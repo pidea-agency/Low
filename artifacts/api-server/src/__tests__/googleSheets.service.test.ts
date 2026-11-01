@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import app from "../app";
+import { createSignedSessionCookie } from "../middlewares/auth.middleware";
 import * as googleSheetsService from "../services/googleSheets.service";
 import {
   GoogleSheetsError,
@@ -95,14 +96,11 @@ describe("Google Sheets Integration & Error Classification", () => {
   });
 
   describe("Route-level integration tests (supertest)", () => {
-    // Helper to generate a valid auth cookie for testing
-    const validAdminPayload = JSON.stringify({
+    // Helper to generate a valid signed auth cookie for testing
+    const testAdminCookie = createSignedSessionCookie({
       username: "123456",
       userId: "local-admin",
-      role: "admin",
-      issuedAt: Date.now(),
     });
-    const testAdminCookie = `court_session_auth=${encodeURIComponent(validAdminPayload)}`;
 
     it("GET /api/sessions returns 200 on success", async () => {
       vi.spyOn(sessionService, "listSessions").mockResolvedValue([

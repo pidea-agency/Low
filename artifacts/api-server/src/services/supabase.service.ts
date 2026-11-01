@@ -40,6 +40,51 @@ let _supabaseClient: SupabaseClient | null = null;
 let _lastUrl: string | undefined = undefined;
 let _lastKey: string | undefined = undefined;
 
+export class AccountSourceUnavailableError extends Error {
+  constructor(message = "Account database is unreachable") {
+    super(message);
+    this.name = "AccountSourceUnavailableError";
+  }
+}
+
+// In-memory session version per user (bumped when password changes or sessions revoked)
+const userSessionVersions = new Map<string, number>();
+
+export function getUserSessionVersion(userId: string): number {
+  if (!userSessionVersions.has(userId)) {
+    userSessionVersions.set(userId, 1);
+  }
+  return userSessionVersions.get(userId)!;
+}
+
+export function revokeUserSessions(userId: string): void {
+  const current = getUserSessionVersion(userId);
+  userSessionVersions.set(userId, current + 1);
+  clearUserAuthCache(userId);
+}
+
+// Short-lived cache for fast user auth resolution (max 2 seconds)
+interface CachedUserRecord {
+  user: AppUser | null;
+  cachedAt: number;
+}
+const USER_CACHE_TTL_MS = 2000;
+const userAuthCache = new Map<string, CachedUserRecord>();
+
+export function clearUserAuthCache(userIdOrUsername?: string): void {
+  if (userIdOrUsername) {
+    const clean = userIdOrUsername.toLowerCase();
+    userAuthCache.delete(clean);
+    for (const [key, val] of userAuthCache.entries()) {
+      if (val.user?.id.toLowerCase() === clean || val.user?.username.toLowerCase() === clean) {
+        userAuthCache.delete(key);
+      }
+    }
+  } else {
+    userAuthCache.clear();
+  }
+}
+
 // In-memory cache for user google credentials to avoid querying Supabase on every Sheets call
 const userGoogleCredsCache = new Map<string, { data: UserGoogleCredentials; timestamp: number }>();
 const CACHE_TTL_MS = 60 * 1000; // 1 minute
@@ -91,16 +136,16 @@ export function loadLocalUsers(): AppUserWithHash[] {
     } catch {}
   }
 
-  // Seed default admin and lawyer with 1-year subscription
-  const adminHash = bcrypt.hashSync(env.adminPassword || "123456", 10);
-  const lawyerHash = bcrypt.hashSync(env.appPassword || "12345", 10);
+  // Seed default admin and lawyer with 1-year subscription if no users file exists
+  const adminHash = bcrypt.hashSync("123456", 10);
+  const lawyerHash = bcrypt.hashSync("12345", 10);
   const oneYearFromNow = new Date();
   oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
   const initial: AppUserWithHash[] = [
     {
       id: "local-admin",
-      username: env.adminUsername || "123456",
+      username: "123456",
       email: "admin@law.internal",
       role: "admin",
       display_name: "المشرف العام (مدير المنظومة)",
@@ -119,7 +164,7 @@ export function loadLocalUsers(): AppUserWithHash[] {
     },
     {
       id: "local-lawyer-default",
-      username: env.appUsername || "12345",
+      username: "12345",
       email: "lawyer@law.internal",
       role: "staff",
       display_name: "المحامي الافتراضي",
@@ -200,8 +245,8 @@ export async function ensureDefaultAdmin(): Promise<void> {
     }
 
     if (count === 0) {
-      const defaultUsername = env.adminUsername || "123456";
-      const defaultPassword = env.adminPassword || "123456";
+      const defaultUsername = "123456";
+      const defaultPassword = "123456";
       const password_hash = await bcrypt.hash(defaultPassword, 10);
 
       const { error: insertErr } = await client.from(tableName).insert([
@@ -278,7 +323,12 @@ export async function verifySupabaseUser(
       .or(`username.ilike.${cleanIdentifier},email.ilike.${cleanIdentifier}`)
       .limit(1);
 
-    if (error || !data || data.length === 0) {
+    if (error) {
+      logger.error({ error }, "Error querying Supabase in verifySupabaseUser");
+      throw new Error(`Account database error: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
       return null;
     }
 
@@ -315,9 +365,101 @@ export async function verifySupabaseUser(
       google_sheet_name: record.google_sheet_name,
       created_at: record.created_at,
     };
-  } catch (err) {
+  } catch (err: any) {
     logger.error({ err }, "Error verifying user against Supabase");
-    return null;
+    throw err;
+  }
+}
+
+/**
+ * Look up user identity and role from the server's trusted source (Supabase or local store).
+ * Used by auth middleware to resolve identity and role on each request, never trusting cookie payload.
+ */
+export async function findUserByIdOrUsername(identifier: string): Promise<AppUser | null> {
+  if (!identifier) return null;
+  const clean = identifier.trim().toLowerCase();
+
+  // Check short-lived cache (max 2 seconds)
+  const cached = userAuthCache.get(clean);
+  if (cached && Date.now() - cached.cachedAt < USER_CACHE_TTL_MS) {
+    return cached.user;
+  }
+
+  const client = getSupabaseClient();
+
+  if (!client) {
+    const local = loadLocalUsers();
+    const user = local.find(
+      (u) =>
+        u.id.toLowerCase() === clean ||
+        u.username.toLowerCase() === clean,
+    );
+    if (!user) {
+      userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
+      return null;
+    }
+
+    const result: AppUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role || "staff",
+      display_name: user.display_name,
+      status: user.status || "active",
+      subscription_end_date: user.subscription_end_date || null,
+      plan_tier: user.plan_tier || (user.role === "admin" ? "pro" : "plus"),
+      billing_cycle: user.billing_cycle || "annual",
+      ai_quota_limit: user.ai_quota_limit,
+      ai_usage_count: user.ai_usage_count || 0,
+      google_spreadsheet_id: user.google_spreadsheet_id,
+      google_sheet_name: user.google_sheet_name,
+      created_at: user.created_at,
+    };
+    userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
+    return result;
+  }
+
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client
+      .from(tableName)
+      .select("id, username, email, role, display_name, status, subscription_end_date, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at")
+      .or(`id.eq.${identifier},username.ilike.${clean}`)
+      .limit(1);
+
+    if (error) {
+      logger.error({ error, identifier }, "Supabase query error in findUserByIdOrUsername");
+      throw new AccountSourceUnavailableError(`Account database error: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
+      return null;
+    }
+
+    const u = data[0];
+    const result: AppUser = {
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role || "staff",
+      display_name: u.display_name,
+      status: u.status || "active",
+      subscription_end_date: u.subscription_end_date || null,
+      plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
+      billing_cycle: u.billing_cycle || "annual",
+      ai_quota_limit: u.ai_quota_limit,
+      ai_usage_count: u.ai_usage_count || 0,
+      google_spreadsheet_id: u.google_spreadsheet_id,
+      google_sheet_name: u.google_sheet_name,
+      created_at: u.created_at,
+    };
+    userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
+    return result;
+  } catch (err: any) {
+    if (err instanceof AccountSourceUnavailableError) throw err;
+    logger.error({ err, identifier }, "Error querying Supabase in findUserByIdOrUsername");
+    throw new AccountSourceUnavailableError(err?.message || "Account database unreachable");
   }
 }
 
@@ -679,6 +821,8 @@ export async function deleteSupabaseUser(id: string): Promise<void> {
     }
     const filtered = local.filter((u) => u.id !== id);
     saveLocalUsers(filtered);
+    clearUserAuthCache(id);
+    revokeUserSessions(id);
     return;
   }
 
@@ -700,6 +844,9 @@ export async function deleteSupabaseUser(id: string): Promise<void> {
     logger.error({ error, id }, "Failed to delete user from Supabase");
     throw new Error(`فشل حذف المستخدم: ${error.message}`);
   }
+
+  clearUserAuthCache(id);
+  revokeUserSessions(id);
 }
 
 /**
@@ -788,6 +935,10 @@ export async function updateSupabaseUser(
     if (input.google_sheet_name !== undefined) user.google_sheet_name = input.google_sheet_name.trim() || null;
 
     saveLocalUsers(local);
+    clearUserAuthCache(id);
+    if (input.password && input.password.trim()) {
+      revokeUserSessions(id);
+    }
     return {
       id: user.id,
       username: user.username,
@@ -855,6 +1006,11 @@ export async function updateSupabaseUser(
   if (error) {
     logger.error({ error, id }, "Failed to update user in Supabase");
     throw new Error(`فشل تعديل المستخدم: ${error.message}`);
+  }
+
+  clearUserAuthCache(id);
+  if (input.password && input.password.trim()) {
+    revokeUserSessions(id);
   }
 
   return {

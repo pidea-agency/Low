@@ -1,6 +1,12 @@
 import app from "./app";
+import { env } from "./config/env";
 import { logger } from "./lib/logger";
 import { startReminderScheduler } from "./scheduler/reminderScheduler";
+
+// Validate required secrets on startup in production
+if (env.isProduction) {
+  void env.sessionSecret;
+}
 
 const rawPort = process.env["PORT"] || "5000";
 

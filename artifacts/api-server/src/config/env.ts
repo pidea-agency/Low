@@ -39,21 +39,17 @@ function requireEnv(key: string, hint?: string): string {
 }
 
 export const env = {
-  // --- Auth (simple env-based credentials, no user database in v1) ---
-  get adminUsername(): string {
-    return readEnv("ADMIN_USERNAME") ?? "123456";
-  },
-  get adminPassword(): string {
-    return readEnv("ADMIN_PASSWORD") ?? "123456";
-  },
-  get appUsername(): string {
-    return readEnv("APP_USERNAME") ?? "12345";
-  },
-  get appPassword(): string {
-    return readEnv("APP_PASSWORD") ?? "12345";
-  },
   get sessionSecret(): string {
-    return readEnv("SESSION_SECRET") ?? "court_session_secret_fallback_key";
+    const val = readEnv("SESSION_SECRET");
+    if (process.env.NODE_ENV === "production") {
+      if (!val || val === "court_session_secret_fallback_key") {
+        throw new MissingEnvVarError(
+          "SESSION_SECRET",
+          "A secure SESSION_SECRET environment variable must be set in production to sign and verify session tokens.",
+        );
+      }
+    }
+    return val ?? "court_session_secret_fallback_key";
   },
 
   // --- Google Sheets (acts as the database in v1) ---
@@ -192,9 +188,9 @@ export function isGoogleSheetsConfigured(): boolean {
   return Boolean(hasSpreadsheetId && hasServiceAccount);
 }
 
-/** Returns true only if login credentials are configured (or dev fallbacks are active), without throwing. */
+/** Returns true only if auth is configured, without throwing. */
 export function isAuthConfigured(): boolean {
-  return true; // We now have default credentials "5128" if env vars are missing
+  return true;
 }
 
 /** Returns true only if the AI API key is present (settings or env var), without throwing. */

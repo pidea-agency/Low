@@ -163,7 +163,7 @@ var require_ms = __commonJS({
 // ../../node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/common.js
 var require_common = __commonJS({
   "../../node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/common.js"(exports2, module2) {
-    function setup(env2) {
+    function setup(env3) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
       createDebug.coerce = coerce2;
@@ -172,8 +172,8 @@ var require_common = __commonJS({
       createDebug.enabled = enabled;
       createDebug.humanize = require_ms();
       createDebug.destroy = destroy;
-      Object.keys(env2).forEach((key) => {
-        createDebug[key] = env2[key];
+      Object.keys(env3).forEach((key) => {
+        createDebug[key] = env3[key];
       });
       createDebug.names = [];
       createDebug.skips = [];
@@ -18666,7 +18666,7 @@ var require_finalhandler = __commonJS({
     module2.exports = finalhandler;
     function finalhandler(req, res, options) {
       var opts = options || {};
-      var env2 = opts.env || "production";
+      var env3 = opts.env || "production";
       var onerror = opts.onerror;
       return function(err) {
         var headers;
@@ -18683,7 +18683,7 @@ var require_finalhandler = __commonJS({
           } else {
             headers = getErrorHeaders(err);
           }
-          msg = getErrorMessage(err, status, env2);
+          msg = getErrorMessage(err, status, env3);
         } else {
           status = 404;
           msg = "Cannot " + req.method + " " + encodeUrl(getResourceName(req));
@@ -18708,9 +18708,9 @@ var require_finalhandler = __commonJS({
       }
       return { ...err.headers };
     }
-    function getErrorMessage(err, status, env2) {
+    function getErrorMessage(err, status, env3) {
       var msg;
-      if (env2 !== "production") {
+      if (env3 !== "production") {
         msg = err.stack;
         if (!msg && typeof err.toString === "function") {
           msg = err.toString();
@@ -21132,10 +21132,10 @@ var require_application = __commonJS({
       });
     };
     app2.defaultConfiguration = function defaultConfiguration() {
-      var env2 = "production";
+      var env3 = "production";
       this.enable("x-powered-by");
       this.set("etag", "weak");
-      this.set("env", env2);
+      this.set("env", env3);
       this.set("query parser", "simple");
       this.set("subdomain offset", 2);
       this.set("trust proxy", false);
@@ -21143,7 +21143,7 @@ var require_application = __commonJS({
         configurable: true,
         value: true
       });
-      debug("booting in %s mode", env2);
+      debug("booting in %s mode", env3);
       this.on("mount", function onmount(parent) {
         if (this.settings[trustProxyDefaultSymbol] === true && typeof parent.settings["trust proxy fn"] === "function") {
           delete this.settings["trust proxy"];
@@ -21160,7 +21160,7 @@ var require_application = __commonJS({
       this.set("view", View);
       this.set("views", resolve4("views"));
       this.set("jsonp callback name", "callback");
-      if (env2 === "production") {
+      if (env3 === "production") {
         this.enable("view cache");
       }
     };
@@ -28941,27 +28941,32 @@ function isSupabaseConfigured() {
   const hasKey = Boolean(settings.supabaseKey && settings.supabaseKey.trim() || readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
   return hasUrl && hasKey;
 }
-var env;
+var MissingEnvVarError, env;
 var init_env = __esm({
   "src/config/env.ts"() {
     "use strict";
     init_settings_store();
+    MissingEnvVarError = class extends Error {
+      constructor(key, hint) {
+        super(
+          `Missing required environment variable "${key}".${hint ? ` ${hint}` : ""}`
+        );
+        this.key = key;
+        this.name = "MissingEnvVarError";
+      }
+    };
     env = {
-      // --- Auth (simple env-based credentials, no user database in v1) ---
-      get adminUsername() {
-        return readEnv("ADMIN_USERNAME") ?? "123456";
-      },
-      get adminPassword() {
-        return readEnv("ADMIN_PASSWORD") ?? "123456";
-      },
-      get appUsername() {
-        return readEnv("APP_USERNAME") ?? "12345";
-      },
-      get appPassword() {
-        return readEnv("APP_PASSWORD") ?? "12345";
-      },
       get sessionSecret() {
-        return readEnv("SESSION_SECRET") ?? "court_session_secret_fallback_key";
+        const val = readEnv("SESSION_SECRET");
+        if (true) {
+          if (!val || val === "court_session_secret_fallback_key") {
+            throw new MissingEnvVarError(
+              "SESSION_SECRET",
+              "A secure SESSION_SECRET environment variable must be set in production to sign and verify session tokens."
+            );
+          }
+        }
+        return val ?? "court_session_secret_fallback_key";
       },
       // --- Google Sheets (acts as the database in v1) ---
       // Settings UI takes precedence over env vars.
@@ -29066,6 +29071,27 @@ var init_env = __esm({
         return true;
       }
     };
+  }
+});
+
+// ../../node_modules/cookie-signature/index.js
+var require_cookie_signature3 = __commonJS({
+  "../../node_modules/cookie-signature/index.js"(exports2) {
+    var crypto3 = require("crypto");
+    exports2.sign = function(val, secret) {
+      if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
+      if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
+      return val + "." + crypto3.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+    };
+    exports2.unsign = function(val, secret) {
+      if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
+      if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
+      var str = val.slice(0, val.lastIndexOf(".")), mac = exports2.sign(str, secret);
+      return sha1(mac) == sha1(val) ? str : false;
+    };
+    function sha1(str) {
+      return crypto3.createHash("sha1").update(str).digest("hex");
+    }
   }
 });
 
@@ -29456,7 +29482,7 @@ function __classPrivateFieldIn(state, receiver) {
   if (receiver === null || typeof receiver !== "object" && typeof receiver !== "function") throw new TypeError("Cannot use 'in' operator on non-object");
   return typeof state === "function" ? receiver === state : state.has(receiver);
 }
-function __addDisposableResource(env2, value, async) {
+function __addDisposableResource(env3, value, async) {
   if (value !== null && value !== void 0) {
     if (typeof value !== "object" && typeof value !== "function") throw new TypeError("Object expected.");
     var dispose, inner;
@@ -29477,22 +29503,22 @@ function __addDisposableResource(env2, value, async) {
         return Promise.reject(e);
       }
     };
-    env2.stack.push({ value, dispose, async });
+    env3.stack.push({ value, dispose, async });
   } else if (async) {
-    env2.stack.push({ async: true });
+    env3.stack.push({ async: true });
   }
   return value;
 }
-function __disposeResources(env2) {
+function __disposeResources(env3) {
   function fail(e) {
-    env2.error = env2.hasError ? new _SuppressedError(e, env2.error, "An error was suppressed during disposal.") : e;
-    env2.hasError = true;
+    env3.error = env3.hasError ? new _SuppressedError(e, env3.error, "An error was suppressed during disposal.") : e;
+    env3.hasError = true;
   }
   var r, s = 0;
   function next() {
-    while (r = env2.stack.pop()) {
+    while (r = env3.stack.pop()) {
       try {
-        if (!r.async && s === 1) return s = 0, env2.stack.push(r), Promise.resolve().then(next);
+        if (!r.async && s === 1) return s = 0, env3.stack.push(r), Promise.resolve().then(next);
         if (r.dispose) {
           var result = r.dispose.call(r.value);
           if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) {
@@ -29504,8 +29530,8 @@ function __disposeResources(env2) {
         fail(e);
       }
     }
-    if (s === 1) return env2.hasError ? Promise.reject(env2.error) : Promise.resolve();
-    if (env2.hasError) throw env2.error;
+    if (s === 1) return env3.hasError ? Promise.reject(env3.error) : Promise.resolve();
+    if (env3.hasError) throw env3.error;
   }
   return next();
 }
@@ -33855,15 +33881,15 @@ var require_websocket_factory = __commonJS({
        * ```
        */
       static getWebSocketConstructor() {
-        const env2 = this.detectEnvironment();
-        if (env2.wsConstructor) {
-          return env2.wsConstructor;
+        const env3 = this.detectEnvironment();
+        if (env3.wsConstructor) {
+          return env3.wsConstructor;
         }
-        let errorMessage = env2.error || "WebSocket not supported in this environment.";
-        if (env2.workaround) {
+        let errorMessage = env3.error || "WebSocket not supported in this environment.";
+        if (env3.workaround) {
           errorMessage += `
 
-Suggested solution: ${env2.workaround}`;
+Suggested solution: ${env3.workaround}`;
         }
         throw new Error(errorMessage);
       }
@@ -33882,8 +33908,8 @@ Suggested solution: ${env2.workaround}`;
        */
       static isWebSocketSupported() {
         try {
-          const env2 = this.detectEnvironment();
-          return env2.type === "native";
+          const env3 = this.detectEnvironment();
+          return env3.type === "native";
         } catch (_a) {
           return false;
         }
@@ -52424,22 +52450,51 @@ var require_bcryptjs = __commonJS({
 // src/services/supabase.service.ts
 var supabase_service_exports = {};
 __export(supabase_service_exports, {
+  AccountSourceUnavailableError: () => AccountSourceUnavailableError,
+  clearUserAuthCache: () => clearUserAuthCache,
   countActiveAdmins: () => countActiveAdmins,
   createSupabaseUser: () => createSupabaseUser,
   deleteSupabaseUser: () => deleteSupabaseUser,
   ensureDefaultAdmin: () => ensureDefaultAdmin,
+  findUserByIdOrUsername: () => findUserByIdOrUsername,
   getSupabaseClient: () => getSupabaseClient,
   getUserGoogleCredentials: () => getUserGoogleCredentials,
+  getUserSessionVersion: () => getUserSessionVersion,
   incrementUserAiUsage: () => incrementUserAiUsage,
   invalidateUserGoogleCache: () => invalidateUserGoogleCache,
   listSupabaseUsers: () => listSupabaseUsers,
   loadLocalUsers: () => loadLocalUsers,
   resetUserAiUsage: () => resetUserAiUsage,
+  revokeUserSessions: () => revokeUserSessions,
   saveLocalUsers: () => saveLocalUsers,
   toggleUserStatus: () => toggleUserStatus,
   updateSupabaseUser: () => updateSupabaseUser,
   verifySupabaseUser: () => verifySupabaseUser
 });
+function getUserSessionVersion(userId) {
+  if (!userSessionVersions.has(userId)) {
+    userSessionVersions.set(userId, 1);
+  }
+  return userSessionVersions.get(userId);
+}
+function revokeUserSessions(userId) {
+  const current = getUserSessionVersion(userId);
+  userSessionVersions.set(userId, current + 1);
+  clearUserAuthCache(userId);
+}
+function clearUserAuthCache(userIdOrUsername) {
+  if (userIdOrUsername) {
+    const clean = userIdOrUsername.toLowerCase();
+    userAuthCache.delete(clean);
+    for (const [key, val] of userAuthCache.entries()) {
+      if (val.user?.id.toLowerCase() === clean || val.user?.username.toLowerCase() === clean) {
+        userAuthCache.delete(key);
+      }
+    }
+  } else {
+    userAuthCache.clear();
+  }
+}
 function invalidateUserGoogleCache(userId) {
   if (userId) {
     userGoogleCredsCache.delete(userId);
@@ -52477,14 +52532,14 @@ function loadLocalUsers() {
     } catch {
     }
   }
-  const adminHash = import_bcryptjs.default.hashSync(env.adminPassword || "123456", 10);
-  const lawyerHash = import_bcryptjs.default.hashSync(env.appPassword || "12345", 10);
+  const adminHash = import_bcryptjs.default.hashSync("123456", 10);
+  const lawyerHash = import_bcryptjs.default.hashSync("12345", 10);
   const oneYearFromNow = /* @__PURE__ */ new Date();
   oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
   const initial = [
     {
       id: "local-admin",
-      username: env.adminUsername || "123456",
+      username: "123456",
       email: "admin@law.internal",
       role: "admin",
       display_name: "\u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 (\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629)",
@@ -52504,7 +52559,7 @@ function loadLocalUsers() {
     },
     {
       id: "local-lawyer-default",
-      username: env.appUsername || "12345",
+      username: "12345",
       email: "lawyer@law.internal",
       role: "staff",
       display_name: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
@@ -52571,8 +52626,8 @@ async function ensureDefaultAdmin() {
       return;
     }
     if (count === 0) {
-      const defaultUsername = env.adminUsername || "123456";
-      const defaultPassword = env.adminPassword || "123456";
+      const defaultUsername = "123456";
+      const defaultPassword = "123456";
       const password_hash = await import_bcryptjs.default.hash(defaultPassword, 10);
       const { error: insertErr } = await client.from(tableName).insert([
         {
@@ -52627,7 +52682,11 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
   try {
     const tableName = env.supabaseTableName;
     const { data, error } = await client.from(tableName).select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, password_hash, google_spreadsheet_id, google_sheet_name, created_at").or(`username.ilike.${cleanIdentifier},email.ilike.${cleanIdentifier}`).limit(1);
-    if (error || !data || data.length === 0) {
+    if (error) {
+      logger.error({ error }, "Error querying Supabase in verifySupabaseUser");
+      throw new Error(`Account database error: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
       return null;
     }
     const record = data[0];
@@ -52662,7 +52721,79 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
     };
   } catch (err) {
     logger.error({ err }, "Error verifying user against Supabase");
-    return null;
+    throw err;
+  }
+}
+async function findUserByIdOrUsername(identifier) {
+  if (!identifier) return null;
+  const clean = identifier.trim().toLowerCase();
+  const cached = userAuthCache.get(clean);
+  if (cached && Date.now() - cached.cachedAt < USER_CACHE_TTL_MS) {
+    return cached.user;
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    const local = loadLocalUsers();
+    const user = local.find(
+      (u) => u.id.toLowerCase() === clean || u.username.toLowerCase() === clean
+    );
+    if (!user) {
+      userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
+      return null;
+    }
+    const result = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role || "staff",
+      display_name: user.display_name,
+      status: user.status || "active",
+      subscription_end_date: user.subscription_end_date || null,
+      plan_tier: user.plan_tier || (user.role === "admin" ? "pro" : "plus"),
+      billing_cycle: user.billing_cycle || "annual",
+      ai_quota_limit: user.ai_quota_limit,
+      ai_usage_count: user.ai_usage_count || 0,
+      google_spreadsheet_id: user.google_spreadsheet_id,
+      google_sheet_name: user.google_sheet_name,
+      created_at: user.created_at
+    };
+    userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
+    return result;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client.from(tableName).select("id, username, email, role, display_name, status, subscription_end_date, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at").or(`id.eq.${identifier},username.ilike.${clean}`).limit(1);
+    if (error) {
+      logger.error({ error, identifier }, "Supabase query error in findUserByIdOrUsername");
+      throw new AccountSourceUnavailableError(`Account database error: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
+      return null;
+    }
+    const u = data[0];
+    const result = {
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role || "staff",
+      display_name: u.display_name,
+      status: u.status || "active",
+      subscription_end_date: u.subscription_end_date || null,
+      plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
+      billing_cycle: u.billing_cycle || "annual",
+      ai_quota_limit: u.ai_quota_limit,
+      ai_usage_count: u.ai_usage_count || 0,
+      google_spreadsheet_id: u.google_spreadsheet_id,
+      google_sheet_name: u.google_sheet_name,
+      created_at: u.created_at
+    };
+    userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
+    return result;
+  } catch (err) {
+    if (err instanceof AccountSourceUnavailableError) throw err;
+    logger.error({ err, identifier }, "Error querying Supabase in findUserByIdOrUsername");
+    throw new AccountSourceUnavailableError(err?.message || "Account database unreachable");
   }
 }
 async function getUserGoogleCredentials(userId) {
@@ -52936,6 +53067,8 @@ async function deleteSupabaseUser(id) {
     }
     const filtered = local.filter((u) => u.id !== id);
     saveLocalUsers(filtered);
+    clearUserAuthCache(id);
+    revokeUserSessions(id);
     return;
   }
   invalidateUserGoogleCache(id);
@@ -52952,6 +53085,8 @@ async function deleteSupabaseUser(id) {
     logger.error({ error, id }, "Failed to delete user from Supabase");
     throw new Error(`\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
   }
+  clearUserAuthCache(id);
+  revokeUserSessions(id);
 }
 async function updateSupabaseUser(id, input) {
   const client = getSupabaseClient();
@@ -53010,6 +53145,10 @@ async function updateSupabaseUser(id, input) {
     if (input.google_spreadsheet_id !== void 0) user.google_spreadsheet_id = input.google_spreadsheet_id.trim() || null;
     if (input.google_sheet_name !== void 0) user.google_sheet_name = input.google_sheet_name.trim() || null;
     saveLocalUsers(local);
+    clearUserAuthCache(id);
+    if (input.password && input.password.trim()) {
+      revokeUserSessions(id);
+    }
     return {
       id: user.id,
       username: user.username,
@@ -53065,6 +53204,10 @@ async function updateSupabaseUser(id, input) {
     logger.error({ error, id }, "Failed to update user in Supabase");
     throw new Error(`\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
   }
+  clearUserAuthCache(id);
+  if (input.password && input.password.trim()) {
+    revokeUserSessions(id);
+  }
   return {
     id: data.id,
     username: data.username,
@@ -53115,7 +53258,7 @@ async function toggleUserStatus(id, explicitStatus) {
   const newStatus = explicitStatus || (target.status === "suspended" ? "active" : "suspended");
   return updateSupabaseUser(id, { status: newStatus });
 }
-var import_bcryptjs, import_fs2, import_path2, import_crypto, _supabaseClient, _lastUrl, _lastKey, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache;
+var import_bcryptjs, import_fs2, import_path2, import_crypto, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -53129,6 +53272,15 @@ var init_supabase_service = __esm({
     _supabaseClient = null;
     _lastUrl = void 0;
     _lastKey = void 0;
+    AccountSourceUnavailableError = class extends Error {
+      constructor(message = "Account database is unreachable") {
+        super(message);
+        this.name = "AccountSourceUnavailableError";
+      }
+    };
+    userSessionVersions = /* @__PURE__ */ new Map();
+    USER_CACHE_TTL_MS = 2e3;
+    userAuthCache = /* @__PURE__ */ new Map();
     userGoogleCredsCache = /* @__PURE__ */ new Map();
     CACHE_TTL_MS = 60 * 1e3;
     LOCAL_USERS_FILE = (0, import_path2.resolve)(process.cwd(), "artifacts", "api-server", "local_users.json");
@@ -63797,22 +63949,26 @@ init_env();
 init_logger();
 
 // src/middlewares/auth.middleware.ts
+var import_cookie_signature = __toESM(require_cookie_signature3(), 1);
 init_env();
+init_supabase_service();
 var SESSION_COOKIE_NAME = "court_session_auth";
 var SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1e3;
 function setSessionCookie(res, userData) {
-  const payload = typeof userData === "string" ? { username: userData, issuedAt: Date.now(), role: "admin" } : {
-    username: userData.username,
-    userId: userData.userId,
-    role: userData.role || "staff",
-    displayName: userData.displayName,
+  const userId = typeof userData === "string" ? void 0 : userData.userId;
+  const username = typeof userData === "string" ? userData : userData.username;
+  const sessionVersion = userId ? getUserSessionVersion(userId) : 1;
+  const payload = {
+    username,
+    userId,
+    sessionVersion,
     issuedAt: Date.now()
   };
   res.cookie(SESSION_COOKIE_NAME, JSON.stringify(payload), {
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: env.isProduction,
-    signed: false,
+    signed: true,
     maxAge: SESSION_MAX_AGE_MS,
     path: "/"
   });
@@ -63820,48 +63976,85 @@ function setSessionCookie(res, userData) {
 function clearSessionCookie(res) {
   res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
 }
-function readSessionCookie(req) {
-  let raw = req.cookies?.[SESSION_COOKIE_NAME] || req.signedCookies?.[SESSION_COOKIE_NAME];
+function readSessionToken(req) {
+  let raw = req.signedCookies?.[SESSION_COOKIE_NAME];
+  if (raw === false) {
+    return null;
+  }
   if (!raw && req.headers.cookie) {
     const match = req.headers.cookie.split(";").map((s) => s.trim()).find((s) => s.startsWith(`${SESSION_COOKIE_NAME}=`));
     if (match) {
-      raw = decodeURIComponent(match.slice(SESSION_COOKIE_NAME.length + 1));
+      const cookieValue = decodeURIComponent(match.slice(SESSION_COOKIE_NAME.length + 1));
+      if (!cookieValue.startsWith("s:")) {
+        return null;
+      }
+      const unsigned = import_cookie_signature.default.unsign(cookieValue.slice(2), env.sessionSecret);
+      if (unsigned === false) {
+        return null;
+      }
+      raw = unsigned;
     }
   }
-  if (!raw) {
+  if (!raw || typeof raw !== "string") {
     return null;
   }
-  if (typeof raw === "object" && raw !== null) {
-    return raw;
+  if (raw.startsWith("j:")) {
+    raw = raw.slice(2);
   }
-  if (typeof raw === "string") {
-    if (raw.startsWith("s:")) {
-      raw = raw.slice(2).split(".")[0];
-    }
-    if (raw.startsWith("j:")) {
-      raw = raw.slice(2);
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (typeof parsed.username !== "string" || typeof parsed.issuedAt !== "number") {
-        return null;
-      }
-      if (Date.now() - parsed.issuedAt > SESSION_MAX_AGE_MS) {
-        return null;
-      }
-      return parsed;
-    } catch {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
       return null;
     }
+    if (typeof parsed.username !== "string" || typeof parsed.issuedAt !== "number") {
+      return null;
+    }
+    if (Date.now() - parsed.issuedAt > SESSION_MAX_AGE_MS) {
+      return null;
+    }
+    return {
+      userId: parsed.userId,
+      username: parsed.username,
+      sessionVersion: parsed.sessionVersion,
+      issuedAt: parsed.issuedAt
+    };
+  } catch {
+    return null;
   }
-  return null;
 }
-function attachAuthUser(req, _res, next) {
-  const session = readSessionCookie(req);
-  if (session) {
-    req.authUser = session;
+async function attachAuthUser(req, res, next) {
+  try {
+    const token = readSessionToken(req);
+    if (token) {
+      const identifier = token.userId || token.username;
+      const trustedUser = await findUserByIdOrUsername(identifier);
+      if (trustedUser) {
+        const currentVersion = getUserSessionVersion(trustedUser.id);
+        const tokenVersion = token.sessionVersion ?? 1;
+        if (tokenVersion === currentVersion) {
+          req.authUser = {
+            userId: trustedUser.id,
+            username: trustedUser.username,
+            role: trustedUser.role,
+            // Live role from server-side store
+            displayName: trustedUser.display_name || trustedUser.username,
+            issuedAt: token.issuedAt
+          };
+        }
+      }
+    }
+    next();
+  } catch (err) {
+    if (err instanceof AccountSourceUnavailableError || err.name === "AccountSourceUnavailableError") {
+      res.status(503).json({
+        error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B."
+      });
+      return;
+    }
+    res.status(503).json({
+      error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B."
+    });
   }
-  next();
 }
 function requireAuth(req, res, next) {
   if (!req.authUser) {
@@ -63978,80 +64171,68 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
       return;
     }
     const { username, password } = parseResult.data;
+    let verifiedUser = null;
     try {
       if (isSupabaseConfigured()) {
         await ensureDefaultAdmin();
       }
-      const verifiedUser = await verifySupabaseUser(username, password);
-      if (verifiedUser) {
-        if (verifiedUser.role === "staff") {
-          if (verifiedUser.status === "suspended") {
-            res.status(403).json({
-              error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.",
-              isSuspended: true
-            });
-            return;
-          }
-          if (verifiedUser.subscription_end_date) {
-            const expiryTime = new Date(verifiedUser.subscription_end_date).getTime();
-            const now = Date.now();
-            if (expiryTime < now) {
-              res.status(403).json({
-                error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
-                isExpired: true,
-                subscription_end_date: verifiedUser.subscription_end_date
-              });
-              return;
-            }
-          }
-        }
-        let subscriptionWarning = null;
-        let daysRemaining = null;
-        if (verifiedUser.subscription_end_date) {
-          const diffMs = new Date(verifiedUser.subscription_end_date).getTime() - Date.now();
-          daysRemaining = Math.ceil(diffMs / (1e3 * 60 * 60 * 24));
-          if (daysRemaining <= 3 && daysRemaining >= 0) {
-            subscriptionWarning = `\u062A\u0646\u0628\u064A\u0647: \u064A\u0646\u062A\u0647\u064A \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u062E\u0644\u0627\u0644 ${daysRemaining === 0 ? "\u0627\u0644\u064A\u0648\u0645" : `${daysRemaining} ${daysRemaining === 1 ? "\u064A\u0648\u0645" : daysRemaining === 2 ? "\u064A\u0648\u0645\u064A\u0646" : "\u0623\u064A\u0627\u0645"}`}. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062A\u062C\u062F\u064A\u062F.`;
-          }
-        }
-        setSessionCookie(res, {
-          username: verifiedUser.username,
-          userId: verifiedUser.id,
-          role: verifiedUser.role,
-          displayName: verifiedUser.display_name || verifiedUser.username
-        });
-        res.json({
-          username: verifiedUser.username,
-          role: verifiedUser.role,
-          displayName: verifiedUser.display_name,
-          status: verifiedUser.status || "active",
-          subscription_end_date: verifiedUser.subscription_end_date,
-          subscriptionWarning,
-          daysRemaining
-        });
-        return;
-      }
+      verifiedUser = await verifySupabaseUser(username, password);
     } catch (err) {
-      logger.error({ err }, "Error authenticating user");
-    }
-    const validAppUsernames = [env.appUsername, "12345", "lawyer", "5128"];
-    const validAppPasswords = [env.appPassword, "12345", "5128"];
-    if (validAppUsernames.includes(username) && validAppPasswords.includes(password)) {
-      setSessionCookie(res, {
-        username: username === "12345" ? "12345" : username,
-        role: "staff",
-        displayName: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A"
-      });
-      res.json({
-        username: username === "12345" ? "12345" : username,
-        role: "staff",
-        displayName: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A",
-        status: "active",
-        subscription_end_date: null
+      logger.error({ err }, "Account source unavailable during login");
+      res.status(503).json({
+        error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B."
       });
       return;
     }
-    res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
+    if (!verifiedUser) {
+      res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
+      return;
+    }
+    if (verifiedUser.role === "staff") {
+      if (verifiedUser.status === "suspended") {
+        res.status(403).json({
+          error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.",
+          isSuspended: true
+        });
+        return;
+      }
+      if (verifiedUser.subscription_end_date) {
+        const expiryTime = new Date(verifiedUser.subscription_end_date).getTime();
+        const now = Date.now();
+        if (expiryTime < now) {
+          res.status(403).json({
+            error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
+            isExpired: true,
+            subscription_end_date: verifiedUser.subscription_end_date
+          });
+          return;
+        }
+      }
+    }
+    let subscriptionWarning = null;
+    let daysRemaining = null;
+    if (verifiedUser.subscription_end_date) {
+      const diffMs = new Date(verifiedUser.subscription_end_date).getTime() - Date.now();
+      daysRemaining = Math.ceil(diffMs / (1e3 * 60 * 60 * 24));
+      if (daysRemaining <= 3 && daysRemaining >= 0) {
+        subscriptionWarning = `\u062A\u0646\u0628\u064A\u0647: \u064A\u0646\u062A\u0647\u064A \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u062E\u0644\u0627\u0644 ${daysRemaining === 0 ? "\u0627\u0644\u064A\u0648\u0645" : `${daysRemaining} ${daysRemaining === 1 ? "\u064A\u0648\u0645" : daysRemaining === 2 ? "\u064A\u0648\u0645\u064A\u0646" : "\u0623\u064A\u0627\u0645"}`}. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062A\u062C\u062F\u064A\u062F.`;
+      }
+    }
+    setSessionCookie(res, {
+      username: verifiedUser.username,
+      userId: verifiedUser.id,
+      role: verifiedUser.role,
+      displayName: verifiedUser.display_name || verifiedUser.username
+    });
+    res.json({
+      username: verifiedUser.username,
+      role: verifiedUser.role,
+      displayName: verifiedUser.display_name,
+      status: verifiedUser.status || "active",
+      subscription_end_date: verifiedUser.subscription_end_date,
+      subscriptionWarning,
+      daysRemaining
+    });
   } catch (error) {
     logger.error({ error }, "Unexpected error in /auth/login");
     res.status(500).json({ error: error?.message || "\u0641\u0634\u0644 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0633\u0628\u0628 \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645." });
@@ -64065,51 +64246,40 @@ router2.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (
   }
   const { username, password } = parseResult.data;
   logger.info({ username, supabaseConfigured: isSupabaseConfigured() }, "Admin login attempt");
-  if (isSupabaseConfigured()) {
-    try {
+  let adminUser = null;
+  try {
+    if (isSupabaseConfigured()) {
       await ensureDefaultAdmin();
-      const supabaseUser = await verifySupabaseUser(username, password);
-      if (supabaseUser) {
-        if (supabaseUser.role !== "admin") {
-          res.status(403).json({
-            error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0644\u064A\u0633 \u0644\u062F\u064A\u0647 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062F\u062E\u0648\u0644 \u0644\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0645\u0634\u0631\u0641."
-          });
-          return;
-        }
-        setSessionCookie(res, {
-          username: supabaseUser.username,
-          userId: supabaseUser.id,
-          role: supabaseUser.role,
-          displayName: supabaseUser.display_name || supabaseUser.username
-        });
-        res.json({
-          username: supabaseUser.username,
-          role: supabaseUser.role,
-          displayName: supabaseUser.display_name
-        });
-        return;
-      }
-    } catch (err) {
-      logger.error({ err }, "Error authenticating admin with Supabase");
     }
-  }
-  const validAdminUsernames = [env.adminUsername, "123456", "admin", "407171248"];
-  const validAdminPasswords = [env.adminPassword, "123456", "407171248"];
-  logger.info({ username, match: validAdminUsernames.includes(username) && validAdminPasswords.includes(password) }, "Admin env credential check");
-  if (validAdminUsernames.includes(username) && validAdminPasswords.includes(password)) {
-    setSessionCookie(res, {
-      username: username === "123456" ? "123456" : username,
-      role: "admin",
-      displayName: "\u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 (Admin)"
-    });
-    res.json({
-      username: username === "123456" ? "123456" : username,
-      role: "admin",
-      displayName: "\u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 (Admin)"
+    adminUser = await verifySupabaseUser(username, password);
+  } catch (err) {
+    logger.error({ err }, "Account source unavailable during admin login");
+    res.status(503).json({
+      error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B."
     });
     return;
   }
-  res.status(401).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u062F\u062E\u0648\u0644 \u0627\u0644\u0645\u0634\u0631\u0641 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
+  if (!adminUser) {
+    res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
+    return;
+  }
+  if (adminUser.role !== "admin") {
+    res.status(403).json({
+      error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0644\u064A\u0633 \u0644\u062F\u064A\u0647 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062F\u062E\u0648\u0644 \u0644\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0645\u0634\u0631\u0641."
+    });
+    return;
+  }
+  setSessionCookie(res, {
+    username: adminUser.username,
+    userId: adminUser.id,
+    role: adminUser.role,
+    displayName: adminUser.display_name || adminUser.username
+  });
+  res.json({
+    username: adminUser.username,
+    role: adminUser.role,
+    displayName: adminUser.display_name
+  });
 });
 router2.post("/auth/logout", (_req, res) => {
   clearSessionCookie(res);
@@ -71085,18 +71255,18 @@ __publicField(Environment, "TESTS", /* @__PURE__ */ new Map([
   ["equalto", (a, b) => a.value === b.value],
   ["eq", (a, b) => a.value === b.value]
 ]));
-function setupGlobals(env2) {
-  env2.set("false", false);
-  env2.set("true", true);
-  env2.set("none", null);
-  env2.set("raise_exception", (args) => {
+function setupGlobals(env3) {
+  env3.set("false", false);
+  env3.set("true", true);
+  env3.set("none", null);
+  env3.set("raise_exception", (args) => {
     throw new Error(args);
   });
-  env2.set("range", range);
-  env2.set("strftime_now", strftime_now);
-  env2.set("True", true);
-  env2.set("False", false);
-  env2.set("None", null);
+  env3.set("range", range);
+  env3.set("strftime_now", strftime_now);
+  env3.set("True", true);
+  env3.set("False", false);
+  env3.set("None", null);
 }
 function getAttributeValue(item, attributePath) {
   const parts = attributePath.split(".");
@@ -71161,8 +71331,8 @@ function compareRuntimeValues(a, b, caseSensitive = false) {
 }
 var Interpreter = class {
   global;
-  constructor(env2) {
-    this.global = env2 ?? new Environment();
+  constructor(env3) {
+    this.global = env3 ?? new Environment();
   }
   /**
    * Run the program.
@@ -72296,14 +72466,14 @@ var Template = class {
     this.parsed = parse(tokens);
   }
   render(items) {
-    const env2 = new Environment();
-    setupGlobals(env2);
+    const env3 = new Environment();
+    setupGlobals(env3);
     if (items) {
       for (const [key, value] of Object.entries(items)) {
-        env2.set(key, value);
+        env3.set(key, value);
       }
     }
-    const interpreter = new Interpreter(env2);
+    const interpreter = new Interpreter(env3);
     const result = interpreter.run(this.parsed);
     return result.value;
   }

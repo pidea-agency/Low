@@ -1,11 +1,24 @@
 import type { NextFunction, Request, Response } from "express";
+import cookieSignature from "cookie-signature";
 import { env } from "../config/env";
+import {
+  findUserByIdOrUsername,
+  getUserSessionVersion,
+  AccountSourceUnavailableError,
+} from "../services/supabase.service";
 
 export interface SessionCookiePayload {
   username: string;
   userId?: string;
   role?: string;
   displayName?: string;
+  issuedAt: number;
+}
+
+export interface SessionTokenPayload {
+  username: string;
+  userId?: string;
+  sessionVersion?: number;
   issuedAt: number;
 }
 
@@ -16,77 +29,111 @@ export function setSessionCookie(
   res: Response,
   userData: string | { username: string; userId?: string; role?: string; displayName?: string },
 ): void {
-  const payload: SessionCookiePayload =
-    typeof userData === "string"
-      ? { username: userData, issuedAt: Date.now(), role: "admin" }
-      : {
-          username: userData.username,
-          userId: userData.userId,
-          role: userData.role || "staff",
-          displayName: userData.displayName,
-          issuedAt: Date.now(),
-        };
+  const userId = typeof userData === "string" ? undefined : userData.userId;
+  const username = typeof userData === "string" ? userData : userData.username;
+  const sessionVersion = userId ? getUserSessionVersion(userId) : 1;
+
+  // Store only minimal, non-role session token in the cookie with current session version
+  const payload: SessionTokenPayload = {
+    username,
+    userId,
+    sessionVersion,
+    issuedAt: Date.now(),
+  };
 
   res.cookie(SESSION_COOKIE_NAME, JSON.stringify(payload), {
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: env.isProduction,
-    signed: false,
+    signed: true,
     maxAge: SESSION_MAX_AGE_MS,
     path: "/",
   });
+}
+
+export function createSignedSessionCookie(userData: {
+  username: string;
+  userId?: string;
+  sessionVersion?: number;
+}): string {
+  const version = userData.sessionVersion ?? (userData.userId ? getUserSessionVersion(userData.userId) : 1);
+  const payload: SessionTokenPayload = {
+    username: userData.username,
+    userId: userData.userId,
+    sessionVersion: version,
+    issuedAt: Date.now(),
+  };
+  const signed = "s:" + cookieSignature.sign(JSON.stringify(payload), env.sessionSecret);
+  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(signed)}`;
 }
 
 export function clearSessionCookie(res: Response): void {
   res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
 }
 
-function readSessionCookie(req: Request): SessionCookiePayload | null {
-  let raw: any = req.cookies?.[SESSION_COOKIE_NAME] || req.signedCookies?.[SESSION_COOKIE_NAME];
+function readSessionToken(req: Request): SessionTokenPayload | null {
+  // 1. Check req.signedCookies (populated by cookieParser middleware when signed: true)
+  let raw: any = req.signedCookies?.[SESSION_COOKIE_NAME];
 
+  // If cookieParser marked it as false, it was a tampered signature
+  if (raw === false) {
+    return null;
+  }
+
+  // 2. Fallback to manual parsing from req.headers.cookie if not populated by cookieParser
   if (!raw && req.headers.cookie) {
     const match = req.headers.cookie
       .split(";")
       .map((s) => s.trim())
       .find((s) => s.startsWith(`${SESSION_COOKIE_NAME}=`));
+
     if (match) {
-      raw = decodeURIComponent(match.slice(SESSION_COOKIE_NAME.length + 1));
+      const cookieValue = decodeURIComponent(match.slice(SESSION_COOKIE_NAME.length + 1));
+      // Cookie MUST start with "s:" to indicate a signed cookie
+      if (!cookieValue.startsWith("s:")) {
+        // Unsigned cookie -> REJECT
+        return null;
+      }
+      const unsigned = cookieSignature.unsign(cookieValue.slice(2), env.sessionSecret);
+      if (unsigned === false) {
+        // Tampered signature -> REJECT
+        return null;
+      }
+      raw = unsigned;
     }
   }
 
-  if (!raw) {
+  if (!raw || typeof raw !== "string") {
     return null;
   }
 
-  if (typeof raw === "object" && raw !== null) {
-    return raw as SessionCookiePayload;
+  if (raw.startsWith("j:")) {
+    raw = raw.slice(2);
   }
 
-  if (typeof raw === "string") {
-    if (raw.startsWith("s:")) {
-      raw = raw.slice(2).split(".")[0];
-    }
-    if (raw.startsWith("j:")) {
-      raw = raw.slice(2);
-    }
-    try {
-      const parsed = JSON.parse(raw) as SessionCookiePayload;
-      if (
-        typeof parsed.username !== "string" ||
-        typeof parsed.issuedAt !== "number"
-      ) {
-        return null;
-      }
-      if (Date.now() - parsed.issuedAt > SESSION_MAX_AGE_MS) {
-        return null;
-      }
-      return parsed;
-    } catch {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
       return null;
     }
+    if (
+      typeof parsed.username !== "string" ||
+      typeof parsed.issuedAt !== "number"
+    ) {
+      return null;
+    }
+    if (Date.now() - parsed.issuedAt > SESSION_MAX_AGE_MS) {
+      return null;
+    }
+    return {
+      userId: parsed.userId,
+      username: parsed.username,
+      sessionVersion: parsed.sessionVersion,
+      issuedAt: parsed.issuedAt,
+    };
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
 declare global {
@@ -97,17 +144,50 @@ declare global {
   }
 }
 
-/** Populates `req.authUser` when a valid session cookie is present, without rejecting the request. */
-export function attachAuthUser(
+/**
+ * Populates `req.authUser` by verifying the signed session token and checking the
+ * current account state from the trusted server-side source.
+ * Fails with 503 if the account source is unreachable.
+ */
+export async function attachAuthUser(
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction,
-): void {
-  const session = readSessionCookie(req);
-  if (session) {
-    req.authUser = session;
+): Promise<void> {
+  try {
+    const token = readSessionToken(req);
+    if (token) {
+      const identifier = token.userId || token.username;
+      // Look up identity, role and account status from trusted server store on EACH request
+      const trustedUser = await findUserByIdOrUsername(identifier);
+      if (trustedUser) {
+        // Verify session version (invalidated after password change or revocation)
+        const currentVersion = getUserSessionVersion(trustedUser.id);
+        const tokenVersion = token.sessionVersion ?? 1;
+
+        if (tokenVersion === currentVersion) {
+          req.authUser = {
+            userId: trustedUser.id,
+            username: trustedUser.username,
+            role: trustedUser.role, // Live role from server-side store
+            displayName: trustedUser.display_name || trustedUser.username,
+            issuedAt: token.issuedAt,
+          };
+        }
+      }
+    }
+    next();
+  } catch (err: any) {
+    if (err instanceof AccountSourceUnavailableError || err.name === "AccountSourceUnavailableError") {
+      res.status(503).json({
+        error: "تعذر الاتصال بقاعدة البيانات. يرجى المحاولة لاحقاً.",
+      });
+      return;
+    }
+    res.status(503).json({
+      error: "تعذر الاتصال بقاعدة البيانات. يرجى المحاولة لاحقاً.",
+    });
   }
-  next();
 }
 
 /** Rejects the request with 401 unless a valid session cookie is present. */

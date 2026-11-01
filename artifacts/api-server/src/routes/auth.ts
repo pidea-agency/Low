@@ -31,92 +31,78 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
 
     const { username, password } = parseResult.data;
 
-    // 1. Verify user via Supabase or local store
+    // 1. Verify user via single trusted account source (Supabase or local store)
+    let verifiedUser: any = null;
     try {
       if (isSupabaseConfigured()) {
         await ensureDefaultAdmin();
       }
-      const verifiedUser = await verifySupabaseUser(username, password);
-      if (verifiedUser) {
-        // Check if suspended
-        if (verifiedUser.role === "staff") {
-          if (verifiedUser.status === "suspended") {
-            res.status(403).json({
-              error: "تم إيقاف اشتراك هذا الحساب مؤقتاً من قِبل إدارة المنظومة. يرجى التواصل مع المشرف العام لإعادة التفعيل.",
-              isSuspended: true,
-            });
-            return;
-          }
-
-          // Check if expired
-          if (verifiedUser.subscription_end_date) {
-            const expiryTime = new Date(verifiedUser.subscription_end_date).getTime();
-            const now = Date.now();
-            if (expiryTime < now) {
-              res.status(403).json({
-                error: "عذراً، انتهت فترة اشتراكك في المنظومة. يرجى التواصل مع المشرف العام لتجديد الاشتراك.",
-                isExpired: true,
-                subscription_end_date: verifiedUser.subscription_end_date,
-              });
-              return;
-            }
-          }
-        }
-
-        // Check 3-day reminder
-        let subscriptionWarning: string | null = null;
-        let daysRemaining: number | null = null;
-        if (verifiedUser.subscription_end_date) {
-          const diffMs = new Date(verifiedUser.subscription_end_date).getTime() - Date.now();
-          daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-          if (daysRemaining <= 3 && daysRemaining >= 0) {
-            subscriptionWarning = `تنبيه: ينتهي اشتراكك خلال ${daysRemaining === 0 ? "اليوم" : `${daysRemaining} ${daysRemaining === 1 ? "يوم" : daysRemaining === 2 ? "يومين" : "أيام"}`}. يرجى التواصل مع الإدارة للتجديد.`;
-          }
-        }
-
-        setSessionCookie(res, {
-          username: verifiedUser.username,
-          userId: verifiedUser.id,
-          role: verifiedUser.role,
-          displayName: verifiedUser.display_name || verifiedUser.username,
-        });
-
-        res.json({
-          username: verifiedUser.username,
-          role: verifiedUser.role,
-          displayName: verifiedUser.display_name,
-          status: verifiedUser.status || "active",
-          subscription_end_date: verifiedUser.subscription_end_date,
-          subscriptionWarning,
-          daysRemaining,
-        });
-        return;
-      }
+      verifiedUser = await verifySupabaseUser(username, password);
     } catch (err) {
-      logger.error({ err }, "Error authenticating user");
-    }
-
-    // 2. Fallback to env credentials
-    const validAppUsernames = [env.appUsername, "12345", "lawyer", "5128"];
-    const validAppPasswords = [env.appPassword, "12345", "5128"];
-    if (validAppUsernames.includes(username) && validAppPasswords.includes(password)) {
-      setSessionCookie(res, {
-        username: username === "12345" ? "12345" : username,
-        role: "staff",
-        displayName: "المحامي",
-      });
-
-      res.json({
-        username: username === "12345" ? "12345" : username,
-        role: "staff",
-        displayName: "المحامي",
-        status: "active",
-        subscription_end_date: null,
+      logger.error({ err }, "Account source unavailable during login");
+      res.status(503).json({
+        error: "تعذر الاتصال بقاعدة البيانات. يرجى المحاولة لاحقاً.",
       });
       return;
     }
 
-    res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة." });
+    if (!verifiedUser) {
+      res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة." });
+      return;
+    }
+
+    // Check if suspended
+    if (verifiedUser.role === "staff") {
+      if (verifiedUser.status === "suspended") {
+        res.status(403).json({
+          error: "تم إيقاف اشتراك هذا الحساب مؤقتاً من قِبل إدارة المنظومة. يرجى التواصل مع المشرف العام لإعادة التفعيل.",
+          isSuspended: true,
+        });
+        return;
+      }
+
+      // Check if expired
+      if (verifiedUser.subscription_end_date) {
+        const expiryTime = new Date(verifiedUser.subscription_end_date).getTime();
+        const now = Date.now();
+        if (expiryTime < now) {
+          res.status(403).json({
+            error: "عذراً، انتهت فترة اشتراكك في المنظومة. يرجى التواصل مع المشرف العام لتجديد الاشتراك.",
+            isExpired: true,
+            subscription_end_date: verifiedUser.subscription_end_date,
+          });
+          return;
+        }
+      }
+    }
+
+    // Check 3-day reminder
+    let subscriptionWarning: string | null = null;
+    let daysRemaining: number | null = null;
+    if (verifiedUser.subscription_end_date) {
+      const diffMs = new Date(verifiedUser.subscription_end_date).getTime() - Date.now();
+      daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      if (daysRemaining <= 3 && daysRemaining >= 0) {
+        subscriptionWarning = `تنبيه: ينتهي اشتراكك خلال ${daysRemaining === 0 ? "اليوم" : `${daysRemaining} ${daysRemaining === 1 ? "يوم" : daysRemaining === 2 ? "يومين" : "أيام"}`}. يرجى التواصل مع الإدارة للتجديد.`;
+      }
+    }
+
+    setSessionCookie(res, {
+      username: verifiedUser.username,
+      userId: verifiedUser.id,
+      role: verifiedUser.role,
+      displayName: verifiedUser.display_name || verifiedUser.username,
+    });
+
+    res.json({
+      username: verifiedUser.username,
+      role: verifiedUser.role,
+      displayName: verifiedUser.display_name,
+      status: verifiedUser.status || "active",
+      subscription_end_date: verifiedUser.subscription_end_date,
+      subscriptionWarning,
+      daysRemaining,
+    });
   } catch (error: any) {
     logger.error({ error }, "Unexpected error in /auth/login");
     res.status(500).json({ error: error?.message || "فشل تسجيل الدخول بسبب خطأ في الخادم." });
@@ -138,59 +124,45 @@ router.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (r
 
   logger.info({ username, supabaseConfigured: isSupabaseConfigured() }, "Admin login attempt");
 
-  // 1. If Supabase is configured
-  if (isSupabaseConfigured()) {
-    try {
+  // Verify admin user via single trusted account source (Supabase or local store)
+  let adminUser: any = null;
+  try {
+    if (isSupabaseConfigured()) {
       await ensureDefaultAdmin();
-      const supabaseUser = await verifySupabaseUser(username, password);
-      if (supabaseUser) {
-        if (supabaseUser.role !== "admin") {
-          res.status(403).json({
-            error: "عذراً، هذا الحساب ليس لديه صلاحيات الإدارة للدخول لبوابة المشرف.",
-          });
-          return;
-        }
-
-        setSessionCookie(res, {
-          username: supabaseUser.username,
-          userId: supabaseUser.id,
-          role: supabaseUser.role,
-          displayName: supabaseUser.display_name || supabaseUser.username,
-        });
-
-        res.json({
-          username: supabaseUser.username,
-          role: supabaseUser.role,
-          displayName: supabaseUser.display_name,
-        });
-        return;
-      }
-    } catch (err) {
-      logger.error({ err }, "Error authenticating admin with Supabase");
     }
-  }
-
-  // 2. Fallback to dedicated admin env credentials
-  const validAdminUsernames = [env.adminUsername, "123456", "admin", "407171248"];
-  const validAdminPasswords = [env.adminPassword, "123456", "407171248"];
-  logger.info({ username, match: validAdminUsernames.includes(username) && validAdminPasswords.includes(password) }, "Admin env credential check");
-
-  if (validAdminUsernames.includes(username) && validAdminPasswords.includes(password)) {
-    setSessionCookie(res, {
-      username: username === "123456" ? "123456" : username,
-      role: "admin",
-      displayName: "المشرف العام (Admin)",
-    });
-
-    res.json({
-      username: username === "123456" ? "123456" : username,
-      role: "admin",
-      displayName: "المشرف العام (Admin)",
+    adminUser = await verifySupabaseUser(username, password);
+  } catch (err) {
+    logger.error({ err }, "Account source unavailable during admin login");
+    res.status(503).json({
+      error: "تعذر الاتصال بقاعدة البيانات. يرجى المحاولة لاحقاً.",
     });
     return;
   }
 
-  res.status(401).json({ error: "بيانات دخول المشرف غير صحيحة." });
+  if (!adminUser) {
+    res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة." });
+    return;
+  }
+
+  if (adminUser.role !== "admin") {
+    res.status(403).json({
+      error: "عذراً، هذا الحساب ليس لديه صلاحيات الإدارة للدخول لبوابة المشرف.",
+    });
+    return;
+  }
+
+  setSessionCookie(res, {
+    username: adminUser.username,
+    userId: adminUser.id,
+    role: adminUser.role,
+    displayName: adminUser.display_name || adminUser.username,
+  });
+
+  res.json({
+    username: adminUser.username,
+    role: adminUser.role,
+    displayName: adminUser.display_name,
+  });
 });
 
 router.post("/auth/logout", (_req, res) => {

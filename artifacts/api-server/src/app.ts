@@ -46,7 +46,7 @@ app.use((req, _res, next) => {
     (req as any)._body = true;
   }
   // Ensure req.secret is always set for signed cookies (Vercel edge doesn't set it)
-  req.secret = env.sessionSecret;
+  (req as any).secret = env.sessionSecret;
   if (req.cookies && !req.signedCookies) {
     delete (req as any).cookies;
   }
