@@ -43,6 +43,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useLocation } from 'wouter';
 import { useGetCurrentUser, useLogout } from '@workspace/api-client-react';
+import { validatePassword, PASSWORD_POLICY } from '@workspace/api-zod';
 import { useQueryClient } from '@tanstack/react-query';
 
 export interface AppUser {
@@ -467,6 +468,19 @@ export default function AdminDashboardPage() {
       return;
     }
 
+    const passwordValidation = validatePassword(newUser.password, {
+      username: newUser.username,
+      email: newUser.email,
+    });
+    if (!passwordValidation.isValid) {
+      toast({
+        title: 'تنبيه أمان كلمة المرور',
+        description: passwordValidation.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Optional JSON validation on client
     if (newUser.google_service_account_json.trim()) {
       try {
@@ -715,8 +729,16 @@ ${handoverData.subscriptionEndDate ? `تاريخ الانتهاء: ${handoverDat
     e.preventDefault();
     if (!selectedUser || !newPassword.trim()) return;
 
-    if (newPassword.trim().length < 6) {
-      toast({ title: 'تنبيه', description: 'كلمة المرور يجب ألا تقل عن 6 خانات.', variant: 'destructive' });
+    const passwordValidation = validatePassword(newPassword, {
+      username: selectedUser.username,
+      email: selectedUser.email,
+    });
+    if (!passwordValidation.isValid) {
+      toast({
+        title: 'تنبيه أمان كلمة المرور',
+        description: passwordValidation.message,
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -1947,22 +1969,26 @@ ${handoverData.subscriptionEndDate ? `تاريخ الانتهاء: ${handoverDat
 
                 <div className="space-y-1">
                   <Label htmlFor="new_user_password" className="text-xs font-semibold">
-                    كلمة المرور * (6 خانات على الأقل)
+                    كلمة المرور * (8 خانات على الأقل)
                   </Label>
                   <Input
                     id="new_user_password"
                     required
                     type="password"
-                    minLength={6}
+                    minLength={PASSWORD_POLICY.MIN_LENGTH}
+                    maxLength={PASSWORD_POLICY.MAX_LENGTH}
                     autoComplete="new-password"
                     placeholder="••••••••"
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى إدخال كلمة مرور من 6 خانات أو أكثر')}
+                    onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity(`يرجى إدخال كلمة مرور من ${PASSWORD_POLICY.MIN_LENGTH} خانات على الأقل`)}
                     onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                     className="font-mono text-sm"
                     dir="ltr"
                   />
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {PASSWORD_POLICY.HELPER_TEXT_AR}
+                  </p>
                 </div>
 
                 <div className="space-y-1">
@@ -2287,23 +2313,27 @@ ${handoverData.subscriptionEndDate ? `تاريخ الانتهاء: ${handoverDat
             <form onSubmit={handleUpdatePassword} className="space-y-3.5">
               <div className="space-y-1">
                 <Label htmlFor="update_password_input" className="text-xs font-semibold">
-                  كلمة المرور الجديدة * (6 خانات على الأقل)
+                  كلمة المرور الجديدة * (8 خانات على الأقل)
                 </Label>
                 <Input
                   id="update_password_input"
                   required
                   type="password"
-                  minLength={6}
+                  minLength={PASSWORD_POLICY.MIN_LENGTH}
+                  maxLength={PASSWORD_POLICY.MAX_LENGTH}
                   autoComplete="new-password"
                   placeholder="أدخل كلمة المرور الجديدة..."
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى إدخال كلمة مرور من 6 خانات أو أكثر')}
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity(`يرجى إدخال كلمة مرور من ${PASSWORD_POLICY.MIN_LENGTH} خانات على الأقل`)}
                   onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                   className="font-mono text-sm"
                   dir="ltr"
                   autoFocus
                 />
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  {PASSWORD_POLICY.HELPER_TEXT_AR}
+                </p>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">

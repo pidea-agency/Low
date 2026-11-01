@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import crypto from "crypto";
+import { validatePassword } from "@workspace/api-zod";
 import { env, isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 
@@ -641,8 +642,12 @@ export async function createSupabaseUser(input: {
   if (!username) {
     throw new Error("اسم المستخدم مطلوب.");
   }
-  if (!password || password.length < 4) {
-    throw new Error("كلمة المرور يجب ألا تقل عن 4 خانات.");
+  const passwordValidation = validatePassword(password, {
+    username,
+    email: input.email,
+  });
+  if (!passwordValidation.isValid) {
+    throw new Error(passwordValidation.message);
   }
 
   const sanitizedGoogleJson = sanitizeGoogleServiceJson(input.google_service_account_json);
@@ -906,8 +911,12 @@ export async function updateSupabaseUser(
     }
     const user = local[index];
     if (input.password && input.password.trim()) {
-      if (input.password.trim().length < 4) {
-        throw new Error("كلمة المرور يجب ألا تقل عن 4 خانات.");
+      const passwordValidation = validatePassword(input.password, {
+        username: user.username,
+        email: input.email !== undefined ? input.email : user.email,
+      });
+      if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.message);
       }
       user.password_hash = await bcrypt.hash(input.password.trim(), 10);
     }
@@ -963,8 +972,22 @@ export async function updateSupabaseUser(
   const updates: Record<string, unknown> = {};
 
   if (input.password && input.password.trim()) {
-    if (input.password.trim().length < 4) {
-      throw new Error("كلمة المرور يجب ألا تقل عن 4 خانات.");
+    let existingUsername: string | undefined;
+    let existingEmail: string | undefined;
+    try {
+      const { data: existingUser } = await client.from(tableName).select("username, email").eq("id", id).maybeSingle();
+      if (existingUser) {
+        existingUsername = existingUser.username;
+        existingEmail = existingUser.email;
+      }
+    } catch {}
+
+    const passwordValidation = validatePassword(input.password, {
+      username: existingUsername,
+      email: input.email !== undefined ? input.email : existingEmail,
+    });
+    if (!passwordValidation.isValid) {
+      throw new Error(passwordValidation.message);
     }
     updates.password_hash = await bcrypt.hash(input.password.trim(), 10);
   }

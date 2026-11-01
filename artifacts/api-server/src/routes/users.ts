@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { validatePassword } from "@workspace/api-zod";
 import { attachAuthUser, requireAuth, requireAdmin } from "../middlewares/auth.middleware";
 import {
   listSupabaseUsers,
@@ -66,6 +67,12 @@ router.post("/users", requireAdmin, async (req, res) => {
       return;
     }
 
+    const passwordValidation = validatePassword(password, { username, email });
+    if (!passwordValidation.isValid) {
+      res.status(400).json({ error: passwordValidation.message, code: passwordValidation.reason });
+      return;
+    }
+
     const newUser = await createSupabaseUser({
       username,
       email,
@@ -113,6 +120,14 @@ router.patch("/users/:id", requireAdmin, async (req, res) => {
       google_spreadsheet_id,
       google_sheet_name,
     } = req.body;
+
+    if (password !== undefined && typeof password === "string" && password.trim() !== "") {
+      const passwordValidation = validatePassword(password, { email });
+      if (!passwordValidation.isValid) {
+        res.status(400).json({ error: passwordValidation.message, code: passwordValidation.reason });
+        return;
+      }
+    }
 
     const updatedUser = await updateSupabaseUser(id, {
       password,

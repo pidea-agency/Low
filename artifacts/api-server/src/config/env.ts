@@ -23,9 +23,47 @@ export class MissingEnvVarError extends Error {
   }
 }
 
+function parseDotEnvFile(): Record<string, string> {
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const candidates = [
+      path.resolve(process.cwd(), ".env"),
+      path.resolve(process.cwd(), "..", "..", ".env"),
+      path.resolve(__dirname, "..", "..", ".env"),
+      path.resolve(__dirname, "..", "..", "..", ".env"),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        const content = fs.readFileSync(p, "utf-8");
+        const parsed: Record<string, string> = {};
+        for (const line of content.split("\n")) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) continue;
+          const eq = trimmed.indexOf("=");
+          if (eq > 0) {
+            const k = trimmed.slice(0, eq).trim();
+            let v = trimmed.slice(eq + 1).trim();
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+              v = v.slice(1, -1);
+            }
+            parsed[k] = v;
+          }
+        }
+        return parsed;
+      }
+    }
+  } catch {}
+  return {};
+}
+
 function readEnv(key: string): string | undefined {
-  const value = process.env[key];
-  return value && value.trim().length > 0 ? value : undefined;
+  const fromProcess = process.env[key];
+  if (fromProcess && fromProcess.trim().length > 0) return fromProcess;
+
+  const dotEnv = parseDotEnvFile();
+  const fromFile = dotEnv[key];
+  return fromFile && fromFile.trim().length > 0 ? fromFile : undefined;
 }
 
 function requireEnv(key: string, hint?: string): string {
@@ -155,6 +193,23 @@ export const env = {
     const raw = readEnv("COURT_TIMEZONE_OFFSET_HOURS");
     const parsed = raw ? Number(raw) : 3; // Mecca / Riyadh = UTC+3
     return Number.isFinite(parsed) ? parsed : 3;
+  },
+
+  // --- Rate Limiting ---
+  get rateLimitLoginMaxPerAccount(): number {
+    const raw = readEnv("RATE_LIMIT_LOGIN_MAX_PER_ACCOUNT");
+    const parsed = raw ? parseInt(raw, 10) : 5;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+  },
+  get rateLimitLoginMaxPerIp(): number {
+    const raw = readEnv("RATE_LIMIT_LOGIN_MAX_PER_IP");
+    const parsed = raw ? parseInt(raw, 10) : 20;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
+  },
+  get rateLimitWindowMs(): number {
+    const raw = readEnv("RATE_LIMIT_WINDOW_MS");
+    const parsed = raw ? parseInt(raw, 10) : 15 * 60 * 1000; // 15 minutes default
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 15 * 60 * 1000;
   },
 
   get isProduction(): boolean {

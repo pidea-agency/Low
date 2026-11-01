@@ -14,7 +14,7 @@ describe("Session Invalidation & Current Account State Verification", () => {
     // 1. Create a temporary staff user
     const tempUser = await supabaseService.createSupabaseUser({
       username,
-      password: "password123",
+      password: "ValidPass123!",
       role: "staff",
     });
 
@@ -24,7 +24,7 @@ describe("Session Invalidation & Current Account State Verification", () => {
         .post("/api/auth/login")
         .send({
           username,
-          password: "password123",
+          password: "ValidPass123!",
         });
 
       expect(loginRes.status).toBe(200);
@@ -58,7 +58,7 @@ describe("Session Invalidation & Current Account State Verification", () => {
     // 1. Create a temporary admin user
     const tempAdmin = await supabaseService.createSupabaseUser({
       username,
-      password: "password123",
+      password: "ValidPass123!",
       role: "admin",
     });
 
@@ -68,7 +68,7 @@ describe("Session Invalidation & Current Account State Verification", () => {
         .post("/api/auth/admin-login")
         .send({
           username,
-          password: "password123",
+          password: "ValidPass123!",
         });
 
       expect(loginRes.status).toBe(200);
