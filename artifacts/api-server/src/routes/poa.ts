@@ -13,7 +13,7 @@ import moment from "moment-hijri";
 const router: IRouter = Router();
 
 // Stop all POA Excel Sheet read/write operations if subscription is suspended or expired
-router.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router.use("/poa", attachAuthUser, requireAuth, requireActiveSubscription);
 
 interface PoaRecord {
   clientName: string;

@@ -18978,14 +18978,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto3 = require("crypto");
+    var crypto4 = require("crypto");
     var Stats = require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto3.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto4.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -22472,17 +22472,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto3 = require("crypto");
+    var crypto4 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto3.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto4.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports2.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto3.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto4.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -24112,11 +24112,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto3 = require("crypto");
+    var crypto4 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto3.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto4.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -24125,7 +24125,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto3.createHash("sha1").update(str).digest("hex");
+      return crypto4.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -29077,11 +29077,11 @@ var init_env = __esm({
 // ../../node_modules/cookie-signature/index.js
 var require_cookie_signature3 = __commonJS({
   "../../node_modules/cookie-signature/index.js"(exports2) {
-    var crypto3 = require("crypto");
+    var crypto4 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto3.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto4.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -29090,7 +29090,7 @@ var require_cookie_signature3 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto3.createHash("sha1").update(str).digest("hex");
+      return crypto4.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -63951,6 +63951,7 @@ init_logger();
 // src/middlewares/auth.middleware.ts
 var import_cookie_signature = __toESM(require_cookie_signature3(), 1);
 init_env();
+init_logger();
 init_supabase_service();
 var SESSION_COOKIE_NAME = "court_session_auth";
 var SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1e3;
@@ -64074,43 +64075,73 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
-function requireActiveSubscription(req, res, next) {
+async function requireActiveSubscription(req, res, next) {
   if (!req.authUser) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
   if (req.authUser.role === "admin") {
-    return next();
+    next();
+    return;
   }
+  const identifier = req.authUser.userId || req.authUser.username;
+  const refId = `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
   try {
-    const { loadLocalUsers: loadLocalUsers2 } = (init_supabase_service(), __toCommonJS(supabase_service_exports));
-    const users = loadLocalUsers2();
-    const current = users.find(
-      (u) => u.id === req.authUser?.userId || u.username === req.authUser?.username
-    );
-    if (current) {
-      if (current.status === "suspended") {
-        res.status(403).json({
-          error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0625\u0643\u0633\u0644 \u0648\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A.",
-          isSuspended: true
-        });
-        return;
-      }
-      if (current.subscription_end_date) {
-        const expiry = new Date(current.subscription_end_date).getTime();
-        if (expiry < Date.now()) {
-          res.status(403).json({
-            error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0627\u0644\u0625\u0643\u0633\u0644 \u0648\u062A\u0648\u0644\u064A\u062F \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
-            isExpired: true,
-            subscription_end_date: current.subscription_end_date
-          });
-          return;
-        }
-      }
+    const current = await findUserByIdOrUsername(identifier);
+    if (!current) {
+      logger.warn({ refId, identifier }, "Subscription check failed: user not found in account source");
+      res.status(403).json({
+        error: "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0633\u062C\u0644 \u0641\u064A \u0645\u0635\u062F\u0631 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A \u0627\u0644\u0645\u0639\u062A\u0645\u062F.",
+        refId
+      });
+      return;
     }
+    if (current.role === "admin") {
+      next();
+      return;
+    }
+    if (current.status === "suspended") {
+      res.status(403).json({
+        error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0625\u0643\u0633\u0644 \u0648\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A.",
+        isSuspended: true,
+        refId
+      });
+      return;
+    }
+    if (!current.subscription_end_date) {
+      logger.warn({ refId, identifier, user: current.username }, "Subscription check failed: missing subscription_end_date");
+      res.status(403).json({
+        error: "\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062F \u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0644\u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645.",
+        refId
+      });
+      return;
+    }
+    const expiryTime = new Date(current.subscription_end_date).getTime();
+    if (isNaN(expiryTime)) {
+      logger.warn({ refId, identifier, invalidDate: current.subscription_end_date }, "Subscription check failed: invalid subscription_end_date");
+      res.status(403).json({
+        error: "\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0633\u062C\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629.",
+        refId
+      });
+      return;
+    }
+    if (expiryTime < Date.now()) {
+      res.status(403).json({
+        error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0627\u0644\u0625\u0643\u0633\u0644 \u0648\u062A\u0648\u0644\u064A\u062F \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
+        isExpired: true,
+        subscription_end_date: current.subscription_end_date,
+        refId
+      });
+      return;
+    }
+    next();
   } catch (err) {
+    logger.error({ err, refId, identifier }, "Subscription verification failed due to account source error");
+    res.status(503).json({
+      error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0628\u0633\u0628\u0628 \u0639\u062F\u0645 \u062A\u0648\u0641\u0631 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",
+      refId
+    });
   }
-  next();
 }
 
 // src/middlewares/rate-limiter.middleware.ts
@@ -82376,7 +82407,7 @@ var WhatsappReminderChannel = class {
 
 // src/routes/sessions.ts
 var router5 = (0, import_express5.Router)();
-router5.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router5.use("/sessions", attachAuthUser, requireAuth, requireActiveSubscription);
 function handleRouteError(res, err, defaultMsg) {
   if (err instanceof GoogleSheetsError) {
     res.status(err.statusCode).json({
@@ -82724,6 +82755,7 @@ var reports_default = router7;
 
 // src/routes/cron.ts
 var import_express8 = __toESM(require_express2(), 1);
+var import_crypto2 = __toESM(require("crypto"), 1);
 init_env();
 init_logger();
 
@@ -82896,16 +82928,24 @@ async function runReminderSweep() {
 
 // src/routes/cron.ts
 var router8 = (0, import_express8.Router)();
+function safeCompare(a, b) {
+  const hashA = import_crypto2.default.createHash("sha256").update(a).digest();
+  const hashB = import_crypto2.default.createHash("sha256").update(b).digest();
+  return import_crypto2.default.timingSafeEqual(hashA, hashB);
+}
 router8.get("/cron/reminders", async (req, res) => {
   const secret = env.cronSecret;
-  if (secret) {
-    const authHeader = req.headers["authorization"] ?? "";
-    const provided = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (provided !== secret) {
-      logger.warn({ ip: req.ip }, "Cron reminder endpoint: unauthorized request rejected");
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
+  if (!secret || !secret.trim()) {
+    logger.error("Cron reminder endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+  const authHeader = req.headers["authorization"] ?? "";
+  const provided = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!provided || !safeCompare(provided, secret.trim())) {
+    logger.warn({ ip: req.ip }, "Cron reminder endpoint: unauthorized request rejected");
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
   if (!isGoogleSheetsConfigured()) {
     res.status(503).json({ ok: false, message: "Google Sheets is not configured yet." });
@@ -82930,7 +82970,7 @@ var import_express9 = __toESM(require_express2(), 1);
 init_logger();
 var import_moment_hijri2 = __toESM(require_moment_hijri(), 1);
 var router9 = (0, import_express9.Router)();
-router9.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router9.use("/poa", attachAuthUser, requireAuth, requireActiveSubscription);
 function calcDaysFromHijri(hijriDateStr) {
   if (!hijriDateStr?.trim()) return 0;
   try {
@@ -83073,7 +83113,7 @@ var poa_default = router9;
 var import_express10 = __toESM(require_express2(), 1);
 init_logger();
 var router10 = (0, import_express10.Router)();
-router10.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router10.use("/judgments", attachAuthUser, requireAuth, requireActiveSubscription);
 function normalizeJudgmentType(val) {
   const trimmed = (val || "").trim();
   if (trimmed === "\u0627\u0628\u062A\u062F\u0627\u0626\u064A" || trimmed === "\u0644\u0627") return "\u0627\u0628\u062A\u062F\u0627\u0626\u064A";
@@ -83254,7 +83294,7 @@ var judgments_default = router10;
 var import_express11 = __toESM(require_express2(), 1);
 init_logger();
 var router11 = (0, import_express11.Router)();
-router11.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router11.use("/tasks", attachAuthUser, requireAuth, requireActiveSubscription);
 var FIELD_KEYS2 = {
   "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629": "title",
   "\u0627\u0644\u0645\u0643\u0644\u0641": "assignee",
@@ -83447,7 +83487,7 @@ init_supabase_service();
 init_env();
 init_logger();
 var router12 = (0, import_express12.Router)();
-router12.use(attachAuthUser, requireAdmin);
+router12.use("/users", attachAuthUser, requireAdmin);
 router12.get("/users", async (_req, res) => {
   try {
     const isConfigured = isSupabaseConfigured();

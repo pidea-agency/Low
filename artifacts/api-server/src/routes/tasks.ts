@@ -14,7 +14,7 @@ import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappC
 const router: IRouter = Router();
 
 // Stop all Tasks Excel Sheet read/write operations if subscription is suspended or expired
-router.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router.use("/tasks", attachAuthUser, requireAuth, requireActiveSubscription);
 
 export interface TaskRecord {
   id: number;

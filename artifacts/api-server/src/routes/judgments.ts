@@ -13,7 +13,7 @@ import {
 const router: IRouter = Router();
 
 // Stop all Judgment Excel Sheet read/write operations if subscription is suspended or expired
-router.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router.use("/judgments", attachAuthUser, requireAuth, requireActiveSubscription);
 
 export interface JudgmentRecord {
   id: number;

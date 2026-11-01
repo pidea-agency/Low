@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import cookieSignature from "cookie-signature";
 import { env } from "../config/env";
+import { logger } from "../lib/logger";
 import {
   findUserByIdOrUsername,
   getUserSessionVersion,
@@ -221,17 +222,16 @@ export function requireAdmin(
 }
 
 /**
- * Rejects requests with 403 if the user's subscription is suspended or expired.
- * Stops access to:
- * - Excel data read/write (sessions, tasks, poa, judgments)
- * - Report generation and saving
- * - AI message extraction
+ * Rejects requests with 403 if the user's subscription is suspended, expired, or invalid.
+ * Rejects requests with 503 if the subscription state cannot be verified (e.g. database error).
+ * Fails closed: ONLY verified active subscriptions call next().
+ * Admins always retain their management access.
  */
-export function requireActiveSubscription(
+export async function requireActiveSubscription(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   if (!req.authUser) {
     res.status(401).json({ error: "Not authenticated" });
     return;
@@ -239,41 +239,77 @@ export function requireActiveSubscription(
 
   // Admins always have access
   if (req.authUser.role === "admin") {
-    return next();
+    next();
+    return;
   }
+
+  const identifier = req.authUser.userId || req.authUser.username;
+  const refId = `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
   try {
-    const { loadLocalUsers } = require("../services/supabase.service");
-    const users = loadLocalUsers();
-    const current = users.find(
-      (u: any) => u.id === req.authUser?.userId || u.username === req.authUser?.username,
-    );
+    // Check real account state from trusted server source (Supabase / local store)
+    const current = await findUserByIdOrUsername(identifier);
 
-    if (current) {
-      if (current.status === "suspended") {
-        res.status(403).json({
-          error: "تم إيقاف اشتراك هذا الحساب مؤقتاً من قِبل إدارة المنظومة. تم إيقاف المزامنة مع الإكسل والتقارير والذكاء الاصطناعي.",
-          isSuspended: true,
-        });
-        return;
-      }
-
-      if (current.subscription_end_date) {
-        const expiry = new Date(current.subscription_end_date).getTime();
-        if (expiry < Date.now()) {
-          res.status(403).json({
-            error: "عذراً، انتهت فترة اشتراكك في المنظومة. تم إيقاف اتصال النظام بالإكسل وتوليد التقارير وتحليل الرسائل بالذكاء الاصطناعي. يرجى التواصل مع المشرف العام لتجديد الاشتراك.",
-            isExpired: true,
-            subscription_end_date: current.subscription_end_date,
-          });
-          return;
-        }
-      }
+    if (!current) {
+      logger.warn({ refId, identifier }, "Subscription check failed: user not found in account source");
+      res.status(403).json({
+        error: "حساب المستخدم غير مسجل في مصدر الحسابات المعتمد.",
+        refId,
+      });
+      return;
     }
-  } catch (err) {
-    // If lookup fails, allow next
-  }
 
-  next();
+    if (current.role === "admin") {
+      next();
+      return;
+    }
+
+    if (current.status === "suspended") {
+      res.status(403).json({
+        error: "تم إيقاف اشتراك هذا الحساب مؤقتاً من قِبل إدارة المنظومة. تم إيقاف المزامنة مع الإكسل والتقارير والذكاء الاصطناعي.",
+        isSuspended: true,
+        refId,
+      });
+      return;
+    }
+
+    if (!current.subscription_end_date) {
+      logger.warn({ refId, identifier, user: current.username }, "Subscription check failed: missing subscription_end_date");
+      res.status(403).json({
+        error: "لم يتم تحديد تاريخ انتهاء الاشتراك لهذا الحساب. يرجى التواصل مع المشرف العام.",
+        refId,
+      });
+      return;
+    }
+
+    const expiryTime = new Date(current.subscription_end_date).getTime();
+    if (isNaN(expiryTime)) {
+      logger.warn({ refId, identifier, invalidDate: current.subscription_end_date }, "Subscription check failed: invalid subscription_end_date");
+      res.status(403).json({
+        error: "تاريخ انتهاء الاشتراك المسجل غير صالح. يرجى مراجعة إدارة المنظومة.",
+        refId,
+      });
+      return;
+    }
+
+    if (expiryTime < Date.now()) {
+      res.status(403).json({
+        error: "عذراً، انتهت فترة اشتراكك في المنظومة. تم إيقاف اتصال النظام بالإكسل وتوليد التقارير وتحليل الرسائل بالذكاء الاصطناعي. يرجى التواصل مع المشرف العام لتجديد الاشتراك.",
+        isExpired: true,
+        subscription_end_date: current.subscription_end_date,
+        refId,
+      });
+      return;
+    }
+
+    // Only reached when subscription is verified active
+    next();
+  } catch (err: any) {
+    logger.error({ err, refId, identifier }, "Subscription verification failed due to account source error");
+    res.status(503).json({
+      error: "تعذر التحقق من حالة الاشتراك بسبب عدم توفر قاعدة البيانات. يرجى المحاولة لاحقاً.",
+      refId,
+    });
+  }
 }
 

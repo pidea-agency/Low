@@ -1,9 +1,20 @@
 import { Router, type IRouter } from "express";
+import crypto from "crypto";
 import { env, isGoogleSheetsConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { runReminderSweep } from "../scheduler/reminderScheduler";
 
 const router: IRouter = Router();
+
+/**
+ * Constant-time string comparison using SHA-256 and crypto.timingSafeEqual
+ * to prevent timing attacks regardless of string length or characters.
+ */
+function safeCompare(a: string, b: string): boolean {
+  const hashA = crypto.createHash("sha256").update(a).digest();
+  const hashB = crypto.createHash("sha256").update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
 
 /**
  * GET /api/cron/reminders
@@ -13,20 +24,28 @@ const router: IRouter = Router();
  * cron request, so we validate that token before running the sweep.
  *
  * Can also be called manually (e.g. for testing) by passing the same bearer token.
+ *
+ * Fail-Closed: If CRON_SECRET is not configured or empty, requests are rejected with 500.
+ * Requests without valid credentials are rejected with 401.
  */
 router.get("/cron/reminders", async (req, res) => {
-  // --- Authentication ---
+  // --- Authentication (Fail-Closed) ---
   const secret = env.cronSecret;
-  if (secret) {
-    const authHeader = req.headers["authorization"] ?? "";
-    const provided = authHeader.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : null;
-    if (provided !== secret) {
-      logger.warn({ ip: req.ip }, "Cron reminder endpoint: unauthorized request rejected");
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
+  if (!secret || !secret.trim()) {
+    logger.error("Cron reminder endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+
+  const authHeader = req.headers["authorization"] ?? "";
+  const provided = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : null;
+
+  if (!provided || !safeCompare(provided, secret.trim())) {
+    logger.warn({ ip: req.ip }, "Cron reminder endpoint: unauthorized request rejected");
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
   // --- Guard: sheets not configured yet ---

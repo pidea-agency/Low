@@ -45,7 +45,7 @@
     "role": "staff",
     "display_name": "المحامي الافتراضي",
     "status": "active",
-    "subscription_end_date": "2027-10-13T12:53:30.114Z",
+    "subscription_end_date": "2026-12-01",
     "subscription_notes": "اشتراك سنوي معتمد (باقة بلس - Plus)",
     "plan_tier": "plus",
     "billing_cycle": "annual",
@@ -55,6 +55,7 @@
     "google_spreadsheet_id": null,
     "google_sheet_name": null,
     "password_hash": "$2a$10$wK29Wma9r/TBgJ/Q5uYN2urFUuCTKnKhwiZtqf8VGmlWcrDSDa79y",
-    "created_at": "2026-10-13T12:53:30.116Z"
+    "created_at": "2026-10-13T12:53:30.116Z",
+    "google_service_account_json": null
   }
 ]

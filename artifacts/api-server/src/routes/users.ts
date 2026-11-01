@@ -14,7 +14,7 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 // Require admin authentication on all user management routes
-router.use(attachAuthUser, requireAdmin);
+router.use("/users", attachAuthUser, requireAdmin);
 
 /**
  * GET /api/users

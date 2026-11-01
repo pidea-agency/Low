@@ -27,7 +27,7 @@ import type { Response } from "express";
 const router: IRouter = Router();
 
 // Stop all Excel Sheet read/write operations if the user's subscription is suspended or expired
-router.use(attachAuthUser, requireAuth, requireActiveSubscription);
+router.use("/sessions", attachAuthUser, requireAuth, requireActiveSubscription);
 
 function handleRouteError(res: Response, err: any, defaultMsg: string): void {
   if (err instanceof GoogleSheetsError) {
