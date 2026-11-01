@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthGuard } from '@/components/auth-guard';
 import { AdminGuard } from '@/components/admin-guard';
+import { RequireRole } from '@/components/require-role';
 import { Sidebar } from '@/components/sidebar';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Route, Switch, Redirect, Router as WouterRouter } from 'wouter';
@@ -149,11 +150,11 @@ function Router() {
         </AuthGuard>
       </Route>
       <Route path="/settings">
-        <AuthGuard>
+        <RequireRole roles={['admin']}>
           <AppShell>
             <SettingsPage />
           </AppShell>
-        </AuthGuard>
+        </RequireRole>
       </Route>
       <Route path="/reports">
         <AuthGuard>

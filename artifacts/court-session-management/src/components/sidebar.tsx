@@ -5,21 +5,7 @@ import { useLogout, useGetCurrentUser } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalSearch } from './global-search';
-
-const baseNavigation = [
-  { name: 'لوحة التحكم', path: '/', icon: LayoutDashboard },
-  { name: 'تحليل رسالة', path: '/chat', icon: MessageSquare },
-  { name: 'جميع الجلسات', path: '/sessions', icon: Calendar },
-  { name: 'تقارير الجلسات', path: '/reports', icon: FileText },
-  { name: 'الوكالات', path: '/poa', icon: ShieldCheck },
-  { name: 'الأحكام', path: '/judgments', icon: Gavel },
-  { name: 'المهام', path: '/tasks', icon: CheckSquare },
-];
-
-const adminNavigation = [
-  { name: 'بوابة المشرف العام', path: '/admin', icon: Shield },
-  { name: 'إعدادات النظام', path: '/settings', icon: Settings },
-];
+import { getNavItemsForRole } from '@/config/navigation';
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -102,7 +88,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           القائمة الرئيسية
         </p>
 
-        {(user?.role === 'admin' ? [...baseNavigation, ...adminNavigation] : baseNavigation).map((item) => {
+        {getNavItemsForRole(user?.role).map((item) => {
           const isActive = location === item.path;
           const Icon = item.icon;
 

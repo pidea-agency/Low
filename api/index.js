@@ -33151,6 +33151,13 @@ var init_password_policy = __esm({
   }
 });
 
+// ../../lib/api-zod/src/navigation-policy.ts
+var init_navigation_policy = __esm({
+  "../../lib/api-zod/src/navigation-policy.ts"() {
+    "use strict";
+  }
+});
+
 // ../../lib/api-zod/src/index.ts
 var init_src = __esm({
   "../../lib/api-zod/src/index.ts"() {
@@ -33158,6 +33165,7 @@ var init_src = __esm({
     init_api();
     init_types2();
     init_password_policy();
+    init_navigation_policy();
   }
 });
 

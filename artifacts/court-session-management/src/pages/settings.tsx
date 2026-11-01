@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
+import { useGetCurrentUser } from '@workspace/api-client-react';
 import {
   Save,
   Eye,
@@ -9,6 +11,8 @@ import {
   Sheet,
   MessageSquare,
   Send,
+  ShieldAlert,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,6 +144,8 @@ function SettingField({
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const { data: currentUser, isLoading: userLoading } = useGetCurrentUser();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -174,6 +180,8 @@ export default function SettingsPage() {
   const [maskedWaToken, setMaskedWaToken] = useState('');
 
   useEffect(() => {
+    if (userLoading || currentUser?.role !== 'admin') return;
+
     setLoading(true);
     fetchSettings()
       .then((data) => {
@@ -203,7 +211,7 @@ export default function SettingsPage() {
         toast({ title: 'خطأ', description: msg, variant: 'destructive' });
       })
       .finally(() => setLoading(false));
-  }, [toast]);
+  }, [userLoading, currentUser, toast]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -270,6 +278,39 @@ export default function SettingsPage() {
 
   const field = (k: keyof SettingsFormState, v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="text-xs text-muted-foreground">جارٍ التحقق من الصلاحيات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-8 text-center" dir="rtl">
+        <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-4 text-destructive shadow-sm">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold mb-2 text-foreground">غير مصرح بالوصول</h2>
+        <p className="text-sm text-muted-foreground mb-6 max-w-md leading-relaxed" data-testid="text-forbidden-message">
+          ليس لديك صلاحية للوصول إلى هذه الصفحة.
+        </p>
+        <Button
+          onClick={() => navigate('/')}
+          className="gap-2 font-medium"
+          data-testid="button-return-dashboard"
+        >
+          <ArrowRight className="w-4 h-4" />
+          العودة إلى لوحة التحكم
+        </Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
