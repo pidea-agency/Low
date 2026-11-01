@@ -17,15 +17,34 @@ import {
   computeDaysRemainingStr,
 } from "../services/session.service";
 import { isGoogleSheetsConfigured } from "../config/env";
+import { GoogleSheetsError } from "../services/googleSheets.service";
 import { logger } from "../lib/logger";
 import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
 import { computeHearingDateTime } from "../utils/hijri";
+import type { Response } from "express";
 
 const router: IRouter = Router();
 
 // Stop all Excel Sheet read/write operations if the user's subscription is suspended or expired
 router.use(attachAuthUser, requireAuth, requireActiveSubscription);
+
+function handleRouteError(res: Response, err: any, defaultMsg: string): void {
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: `تعذر الاتصال بمصدر البيانات. ${err.userMessage} رقم المرجع: ${err.refId}`,
+      refId: err.refId,
+    });
+    return;
+  }
+  const isClockError =
+    String(err?.message || "").includes("invalid_grant") ||
+    String(err?.stack || "").includes("invalid_grant");
+  const errorMsg = isClockError
+    ? "فشل الاتصال بـ Google Sheets بسبب عدم تزامن تاريخ وتوقيت الجهاز مع سيرفرات Google (invalid_grant)."
+    : err?.message || defaultMsg;
+  res.status(500).json({ error: errorMsg });
+}
 
 function unconfiguredResponse(): { error: string } {
   return {
@@ -47,11 +66,7 @@ router.get("/sessions", async (req, res) => {
     res.json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to list sessions");
-    const isClockError = String(err?.message || "").includes("invalid_grant") || String(err?.stack || "").includes("invalid_grant");
-    const errorMsg = isClockError
-      ? "فشل الاتصال بـ Google Sheets بسبب عدم تزامن تاريخ وتوقيت الجهاز مع سيرفرات Google (invalid_grant)."
-      : (err?.message || "فشل تحميل قائمة الجلسات.");
-    res.status(500).json({ error: errorMsg });
+    handleRouteError(res, err, "فشل تحميل قائمة الجلسات.");
   }
 });
 
@@ -75,7 +90,7 @@ router.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
     res.status(201).json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to create session");
-    res.status(500).json({ error: err?.message || "فشل إنشاء الجلسة." });
+    handleRouteError(res, err, "فشل إنشاء الجلسة.");
   }
 });
 
@@ -96,7 +111,7 @@ router.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     res.json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to load session");
-    res.status(500).json({ error: err?.message || "فشل تحميل الجلسة." });
+    handleRouteError(res, err, "فشل تحميل الجلسة.");
   }
 });
 
@@ -122,7 +137,7 @@ router.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     res.json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to update session");
-    res.status(500).json({ error: err?.message || "فشل تحديث الجلسة." });
+    handleRouteError(res, err, "فشل تحديث الجلسة.");
   }
 });
 
@@ -142,7 +157,7 @@ router.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => 
     res.status(204).send();
   } catch (err: any) {
     logger.error({ err }, "Failed to delete session");
-    res.status(500).json({ error: err?.message || "فشل حذف الجلسة." });
+    handleRouteError(res, err, "فشل حذف الجلسة.");
   }
 });
 

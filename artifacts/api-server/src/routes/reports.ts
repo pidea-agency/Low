@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
 import { getSessionReport, saveSessionReport } from "../services/session.service";
 import { isGoogleSheetsConfigured } from "../config/env";
+import { GoogleSheetsError } from "../services/googleSheets.service";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -23,6 +24,14 @@ router.get("/sessions/:id/report", attachAuthUser, requireAuth, requireActiveSub
     }
     res.json(report);
   } catch (err: any) {
+    if (err instanceof GoogleSheetsError) {
+      logger.error({ err, refId: err.refId, id }, "Google Sheets failure in GET /sessions/:id/report");
+      res.status(err.statusCode).json({
+        error: `تعذر الاتصال بمصدر البيانات. ${err.userMessage} رقم المرجع: ${err.refId}`,
+        refId: err.refId,
+      });
+      return;
+    }
     logger.error({ err }, "Failed to fetch session report");
     res.status(500).json({ error: err?.message || "Failed to fetch session report." });
   }
@@ -47,6 +56,14 @@ router.put("/sessions/:id/report", attachAuthUser, requireAuth, requireActiveSub
     logger.info({ id }, "Session report saved successfully");
     res.json(updated);
   } catch (err: any) {
+    if (err instanceof GoogleSheetsError) {
+      logger.error({ err, refId: err.refId, id }, "Google Sheets failure in PUT /sessions/:id/report");
+      res.status(err.statusCode).json({
+        error: `تعذر الاتصال بمصدر البيانات. ${err.userMessage} رقم المرجع: ${err.refId}`,
+        refId: err.refId,
+      });
+      return;
+    }
     logger.error({ err }, "Failed to save session report");
     res.status(500).json({ error: err?.message || "Failed to save session report." });
   }

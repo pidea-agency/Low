@@ -32,6 +32,184 @@ export const SHEET_COLUMNS = [
 
 export type SheetRow = string[];
 
+// ============================================================================
+// Typed Error Hierarchy for Google Sheets Integration
+// ============================================================================
+
+export class GoogleSheetsError extends Error {
+  public readonly refId: string;
+  public readonly statusCode: number;
+  public readonly userMessage: string;
+
+  constructor(message: string, statusCode: number, userMessage: string, refId?: string) {
+    super(message);
+    this.name = "GoogleSheetsError";
+    this.refId =
+      refId ||
+      `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    this.statusCode = statusCode;
+    this.userMessage = userMessage;
+  }
+}
+
+export class GoogleSheetsConfigError extends GoogleSheetsError {
+  constructor(message: string, refId?: string) {
+    super(
+      message,
+      503,
+      "إعدادات Google Sheets غير مكتملة. يرجى تزويد ملف Service Account ومعرف جدول البيانات.",
+      refId,
+    );
+    this.name = "GoogleSheetsConfigError";
+  }
+}
+
+export class GoogleSheetsAuthError extends GoogleSheetsError {
+  constructor(message: string, refId?: string) {
+    super(
+      message,
+      503,
+      "فشل التحقق من هوية حساب الخدمة لدى Google (Authentication Failed).",
+      refId,
+    );
+    this.name = "GoogleSheetsAuthError";
+  }
+}
+
+export class GoogleSheetsPermissionError extends GoogleSheetsError {
+  constructor(message: string, refId?: string) {
+    super(
+      message,
+      503,
+      "تعذر الوصول إلى جدول البيانات: يرجى مشاركة الجدول مع البريد الإلكتروني لحساب الخدمة ومنحه صلاحية محرر (Editor).",
+      refId,
+    );
+    this.name = "GoogleSheetsPermissionError";
+  }
+}
+
+export class GoogleSheetsNotFoundError extends GoogleSheetsError {
+  constructor(message: string, refId?: string) {
+    super(
+      message,
+      502,
+      "جدول البيانات غير موجود أو تم حذفه (Spreadsheet Not Found).",
+      refId,
+    );
+    this.name = "GoogleSheetsNotFoundError";
+  }
+}
+
+export class GoogleSheetsRangeError extends GoogleSheetsError {
+  constructor(message: string, refId?: string) {
+    super(
+      message,
+      502,
+      "تعذر قراءة ورقة العمل أو النطاق المحدد (Worksheet Range Error).",
+      refId,
+    );
+    this.name = "GoogleSheetsRangeError";
+  }
+}
+
+export class GoogleSheetsNetworkError extends GoogleSheetsError {
+  constructor(message: string, refId?: string) {
+    super(
+      message,
+      504,
+      "تعذر الاتصال بخوادم Google بسبب انقطاع الشبكة أو انتهاء المهلة (Network Timeout).",
+      refId,
+    );
+    this.name = "GoogleSheetsNetworkError";
+  }
+}
+
+export function maskIdentifier(val?: string | null): string {
+  if (!val) return "(none)";
+  if (val.length <= 4) return "****";
+  return `****${val.slice(-4)}`;
+}
+
+export function classifyGoogleError(
+  err: any,
+  operation: string,
+  meta?: { spreadsheetId?: string; sheetName?: string; userId?: string },
+): GoogleSheetsError {
+  if (err instanceof GoogleSheetsError) {
+    return err;
+  }
+
+  const rawMsg = String(err?.message || err || "");
+  const status = Number(err?.status || err?.code || err?.response?.status || 0);
+  const maskedId = meta?.spreadsheetId ? maskIdentifier(meta.spreadsheetId) : undefined;
+
+  let classified: GoogleSheetsError;
+
+  if (
+    status === 401 ||
+    rawMsg.includes("invalid_grant") ||
+    rawMsg.includes("Unauthorized") ||
+    rawMsg.includes("unauthorized_client") ||
+    rawMsg.includes("Authentication with Google failed")
+  ) {
+    classified = new GoogleSheetsAuthError(`Google Auth Failure in ${operation}: ${rawMsg}`);
+  } else if (
+    status === 403 ||
+    rawMsg.includes("The caller does not have permission") ||
+    rawMsg.includes("PERMISSION_DENIED") ||
+    rawMsg.includes("does not have permission")
+  ) {
+    classified = new GoogleSheetsPermissionError(`Google Permission Denied in ${operation}: ${rawMsg}`);
+  } else if (
+    status === 404 ||
+    rawMsg.includes("Requested entity was not found") ||
+    rawMsg.includes("NOT_FOUND") ||
+    rawMsg.includes("Spreadsheet not found")
+  ) {
+    classified = new GoogleSheetsNotFoundError(`Google Spreadsheet Not Found in ${operation}: ${rawMsg}`);
+  } else if (
+    status === 400 ||
+    rawMsg.includes("Unable to parse range") ||
+    rawMsg.includes("badRequest") ||
+    rawMsg.includes("Sheet tab")
+  ) {
+    classified = new GoogleSheetsRangeError(`Google Sheets Range Error in ${operation}: ${rawMsg}`);
+  } else if (
+    rawMsg.includes("ETIMEDOUT") ||
+    rawMsg.includes("ECONNRESET") ||
+    rawMsg.includes("ECONNREFUSED") ||
+    rawMsg.includes("ENOTFOUND") ||
+    rawMsg.includes("network timeout") ||
+    rawMsg.includes("timed out") ||
+    status === 504
+  ) {
+    classified = new GoogleSheetsNetworkError(`Google Network Timeout in ${operation}: ${rawMsg}`);
+  } else {
+    classified = new GoogleSheetsError(
+      `Google API Error in ${operation}: ${rawMsg}`,
+      502,
+      "تعذر معالجة طلب بيانات الجلسات مع خادم Google.",
+    );
+  }
+
+  logger.error(
+    {
+      operation,
+      refId: classified.refId,
+      status: classified.statusCode,
+      googleStatus: status,
+      errorName: classified.name,
+      maskedSpreadsheetId: maskedId,
+      sheetName: meta?.sheetName,
+      userId: meta?.userId,
+      googleMessage: rawMsg.slice(0, 300),
+    },
+    `[GoogleSheets Diagnostic] ${operation} failed with ${classified.name} (refId: ${classified.refId})`,
+  );
+
+  return classified;
+}
+
 let defaultSheetsClient: sheets_v4.Sheets | null = null;
 const userClientsMap = new Map<string, sheets_v4.Sheets>();
 
@@ -42,17 +220,21 @@ function getDefaultClient(): sheets_v4.Sheets {
       private_key?: string;
     } | null;
     if (!credentials || !credentials.client_email || !credentials.private_key) {
-      throw new Error(
+      throw new GoogleSheetsConfigError(
         "ملف Google Service Account JSON غير محدد في النظام. يرجى إضافته في بيانات المستخدم أو في متغيرات البيئة.",
       );
     }
-    const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-    const auth = new google.auth.JWT({
-      email: credentials.client_email,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    defaultSheetsClient = google.sheets({ version: "v4", auth });
+    try {
+      const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+      const auth = new google.auth.JWT({
+        email: credentials.client_email,
+        key: privateKey,
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+      });
+      defaultSheetsClient = google.sheets({ version: "v4", auth });
+    } catch (err) {
+      throw classifyGoogleError(err, "getDefaultClient");
+    }
   }
   return defaultSheetsClient;
 }
@@ -79,20 +261,24 @@ export async function getGoogleContext(userId?: string): Promise<GoogleContext> 
       if (credentials.client_email && credentials.private_key) {
         let client = userClientsMap.get(userId);
         if (!client) {
-          const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-          const auth = new google.auth.JWT({
-            email: credentials.client_email,
-            key: privateKey,
-            scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-          });
-          client = google.sheets({ version: "v4", auth });
-          userClientsMap.set(userId, client);
+          try {
+            const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+            const auth = new google.auth.JWT({
+              email: credentials.client_email,
+              key: privateKey,
+              scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+            });
+            client = google.sheets({ version: "v4", auth });
+            userClientsMap.set(userId, client);
+          } catch (err) {
+            throw classifyGoogleError(err, "getGoogleContext.createClient", { userId });
+          }
         }
 
         const spreadsheetId = (userCreds.spreadsheetId && userCreds.spreadsheetId.trim())
           || env.googleSpreadsheetId;
         if (!spreadsheetId) {
-          throw new Error("معرّف جدول Google Spreadsheet ID غير محدد لهذا المستخدم.");
+          throw new GoogleSheetsConfigError("معرّف جدول Google Spreadsheet ID غير محدد لهذا المستخدم.");
         }
 
         const sheetName = (userCreds.sheetName && userCreds.sheetName.trim())
@@ -106,8 +292,8 @@ export async function getGoogleContext(userId?: string): Promise<GoogleContext> 
   // Global default fallback
   const globalSpreadsheetId = env.googleSpreadsheetId;
   if (!globalSpreadsheetId) {
-    throw new Error(
-      "لم يتم إعداد Google Sheets. يرجى إدخال ملف Google Service Account JSON ومعرف الجدول (Spreadsheet ID) في بيانات المستخدم من لوحة الإدارة.",
+    throw new GoogleSheetsConfigError(
+      "لم يتم إعداد Google Sheets. يرجى إدخال ملف Google Service Account JSON ومعرف الجدول (Spreadsheet ID) في بيانات المستخدم من لوحة الإدارة أو متغيرات البيئة.",
     );
   }
 
@@ -120,24 +306,34 @@ export async function getGoogleContext(userId?: string): Promise<GoogleContext> 
 
 /** Resolves the numeric sheet (tab) id needed for row delete operations. */
 async function getSheetId(ctx: GoogleContext): Promise<number> {
-  const spreadsheet = await ctx.sheets.spreadsheets.get({
-    spreadsheetId: ctx.spreadsheetId,
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === ctx.sheetName,
-  );
-  if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
-    throw new Error(
-      `Sheet tab "${ctx.sheetName}" was not found in the configured spreadsheet.`,
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId,
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === ctx.sheetName,
     );
+    if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
+      throw new GoogleSheetsRangeError(
+        `Sheet tab "${ctx.sheetName}" was not found in the configured spreadsheet.`,
+      );
+    }
+    return sheet.properties.sheetId;
+  } catch (err) {
+    throw classifyGoogleError(err, "getSheetId", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName });
   }
-  return sheet.properties.sheetId;
 }
 
 /** Ensures the target sheet tab exists with the expected header row. Safe to call repeatedly. */
 export async function ensureSheetReady(userId?: string): Promise<void> {
+  let ctx: GoogleContext;
   try {
-    const ctx = await getGoogleContext(userId);
+    ctx = await getGoogleContext(userId);
+  } catch (err) {
+    throw classifyGoogleError(err, "ensureSheetReady.getContext", { userId });
+  }
+
+  try {
     const spreadsheet = await ctx.sheets.spreadsheets.get({
       spreadsheetId: ctx.spreadsheetId,
     });
@@ -156,26 +352,30 @@ export async function ensureSheetReady(userId?: string): Promise<void> {
 
     await ctx.sheets.spreadsheets.values.update({
       spreadsheetId: ctx.spreadsheetId,
-      range: `${ctx.sheetName}!A1:Q1`,
+      range: `'${ctx.sheetName}'!A1:Q1`,
       valueInputOption: "RAW",
       requestBody: { values: [[...SHEET_COLUMNS]] },
     });
   } catch (err) {
-    logger.warn({ err, userId }, "ensureSheetReady non-fatal warning");
+    logger.warn({ err, userId, refId: (err as any)?.refId }, "ensureSheetReady non-fatal warning");
   }
 }
 
 /** Returns every data row (excluding the header) as `{ id, values }`, where `id` is the 1-based sheet row number. */
 export async function listRows(userId?: string): Promise<{ id: number; values: SheetRow }[]> {
   const ctx = await getGoogleContext(userId);
-  const response = await ctx.sheets.spreadsheets.values.get({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${ctx.sheetName}!A2:Q`,
-  });
-  const rows = response.data.values ?? [];
-  return rows
-    .map((row, index) => ({ id: index + 2, values: row as SheetRow }))
-    .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
+  try {
+    const response = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A2:Q`,
+    });
+    const rows = response.data.values ?? [];
+    return rows
+      .map((row, index) => ({ id: index + 2, values: row as SheetRow }))
+      .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
+  } catch (err) {
+    throw classifyGoogleError(err, "listRows", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }
 
 /** Appends a new row (filling the first empty row if available) and returns its 1-based sheet row id. */
@@ -186,7 +386,7 @@ export async function appendRow(values: SheetRow, userId?: string): Promise<numb
   try {
     const existing = await ctx.sheets.spreadsheets.values.get({
       spreadsheetId: ctx.spreadsheetId,
-      range: `${ctx.sheetName}!A2:Q`,
+      range: `'${ctx.sheetName}'!A2:Q`,
     });
     const rawRows = existing.data.values ?? [];
 
@@ -211,36 +411,44 @@ export async function appendRow(values: SheetRow, userId?: string): Promise<numb
     logger.warn({ err, userId }, "Failed to check empty rows before append, falling back to append API");
   }
 
-  const response = await ctx.sheets.spreadsheets.values.append({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${ctx.sheetName}!A:Q`,
-    valueInputOption: "RAW",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [values] },
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) {
-    return Number(match[1]);
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A:Q`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [values] },
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) {
+      return Number(match[1]);
+    }
+    logger.warn({ updatedRange, userId }, "Could not parse appended row id from Sheets response");
+    const rows = await listRows(userId);
+    const last = rows[rows.length - 1];
+    if (!last) {
+      throw new GoogleSheetsError("Failed to determine id of newly created session row.", 502, "تعذر تحديد معرّف السطر المضاف.");
+    }
+    return last.id;
+  } catch (err) {
+    throw classifyGoogleError(err, "appendRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
   }
-  logger.warn({ updatedRange, userId }, "Could not parse appended row id from Sheets response");
-  const rows = await listRows(userId);
-  const last = rows[rows.length - 1];
-  if (!last) {
-    throw new Error("Failed to determine id of newly created session row.");
-  }
-  return last.id;
 }
 
 /** Overwrites a single existing row (1-based sheet row id) with new values. */
 export async function updateRow(id: number, values: SheetRow, userId?: string): Promise<void> {
   const ctx = await getGoogleContext(userId);
-  await ctx.sheets.spreadsheets.values.update({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${ctx.sheetName}!A${id}:Q${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [values] },
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A${id}:Q${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [values] },
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }
 
 /** Overwrites specific columns (0-based indexes into SHEET_COLUMNS) on a row, leaving others untouched. */
@@ -253,38 +461,46 @@ export async function updateRowCells(
   const data = Object.entries(updates).map(([colIndex, value]) => {
     const column = String.fromCharCode("A".charCodeAt(0) + Number(colIndex));
     return {
-      range: `${ctx.sheetName}!${column}${id}:${column}${id}`,
+      range: `'${ctx.sheetName}'!${column}${id}:${column}${id}`,
       values: [[value]],
     };
   });
   if (data.length === 0) {
     return;
   }
-  await ctx.sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: ctx.spreadsheetId,
-    requestBody: { valueInputOption: "RAW", data },
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: { valueInputOption: "RAW", data },
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateRowCells", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }
 
 /** Deletes a row (1-based sheet row id). */
 export async function deleteRow(id: number, userId?: string): Promise<void> {
   const ctx = await getGoogleContext(userId);
   const sheetId = await getSheetId(ctx);
-  await ctx.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: ctx.spreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id,
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id,
+              },
             },
           },
-        },
-      ],
-    },
-  });
+        ],
+      },
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "deleteRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }

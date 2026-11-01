@@ -64201,23 +64201,151 @@ var SHEET_COLUMNS = [
   "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621",
   "\u0627\u0644\u062A\u0642\u0631\u064A\u0631"
 ];
+var GoogleSheetsError = class extends Error {
+  refId;
+  statusCode;
+  userMessage;
+  constructor(message, statusCode, userMessage, refId) {
+    super(message);
+    this.name = "GoogleSheetsError";
+    this.refId = refId || `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    this.statusCode = statusCode;
+    this.userMessage = userMessage;
+  }
+};
+var GoogleSheetsConfigError = class extends GoogleSheetsError {
+  constructor(message, refId) {
+    super(
+      message,
+      503,
+      "\u0625\u0639\u062F\u0627\u062F\u0627\u062A Google Sheets \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u0632\u0648\u064A\u062F \u0645\u0644\u0641 Service Account \u0648\u0645\u0639\u0631\u0641 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.",
+      refId
+    );
+    this.name = "GoogleSheetsConfigError";
+  }
+};
+var GoogleSheetsAuthError = class extends GoogleSheetsError {
+  constructor(message, refId) {
+    super(
+      message,
+      503,
+      "\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0648\u064A\u0629 \u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0644\u062F\u0649 Google (Authentication Failed).",
+      refId
+    );
+    this.name = "GoogleSheetsAuthError";
+  }
+};
+var GoogleSheetsPermissionError = class extends GoogleSheetsError {
+  constructor(message, refId) {
+    super(
+      message,
+      503,
+      "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: \u064A\u0631\u062C\u0649 \u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u062C\u062F\u0648\u0644 \u0645\u0639 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0648\u0645\u0646\u062D\u0647 \u0635\u0644\u0627\u062D\u064A\u0629 \u0645\u062D\u0631\u0631 (Editor).",
+      refId
+    );
+    this.name = "GoogleSheetsPermissionError";
+  }
+};
+var GoogleSheetsNotFoundError = class extends GoogleSheetsError {
+  constructor(message, refId) {
+    super(
+      message,
+      502,
+      "\u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u062A\u0645 \u062D\u0630\u0641\u0647 (Spreadsheet Not Found).",
+      refId
+    );
+    this.name = "GoogleSheetsNotFoundError";
+  }
+};
+var GoogleSheetsRangeError = class extends GoogleSheetsError {
+  constructor(message, refId) {
+    super(
+      message,
+      502,
+      "\u062A\u0639\u0630\u0631 \u0642\u0631\u0627\u0621\u0629 \u0648\u0631\u0642\u0629 \u0627\u0644\u0639\u0645\u0644 \u0623\u0648 \u0627\u0644\u0646\u0637\u0627\u0642 \u0627\u0644\u0645\u062D\u062F\u062F (Worksheet Range Error).",
+      refId
+    );
+    this.name = "GoogleSheetsRangeError";
+  }
+};
+var GoogleSheetsNetworkError = class extends GoogleSheetsError {
+  constructor(message, refId) {
+    super(
+      message,
+      504,
+      "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0648\u0627\u062F\u0645 Google \u0628\u0633\u0628\u0628 \u0627\u0646\u0642\u0637\u0627\u0639 \u0627\u0644\u0634\u0628\u0643\u0629 \u0623\u0648 \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0645\u0647\u0644\u0629 (Network Timeout).",
+      refId
+    );
+    this.name = "GoogleSheetsNetworkError";
+  }
+};
+function maskIdentifier(val) {
+  if (!val) return "(none)";
+  if (val.length <= 4) return "****";
+  return `****${val.slice(-4)}`;
+}
+function classifyGoogleError(err, operation, meta) {
+  if (err instanceof GoogleSheetsError) {
+    return err;
+  }
+  const rawMsg = String(err?.message || err || "");
+  const status = Number(err?.status || err?.code || err?.response?.status || 0);
+  const maskedId = meta?.spreadsheetId ? maskIdentifier(meta.spreadsheetId) : void 0;
+  let classified;
+  if (status === 401 || rawMsg.includes("invalid_grant") || rawMsg.includes("Unauthorized") || rawMsg.includes("unauthorized_client") || rawMsg.includes("Authentication with Google failed")) {
+    classified = new GoogleSheetsAuthError(`Google Auth Failure in ${operation}: ${rawMsg}`);
+  } else if (status === 403 || rawMsg.includes("The caller does not have permission") || rawMsg.includes("PERMISSION_DENIED") || rawMsg.includes("does not have permission")) {
+    classified = new GoogleSheetsPermissionError(`Google Permission Denied in ${operation}: ${rawMsg}`);
+  } else if (status === 404 || rawMsg.includes("Requested entity was not found") || rawMsg.includes("NOT_FOUND") || rawMsg.includes("Spreadsheet not found")) {
+    classified = new GoogleSheetsNotFoundError(`Google Spreadsheet Not Found in ${operation}: ${rawMsg}`);
+  } else if (status === 400 || rawMsg.includes("Unable to parse range") || rawMsg.includes("badRequest") || rawMsg.includes("Sheet tab")) {
+    classified = new GoogleSheetsRangeError(`Google Sheets Range Error in ${operation}: ${rawMsg}`);
+  } else if (rawMsg.includes("ETIMEDOUT") || rawMsg.includes("ECONNRESET") || rawMsg.includes("ECONNREFUSED") || rawMsg.includes("ENOTFOUND") || rawMsg.includes("network timeout") || rawMsg.includes("timed out") || status === 504) {
+    classified = new GoogleSheetsNetworkError(`Google Network Timeout in ${operation}: ${rawMsg}`);
+  } else {
+    classified = new GoogleSheetsError(
+      `Google API Error in ${operation}: ${rawMsg}`,
+      502,
+      "\u062A\u0639\u0630\u0631 \u0645\u0639\u0627\u0644\u062C\u0629 \u0637\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0627\u062A \u0645\u0639 \u062E\u0627\u062F\u0645 Google."
+    );
+  }
+  logger.error(
+    {
+      operation,
+      refId: classified.refId,
+      status: classified.statusCode,
+      googleStatus: status,
+      errorName: classified.name,
+      maskedSpreadsheetId: maskedId,
+      sheetName: meta?.sheetName,
+      userId: meta?.userId,
+      googleMessage: rawMsg.slice(0, 300)
+    },
+    `[GoogleSheets Diagnostic] ${operation} failed with ${classified.name} (refId: ${classified.refId})`
+  );
+  return classified;
+}
 var defaultSheetsClient = null;
 var userClientsMap = /* @__PURE__ */ new Map();
 function getDefaultClient() {
   if (!defaultSheetsClient) {
     const credentials = env.googleServiceAccountJson;
     if (!credentials || !credentials.client_email || !credentials.private_key) {
-      throw new Error(
+      throw new GoogleSheetsConfigError(
         "\u0645\u0644\u0641 Google Service Account JSON \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645. \u064A\u0631\u062C\u0649 \u0625\u0636\u0627\u0641\u062A\u0647 \u0641\u064A \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0641\u064A \u0645\u062A\u063A\u064A\u0631\u0627\u062A \u0627\u0644\u0628\u064A\u0626\u0629."
       );
     }
-    const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-    const auth = new import_googleapis.google.auth.JWT({
-      email: credentials.client_email,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-    });
-    defaultSheetsClient = import_googleapis.google.sheets({ version: "v4", auth });
+    try {
+      const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+      const auth = new import_googleapis.google.auth.JWT({
+        email: credentials.client_email,
+        key: privateKey,
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+      });
+      defaultSheetsClient = import_googleapis.google.sheets({ version: "v4", auth });
+    } catch (err) {
+      throw classifyGoogleError(err, "getDefaultClient");
+    }
   }
   return defaultSheetsClient;
 }
@@ -64229,18 +64357,22 @@ async function getGoogleContext(userId) {
       if (credentials.client_email && credentials.private_key) {
         let client = userClientsMap.get(userId);
         if (!client) {
-          const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-          const auth = new import_googleapis.google.auth.JWT({
-            email: credentials.client_email,
-            key: privateKey,
-            scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-          });
-          client = import_googleapis.google.sheets({ version: "v4", auth });
-          userClientsMap.set(userId, client);
+          try {
+            const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+            const auth = new import_googleapis.google.auth.JWT({
+              email: credentials.client_email,
+              key: privateKey,
+              scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+            });
+            client = import_googleapis.google.sheets({ version: "v4", auth });
+            userClientsMap.set(userId, client);
+          } catch (err) {
+            throw classifyGoogleError(err, "getGoogleContext.createClient", { userId });
+          }
         }
         const spreadsheetId = userCreds.spreadsheetId && userCreds.spreadsheetId.trim() || env.googleSpreadsheetId;
         if (!spreadsheetId) {
-          throw new Error("\u0645\u0639\u0631\u0651\u0641 \u062C\u062F\u0648\u0644 Google Spreadsheet ID \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.");
+          throw new GoogleSheetsConfigError("\u0645\u0639\u0631\u0651\u0641 \u062C\u062F\u0648\u0644 Google Spreadsheet ID \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.");
         }
         const sheetName = userCreds.sheetName && userCreds.sheetName.trim() || env.googleSheetName || "Sessions";
         return { sheets: client, spreadsheetId, sheetName };
@@ -64249,8 +64381,8 @@ async function getGoogleContext(userId) {
   }
   const globalSpreadsheetId = env.googleSpreadsheetId;
   if (!globalSpreadsheetId) {
-    throw new Error(
-      "\u0644\u0645 \u064A\u062A\u0645 \u0625\u0639\u062F\u0627\u062F Google Sheets. \u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0645\u0644\u0641 Google Service Account JSON \u0648\u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 (Spreadsheet ID) \u0641\u064A \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629."
+    throw new GoogleSheetsConfigError(
+      "\u0644\u0645 \u064A\u062A\u0645 \u0625\u0639\u062F\u0627\u062F Google Sheets. \u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0645\u0644\u0641 Google Service Account JSON \u0648\u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 (Spreadsheet ID) \u0641\u064A \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u0648 \u0645\u062A\u063A\u064A\u0631\u0627\u062A \u0627\u0644\u0628\u064A\u0626\u0629."
     );
   }
   return {
@@ -64260,22 +64392,31 @@ async function getGoogleContext(userId) {
   };
 }
 async function getSheetId(ctx) {
-  const spreadsheet = await ctx.sheets.spreadsheets.get({
-    spreadsheetId: ctx.spreadsheetId
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === ctx.sheetName
-  );
-  if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
-    throw new Error(
-      `Sheet tab "${ctx.sheetName}" was not found in the configured spreadsheet.`
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === ctx.sheetName
     );
+    if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
+      throw new GoogleSheetsRangeError(
+        `Sheet tab "${ctx.sheetName}" was not found in the configured spreadsheet.`
+      );
+    }
+    return sheet.properties.sheetId;
+  } catch (err) {
+    throw classifyGoogleError(err, "getSheetId", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName });
   }
-  return sheet.properties.sheetId;
 }
 async function ensureSheetReady(userId) {
+  let ctx;
   try {
-    const ctx = await getGoogleContext(userId);
+    ctx = await getGoogleContext(userId);
+  } catch (err) {
+    throw classifyGoogleError(err, "ensureSheetReady.getContext", { userId });
+  }
+  try {
     const spreadsheet = await ctx.sheets.spreadsheets.get({
       spreadsheetId: ctx.spreadsheetId
     });
@@ -64292,29 +64433,33 @@ async function ensureSheetReady(userId) {
     }
     await ctx.sheets.spreadsheets.values.update({
       spreadsheetId: ctx.spreadsheetId,
-      range: `${ctx.sheetName}!A1:Q1`,
+      range: `'${ctx.sheetName}'!A1:Q1`,
       valueInputOption: "RAW",
       requestBody: { values: [[...SHEET_COLUMNS]] }
     });
   } catch (err) {
-    logger.warn({ err, userId }, "ensureSheetReady non-fatal warning");
+    logger.warn({ err, userId, refId: err?.refId }, "ensureSheetReady non-fatal warning");
   }
 }
 async function listRows(userId) {
   const ctx = await getGoogleContext(userId);
-  const response = await ctx.sheets.spreadsheets.values.get({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${ctx.sheetName}!A2:Q`
-  });
-  const rows = response.data.values ?? [];
-  return rows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell2) => cell2 !== void 0 && cell2 !== ""));
+  try {
+    const response = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A2:Q`
+    });
+    const rows = response.data.values ?? [];
+    return rows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell2) => cell2 !== void 0 && cell2 !== ""));
+  } catch (err) {
+    throw classifyGoogleError(err, "listRows", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }
 async function appendRow(values, userId) {
   const ctx = await getGoogleContext(userId);
   try {
     const existing = await ctx.sheets.spreadsheets.values.get({
       spreadsheetId: ctx.spreadsheetId,
-      range: `${ctx.sheetName}!A2:Q`
+      range: `'${ctx.sheetName}'!A2:Q`
     });
     const rawRows = existing.data.values ?? [];
     let emptyRowId = null;
@@ -64333,72 +64478,88 @@ async function appendRow(values, userId) {
   } catch (err) {
     logger.warn({ err, userId }, "Failed to check empty rows before append, falling back to append API");
   }
-  const response = await ctx.sheets.spreadsheets.values.append({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${ctx.sheetName}!A:Q`,
-    valueInputOption: "RAW",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [values] }
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) {
-    return Number(match[1]);
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A:Q`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [values] }
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) {
+      return Number(match[1]);
+    }
+    logger.warn({ updatedRange, userId }, "Could not parse appended row id from Sheets response");
+    const rows = await listRows(userId);
+    const last = rows[rows.length - 1];
+    if (!last) {
+      throw new GoogleSheetsError("Failed to determine id of newly created session row.", 502, "\u062A\u0639\u0630\u0631 \u062A\u062D\u062F\u064A\u062F \u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0633\u0637\u0631 \u0627\u0644\u0645\u0636\u0627\u0641.");
+    }
+    return last.id;
+  } catch (err) {
+    throw classifyGoogleError(err, "appendRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
   }
-  logger.warn({ updatedRange, userId }, "Could not parse appended row id from Sheets response");
-  const rows = await listRows(userId);
-  const last = rows[rows.length - 1];
-  if (!last) {
-    throw new Error("Failed to determine id of newly created session row.");
-  }
-  return last.id;
 }
 async function updateRow(id, values, userId) {
   const ctx = await getGoogleContext(userId);
-  await ctx.sheets.spreadsheets.values.update({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${ctx.sheetName}!A${id}:Q${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [values] }
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A${id}:Q${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [values] }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }
 async function updateRowCells(id, updates, userId) {
   const ctx = await getGoogleContext(userId);
   const data = Object.entries(updates).map(([colIndex, value]) => {
     const column = String.fromCharCode("A".charCodeAt(0) + Number(colIndex));
     return {
-      range: `${ctx.sheetName}!${column}${id}:${column}${id}`,
+      range: `'${ctx.sheetName}'!${column}${id}:${column}${id}`,
       values: [[value]]
     };
   });
   if (data.length === 0) {
     return;
   }
-  await ctx.sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: ctx.spreadsheetId,
-    requestBody: { valueInputOption: "RAW", data }
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: { valueInputOption: "RAW", data }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateRowCells", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }
 async function deleteRow(id, userId) {
   const ctx = await getGoogleContext(userId);
   const sheetId = await getSheetId(ctx);
-  await ctx.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: ctx.spreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id
+              }
             }
           }
-        }
-      ]
-    }
-  });
+        ]
+      }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "deleteRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
 }
 
 // src/utils/hijri.ts
@@ -81653,7 +81814,7 @@ function extractWithRules(message) {
   if (courtMatch) {
     const candidate = courtMatch[1].trim();
     if (!/(?:ليست|ليس|لا\s+تحتوي|ولا\s+تحتوي|غير|بدون|مرحباً|كيف\s+حالك|اختبار)/i.test(candidate)) {
-      result.court = candidate;
+      result.court = candidate.replace(/[\s\-_–—]+$/, "");
     }
   }
   const circuitMatch = message.match(/(?:الدائرة|دائرة)\s+([^\n،,.]+?(?=\s+بين|\s+ضد|\s+بتاريخ|\s+يوم|[،,.\n]|$))/);
@@ -81767,22 +81928,26 @@ async function analyzeCourtMessage(message, userId) {
     }
     try {
       const parsed = JSON.parse(jsonStr || raw);
+      const rulesFallback = extractWithRules(message);
       result = {
-        case_number: typeof parsed.case_number === "string" ? parsed.case_number.trim() : null,
-        plaintiff: typeof parsed.plaintiff === "string" ? parsed.plaintiff.trim() : null,
-        defendant: typeof parsed.defendant === "string" ? parsed.defendant.trim() : null,
-        court: typeof parsed.court === "string" ? parsed.court.trim() : null,
-        court_circuit: typeof parsed.court_circuit === "string" ? parsed.court_circuit.trim() : null,
-        case_subject: typeof parsed.case_subject === "string" ? parsed.case_subject.trim() : null,
-        session_type: typeof parsed.session_type === "string" ? parsed.session_type.trim() : null,
-        session_date_hijri: typeof parsed.session_date_hijri === "string" ? parsed.session_date_hijri.trim() : null,
-        session_time: typeof parsed.session_time === "string" ? parsed.session_time.trim() : null,
-        notes: typeof parsed.notes === "string" ? parsed.notes.trim() : null
+        case_number: typeof parsed.case_number === "string" && parsed.case_number.trim() || rulesFallback.case_number || null,
+        plaintiff: typeof parsed.plaintiff === "string" && parsed.plaintiff.trim() || rulesFallback.plaintiff || null,
+        defendant: typeof parsed.defendant === "string" && parsed.defendant.trim() || rulesFallback.defendant || null,
+        court: typeof parsed.court === "string" && parsed.court.trim() || rulesFallback.court || null,
+        court_circuit: typeof parsed.court_circuit === "string" && parsed.court_circuit.trim() || rulesFallback.court_circuit || null,
+        case_subject: typeof parsed.case_subject === "string" && parsed.case_subject.trim() || rulesFallback.case_subject || null,
+        session_type: typeof parsed.session_type === "string" && parsed.session_type.trim() || rulesFallback.session_type || null,
+        session_date_hijri: typeof parsed.session_date_hijri === "string" && parsed.session_date_hijri.trim() || rulesFallback.session_date_hijri || null,
+        session_time: typeof parsed.session_time === "string" && parsed.session_time.trim() || rulesFallback.session_time || null,
+        notes: typeof parsed.notes === "string" && parsed.notes.trim() ? parsed.notes.trim() : rulesFallback.notes || null
       };
     } catch {
       logger.info("Falling back to rule-based parser after invalid AI JSON");
       result = extractWithRules(message);
     }
+  } else {
+    logger.info("Falling back to rule-based parser when AI raw response is unavailable");
+    result = extractWithRules(message);
   }
   if (isNonJudicialOrNegated(message) || !hasSufficientSessionData(result)) {
     throw new InsufficientSessionDataError(
@@ -82042,6 +82207,18 @@ var WhatsappReminderChannel = class {
 // src/routes/sessions.ts
 var router5 = (0, import_express5.Router)();
 router5.use(attachAuthUser, requireAuth, requireActiveSubscription);
+function handleRouteError(res, err, defaultMsg) {
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0645\u0635\u062F\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. ${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      refId: err.refId
+    });
+    return;
+  }
+  const isClockError = String(err?.message || "").includes("invalid_grant") || String(err?.stack || "").includes("invalid_grant");
+  const errorMsg = isClockError ? "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets \u0628\u0633\u0628\u0628 \u0639\u062F\u0645 \u062A\u0632\u0627\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0648\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u062C\u0647\u0627\u0632 \u0645\u0639 \u0633\u064A\u0631\u0641\u0631\u0627\u062A Google (invalid_grant)." : err?.message || defaultMsg;
+  res.status(500).json({ error: errorMsg });
+}
 router5.get("/sessions", async (req, res) => {
   const parseResult = ListSessionsQueryParams.safeParse(req.query);
   if (!parseResult.success) {
@@ -82055,9 +82232,7 @@ router5.get("/sessions", async (req, res) => {
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to list sessions");
-    const isClockError = String(err?.message || "").includes("invalid_grant") || String(err?.stack || "").includes("invalid_grant");
-    const errorMsg = isClockError ? "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets \u0628\u0633\u0628\u0628 \u0639\u062F\u0645 \u062A\u0632\u0627\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0648\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u062C\u0647\u0627\u0632 \u0645\u0639 \u0633\u064A\u0631\u0641\u0631\u0627\u062A Google (invalid_grant)." : err?.message || "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0644\u0633\u0627\u062A.";
-    res.status(500).json({ error: errorMsg });
+    handleRouteError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0644\u0633\u0627\u062A.");
   }
 });
 router5.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
@@ -82080,7 +82255,7 @@ router5.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
     res.status(201).json(data);
   } catch (err) {
     logger.error({ err }, "Failed to create session");
-    res.status(500).json({ error: err?.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062C\u0644\u0633\u0629." });
+    handleRouteError(res, err, "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062C\u0644\u0633\u0629.");
   }
 });
 router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -82100,7 +82275,7 @@ router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to load session");
-    res.status(500).json({ error: err?.message || "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062C\u0644\u0633\u0629." });
+    handleRouteError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062C\u0644\u0633\u0629.");
   }
 });
 router5.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -82125,7 +82300,7 @@ router5.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => 
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to update session");
-    res.status(500).json({ error: err?.message || "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062C\u0644\u0633\u0629." });
+    handleRouteError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062C\u0644\u0633\u0629.");
   }
 });
 router5.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -82144,7 +82319,7 @@ router5.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) =>
     res.status(204).send();
   } catch (err) {
     logger.error({ err }, "Failed to delete session");
-    res.status(500).json({ error: err?.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062C\u0644\u0633\u0629." });
+    handleRouteError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062C\u0644\u0633\u0629.");
   }
 });
 router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (req, res) => {
@@ -82333,6 +82508,14 @@ router7.get("/sessions/:id/report", attachAuthUser, requireAuth, requireActiveSu
     }
     res.json(report);
   } catch (err) {
+    if (err instanceof GoogleSheetsError) {
+      logger.error({ err, refId: err.refId, id }, "Google Sheets failure in GET /sessions/:id/report");
+      res.status(err.statusCode).json({
+        error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0645\u0635\u062F\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. ${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+        refId: err.refId
+      });
+      return;
+    }
     logger.error({ err }, "Failed to fetch session report");
     res.status(500).json({ error: err?.message || "Failed to fetch session report." });
   }
@@ -82355,6 +82538,14 @@ router7.put("/sessions/:id/report", attachAuthUser, requireAuth, requireActiveSu
     logger.info({ id }, "Session report saved successfully");
     res.json(updated);
   } catch (err) {
+    if (err instanceof GoogleSheetsError) {
+      logger.error({ err, refId: err.refId, id }, "Google Sheets failure in PUT /sessions/:id/report");
+      res.status(err.statusCode).json({
+        error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0645\u0635\u062F\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. ${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+        refId: err.refId
+      });
+      return;
+    }
     logger.error({ err }, "Failed to save session report");
     res.status(500).json({ error: err?.message || "Failed to save session report." });
   }

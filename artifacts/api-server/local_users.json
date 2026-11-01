@@ -1,5 +1,25 @@
 [
   {
+    "id": "local-0e7aee36-a7cf-4d73-a88b-81fb62640163",
+    "username": "lawyer_2",
+    "email": "nonomassi270@gmail.com",
+    "role": "staff",
+    "display_name": "محمد عبدالقادر",
+    "status": "active",
+    "subscription_end_date": "2026-12-01",
+    "subscription_notes": null,
+    "plan_tier": "plus",
+    "billing_cycle": "annual",
+    "ai_quota_limit": 50,
+    "ai_usage_count": 3,
+    "google_service_account_json": null,
+    "google_spreadsheet_id": "19bhZ6R3le-_WbHXfpyKWEnWYOGq1KMQ2qMTTMqD4hMg/edit",
+    "google_sheet_name": "sessions",
+    "has_google_service": false,
+    "password_hash": "$2a$10$8.U6vY6pdDLmTfuModl6Fu6WTrhGH.KehrWrAkV7ZRZEQF0DzXJr6",
+    "created_at": "2026-11-01T08:57:05.927Z"
+  },
+  {
     "id": "local-admin",
     "username": "123456",
     "email": "admin@law.internal",

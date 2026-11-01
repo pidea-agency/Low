@@ -83,7 +83,7 @@ function extractWithRules(message: string): SessionExtraction {
     const candidate = courtMatch[1].trim();
     // Validate candidate: must NOT contain negation words or casual conversational text
     if (!/(?:ليست|ليس|لا\s+تحتوي|ولا\s+تحتوي|غير|بدون|مرحباً|كيف\s+حالك|اختبار)/i.test(candidate)) {
-      result.court = candidate;
+      result.court = candidate.replace(/[\s\-_–—]+$/, "");
     }
   }
 
@@ -238,22 +238,26 @@ export async function analyzeCourtMessage(
 
     try {
       const parsed = JSON.parse(jsonStr || raw) as Record<string, unknown>;
+      const rulesFallback = extractWithRules(message);
       result = {
-        case_number: typeof parsed.case_number === "string" ? parsed.case_number.trim() : null,
-        plaintiff: typeof parsed.plaintiff === "string" ? parsed.plaintiff.trim() : null,
-        defendant: typeof parsed.defendant === "string" ? parsed.defendant.trim() : null,
-        court: typeof parsed.court === "string" ? parsed.court.trim() : null,
-        court_circuit: typeof parsed.court_circuit === "string" ? parsed.court_circuit.trim() : null,
-        case_subject: typeof parsed.case_subject === "string" ? parsed.case_subject.trim() : null,
-        session_type: typeof parsed.session_type === "string" ? parsed.session_type.trim() : null,
-        session_date_hijri: typeof parsed.session_date_hijri === "string" ? parsed.session_date_hijri.trim() : null,
-        session_time: typeof parsed.session_time === "string" ? parsed.session_time.trim() : null,
-        notes: typeof parsed.notes === "string" ? parsed.notes.trim() : null,
+        case_number: (typeof parsed.case_number === "string" && parsed.case_number.trim()) || rulesFallback.case_number || null,
+        plaintiff: (typeof parsed.plaintiff === "string" && parsed.plaintiff.trim()) || rulesFallback.plaintiff || null,
+        defendant: (typeof parsed.defendant === "string" && parsed.defendant.trim()) || rulesFallback.defendant || null,
+        court: (typeof parsed.court === "string" && parsed.court.trim()) || rulesFallback.court || null,
+        court_circuit: (typeof parsed.court_circuit === "string" && parsed.court_circuit.trim()) || rulesFallback.court_circuit || null,
+        case_subject: (typeof parsed.case_subject === "string" && parsed.case_subject.trim()) || rulesFallback.case_subject || null,
+        session_type: (typeof parsed.session_type === "string" && parsed.session_type.trim()) || rulesFallback.session_type || null,
+        session_date_hijri: (typeof parsed.session_date_hijri === "string" && parsed.session_date_hijri.trim()) || rulesFallback.session_date_hijri || null,
+        session_time: (typeof parsed.session_time === "string" && parsed.session_time.trim()) || rulesFallback.session_time || null,
+        notes: typeof parsed.notes === "string" && parsed.notes.trim() ? parsed.notes.trim() : rulesFallback.notes || null,
       };
     } catch {
       logger.info("Falling back to rule-based parser after invalid AI JSON");
       result = extractWithRules(message);
     }
+  } else {
+    logger.info("Falling back to rule-based parser when AI raw response is unavailable");
+    result = extractWithRules(message);
   }
 
   // ── 3.5 Validate message semantic validity and extracted fields ─────────
