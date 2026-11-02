@@ -17,7 +17,7 @@ import {
   computeDaysRemainingStr,
 } from "../services/session.service";
 import { isGoogleSheetsConfigured } from "../config/env";
-import { GoogleSheetsError } from "../services/googleSheets.service";
+import { GoogleSheetsError, GoogleBindingMissingError, GoogleSettingsStoreError } from "../services/googleSheets.service";
 import { logger } from "../lib/logger";
 import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
@@ -30,6 +30,22 @@ const router: IRouter = Router();
 router.use("/sessions", attachAuthUser, requireAuth, requireActiveSubscription);
 
 function handleRouteError(res: Response, err: any, defaultMsg: string): void {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: "ربط المكتب غير مكتمل. تواصل مع المشرف",
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId,
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.",
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId,
+    });
+    return;
+  }
   if (err instanceof GoogleSheetsError) {
     res.status(err.statusCode).json({
       error: `تعذر الاتصال بمصدر البيانات. ${err.userMessage} رقم المرجع: ${err.refId}`,

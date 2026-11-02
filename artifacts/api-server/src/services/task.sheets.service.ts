@@ -1,27 +1,31 @@
-import { google, type sheets_v4 } from "googleapis";
+import { type sheets_v4 } from "googleapis";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
+import { getGoogleContext, GoogleSheetsError } from "./googleSheets.service";
 
 /**
  * Google Sheets service for Tasks (المهام) records.
  * Uses a dedicated sheet tab named "Tasks" in the spreadsheet.
+ * Strictly enforces office-level multi-tenant isolation via the "معرف المكتب" column.
  */
 
 const TASK_SHEET_NAME = "Tasks";
 
 export const TASK_SHEET_COLUMNS = [
-  "عنوان المهمة",
-  "المكلف",
-  "الأولوية",
-  "تاريخ التسليم",
-  "عدد الأيام المتبقية",
-  "الحالة",
-  "ملاحظات",
-  "تاريخ الإنشاء",
+  "عنوان المهمة",        // Col 0 (A)
+  "المكلف",             // Col 1 (B)
+  "الأولوية",           // Col 2 (C)
+  "تاريخ التسليم",      // Col 3 (D)
+  "عدد الأيام المتبقية", // Col 4 (E)
+  "الحالة",             // Col 5 (F)
+  "ملاحظات",            // Col 6 (G)
+  "تاريخ الإنشاء",      // Col 7 (H)
+  "معرف المكتب",         // Col 8 (I) - Office ID
 ] as const;
 
-export const TASK_COLS = TASK_SHEET_COLUMNS.length; // 8
-const COL_LAST = String.fromCharCode("A".charCodeAt(0) + TASK_COLS - 1); // "H"
+export const TASK_COLS = TASK_SHEET_COLUMNS.length; // 9
+const COL_LAST = String.fromCharCode("A".charCodeAt(0) + TASK_COLS - 1); // "I"
+export const TASK_OFFICE_COL_INDEX = 8;
 
 let sheetsClient: sheets_v4.Sheets | null = null;
 
@@ -60,11 +64,10 @@ export function invalidateTaskCache(): void {
   lastTaskCacheTime = 0;
 }
 
-async function getTaskSheetId(): Promise<number> {
-  if (taskSheetIdCache !== null) return taskSheetIdCache;
-  const sheets = getClient();
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId: env.googleSpreadsheetId,
+async function getTaskSheetId(officeId?: string): Promise<number> {
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
+  const spreadsheet = await ctx.sheets.spreadsheets.get({
+    spreadsheetId: ctx.spreadsheetId,
   });
   const sheet = spreadsheet.data.sheets?.find(
     (s) => s.properties?.title === TASK_SHEET_NAME,
@@ -72,99 +75,52 @@ async function getTaskSheetId(): Promise<number> {
   if (!sheet?.properties && sheet?.properties?.sheetId === undefined) {
     throw new Error(`Sheet tab "${TASK_SHEET_NAME}" not found.`);
   }
-  taskSheetIdCache = sheet!.properties!.sheetId!;
-  return taskSheetIdCache;
+  return sheet!.properties!.sheetId!;
 }
 
-/** Ensures the "Tasks" sheet tab exists with the correct header row and formatting. */
-export async function ensureTaskSheetReady(): Promise<void> {
-  if (isTaskSheetReadyCache) return;
-
+/** Ensures the "Tasks" sheet tab exists with the correct header row. */
+export async function ensureTaskSheetReady(officeId?: string): Promise<void> {
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   try {
-    const sheets = getClient();
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: env.googleSpreadsheetId,
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId,
     });
     const existing = spreadsheet.data.sheets?.find(
       (s) => s.properties?.title === TASK_SHEET_NAME,
     );
 
     if (!existing) {
-      const addRes = await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: env.googleSpreadsheetId,
+      await ctx.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: ctx.spreadsheetId,
         requestBody: {
           requests: [{ addSheet: { properties: { title: TASK_SHEET_NAME } } }],
         },
       });
-      taskSheetIdCache = addRes.data.replies?.[0]?.addSheet?.properties?.sheetId ?? null;
       logger.info(`Created sheet tab "${TASK_SHEET_NAME}"`);
-    } else {
-      taskSheetIdCache = existing.properties?.sheetId ?? null;
     }
 
-    // 1. Write header row
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: env.googleSpreadsheetId,
+    // Always ensure the header is up to date (A1:I1)
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${TASK_SHEET_NAME}!A1:${COL_LAST}1`,
       valueInputOption: "RAW",
       requestBody: { values: [[...TASK_SHEET_COLUMNS]] },
     });
-
-    isTaskSheetReadyCache = true;
-
-    // 2. Format header row safely (non-blocking)
-    if (taskSheetIdCache !== null) {
-      try {
-        await sheets.spreadsheets.batchUpdate({
-          spreadsheetId: env.googleSpreadsheetId,
-          requestBody: {
-            requests: [
-              {
-                repeatCell: {
-                  range: {
-                    sheetId: taskSheetIdCache,
-                    startRowIndex: 0,
-                    endRowIndex: 1,
-                    startColumnIndex: 0,
-                    endColumnIndex: TASK_COLS,
-                  },
-                  cell: {
-                    userEnteredFormat: {
-                      backgroundColor: { red: 0.1, green: 0.15, blue: 0.25 },
-                      textFormat: {
-                        foregroundColor: { red: 1, green: 1, blue: 1 },
-                        bold: true,
-                        fontSize: 10,
-                      },
-                      horizontalAlignment: "CENTER",
-                      verticalAlignment: "MIDDLE",
-                    },
-                  },
-                  fields:
-                    "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)",
-                },
-              },
-            ],
-          },
-        });
-      } catch (fmtErr) {
-        logger.warn({ fmtErr }, "Non-fatal formatting warning for Tasks sheet");
-      }
-    }
-  } catch (err) {
+  } catch (err: any) {
+    if (err instanceof GoogleSheetsError) throw err;
     logger.warn({ err }, "ensureTaskSheetReady warning");
-    isTaskSheetReadyCache = true;
   }
 }
 
 export type TaskRow = string[];
 
-/** Returns all Task records (excluding header row), using in-memory cache if fresh. */
-export async function listTaskRowsWithHeaders(forceRefresh = false): Promise<{
+/** Internal helper to fetch all raw task rows from sheet */
+async function fetchAllRawTaskRows(officeId?: string, forceRefresh = false): Promise<{
   headers: string[];
   rows: { id: number; values: TaskRow }[];
 }> {
-  await ensureTaskSheetReady();
+  await ensureTaskSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
 
   const now = Date.now();
   const useCache =
@@ -172,51 +128,97 @@ export async function listTaskRowsWithHeaders(forceRefresh = false): Promise<{
     taskDataCache !== null &&
     now - lastTaskCacheTime < TASK_CACHE_TTL_MS;
 
-  try {
-    const sheets = getClient();
-
-    if (useCache) {
-      const headerRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: env.googleSpreadsheetId,
-        range: `${TASK_SHEET_NAME}!A1:${COL_LAST}1`,
-      });
-      const headers = ((headerRes.data.values?.[0] as string[]) ?? [...TASK_SHEET_COLUMNS]);
-      return { headers, rows: taskDataCache! };
-    }
-
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: env.googleSpreadsheetId,
-      range: `${TASK_SHEET_NAME}!A1:${COL_LAST}`,
+  if (useCache) {
+    const headerRes = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${TASK_SHEET_NAME}!A1:${COL_LAST}1`,
     });
-    const data = response.data.values ?? [];
-    const headers = (data[0] as string[]) ?? [...TASK_SHEET_COLUMNS];
-    const dataRows = data.slice(1);
-    const rows = dataRows
-      .map((row, index) => ({ id: index + 2, values: row as TaskRow }))
-      .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
-
-    taskDataCache = rows;
-    lastTaskCacheTime = now;
-    return { headers, rows };
-  } catch (err) {
-    logger.warn({ err }, "Failed to fetch Task rows from Google Sheets, returning cached/empty");
-    return {
-      headers: [...TASK_SHEET_COLUMNS],
-      rows: taskDataCache ?? [],
-    };
+    const headers = ((headerRes.data.values?.[0] as string[]) ?? [...TASK_SHEET_COLUMNS]);
+    return { headers, rows: taskDataCache! };
   }
+
+  const response = await ctx.sheets.spreadsheets.values.get({
+    spreadsheetId: ctx.spreadsheetId,
+    range: `${TASK_SHEET_NAME}!A1:${COL_LAST}`,
+  });
+  const data = response.data.values ?? [];
+  const headers = (data[0] as string[]) ?? [...TASK_SHEET_COLUMNS];
+  const dataRows = data.slice(1);
+  const rows = dataRows
+    .map((row, index) => ({ id: index + 2, values: row as TaskRow }))
+    .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
+
+  taskDataCache = rows;
+  lastTaskCacheTime = now;
+  return { headers, rows };
 }
 
 /**
- * Appends a new Task record row and returns its 1-based row id.
- * Uses OVERWRITE (not INSERT_ROWS) to avoid inheriting header row formatting.
+ * Returns all Task records for the specified office.
+ * Unmigrated rows without an office are strictly ignored.
  */
-export async function appendTaskRow(values: TaskRow): Promise<number> {
+export async function listTaskRowsWithHeaders(
+  officeId: string,
+  forceRefresh = false,
+): Promise<{
+  headers: string[];
+  rows: { id: number; values: TaskRow }[];
+}> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to list Task records.");
+  }
+  const cleanOfficeId = officeId.trim();
+  const { headers, rows } = await fetchAllRawTaskRows(cleanOfficeId, forceRefresh);
+
+  const officeColIdx = headers.findIndex((h) => h.trim() === "معرف المكتب");
+  const actualColIdx = officeColIdx !== -1 ? officeColIdx : TASK_OFFICE_COL_INDEX;
+
+  const filtered = rows.filter((r) => (r.values[actualColIdx] || "").trim() === cleanOfficeId);
+  return { headers, rows: filtered };
+}
+
+/**
+ * Gets a single Task record row by id, strictly verifying office ownership.
+ * Returns null if record doesn't exist or belongs to another office.
+ */
+export async function getTaskRowById(
+  officeId: string,
+  id: number,
+): Promise<{ id: number; values: TaskRow; headers: string[] } | null> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to get a Task record.");
+  }
+  const cleanOfficeId = officeId.trim();
+  const { headers, rows } = await fetchAllRawTaskRows(cleanOfficeId);
+
+  const match = rows.find((r) => r.id === id);
+  if (!match) return null;
+
+  const officeColIdx = headers.findIndex((h) => h.trim() === "معرف المكتب");
+  const actualColIdx = officeColIdx !== -1 ? officeColIdx : TASK_OFFICE_COL_INDEX;
+
+  if ((match.values[actualColIdx] || "").trim() !== cleanOfficeId) {
+    return null; // Do not reveal existence of records from other offices
+  }
+  return { id: match.id, values: match.values, headers };
+}
+
+/**
+ * Appends a new Task record row, forcefully stamping the caller's office.
+ */
+export async function appendTaskRow(officeId: string, values: TaskRow): Promise<number> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to create a Task record.");
+  }
   invalidateTaskCache();
-  const sheets = getClient();
+  await ensureTaskSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
+
   const paddedValues: string[] = Array.from({ length: TASK_COLS }, (_, i) => values[i] ?? "");
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: env.googleSpreadsheetId,
+  paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
+
+  const response = await ctx.sheets.spreadsheets.values.append({
+    spreadsheetId: ctx.spreadsheetId,
     range: `${TASK_SHEET_NAME}!A:${COL_LAST}`,
     valueInputOption: "RAW",
     insertDataOption: "OVERWRITE",
@@ -225,32 +227,57 @@ export async function appendTaskRow(values: TaskRow): Promise<number> {
   const updatedRange = response.data.updates?.updatedRange;
   const match = updatedRange?.match(/![A-Z]+(\d+):/);
   if (match) return Number(match[1]);
-  const { rows } = await listTaskRowsWithHeaders();
+
+  const { rows } = await fetchAllRawTaskRows(officeId, true);
   const last = rows[rows.length - 1];
   if (!last) throw new Error("Failed to determine id of newly created Task row.");
   return last.id;
 }
 
-/** Updates an existing Task row by its 1-based row id. */
-export async function updateTaskRow(id: number, values: TaskRow): Promise<void> {
+/**
+ * Updates an existing Task row by its 1-based row id.
+ * Verifies that the row belongs to the caller's office before updating.
+ */
+export async function updateTaskRow(officeId: string, id: number, values: TaskRow): Promise<void> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to update a Task record.");
+  }
+  const existing = await getTaskRowById(officeId, id);
+  if (!existing) {
+    throw new Error("Task record not found for this office.");
+  }
+
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   invalidateTaskCache();
-  const sheets = getClient();
   const paddedValues: string[] = Array.from({ length: TASK_COLS }, (_, i) => values[i] ?? "");
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: env.googleSpreadsheetId,
+  paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
+
+  await ctx.sheets.spreadsheets.values.update({
+    spreadsheetId: ctx.spreadsheetId,
     range: `${TASK_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
     valueInputOption: "RAW",
     requestBody: { values: [paddedValues] },
   });
 }
 
-/** Deletes a Task row by its 1-based row id. */
-export async function deleteTaskRow(id: number): Promise<void> {
+/**
+ * Deletes a Task row by its 1-based row id.
+ * Verifies that the row belongs to the caller's office before deleting.
+ */
+export async function deleteTaskRow(officeId: string, id: number): Promise<void> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to delete a Task record.");
+  }
+  const existing = await getTaskRowById(officeId, id);
+  if (!existing) {
+    throw new Error("Task record not found for this office.");
+  }
+
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   invalidateTaskCache();
-  const sheets = getClient();
-  const sheetId = await getTaskSheetId();
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: env.googleSpreadsheetId,
+  const sheetId = await getTaskSheetId(officeId);
+  await ctx.sheets.spreadsheets.batchUpdate({
+    spreadsheetId: ctx.spreadsheetId,
     requestBody: {
       requests: [
         {
@@ -267,3 +294,20 @@ export async function deleteTaskRow(id: number): Promise<void> {
     },
   });
 }
+
+/** Assign office to a legacy/unassigned row (for migration) */
+export async function assignOfficeToLegacyRow(id: number, targetOfficeId: string): Promise<void> {
+  const cleanOfficeId = targetOfficeId.trim();
+  if (!cleanOfficeId) throw new Error("targetOfficeId is required.");
+  invalidateTaskCache();
+  const sheets = getClient();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: env.googleSpreadsheetId,
+    range: `${TASK_SHEET_NAME}!${COL_LAST}${id}`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[cleanOfficeId]] },
+  });
+}
+
+/** Expose raw fetch for the migration script */
+export { fetchAllRawTaskRows };

@@ -64,6 +64,30 @@ export class GoogleSheetsConfigError extends GoogleSheetsError {
   }
 }
 
+export class GoogleBindingMissingError extends GoogleSheetsError {
+  constructor(message = "ربط المكتب غير مكتمل. تواصل مع المشرف", refId?: string) {
+    super(
+      message,
+      409,
+      "ربط المكتب غير مكتمل. تواصل مع المشرف",
+      refId,
+    );
+    this.name = "GoogleBindingMissingError";
+  }
+}
+
+export class GoogleSettingsStoreError extends GoogleSheetsError {
+  constructor(message = "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.", refId?: string) {
+    super(
+      message,
+      503,
+      "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.",
+      refId,
+    );
+    this.name = "GoogleSettingsStoreError";
+  }
+}
+
 export class GoogleSheetsAuthError extends GoogleSheetsError {
   constructor(message: string, refId?: string) {
     super(
@@ -245,63 +269,94 @@ export interface GoogleContext {
   sheetName: string;
 }
 
-export async function getGoogleContext(userId?: string): Promise<GoogleContext> {
-  if (userId) {
-    const userCreds = await getUserGoogleCredentials(userId);
-    if (
-      userCreds &&
-      userCreds.serviceAccountJson &&
-      typeof userCreds.serviceAccountJson === "object"
-    ) {
-      const credentials = userCreds.serviceAccountJson as {
-        client_email?: string;
-        private_key?: string;
-      };
+export async function getGoogleContext(
+  userId?: string,
+  defaultSheetName = "Sessions",
+): Promise<GoogleContext> {
+  const cleanUserId = userId?.trim();
 
-      if (credentials.client_email && credentials.private_key) {
-        let client = userClientsMap.get(userId);
-        if (!client) {
-          try {
-            const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-            const auth = new google.auth.JWT({
-              email: credentials.client_email,
-              key: privateKey,
-              scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-            });
-            client = google.sheets({ version: "v4", auth });
-            userClientsMap.set(userId, client);
-          } catch (err) {
-            throw classifyGoogleError(err, "getGoogleContext.createClient", { userId });
-          }
-        }
+  // 1. Check if user is explicitly allowed to use the global sheet
+  const isAllowListed = cleanUserId
+    ? env.globalSheetAllowedUserIds.includes(cleanUserId)
+    : false;
 
-        const spreadsheetId = (userCreds.spreadsheetId && userCreds.spreadsheetId.trim())
-          || env.googleSpreadsheetId;
-        if (!spreadsheetId) {
-          throw new GoogleSheetsConfigError("معرّف جدول Google Spreadsheet ID غير محدد لهذا المستخدم.");
-        }
-
-        const sheetName = (userCreds.sheetName && userCreds.sheetName.trim())
-          || env.googleSheetName
-          || "Sessions";
-        return { sheets: client, spreadsheetId, sheetName };
-      }
+  if (isAllowListed) {
+    const globalSpreadsheetId = env.googleSpreadsheetId;
+    if (!globalSpreadsheetId) {
+      throw new GoogleSheetsConfigError(
+        "إعدادات Google Sheets العامة غير مكتملة في الخادم.",
+      );
     }
+    logger.info(
+      { userId: cleanUserId, defaultSheetName },
+      "[GoogleSheets] Intentional global sheet usage: user is on GLOBAL_SHEET_ALLOWED_USER_IDS allow-list",
+    );
+    return {
+      sheets: getDefaultClient(),
+      spreadsheetId: globalSpreadsheetId,
+      sheetName: defaultSheetName || env.googleSheetName || "Sessions",
+    };
   }
 
-  // Global default fallback
-  const globalSpreadsheetId = env.googleSpreadsheetId;
-  if (!globalSpreadsheetId) {
-    throw new GoogleSheetsConfigError(
-      "لم يتم إعداد Google Sheets. يرجى إدخال ملف Google Service Account JSON ومعرف الجدول (Spreadsheet ID) في بيانات المستخدم من لوحة الإدارة أو متغيرات البيئة.",
+  // 2. If not allow-listed and no userId provided, fail closed
+  if (!cleanUserId) {
+    throw new GoogleBindingMissingError("معرف المستخدم/المكتب غير محدد للوصول إلى Google Sheets.");
+  }
+
+  // 3. Look up user's own Google binding from the settings store
+  let userCreds: import("./supabase.service").UserGoogleCredentials | null = null;
+  try {
+    userCreds = await getUserGoogleCredentials(cleanUserId);
+  } catch (err: any) {
+    logger.error({ err, userId: cleanUserId }, "Failed to load user Google settings from store");
+    throw new GoogleSettingsStoreError(
+      `تعذر الوصول إلى مخزن إعدادات المكتب للمستخدم ${cleanUserId}: ${err?.message || err}`,
     );
   }
 
-  return {
-    sheets: getDefaultClient(),
-    spreadsheetId: globalSpreadsheetId,
-    sheetName: env.googleSheetName || "Sessions",
-  };
+  // 4. Verify binding exists and is complete
+  if (!userCreds) {
+    throw new GoogleBindingMissingError("ربط المكتب غير مكتمل. تواصل مع المشرف");
+  }
+
+  const spreadsheetId = userCreds.spreadsheetId?.trim();
+  if (!spreadsheetId) {
+    throw new GoogleBindingMissingError("ربط المكتب غير مكتمل. تواصل مع المشرف");
+  }
+
+  const credentials = userCreds.serviceAccountJson as {
+    client_email?: string;
+    private_key?: string;
+  } | undefined;
+
+  if (
+    !credentials ||
+    typeof credentials !== "object" ||
+    !credentials.client_email?.trim() ||
+    !credentials.private_key?.trim()
+  ) {
+    throw new GoogleBindingMissingError("ربط المكتب غير مكتمل. تواصل مع المشرف");
+  }
+
+  // 5. Build or reuse client for this office
+  let client = userClientsMap.get(cleanUserId);
+  if (!client) {
+    try {
+      const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+      const auth = new google.auth.JWT({
+        email: credentials.client_email,
+        key: privateKey,
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+      });
+      client = google.sheets({ version: "v4", auth });
+      userClientsMap.set(cleanUserId, client);
+    } catch (err) {
+      throw classifyGoogleError(err, "getGoogleContext.createClient", { userId: cleanUserId });
+    }
+  }
+
+  const sheetName = userCreds.sheetName?.trim() || defaultSheetName;
+  return { sheets: client, spreadsheetId, sheetName };
 }
 
 /** Resolves the numeric sheet (tab) id needed for row delete operations. */

@@ -58,6 +58,7 @@ export default function JudgmentsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<JudgmentRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JudgmentRecord | null>(null);
+  const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Form State
   const [caseNumber, setCaseNumber] = useState('');
@@ -77,10 +78,17 @@ export default function JudgmentsPage() {
       const url = isManualRefresh ? '/api/judgments?refresh=true' : '/api/judgments';
       const res = await fetch(url, { credentials: 'include' });
       if (res.ok) {
+        setBindingError(null);
         const data: JudgmentRecord[] = await res.json();
         setRecords(data);
+      } else if (res.status === 409) {
+        const errJson = await res.json().catch(() => ({}));
+        const msg = errJson.error || 'ربط المكتب غير مكتمل. تواصل مع المشرف';
+        setBindingError(msg);
+        throw new Error(msg);
       } else {
-        throw new Error('فشل جلب البيانات من السيرفر');
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'فشل جلب البيانات من السيرفر');
       }
     } catch (err: any) {
       toast({
@@ -286,6 +294,13 @@ export default function JudgmentsPage() {
           </Button>
         </div>
       </div>
+
+      {bindingError && (
+        <div className="fade-in-up rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-destructive flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <div className="flex-1 font-semibold text-sm">{bindingError}</div>
+        </div>
+      )}
 
       {/* Stats Quick Cards */}
       <div className="fade-in-up fade-in-up-delay-1 grid grid-cols-1 sm:grid-cols-3 gap-4">

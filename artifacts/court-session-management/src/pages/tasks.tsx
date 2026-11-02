@@ -424,6 +424,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewTask, setViewTask] = useState<Task | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Load Tasks from API (and fallback to localStorage if offline)
   const loadTasks = useCallback(async (isManualRefresh = false) => {
@@ -432,9 +433,13 @@ export default function TasksPage() {
       const url = isManualRefresh ? '/api/tasks?refresh=true' : '/api/tasks';
       const res = await fetch(url, { credentials: 'include' });
       if (res.ok) {
+        setBindingError(null);
         const data: Task[] = await res.json();
         setTasks(data);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } else if (res.status === 409) {
+        const errJson = await res.json().catch(() => ({}));
+        setBindingError(errJson.error || 'ربط المكتب غير مكتمل. تواصل مع المشرف');
       } else {
         throw new Error('فشل جلب المهام من السيرفر');
       }
@@ -645,6 +650,13 @@ export default function TasksPage() {
           </Button>
         </div>
       </div>
+
+      {bindingError && (
+        <div className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-destructive flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <div className="flex-1 font-semibold text-sm">{bindingError}</div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2 mb-6">

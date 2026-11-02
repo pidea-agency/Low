@@ -12,7 +12,12 @@
  *   3. Built-in default (where applicable)
  */
 
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { getSettings } from "./settings-store";
+
+const currentDirname = typeof __dirname !== "undefined" ? __dirname : fileURLToPath(new URL(".", import.meta.url));
 
 export class MissingEnvVarError extends Error {
   constructor(public readonly key: string, hint?: string) {
@@ -25,13 +30,12 @@ export class MissingEnvVarError extends Error {
 
 function parseDotEnvFile(): Record<string, string> {
   try {
-    const fs = require("fs");
-    const path = require("path");
     const candidates = [
       path.resolve(process.cwd(), ".env"),
+      path.resolve(process.cwd(), "..", ".env"),
       path.resolve(process.cwd(), "..", "..", ".env"),
-      path.resolve(__dirname, "..", "..", ".env"),
-      path.resolve(__dirname, "..", "..", "..", ".env"),
+      path.resolve(currentDirname, "..", "..", ".env"),
+      path.resolve(currentDirname, "..", "..", "..", ".env"),
     ];
     for (const p of candidates) {
       if (fs.existsSync(p)) {
@@ -92,6 +96,13 @@ export const env = {
 
   // --- Google Sheets (acts as the database in v1) ---
   // Settings UI takes precedence over env vars.
+  get globalSheetAllowedUserIds(): string[] {
+    const raw = readEnv("GLOBAL_SHEET_ALLOWED_USER_IDS") || "";
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  },
   get googleSpreadsheetId(): string {
     const stored = getSettings().googleSpreadsheetId;
     if (stored && stored.trim()) return stored.trim();
@@ -100,14 +111,13 @@ export const env = {
   },
   get googleServiceAccountJson(): Record<string, unknown> | null {
     try {
-      const fs = require("fs");
-      const path = require("path");
       const candidates = [
         path.resolve(process.cwd(), "service-account.json"),
+        path.resolve(process.cwd(), "..", "service-account.json"),
         path.resolve(process.cwd(), "..", "..", "service-account.json"),
         path.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
-        path.resolve(__dirname, "..", "..", "service-account.json"),
-        path.resolve(__dirname, "..", "..", "..", "service-account.json"),
+        path.resolve(currentDirname, "..", "..", "service-account.json"),
+        path.resolve(currentDirname, "..", "..", "..", "service-account.json"),
       ];
       for (const p of candidates) {
         if (fs.existsSync(p)) {
@@ -227,14 +237,13 @@ export function isGoogleSheetsConfigured(): boolean {
   let hasServiceAccount = Boolean(readEnv("GOOGLE_SERVICE_ACCOUNT_JSON"));
   if (!hasServiceAccount) {
     try {
-      const fs = require("fs");
-      const path = require("path");
       const candidates = [
         path.resolve(process.cwd(), "service-account.json"),
+        path.resolve(process.cwd(), "..", "service-account.json"),
         path.resolve(process.cwd(), "..", "..", "service-account.json"),
         path.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
-        path.resolve(__dirname, "..", "..", "service-account.json"),
-        path.resolve(__dirname, "..", "..", "..", "service-account.json"),
+        path.resolve(currentDirname, "..", "..", "service-account.json"),
+        path.resolve(currentDirname, "..", "..", "..", "service-account.json"),
       ];
       hasServiceAccount = candidates.some((p) => fs.existsSync(p));
     } catch(e) {}

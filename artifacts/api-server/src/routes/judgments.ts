@@ -1,16 +1,46 @@
 import { Router, type IRouter } from "express";
 import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
+import { GoogleBindingMissingError, GoogleSettingsStoreError, GoogleSheetsError } from "../services/googleSheets.service";
 import {
   ensureJudgmentSheetReady,
   listJudgmentRowsWithHeaders,
   appendJudgmentRow,
   updateJudgmentRow,
   deleteJudgmentRow,
+  getJudgmentRowById,
   JUDGMENT_SHEET_COLUMNS,
 } from "../services/judgment.sheets.service";
 
 const router: IRouter = Router();
+
+function handleJudgmentError(res: any, err: any, defaultMsg: string): void {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: "ربط المكتب غير مكتمل. تواصل مع المشرف",
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId,
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.",
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId,
+    });
+    return;
+  }
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: err.userMessage,
+      refId: err.refId,
+    });
+    return;
+  }
+  logger.error({ err }, defaultMsg);
+  res.status(500).json({ error: defaultMsg });
+}
 
 // Stop all Judgment Excel Sheet read/write operations if subscription is suspended or expired
 router.use("/judgments", attachAuthUser, requireAuth, requireActiveSubscription);
@@ -27,6 +57,7 @@ export interface JudgmentRecord {
   summary: string;
   isFavorable: "نهائي" | "ابتدائي" | string;
   createdAt: string;
+  officeId?: string;
 }
 
 function normalizeJudgmentType(val: string): "نهائي" | "ابتدائي" {
@@ -35,10 +66,7 @@ function normalizeJudgmentType(val: string): "نهائي" | "ابتدائي" {
   return "نهائي";
 }
 
-/**
- * Canonical column names in the order they appear in JUDGMENT_SHEET_COLUMNS.
- * These are used to build a lookup index from header names to column positions.
- */
+/** Canonical column header → field key mapping */
 const FIELD_KEYS: Record<string, keyof Omit<JudgmentRecord, "id">> = {
   "رقم القضية":      "caseNumber",
   "المحكمة المختصة": "court",
@@ -50,17 +78,13 @@ const FIELD_KEYS: Record<string, keyof Omit<JudgmentRecord, "id">> = {
   "ملخص الحكم":      "summary",
   "الحكم":           "isFavorable",
   "تاريخ الإنشاء":   "createdAt",
+  "معرف المكتب":      "officeId",
 };
 
 /**
  * Maps a raw Google Sheets row to a JudgmentRecord using the actual sheet headers.
- * This is the ONLY correct approach — it never relies on positional heuristics.
- * @param id      1-based row number in the sheet
- * @param values  Raw cell values from the sheet row
- * @param headers Header values from Row 1 of the sheet
  */
 function rowToRecord(id: number, values: string[], headers: string[]): JudgmentRecord {
-  // Build an index: fieldKey → cell value, driven by the actual sheet header row.
   const record: Partial<Omit<JudgmentRecord, "id">> = {};
   headers.forEach((header, colIdx) => {
     const fieldKey = FIELD_KEYS[header.trim()];
@@ -81,14 +105,14 @@ function rowToRecord(id: number, values: string[], headers: string[]): JudgmentR
     summary:       record.summary       || "",
     isFavorable:   normalizeJudgmentType(record.isFavorable || ""),
     createdAt:     record.createdAt     || new Date().toISOString(),
+    officeId:      record.officeId      || "",
   };
 }
 
 /**
  * Converts a JudgmentRecord back to a row array ordered by JUDGMENT_SHEET_COLUMNS.
- * Always outputs exactly 10 values in the canonical column order.
  */
-function recordToRow(record: Omit<JudgmentRecord, "id">): string[] {
+function recordToRow(record: Omit<JudgmentRecord, "id">, officeId: string): string[] {
   return [
     record.caseNumber || "",                           // A: رقم القضية
     record.court || "",                                // B: المحكمة المختصة
@@ -100,142 +124,181 @@ function recordToRow(record: Omit<JudgmentRecord, "id">): string[] {
     record.summary || "",                              // H: ملخص الحكم
     normalizeJudgmentType(record.isFavorable),         // I: الحكم
     record.createdAt || new Date().toISOString(),      // J: تاريخ الإنشاء
+    officeId,                                          // K: معرف المكتب
   ];
 }
 
 /**
  * GET /api/judgments
- * Lists all Judgment records from the "Judgment" sheet.
+ * Lists all Judgment records belonging to the authenticated office.
  */
 router.get("/judgments", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   try {
-    await ensureJudgmentSheetReady();
+    await ensureJudgmentSheetReady(officeId);
     const forceRefresh = req.query.refresh === "true";
-    const { headers, rows } = await listJudgmentRowsWithHeaders(forceRefresh);
+    const { headers, rows } = await listJudgmentRowsWithHeaders(officeId, forceRefresh);
     const records = rows.map(({ id, values }) => rowToRecord(id, values, headers));
     res.json(records);
   } catch (err) {
-    logger.error({ err }, "Failed to list Judgment records");
-    res.status(500).json({ error: "فشل تحميل بيانات الأحكام." });
+    handleJudgmentError(res, err, "فشل تحميل بيانات الأحكام.");
   }
 });
 
 /**
  * GET /api/judgments/:id
- * Gets a single Judgment record by row id.
+ * Gets a single Judgment record by row id. Verifies office ownership, returning 404 if not found or unauthorized.
  */
 router.get("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الصف غير صالح." });
     return;
   }
+
   try {
-    await ensureJudgmentSheetReady();
-    const { headers, rows } = await listJudgmentRowsWithHeaders();
-    const match = rows.find((r) => r.id === id);
+    await ensureJudgmentSheetReady(officeId);
+    const match = await getJudgmentRowById(officeId, id);
     if (!match) {
       res.status(404).json({ error: "الحكم غير موجود." });
       return;
     }
-    res.json(rowToRecord(match.id, match.values, headers));
+    res.json(rowToRecord(match.id, match.values, match.headers));
   } catch (err) {
-    logger.error({ err }, "Failed to get Judgment record");
-    res.status(500).json({ error: "فشل تحميل بيانات الحكم." });
+    handleJudgmentError(res, err, "فشل تحميل بيانات الحكم.");
   }
 });
 
 /**
  * POST /api/judgments
- * Creates a new Judgment record in the "Judgment" sheet.
+ * Creates a new Judgment record in the "Judgment" sheet stamped with caller's office.
  */
 router.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
-  const body = req.body as Partial<JudgmentRecord>;
-  if (!body.judgmentNumber?.trim()) {
-    res.status(400).json({ error: "رقم الصك مطلوب." });
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
     return;
   }
+
+  const body = req.body as Partial<JudgmentRecord>;
+  if (!body.caseNumber?.trim()) {
+    res.status(400).json({ error: "رقم القضية مطلوب." });
+    return;
+  }
+
   try {
-    await ensureJudgmentSheetReady();
-    const recordPayload: Omit<JudgmentRecord, "id"> = {
-      caseNumber: body.caseNumber?.trim() || "",
-      court: body.court?.trim() || "",
-      plaintiff: body.plaintiff?.trim() || "",
-      defendant: body.defendant?.trim() || "",
+    await ensureJudgmentSheetReady(officeId);
+    const record: Omit<JudgmentRecord, "id"> = {
+      caseNumber:    body.caseNumber.trim(),
+      court:         body.court?.trim() || "",
+      plaintiff:     body.plaintiff?.trim() || "",
+      defendant:     body.defendant?.trim() || "",
       assignedLawyer: body.assignedLawyer?.trim() || "",
-      judgmentNumber: body.judgmentNumber.trim(),
-      judgmentDate: body.judgmentDate?.trim() || "",
-      summary: body.summary?.trim() || "",
-      isFavorable: normalizeJudgmentType(body.isFavorable || "نهائي"),
-      createdAt: new Date().toISOString(),
+      judgmentNumber: body.judgmentNumber?.trim() || "",
+      judgmentDate:  body.judgmentDate?.trim() || "",
+      summary:       body.summary?.trim() || "",
+      isFavorable:   normalizeJudgmentType(body.isFavorable || ""),
+      createdAt:     new Date().toISOString(),
+      officeId, // Always use authenticated session officeId
     };
-    const rowId = await appendJudgmentRow(recordToRow(recordPayload));
-    logger.info({ rowId }, "Judgment record created");
-    res.status(201).json({ id: rowId, ...recordPayload });
+
+    const rowId = await appendJudgmentRow(officeId, recordToRow(record, officeId));
+    logger.info({ rowId, officeId }, "Judgment record created");
+    res.status(201).json({ id: rowId, ...record });
   } catch (err) {
-    logger.error({ err }, "Failed to create Judgment record");
-    res.status(500).json({ error: "فشل حفظ الحكم." });
+    handleJudgmentError(res, err, "فشل حفظ الحكم.");
   }
 });
 
 /**
  * PUT /api/judgments/:id
- * Updates an existing Judgment record. :id is the 1-based sheet row number.
+ * Updates an existing Judgment record. Verifies office ownership, returning 404 if not found or unauthorized.
  */
 router.put("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الصف غير صالح." });
     return;
   }
+
   const body = req.body as Partial<JudgmentRecord>;
   try {
-    await ensureJudgmentSheetReady();
-    const { headers, rows } = await listJudgmentRowsWithHeaders();
-    const existing = rows.find((r) => r.id === id);
+    await ensureJudgmentSheetReady(officeId);
+    const existing = await getJudgmentRowById(officeId, id);
     if (!existing) {
       res.status(404).json({ error: "الحكم غير موجود." });
       return;
     }
-    const existingRecord = rowToRecord(id, existing.values, headers);
-    const updatedPayload: Omit<JudgmentRecord, "id"> = {
-      caseNumber: body.caseNumber !== undefined ? body.caseNumber.trim() : existingRecord.caseNumber,
-      court: body.court !== undefined ? body.court.trim() : existingRecord.court,
-      plaintiff: body.plaintiff !== undefined ? body.plaintiff.trim() : existingRecord.plaintiff,
-      defendant: body.defendant !== undefined ? body.defendant.trim() : existingRecord.defendant,
-      assignedLawyer: body.assignedLawyer !== undefined ? body.assignedLawyer.trim() : existingRecord.assignedLawyer,
-      judgmentNumber: body.judgmentNumber !== undefined ? body.judgmentNumber.trim() : existingRecord.judgmentNumber,
-      judgmentDate: body.judgmentDate !== undefined ? body.judgmentDate.trim() : existingRecord.judgmentDate,
-      summary: body.summary !== undefined ? body.summary.trim() : existingRecord.summary,
-      isFavorable: body.isFavorable !== undefined ? normalizeJudgmentType(body.isFavorable) : existingRecord.isFavorable,
-      createdAt: existingRecord.createdAt,
+
+    const current = rowToRecord(existing.id, existing.values, existing.headers);
+    const updated: Omit<JudgmentRecord, "id"> = {
+      caseNumber:    body.caseNumber !== undefined ? body.caseNumber.trim() : current.caseNumber,
+      court:         body.court !== undefined ? body.court.trim() : current.court,
+      plaintiff:     body.plaintiff !== undefined ? body.plaintiff.trim() : current.plaintiff,
+      defendant:     body.defendant !== undefined ? body.defendant.trim() : current.defendant,
+      assignedLawyer: body.assignedLawyer !== undefined ? body.assignedLawyer.trim() : current.assignedLawyer,
+      judgmentNumber: body.judgmentNumber !== undefined ? body.judgmentNumber.trim() : current.judgmentNumber,
+      judgmentDate:  body.judgmentDate !== undefined ? body.judgmentDate.trim() : current.judgmentDate,
+      summary:       body.summary !== undefined ? body.summary.trim() : current.summary,
+      isFavorable:   body.isFavorable !== undefined ? normalizeJudgmentType(body.isFavorable) : current.isFavorable,
+      createdAt:     current.createdAt,
+      officeId, // Preserve caller's office
     };
-    await updateJudgmentRow(id, recordToRow(updatedPayload));
-    logger.info({ id }, "Judgment record updated");
-    res.json({ id, ...updatedPayload });
+
+    await updateJudgmentRow(officeId, id, recordToRow(updated, officeId));
+    logger.info({ id, officeId }, "Judgment record updated");
+    res.json({ id, ...updated });
   } catch (err) {
-    logger.error({ err }, "Failed to update Judgment record");
-    res.status(500).json({ error: "فشل تحديث الحكم." });
+    handleJudgmentError(res, err, "فشل تحديث الحكم.");
   }
 });
 
 /**
  * DELETE /api/judgments/:id
- * Deletes a Judgment record by its 1-based sheet row id.
+ * Deletes a Judgment record by row id. Verifies office ownership, returning 404 if not found or unauthorized.
  */
 router.delete("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الصف غير صالح." });
     return;
   }
+
   try {
-    await deleteJudgmentRow(id);
-    logger.info({ id }, "Judgment record deleted");
+    const existing = await getJudgmentRowById(officeId, id);
+    if (!existing) {
+      res.status(404).json({ error: "الحكم غير موجود." });
+      return;
+    }
+
+    await deleteJudgmentRow(officeId, id);
+    logger.info({ id, officeId }, "Judgment record deleted");
     res.status(204).send();
   } catch (err) {
-    logger.error({ err }, "Failed to delete Judgment record");
-    res.status(500).json({ error: "فشل حذف الحكم." });
+    handleJudgmentError(res, err, "فشل حذف الحكم.");
   }
 });
 

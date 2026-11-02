@@ -1,29 +1,33 @@
-import { google, type sheets_v4 } from "googleapis";
+import { type sheets_v4 } from "googleapis";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
+import { getGoogleContext, GoogleSheetsError } from "./googleSheets.service";
 
 /**
  * Google Sheets service for Judgment (الأحكام) records.
  * Uses a dedicated sheet tab named "Judgment" in the spreadsheet.
+ * Strictly enforces office-level multi-tenant isolation via the "معرف المكتب" column.
  */
 
 const JUDGMENT_SHEET_NAME = "Judgment";
 
 export const JUDGMENT_SHEET_COLUMNS = [
-  "رقم القضية",
-  "المحكمة المختصة",
-  "المدعي",
-  "المدعى عليه",
-  "المحامي المكلف",
-  "رقم الصك",
-  "تاريخ الحكم",
-  "ملخص الحكم",
-  "الحكم",
-  "تاريخ الإنشاء",
+  "رقم القضية",      // Col 0 (A)
+  "المحكمة المختصة", // Col 1 (B)
+  "المدعي",          // Col 2 (C)
+  "المدعى عليه",     // Col 3 (D)
+  "المحامي المكلف",  // Col 4 (E)
+  "رقم الصك",        // Col 5 (F)
+  "تاريخ الحكم",     // Col 6 (G)
+  "ملخص الحكم",      // Col 7 (H)
+  "الحكم",           // Col 8 (I)
+  "تاريخ الإنشاء",   // Col 9 (J)
+  "معرف المكتب",      // Col 10 (K) - Office ID
 ] as const;
 
-export const JUDGMENT_COLS = JUDGMENT_SHEET_COLUMNS.length; // 10
-const COL_LAST = String.fromCharCode("A".charCodeAt(0) + JUDGMENT_COLS - 1); // "J"
+export const JUDGMENT_COLS = JUDGMENT_SHEET_COLUMNS.length; // 11
+const COL_LAST = String.fromCharCode("A".charCodeAt(0) + JUDGMENT_COLS - 1); // "K"
+export const JUDGMENT_OFFICE_COL_INDEX = 10;
 
 let sheetsClient: sheets_v4.Sheets | null = null;
 
@@ -62,11 +66,10 @@ export function invalidateJudgmentCache(): void {
   lastJudgmentCacheTime = 0;
 }
 
-async function getJudgmentSheetId(): Promise<number> {
-  if (judgmentSheetIdCache !== null) return judgmentSheetIdCache;
-  const sheets = getClient();
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId: env.googleSpreadsheetId,
+async function getJudgmentSheetId(officeId?: string): Promise<number> {
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
+  const spreadsheet = await ctx.sheets.spreadsheets.get({
+    spreadsheetId: ctx.spreadsheetId,
   });
   const sheet = spreadsheet.data.sheets?.find(
     (s) => s.properties?.title === JUDGMENT_SHEET_NAME,
@@ -74,150 +77,52 @@ async function getJudgmentSheetId(): Promise<number> {
   if (!sheet?.properties && sheet?.properties?.sheetId === undefined) {
     throw new Error(`Sheet tab "${JUDGMENT_SHEET_NAME}" not found.`);
   }
-  judgmentSheetIdCache = sheet!.properties!.sheetId!;
-  return judgmentSheetIdCache;
+  return sheet!.properties!.sheetId!;
 }
 
-/** Ensures the "Judgment" sheet tab exists with the correct header row and text formatting. */
-export async function ensureJudgmentSheetReady(): Promise<void> {
-  if (isJudgmentSheetReadyCache) return;
-
+/** Ensures the "Judgment" sheet tab exists with the correct header row. */
+export async function ensureJudgmentSheetReady(officeId?: string): Promise<void> {
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   try {
-    const sheets = getClient();
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: env.googleSpreadsheetId,
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId,
     });
     const existing = spreadsheet.data.sheets?.find(
       (s) => s.properties?.title === JUDGMENT_SHEET_NAME,
     );
 
     if (!existing) {
-      const addRes = await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: env.googleSpreadsheetId,
+      await ctx.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: ctx.spreadsheetId,
         requestBody: {
           requests: [{ addSheet: { properties: { title: JUDGMENT_SHEET_NAME } } }],
         },
       });
-      judgmentSheetIdCache = addRes.data.replies?.[0]?.addSheet?.properties?.sheetId ?? null;
       logger.info(`Created sheet tab "${JUDGMENT_SHEET_NAME}"`);
-    } else {
-      judgmentSheetIdCache = existing.properties?.sheetId ?? null;
     }
 
-    // 1. Ensure Header row 1 is updated to JUDGMENT_SHEET_COLUMNS
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: env.googleSpreadsheetId,
+    // Always ensure the header is up to date (A1:K1)
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}1`,
       valueInputOption: "RAW",
       requestBody: { values: [[...JUDGMENT_SHEET_COLUMNS]] },
     });
-
-    // 2. Format cells explicitly so text color is BLACK on white background for data rows,
-    //    preventing Google Sheets from making text white.
-    if (judgmentSheetIdCache !== null) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: env.googleSpreadsheetId,
-        requestBody: {
-          requests: [
-            // Row 1 (Header): Dark Navy fill, white text, bold
-            {
-              repeatCell: {
-                range: {
-                  sheetId: judgmentSheetIdCache,
-                  startRowIndex: 0,
-                  endRowIndex: 1,
-                  startColumnIndex: 0,
-                  endColumnIndex: JUDGMENT_COLS,
-                },
-                cell: {
-                  userEnteredFormat: {
-                    backgroundColor: { red: 0.1, green: 0.15, blue: 0.25 },
-                    textFormat: {
-                      foregroundColor: { red: 1, green: 1, blue: 1 },
-                      bold: true,
-                      fontSize: 10,
-                    },
-                    horizontalAlignment: "CENTER",
-                    verticalAlignment: "MIDDLE",
-                  },
-                },
-                fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)",
-              },
-            },
-            // Rows 2..1000 (Data): White fill, BLACK text, normal
-            {
-              repeatCell: {
-                range: {
-                  sheetId: judgmentSheetIdCache,
-                  startRowIndex: 1,
-                  endRowIndex: 1000,
-                  startColumnIndex: 0,
-                  endColumnIndex: JUDGMENT_COLS,
-                },
-                cell: {
-                  userEnteredFormat: {
-                    backgroundColor: { red: 1, green: 1, blue: 1 },
-                    textFormat: {
-                      foregroundColor: { red: 0, green: 0, blue: 0 },
-                      bold: false,
-                      fontSize: 10,
-                    },
-                    horizontalAlignment: "RIGHT",
-                    verticalAlignment: "MIDDLE",
-                  },
-                },
-                fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)",
-              },
-            },
-          ],
-        },
-      });
-    }
-
-    isJudgmentSheetReadyCache = true;
-  } catch (err) {
-    isJudgmentSheetReadyCache = false;
-    logger.warn({ err }, "ensureJudgmentSheetReady non-fatal warning");
+  } catch (err: any) {
+    if (err instanceof GoogleSheetsError) throw err;
+    logger.warn({ err }, "ensureJudgmentSheetReady warning");
   }
 }
 
 export type JudgmentRow = string[];
 
-/** Returns all Judgment records (excluding header row), using in-memory cache if fresh. */
-export async function listJudgmentRows(forceRefresh = false): Promise<{ id: number; values: JudgmentRow }[]> {
-  const now = Date.now();
-  if (!forceRefresh && judgmentDataCache !== null && now - lastJudgmentCacheTime < JUDGMENT_CACHE_TTL_MS) {
-    return judgmentDataCache;
-  }
-
-  await ensureJudgmentSheetReady();
-
-  try {
-    const sheets = getClient();
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: env.googleSpreadsheetId,
-      range: `${JUDGMENT_SHEET_NAME}!A2:${COL_LAST}`,
-    });
-    const rows = response.data.values ?? [];
-    const result = rows
-      .map((row, index) => ({ id: index + 2, values: row as JudgmentRow }))
-      .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
-    
-    judgmentDataCache = result;
-    lastJudgmentCacheTime = now;
-    return result;
-  } catch (err) {
-    logger.warn({ err }, "Failed to fetch Judgment rows from Google Sheets, returning cached/empty");
-    return judgmentDataCache ?? [];
-  }
-}
-
-/** Fetches both headers and data rows in a single API call, using in-memory cache if fresh. */
-export async function listJudgmentRowsWithHeaders(forceRefresh = false): Promise<{
+/** Internal helper to fetch all raw judgment rows from sheet */
+async function fetchAllRawJudgmentRows(officeId?: string, forceRefresh = false): Promise<{
   headers: string[];
   rows: { id: number; values: JudgmentRow }[];
 }> {
-  await ensureJudgmentSheetReady();
+  await ensureJudgmentSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
 
   const now = Date.now();
   const useCache =
@@ -225,89 +130,156 @@ export async function listJudgmentRowsWithHeaders(forceRefresh = false): Promise
     judgmentDataCache !== null &&
     now - lastJudgmentCacheTime < JUDGMENT_CACHE_TTL_MS;
 
-  try {
-    const sheets = getClient();
-
-    if (useCache) {
-      // Fetch row 1 only for headers when using cache
-      const headerRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: env.googleSpreadsheetId,
-        range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}1`,
-      });
-      const headers = ((headerRes.data.values?.[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS]);
-      return { headers, rows: judgmentDataCache! };
-    }
-
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: env.googleSpreadsheetId,
-      range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}`,
+  if (useCache) {
+    const headerRes = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}1`,
     });
-    const data = response.data.values ?? [];
-    const headers = (data[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS];
-    const dataRows = data.slice(1);
-    const rows = dataRows
-      .map((row, index) => ({ id: index + 2, values: row as JudgmentRow }))
-      .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
-
-    judgmentDataCache = rows;
-    lastJudgmentCacheTime = now;
-    return { headers, rows };
-  } catch (err) {
-    logger.warn({ err }, "Failed to fetch Judgment rows from Google Sheets, returning cached/empty");
-    return {
-      headers: [...JUDGMENT_SHEET_COLUMNS],
-      rows: judgmentDataCache ?? [],
-    };
+    const headers = ((headerRes.data.values?.[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS]);
+    return { headers, rows: judgmentDataCache! };
   }
+
+  const response = await ctx.sheets.spreadsheets.values.get({
+    spreadsheetId: ctx.spreadsheetId,
+    range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}`,
+  });
+  const data = response.data.values ?? [];
+  const headers = (data[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS];
+  const dataRows = data.slice(1);
+  const rows = dataRows
+    .map((row, index) => ({ id: index + 2, values: row as JudgmentRow }))
+    .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
+
+  judgmentDataCache = rows;
+  lastJudgmentCacheTime = now;
+  return { headers, rows };
 }
 
-/** Appends a new Judgment record row and returns its 1-based row id.
- *  Uses OVERWRITE (not INSERT_ROWS) to avoid inheriting cell formatting
- *  from the row above, which would make text appear white on a white background.
+/**
+ * Returns all Judgment records for the specified office.
+ * Unmigrated rows without an office are strictly ignored.
  */
-export async function appendJudgmentRow(values: JudgmentRow): Promise<number> {
+export async function listJudgmentRowsWithHeaders(
+  officeId: string,
+  forceRefresh = false,
+): Promise<{
+  headers: string[];
+  rows: { id: number; values: JudgmentRow }[];
+}> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to list Judgment records.");
+  }
+  const cleanOfficeId = officeId.trim();
+  const { headers, rows } = await fetchAllRawJudgmentRows(cleanOfficeId, forceRefresh);
+
+  const officeColIdx = headers.findIndex((h) => h.trim() === "معرف المكتب");
+  const actualColIdx = officeColIdx !== -1 ? officeColIdx : JUDGMENT_OFFICE_COL_INDEX;
+
+  const filtered = rows.filter((r) => (r.values[actualColIdx] || "").trim() === cleanOfficeId);
+  return { headers, rows: filtered };
+}
+
+/**
+ * Gets a single Judgment record row by id, strictly verifying office ownership.
+ * Returns null if record doesn't exist or belongs to another office.
+ */
+export async function getJudgmentRowById(
+  officeId: string,
+  id: number,
+): Promise<{ id: number; values: JudgmentRow; headers: string[] } | null> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to get a Judgment record.");
+  }
+  const cleanOfficeId = officeId.trim();
+  const { headers, rows } = await fetchAllRawJudgmentRows(cleanOfficeId);
+
+  const match = rows.find((r) => r.id === id);
+  if (!match) return null;
+
+  const officeColIdx = headers.findIndex((h) => h.trim() === "معرف المكتب");
+  const actualColIdx = officeColIdx !== -1 ? officeColIdx : JUDGMENT_OFFICE_COL_INDEX;
+
+  if ((match.values[actualColIdx] || "").trim() !== cleanOfficeId) {
+    return null; // Do not reveal existence of records from other offices
+  }
+  return { id: match.id, values: match.values, headers };
+}
+
+/**
+ * Appends a new Judgment record row, forcefully stamping the caller's office.
+ */
+export async function appendJudgmentRow(officeId: string, values: JudgmentRow): Promise<number> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to create a Judgment record.");
+  }
   invalidateJudgmentCache();
-  const sheets = getClient();
-  // Pad the row to exactly JUDGMENT_COLS so we always write all 10 columns
+  await ensureJudgmentSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
+
   const paddedValues: string[] = Array.from({ length: JUDGMENT_COLS }, (_, i) => values[i] ?? "");
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: env.googleSpreadsheetId,
+  paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
+
+  const response = await ctx.sheets.spreadsheets.values.append({
+    spreadsheetId: ctx.spreadsheetId,
     range: `${JUDGMENT_SHEET_NAME}!A:${COL_LAST}`,
     valueInputOption: "RAW",
-    insertDataOption: "OVERWRITE", // OVERWRITE avoids inheriting header row's white-text formatting
+    insertDataOption: "OVERWRITE",
     requestBody: { values: [paddedValues] },
   });
   const updatedRange = response.data.updates?.updatedRange;
   const match = updatedRange?.match(/![A-Z]+(\d+):/);
   if (match) return Number(match[1]);
-  const { rows } = await listJudgmentRowsWithHeaders();
+
+  const { rows } = await fetchAllRawJudgmentRows(officeId, true);
   const last = rows[rows.length - 1];
   if (!last) throw new Error("Failed to determine id of newly created Judgment row.");
   return last.id;
 }
 
-/** Updates an existing Judgment row by its 1-based row id. */
-export async function updateJudgmentRow(id: number, values: JudgmentRow): Promise<void> {
+/**
+ * Updates an existing Judgment row by its 1-based row id.
+ * Verifies that the row belongs to the caller's office before updating.
+ */
+export async function updateJudgmentRow(officeId: string, id: number, values: JudgmentRow): Promise<void> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to update a Judgment record.");
+  }
+  const existing = await getJudgmentRowById(officeId, id);
+  if (!existing) {
+    throw new Error("Judgment record not found for this office.");
+  }
+
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   invalidateJudgmentCache();
-  const sheets = getClient();
-  // Always write exactly JUDGMENT_COLS columns to avoid leaving stale values
   const paddedValues: string[] = Array.from({ length: JUDGMENT_COLS }, (_, i) => values[i] ?? "");
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: env.googleSpreadsheetId,
+  paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
+
+  await ctx.sheets.spreadsheets.values.update({
+    spreadsheetId: ctx.spreadsheetId,
     range: `${JUDGMENT_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
     valueInputOption: "RAW",
     requestBody: { values: [paddedValues] },
   });
 }
 
+/**
+ * Deletes a Judgment row by its 1-based row id.
+ * Verifies that the row belongs to the caller's office before deleting.
+ */
+export async function deleteJudgmentRow(officeId: string, id: number): Promise<void> {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to delete a Judgment record.");
+  }
+  const existing = await getJudgmentRowById(officeId, id);
+  if (!existing) {
+    throw new Error("Judgment record not found for this office.");
+  }
 
-/** Deletes a Judgment row by its 1-based row id. */
-export async function deleteJudgmentRow(id: number): Promise<void> {
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   invalidateJudgmentCache();
-  const sheets = getClient();
-  const sheetId = await getJudgmentSheetId();
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: env.googleSpreadsheetId,
+  const sheetId = await getJudgmentSheetId(officeId);
+  await ctx.sheets.spreadsheets.batchUpdate({
+    spreadsheetId: ctx.spreadsheetId,
     requestBody: {
       requests: [
         {
@@ -324,3 +296,20 @@ export async function deleteJudgmentRow(id: number): Promise<void> {
     },
   });
 }
+
+/** Assign office to a legacy/unassigned row (for migration) */
+export async function assignOfficeToLegacyRow(id: number, targetOfficeId: string): Promise<void> {
+  const cleanOfficeId = targetOfficeId.trim();
+  if (!cleanOfficeId) throw new Error("targetOfficeId is required.");
+  invalidateJudgmentCache();
+  const sheets = getClient();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: env.googleSpreadsheetId,
+    range: `${JUDGMENT_SHEET_NAME}!${COL_LAST}${id}`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[cleanOfficeId]] },
+  });
+}
+
+/** Expose raw fetch for the migration script */
+export { fetchAllRawJudgmentRows };

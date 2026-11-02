@@ -478,7 +478,30 @@ export async function getUserGoogleCredentials(userId?: string): Promise<UserGoo
   }
 
   const client = getSupabaseClient();
-  if (!client) return null;
+  if (!client) {
+    const local = loadLocalUsers();
+    const user = local.find((u) => u.id === userId || u.username === userId);
+    if (!user) return null;
+
+    let parsedJson: Record<string, unknown> | undefined = undefined;
+    if (user.google_service_account_json) {
+      try {
+        parsedJson = typeof user.google_service_account_json === "string"
+          ? JSON.parse(user.google_service_account_json)
+          : (user.google_service_account_json as any);
+      } catch (err) {
+        logger.warn({ err, userId }, "Failed to parse local user google_service_account_json");
+      }
+    }
+
+    const creds: UserGoogleCredentials = {
+      serviceAccountJson: parsedJson,
+      spreadsheetId: user.google_spreadsheet_id?.trim() || undefined,
+      sheetName: user.google_sheet_name?.trim() || undefined,
+    };
+    userGoogleCredsCache.set(userId, { data: creds, timestamp: Date.now() });
+    return creds;
+  }
 
   try {
     const tableName = env.supabaseTableName;
@@ -488,7 +511,12 @@ export async function getUserGoogleCredentials(userId?: string): Promise<UserGoo
       .eq("id", userId)
       .single();
 
-    if (error || !data) return null;
+    if (error) {
+      // PGRST116 means 0 rows returned (user not found)
+      if (error.code === "PGRST116") return null;
+      throw new AccountSourceUnavailableError(`Database error querying user Google credentials: ${error.message}`);
+    }
+    if (!data) return null;
 
     let parsedJson: Record<string, unknown> | undefined = undefined;
     if (data.google_service_account_json) {
@@ -510,8 +538,9 @@ export async function getUserGoogleCredentials(userId?: string): Promise<UserGoo
     userGoogleCredsCache.set(userId, { data: creds, timestamp: Date.now() });
     return creds;
   } catch (err) {
+    if (err instanceof AccountSourceUnavailableError) throw err;
     logger.error({ err, userId }, "Error getting user Google credentials from Supabase");
-    return null;
+    throw new AccountSourceUnavailableError(`Error accessing settings store for user ${userId}: ${(err as any)?.message}`);
   }
 }
 

@@ -1,16 +1,46 @@
 import { Router, type IRouter } from "express";
 import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
+import { GoogleBindingMissingError, GoogleSettingsStoreError, GoogleSheetsError } from "../services/googleSheets.service";
 import {
   ensurePoaSheetReady,
   listPoaRows,
   appendPoaRow,
   updatePoaRow,
   deletePoaRow,
+  getPoaRowById,
 } from "../services/poa.sheets.service";
 import moment from "moment-hijri";
 
 const router: IRouter = Router();
+
+function handlePoaError(res: any, err: any, defaultMsg: string): void {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: "ربط المكتب غير مكتمل. تواصل مع المشرف",
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId,
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.",
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId,
+    });
+    return;
+  }
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: err.userMessage,
+      refId: err.refId,
+    });
+    return;
+  }
+  logger.error({ err }, defaultMsg);
+  res.status(500).json({ error: defaultMsg });
+}
 
 // Stop all POA Excel Sheet read/write operations if subscription is suspended or expired
 router.use("/poa", attachAuthUser, requireAuth, requireActiveSubscription);
@@ -23,11 +53,11 @@ interface PoaRecord {
   daysRemaining: number;
   notes?: string;
   createdAt: string;
+  officeId?: string;
 }
 
 /**
  * Calculates days remaining from a Hijri date string (DD/MM/YYYY or YYYY/MM/DD).
- * Returns 0 if the string is empty or cannot be parsed.
  */
 function calcDaysFromHijri(hijriDateStr: string): number {
   if (!hijriDateStr?.trim()) return 0;
@@ -66,10 +96,11 @@ function rowToRecord(values: string[]): PoaRecord {
       : calcDaysFromHijri(values[3] || ""),
     notes: values[5] || "",
     createdAt: values[6] || new Date().toISOString(),
+    officeId: values[7] || "",
   };
 }
 
-function recordToRow(record: PoaRecord): string[] {
+function recordToRow(record: PoaRecord, officeId: string): string[] {
   return [
     record.clientName,
     record.poaNumber,
@@ -78,41 +109,54 @@ function recordToRow(record: PoaRecord): string[] {
     String(record.daysRemaining ?? 0),
     record.notes || "",
     record.createdAt || new Date().toISOString(),
+    officeId,
   ];
 }
 
 /**
  * GET /api/poa
- * Lists all Power of Attorney records from the "Attorney" sheet.
+ * Lists all Power of Attorney records belonging to the authenticated office.
  */
 router.get("/poa", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   try {
-    await ensurePoaSheetReady();
+    await ensurePoaSheetReady(officeId);
     const forceRefresh = req.query.refresh === "true";
-    const rows = await listPoaRows(forceRefresh);
+    const rows = await listPoaRows(officeId, forceRefresh);
     const records = rows.map(({ id, values }) => ({
       ...rowToRecord(values),
       sheetRowId: id,
     }));
     res.json(records);
   } catch (err) {
-    logger.error({ err }, "Failed to list POA records");
-    res.status(500).json({ error: "فشل تحميل بيانات الوكالات." });
+    handlePoaError(res, err, "فشل تحميل بيانات الوكالات.");
   }
 });
 
 /**
  * POST /api/poa
- * Creates a new Power of Attorney record in the "Attorney" sheet.
+ * Creates a new Power of Attorney record stamped with the caller's office.
  */
 router.post("/poa", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const body = req.body as Partial<PoaRecord>;
   if (!body.clientName?.trim() || !body.poaNumber?.trim()) {
     res.status(400).json({ error: "اسم العميل ورقم الوكالة مطلوبان." });
     return;
   }
+
   try {
-    await ensurePoaSheetReady();
+    await ensurePoaSheetReady(officeId);
     const record: PoaRecord = {
       clientName: body.clientName.trim(),
       poaNumber: body.poaNumber.trim(),
@@ -121,35 +165,43 @@ router.post("/poa", attachAuthUser, requireAuth, async (req, res) => {
       daysRemaining: Number(body.daysRemaining) || 0,
       notes: body.notes?.trim() || "",
       createdAt: new Date().toISOString(),
+      officeId, // Always use authenticated session officeId
     };
-    await appendPoaRow(recordToRow(record));
-    logger.info("POA record created");
-    res.status(201).json(record);
+
+    const rowId = await appendPoaRow(officeId, recordToRow(record, officeId));
+    logger.info({ rowId, officeId }, "POA record created");
+    res.status(201).json({ ...record, sheetRowId: rowId });
   } catch (err) {
-    logger.error({ err }, "Failed to create POA record");
-    res.status(500).json({ error: "فشل حفظ الوكالة." });
+    handlePoaError(res, err, "فشل حفظ الوكالة.");
   }
 });
 
 /**
  * PUT /api/poa/:rowId
- * Updates an existing POA record. :rowId is the 1-based sheet row number.
+ * Updates an existing POA record. Verifies office ownership, returning 404 if not found or unauthorized.
  */
 router.put("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
     res.status(400).json({ error: "معرف الصف غير صالح." });
     return;
   }
+
   const body = req.body as Partial<PoaRecord>;
   try {
-    await ensurePoaSheetReady();
-    const rows = await listPoaRows();
-    const existing = rows.find((r) => r.id === rowId);
+    await ensurePoaSheetReady(officeId);
+    const existing = await getPoaRowById(officeId, rowId);
     if (!existing) {
       res.status(404).json({ error: "الوكالة غير موجودة." });
       return;
     }
+
     const existingRecord = rowToRecord(existing.values);
     const updated: PoaRecord = {
       ...existingRecord,
@@ -159,33 +211,46 @@ router.put("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
       expiryDateHijri: body.expiryDateHijri?.trim() ?? existingRecord.expiryDateHijri,
       daysRemaining: body.daysRemaining !== undefined ? Number(body.daysRemaining) : existingRecord.daysRemaining,
       notes: body.notes?.trim() ?? existingRecord.notes,
+      officeId, // Preserve caller's office
     };
-    await updatePoaRow(rowId, recordToRow(updated));
-    logger.info({ rowId }, "POA record updated");
-    res.json(updated);
+
+    await updatePoaRow(officeId, rowId, recordToRow(updated, officeId));
+    logger.info({ rowId, officeId }, "POA record updated");
+    res.json({ ...updated, sheetRowId: rowId });
   } catch (err) {
-    logger.error({ err }, "Failed to update POA record");
-    res.status(500).json({ error: "فشل تحديث الوكالة." });
+    handlePoaError(res, err, "فشل تحديث الوكالة.");
   }
 });
 
 /**
  * DELETE /api/poa/:rowId
- * Deletes a POA record by its 1-based sheet row id.
+ * Deletes a POA record by its 1-based sheet row id. Verifies office ownership, returning 404 if not found or unauthorized.
  */
 router.delete("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
     res.status(400).json({ error: "معرف الصف غير صالح." });
     return;
   }
+
   try {
-    await deletePoaRow(rowId);
-    logger.info({ rowId }, "POA record deleted");
+    const existing = await getPoaRowById(officeId, rowId);
+    if (!existing) {
+      res.status(404).json({ error: "الوكالة غير موجودة." });
+      return;
+    }
+
+    await deletePoaRow(officeId, rowId);
+    logger.info({ rowId, officeId }, "POA record deleted");
     res.status(204).send();
   } catch (err) {
-    logger.error({ err }, "Failed to delete POA record");
-    res.status(500).json({ error: "فشل حذف الوكالة." });
+    handlePoaError(res, err, "فشل حذف الوكالة.");
   }
 });
 

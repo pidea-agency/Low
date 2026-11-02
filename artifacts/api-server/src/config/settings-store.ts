@@ -13,7 +13,10 @@
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve } from "path";
+import { fileURLToPath } from "url";
 import { logger } from "../lib/logger";
+
+const currentDirname = typeof __dirname !== "undefined" ? __dirname : fileURLToPath(new URL(".", import.meta.url));
 
 export interface AppSettings {
   /** AI Provider API key (e.g. OpenRouter, OpenAI, Groq) */
@@ -58,8 +61,8 @@ function loadFromDisk(): AppSettings {
   const pathsToTry = [
     LOCAL_SETTINGS_PATH,
     ALT_SETTINGS_PATH,
-    resolve(__dirname, "..", "..", "settings.json"),
-    resolve(__dirname, "..", "..", "..", "settings.json"),
+    resolve(currentDirname, "..", "..", "settings.json"),
+    resolve(currentDirname, "..", "..", "..", "settings.json"),
     TMP_SETTINGS_PATH,
   ];
   let result: AppSettings = {};

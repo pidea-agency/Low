@@ -1,17 +1,47 @@
 import { Router, type IRouter } from "express";
 import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
+import { GoogleBindingMissingError, GoogleSettingsStoreError, GoogleSheetsError } from "../services/googleSheets.service";
 import {
   ensureTaskSheetReady,
   listTaskRowsWithHeaders,
   appendTaskRow,
   updateTaskRow,
   deleteTaskRow,
+  getTaskRowById,
   TASK_SHEET_COLUMNS,
 } from "../services/task.sheets.service";
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
 
 const router: IRouter = Router();
+
+function handleTaskError(res: any, err: any, defaultMsg: string): void {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: "ربط المكتب غير مكتمل. تواصل مع المشرف",
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId,
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.",
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId,
+    });
+    return;
+  }
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: err.userMessage,
+      refId: err.refId,
+    });
+    return;
+  }
+  logger.error({ err }, defaultMsg);
+  res.status(500).json({ error: defaultMsg });
+}
 
 // Stop all Tasks Excel Sheet read/write operations if subscription is suspended or expired
 router.use("/tasks", attachAuthUser, requireAuth, requireActiveSubscription);
@@ -26,18 +56,20 @@ export interface TaskRecord {
   status: "قيد التنفيذ" | "مكتملة" | "مؤجلة" | "معلقة";
   notes: string;
   createdAt: string;
+  officeId?: string;
 }
 
 /** Canonical column header → field key mapping */
 const FIELD_KEYS: Record<string, keyof Omit<TaskRecord, "id">> = {
-  "عنوان المهمة":      "title",
-  "المكلف":           "assignee",
-  "الأولوية":         "priority",
-  "تاريخ التسليم":    "dueDate",
+  "عنوان المهمة":        "title",
+  "المكلف":             "assignee",
+  "الأولوية":           "priority",
+  "تاريخ التسليم":      "dueDate",
   "عدد الأيام المتبقية": "remainingDays",
-  "الحالة":           "status",
-  "ملاحظات":          "notes",
-  "تاريخ الإنشاء":    "createdAt",
+  "الحالة":             "status",
+  "ملاحظات":            "notes",
+  "تاريخ الإنشاء":      "createdAt",
+  "معرف المكتب":         "officeId",
 };
 
 /** Calculates remaining days from a YYYY-MM-DD date string. */
@@ -74,178 +106,194 @@ function rowToRecord(id: number, values: string[], headers: string[]): TaskRecor
     status:        (record.status as TaskRecord["status"]) || "قيد التنفيذ",
     notes:         record.notes         || "",
     createdAt:     record.createdAt     || new Date().toISOString(),
+    officeId:      record.officeId      || "",
   };
 }
 
 /**
  * Converts a TaskRecord back to a row array ordered by TASK_SHEET_COLUMNS.
- * Always outputs exactly 8 values in the canonical column order.
  */
-function recordToRow(record: Omit<TaskRecord, "id">): string[] {
+function recordToRow(record: Omit<TaskRecord, "id">, officeId: string): string[] {
   return [
     record.title         || "",  // A: عنوان المهمة
     record.assignee      || "",  // B: المكلف
     record.priority      || "",  // C: الأولوية
     record.dueDate       || "",  // D: تاريخ التسليم
     calcRemainingDays(record.dueDate), // E: عدد الأيام المتبقية (auto)
-    record.status        || "",  // F: الحالة
+    record.status        || "قيد التنفيذ", // F: الحالة
     record.notes         || "",  // G: ملاحظات
     record.createdAt     || new Date().toISOString(), // H: تاريخ الإنشاء
+    officeId,                    // I: معرف المكتب
   ];
 }
 
 /**
  * GET /api/tasks
- * Lists all Task records from the "Tasks" sheet.
+ * Lists all Task records belonging to the authenticated office.
  */
 router.get("/tasks", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   try {
-    await ensureTaskSheetReady();
+    await ensureTaskSheetReady(officeId);
     const forceRefresh = req.query.refresh === "true";
-    const { headers, rows } = await listTaskRowsWithHeaders(forceRefresh);
+    const { headers, rows } = await listTaskRowsWithHeaders(officeId, forceRefresh);
     const records = rows.map(({ id, values }) => rowToRecord(id, values, headers));
     res.json(records);
   } catch (err) {
-    logger.error({ err }, "Failed to list Task records");
-    res.status(500).json({ error: "فشل تحميل بيانات المهام." });
+    handleTaskError(res, err, "فشل تحميل بيانات المهام.");
+  }
+});
+
+/**
+ * GET /api/tasks/:id
+ * Gets a single Task record by row id. Verifies office ownership, returning 404 if not found or unauthorized.
+ */
+router.get("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "معرف الصف غير صالح." });
+    return;
+  }
+
+  try {
+    await ensureTaskSheetReady(officeId);
+    const match = await getTaskRowById(officeId, id);
+    if (!match) {
+      res.status(404).json({ error: "المهمة غير موجودة." });
+      return;
+    }
+    res.json(rowToRecord(match.id, match.values, match.headers));
+  } catch (err) {
+    handleTaskError(res, err, "فشل تحميل بيانات المهمة.");
   }
 });
 
 /**
  * POST /api/tasks
- * Creates a new Task record in the "Tasks" sheet.
+ * Creates a new Task record in the "Tasks" sheet stamped with caller's office.
  */
 router.post("/tasks", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const body = req.body as Partial<TaskRecord>;
   if (!body.title?.trim()) {
     res.status(400).json({ error: "عنوان المهمة مطلوب." });
     return;
   }
+
   try {
-    await ensureTaskSheetReady();
-    const recordPayload: Omit<TaskRecord, "id"> = {
-      title:         body.title.trim(),
-      assignee:      body.assignee?.trim()  || "",
-      priority:      body.priority           || "عادية",
-      dueDate:       body.dueDate?.trim()   || "",
-      remainingDays: calcRemainingDays(body.dueDate?.trim() || ""),
-      status:        body.status             || "قيد التنفيذ",
-      notes:         body.notes?.trim()      || "",
-      createdAt:     new Date().toISOString(),
+    await ensureTaskSheetReady(officeId);
+    const record: Omit<TaskRecord, "id"> = {
+      title: body.title.trim(),
+      assignee: body.assignee?.trim() || "",
+      priority: (body.priority as TaskRecord["priority"]) || "عادية",
+      dueDate: body.dueDate?.trim() || "",
+      remainingDays: calcRemainingDays(body.dueDate || ""),
+      status: (body.status as TaskRecord["status"]) || "قيد التنفيذ",
+      notes: body.notes?.trim() || "",
+      createdAt: new Date().toISOString(),
+      officeId, // Always use authenticated session officeId
     };
-    const rowId = await appendTaskRow(recordToRow(recordPayload));
-    logger.info({ rowId }, "Task record created");
-    res.status(201).json({ id: rowId, ...recordPayload });
+
+    const rowId = await appendTaskRow(officeId, recordToRow(record, officeId));
+    logger.info({ rowId, officeId }, "Task record created");
+    res.status(201).json({ id: rowId, ...record });
   } catch (err) {
-    logger.error({ err }, "Failed to create Task record");
-    res.status(500).json({ error: "فشل حفظ المهمة." });
+    handleTaskError(res, err, "فشل حفظ المهمة.");
   }
 });
 
 /**
  * PUT /api/tasks/:id
- * Updates an existing Task record. :id is the 1-based sheet row number.
+ * Updates an existing Task record. Verifies office ownership, returning 404 if not found or unauthorized.
  */
 router.put("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الصف غير صالح." });
     return;
   }
+
   const body = req.body as Partial<TaskRecord>;
   try {
-    await ensureTaskSheetReady();
-    const { headers, rows } = await listTaskRowsWithHeaders();
-    const existing = rows.find((r) => r.id === id);
+    await ensureTaskSheetReady(officeId);
+    const existing = await getTaskRowById(officeId, id);
     if (!existing) {
       res.status(404).json({ error: "المهمة غير موجودة." });
       return;
     }
-    const existingRecord = rowToRecord(id, existing.values, headers);
-    const updatedPayload: Omit<TaskRecord, "id"> = {
-      title:         body.title    !== undefined ? body.title.trim()    : existingRecord.title,
-      assignee:      body.assignee !== undefined ? body.assignee.trim() : existingRecord.assignee,
-      priority:      body.priority !== undefined ? body.priority        : existingRecord.priority,
-      dueDate:       body.dueDate  !== undefined ? body.dueDate.trim()  : existingRecord.dueDate,
-      remainingDays: calcRemainingDays(body.dueDate !== undefined ? body.dueDate.trim() : existingRecord.dueDate),
-      status:        body.status   !== undefined ? body.status          : existingRecord.status,
-      notes:         body.notes    !== undefined ? body.notes.trim()    : existingRecord.notes,
-      createdAt:     existingRecord.createdAt,
+
+    const current = rowToRecord(existing.id, existing.values, existing.headers);
+    const updated: Omit<TaskRecord, "id"> = {
+      title: body.title !== undefined ? body.title.trim() : current.title,
+      assignee: body.assignee !== undefined ? body.assignee.trim() : current.assignee,
+      priority: (body.priority as TaskRecord["priority"]) || current.priority,
+      dueDate: body.dueDate !== undefined ? body.dueDate.trim() : current.dueDate,
+      remainingDays: calcRemainingDays(body.dueDate !== undefined ? body.dueDate : current.dueDate),
+      status: (body.status as TaskRecord["status"]) || current.status,
+      notes: body.notes !== undefined ? body.notes.trim() : current.notes,
+      createdAt: current.createdAt,
+      officeId, // Preserve caller's office
     };
-    await updateTaskRow(id, recordToRow(updatedPayload));
-    logger.info({ id }, "Task record updated");
-    res.json({ id, ...updatedPayload });
+
+    await updateTaskRow(officeId, id, recordToRow(updated, officeId));
+    logger.info({ id, officeId }, "Task record updated");
+    res.json({ id, ...updated });
   } catch (err) {
-    logger.error({ err }, "Failed to update Task record");
-    res.status(500).json({ error: "فشل تحديث المهمة." });
+    handleTaskError(res, err, "فشل تحديث المهمة.");
   }
 });
 
 /**
  * DELETE /api/tasks/:id
- * Deletes a Task record by its 1-based sheet row id.
+ * Deletes a Task record by row id. Verifies office ownership, returning 404 if not found or unauthorized.
  */
 router.delete("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
+  const officeId = req.authUser?.userId || req.authUser?.username;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الصف غير صالح." });
     return;
   }
-  try {
-    await deleteTaskRow(id);
-    logger.info({ id }, "Task record deleted");
-    res.status(204).send();
-  } catch (err) {
-    logger.error({ err }, "Failed to delete Task record");
-    res.status(500).json({ error: "فشل حذف المهمة." });
-  }
-});
 
-/**
- * POST /api/tasks/:id/send-whatsapp
- * Dispatches an instant WhatsApp reminder with task details.
- */
-router.post("/tasks/:id/send-whatsapp", attachAuthUser, requireAuth, async (req, res) => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "معرف المهمة غير صالح." });
-    return;
-  }
   try {
-    await ensureTaskSheetReady();
-    const { headers, rows } = await listTaskRowsWithHeaders();
-    const existing = rows.find((r) => r.id === id);
+    const existing = await getTaskRowById(officeId, id);
     if (!existing) {
       res.status(404).json({ error: "المهمة غير موجودة." });
       return;
     }
-    const task = rowToRecord(id, existing.values, headers);
 
-    const remainingText = calcRemainingDays(task.dueDate);
-    const lines: string[] = [
-      `🔔 *تذكير بموعد مهمة قانونية* (${remainingText ? remainingText : "تذكير فوري"})`,
-      "",
-      `📌 *عنوان المهمة:* ${task.title}`,
-    ];
-
-    if (task.assignee) lines.push(`👤 *المكلف:* ${task.assignee}`);
-    if (task.status) lines.push(`📋 *الحالة:* ${task.status}`);
-    if (task.priority) lines.push(`🚩 *الأولوية:* ${task.priority}`);
-    if (task.dueDate) lines.push(`📅 *تاريخ التسليم:* ${task.dueDate}`);
-    if (task.notes) lines.push(`📝 *ملاحظات:* ${task.notes}`);
-
-    lines.push("", "الرجاء الإنجاز والمتابعة في الموعد المحدد.");
-
-    const message = lines.join("\n");
-
-    const channel = new WhatsappReminderChannel();
-    await channel.sendRaw(message);
-
-    res.json({ message: "تم إرسال تذكير المهمة عبر الواتساب بنجاح!" });
-  } catch (err: any) {
-    logger.error({ err, id }, "Failed to send instant WhatsApp task reminder");
-    const errMsg = err?.message || "فشل إرسال تذكير الواتساب للمهمة.";
-    res.status(400).json({ error: errMsg });
+    await deleteTaskRow(officeId, id);
+    logger.info({ id, officeId }, "Task record deleted");
+    res.status(204).send();
+  } catch (err) {
+    handleTaskError(res, err, "فشل حذف المهمة.");
   }
 });
 

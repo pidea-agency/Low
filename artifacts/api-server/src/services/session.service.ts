@@ -370,9 +370,9 @@ export interface DashboardStats {
 export async function getDashboardStats(userId?: string): Promise<DashboardStats> {
   const [sessionsRes, poaRes, judgmentRes, taskRes] = await Promise.allSettled([
     listSessions(undefined, userId),
-    listPoaRows(),
-    listJudgmentRowsWithHeaders(),
-    listTaskRowsWithHeaders(),
+    userId ? listPoaRows(userId) : Promise.resolve([]),
+    userId ? listJudgmentRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] }),
+    userId ? listTaskRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] }),
   ]);
 
   const sessions = sessionsRes.status === "fulfilled" ? sessionsRes.value : [];

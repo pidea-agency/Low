@@ -277,9 +277,11 @@ export default function SessionsPage() {
             <AlertCircle className="w-6 h-6" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-destructive">فشل تحميل قائمة الجلسات</h3>
+            <h3 className="text-base font-bold text-destructive">
+              {(error as any)?.status === 409 ? 'تنبيه إعدادات المكتب' : 'فشل تحميل قائمة الجلسات'}
+            </h3>
             <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
-              تعذر الاتصال بـ Google Sheets لجلب بيانات الجلسات. يرجى التحقق من اتصال الشبكة وصلاحيات ملف الاعتماد ثم إعادة المحاولة.
+              {(error as any)?.data?.error || (error as any)?.message || 'تعذر الاتصال بـ Google Sheets لجلب بيانات الجلسات. يرجى التحقق من اتصال الشبكة وصلاحيات ملف الاعتماد ثم إعادة المحاولة.'}
             </p>
           </div>
           <Button
