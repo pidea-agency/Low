@@ -14,10 +14,14 @@ import {
 
 const router: IRouter = Router();
 
+function generateRefId(): string {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+
 function handleJudgmentError(res: any, err: any, defaultMsg: string): void {
   if (err instanceof GoogleBindingMissingError) {
     res.status(409).json({
-      error: "ربط المكتب غير مكتمل. تواصل مع المشرف",
+      error: `ربط المكتب غير مكتمل. تواصل مع المشرف. رقم المرجع: ${err.refId}`,
       code: "GOOGLE_BINDING_INCOMPLETE",
       refId: err.refId,
     });
@@ -25,7 +29,7 @@ function handleJudgmentError(res: any, err: any, defaultMsg: string): void {
   }
   if (err instanceof GoogleSettingsStoreError) {
     res.status(503).json({
-      error: "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.",
+      error: `تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً. رقم المرجع: ${err.refId}`,
       code: "SETTINGS_STORE_UNAVAILABLE",
       refId: err.refId,
     });
@@ -33,13 +37,28 @@ function handleJudgmentError(res: any, err: any, defaultMsg: string): void {
   }
   if (err instanceof GoogleSheetsError) {
     res.status(err.statusCode).json({
-      error: err.userMessage,
+      error: `${err.userMessage} رقم المرجع: ${err.refId}`,
       refId: err.refId,
+      code: err.name,
     });
     return;
   }
-  logger.error({ err }, defaultMsg);
-  res.status(500).json({ error: defaultMsg });
+
+  const refId = generateRefId();
+  logger.error(
+    {
+      refId,
+      errName: err?.name,
+      errCode: err?.code,
+      message: err?.message || String(err),
+    },
+    defaultMsg,
+  );
+  res.status(500).json({
+    error: `${defaultMsg} رقم المرجع: ${refId}`,
+    refId,
+    code: "INTERNAL_ERROR",
+  });
 }
 
 // Stop all Judgment Excel Sheet read/write operations if subscription is suspended or expired
@@ -196,6 +215,10 @@ router.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
     res.status(400).json({ error: "رقم القضية مطلوب." });
     return;
   }
+  if (!body.judgmentNumber?.trim()) {
+    res.status(400).json({ error: "رقم الصك مطلوب." });
+    return;
+  }
 
   try {
     await ensureJudgmentSheetReady(officeId);
@@ -205,7 +228,7 @@ router.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
       plaintiff:     body.plaintiff?.trim() || "",
       defendant:     body.defendant?.trim() || "",
       assignedLawyer: body.assignedLawyer?.trim() || "",
-      judgmentNumber: body.judgmentNumber?.trim() || "",
+      judgmentNumber: body.judgmentNumber.trim(),
       judgmentDate:  body.judgmentDate?.trim() || "",
       summary:       body.summary?.trim() || "",
       isFavorable:   normalizeJudgmentType(body.isFavorable || ""),
@@ -214,8 +237,20 @@ router.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
     };
 
     const rowId = await appendJudgmentRow(officeId, recordToRow(record, officeId));
-    logger.info({ rowId, officeId }, "Judgment record created");
-    res.status(201).json({ id: rowId, ...record });
+
+    // Read-after-write verification: confirm existence in sheet before replying
+    const verified = await getJudgmentRowById(officeId, rowId);
+    if (!verified) {
+      throw new GoogleSheetsError(
+        `Judgment record with rowId ${rowId} could not be confirmed upon re-reading.`,
+        502,
+        "تمت كتابة الحكم ولكن تعذر التحقق من وجوده في الشيت.",
+      );
+    }
+
+    const createdRecord = rowToRecord(verified.id, verified.values, verified.headers);
+    logger.info({ rowId, officeId }, "Judgment record created and verified");
+    res.status(201).json(createdRecord);
   } catch (err) {
     handleJudgmentError(res, err, "فشل حفظ الحكم.");
   }

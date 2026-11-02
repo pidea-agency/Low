@@ -1,11 +1,34 @@
 import cron from "node-cron";
-import { env, isGoogleSheetsConfigured } from "../config/env";
+import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { listSessions, markReminderSent } from "../services/session.service";
 import { notify } from "../services/reminder/reminder.service";
 import { computeHearingDateTime } from "../utils/hijri";
+import { listSupabaseUsers, type AppUser } from "../services/supabase.service";
+import { GoogleBindingMissingError } from "../services/googleSheets.service";
+import type { Session } from "@workspace/api-client-react";
+import type { ReminderPayload } from "../services/reminder/reminder.types";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
+
+export interface OfficeReminderResult {
+  officeId: string;
+  remindersFound: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+  reason?: string;
+}
+
+/**
+ * Masks phone numbers for secure logging (masks all characters except the last 3 digits).
+ */
+export function maskPhone(phone?: string | null): string {
+  if (!phone) return "";
+  const cleaned = phone.trim();
+  if (cleaned.length <= 3) return "***";
+  return "*".repeat(cleaned.length - 3) + cleaned.slice(-3);
+}
 
 /**
  * Formats the exact remaining time as a human-readable Arabic string.
@@ -42,72 +65,189 @@ function formatRemainingTime(diffMs: number): string {
   return `متبقي ${parts.join(" و ")}`;
 }
 
-export async function runReminderSweep(): Promise<void> {
-  const sessions = await listSessions();
+/**
+ * Runs reminder processing isolated per office tenant.
+ * - Iterates over active offices
+ * - Skips offices with missing/partial bindings without aborting others
+ * - Skips offices without registered authorized recipient phone (never falls back to global numbers)
+ * - Returns a per-office result summary
+ */
+export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
+  const results: OfficeReminderResult[] = [];
+  let offices: AppUser[] = [];
+
+  try {
+    const users = await listSupabaseUsers();
+    // Process active accounts (suspended offices do not receive automated reminders)
+    offices = users.filter((u) => u.status !== "suspended");
+  } catch (err: any) {
+    logger.error({ err }, "Failed to list offices for reminder sweep");
+    return results;
+  }
+
   const now = new Date();
 
-  for (const session of sessions) {
-    if (session.status === "Cancelled" || session.status === "Finished") {
-      continue;
-    }
-    const hearingAt = computeHearingDateTime(
-      session.sessionDateHijri,
-      session.sessionTime,
+  for (const office of offices) {
+    const officeId = office.id;
+    const recipientPhone = office.phone?.trim() || null;
+
+    // Fast check: verify if office has sheets credentials configured
+    const hasBinding = Boolean(
+      (office.has_google_service || office.google_service_account_json) &&
+      office.google_spreadsheet_id
     );
-    if (!hearingAt) {
+
+    if (!hasBinding && !office.has_google_service && !office.google_spreadsheet_id) {
+      results.push({
+        officeId,
+        remindersFound: 0,
+        sent: 0,
+        skipped: 0,
+        failed: 0,
+        reason: "Google Sheets binding missing or incomplete",
+      });
       continue;
     }
 
-    const diffMs = hearingAt.getTime() - now.getTime();
-    const hoursLeft = diffMs / MS_PER_HOUR;
-    const remainingText = formatRemainingTime(diffMs);
+    try {
+      let sessions: Session[] = [];
+      try {
+        sessions = await listSessions(officeId);
+      } catch (err: any) {
+        if (
+          err instanceof GoogleBindingMissingError ||
+          String(err?.message || "").toLowerCase().includes("binding")
+        ) {
+          results.push({
+            officeId,
+            remindersFound: 0,
+            sent: 0,
+            skipped: 0,
+            failed: 0,
+            reason: "Google Sheets binding missing or incomplete",
+          });
+          continue;
+        }
+        throw err;
+      }
 
-    // Check 24-hour reminder threshold:
-    // Trigger if remaining time is <= 24 hours, session hasn't passed yet (> 0), and 24h reminder was not sent.
-    if (!session.reminder24 && hoursLeft <= 24 && hoursLeft > 0) {
-      logger.info(
-        { sessionId: session.id, caseNumber: session.caseNumber, hoursLeft: hoursLeft.toFixed(2) },
-        "Triggering 24h session reminder",
-      );
-      await notify({
-        sessionId: session.id,
-        caseNumber: session.caseNumber,
-        sessionDateHijri: session.sessionDateHijri,
-        sessionTime: session.sessionTime,
-        kind: "24h",
-        remainingText,
-        court: session.court,
-        courtCircuit: session.courtCircuit,
-        plaintiff: session.plaintiff,
-        defendant: session.defendant,
-        caseSubject: session.caseSubject,
-      });
-      await markReminderSent(session.id, "24h");
-    }
+      let remindersFound = 0;
+      let sent = 0;
+      let skipped = 0;
 
-    // Check 6-hour reminder threshold:
-    // Trigger if remaining time is <= 6 hours, session hasn't passed yet (> 0), and 6h reminder was not sent.
-    if (!session.reminder6 && hoursLeft <= 6 && hoursLeft > 0) {
+      for (const session of sessions) {
+        if (session.status === "Cancelled" || session.status === "Finished") {
+          continue;
+        }
+        const hearingAt = computeHearingDateTime(
+          session.sessionDateHijri,
+          session.sessionTime,
+        );
+        if (!hearingAt) {
+          continue;
+        }
+
+        const diffMs = hearingAt.getTime() - now.getTime();
+        const hoursLeft = diffMs / MS_PER_HOUR;
+        const remainingText = formatRemainingTime(diffMs);
+
+        // Check 24-hour reminder threshold
+        if (!session.reminder24 && hoursLeft <= 24 && hoursLeft > 0) {
+          remindersFound++;
+          if (!recipientPhone) {
+            skipped++;
+          } else {
+            const payload: ReminderPayload = {
+              officeId,
+              recipientPhone,
+              sessionId: session.id,
+              caseNumber: session.caseNumber,
+              sessionDateHijri: session.sessionDateHijri,
+              sessionTime: session.sessionTime,
+              kind: "24h",
+              remainingText,
+              court: session.court,
+              courtCircuit: session.courtCircuit,
+              plaintiff: session.plaintiff,
+              defendant: session.defendant,
+              caseSubject: session.caseSubject,
+            };
+
+            await notify(payload, officeId);
+            await markReminderSent(session.id, "24h", officeId);
+            sent++;
+          }
+        }
+
+        // Check 6-hour reminder threshold
+        if (!session.reminder6 && hoursLeft <= 6 && hoursLeft > 0) {
+          remindersFound++;
+          if (!recipientPhone) {
+            skipped++;
+          } else {
+            const payload: ReminderPayload = {
+              officeId,
+              recipientPhone,
+              sessionId: session.id,
+              caseNumber: session.caseNumber,
+              sessionDateHijri: session.sessionDateHijri,
+              sessionTime: session.sessionTime,
+              kind: "6h",
+              remainingText,
+              court: session.court,
+              courtCircuit: session.courtCircuit,
+              plaintiff: session.plaintiff,
+              defendant: session.defendant,
+              caseSubject: session.caseSubject,
+            };
+
+            await notify(payload, officeId);
+            await markReminderSent(session.id, "6h", officeId);
+            sent++;
+          }
+        }
+      }
+
+      const officeResult: OfficeReminderResult = {
+        officeId,
+        remindersFound,
+        sent,
+        skipped,
+        failed: 0,
+        ...(!recipientPhone
+          ? { reason: "No authorized recipient phone registered for office" }
+          : {}),
+      };
+
       logger.info(
-        { sessionId: session.id, caseNumber: session.caseNumber, hoursLeft: hoursLeft.toFixed(2) },
-        "Triggering 6h session reminder",
+        {
+          officeId,
+          recipientPhone: maskPhone(recipientPhone),
+          remindersFound,
+          sent,
+          skipped,
+        },
+        "Office reminder sweep completed",
       );
-      await notify({
-        sessionId: session.id,
-        caseNumber: session.caseNumber,
-        sessionDateHijri: session.sessionDateHijri,
-        sessionTime: session.sessionTime,
-        kind: "6h",
-        remainingText,
-        court: session.court,
-        courtCircuit: session.courtCircuit,
-        plaintiff: session.plaintiff,
-        defendant: session.defendant,
-        caseSubject: session.caseSubject,
+
+      results.push(officeResult);
+    } catch (err: any) {
+      logger.error(
+        { officeId, err: err?.message || err },
+        "Error processing reminders for office",
+      );
+      results.push({
+        officeId,
+        remindersFound: 0,
+        sent: 0,
+        skipped: 0,
+        failed: 1,
+        reason: err?.message || "Unknown error",
       });
-      await markReminderSent(session.id, "6h");
     }
   }
+
+  return results;
 }
 
 let started = false;
@@ -115,12 +255,6 @@ let started = false;
 /** Starts the recurring reminder scheduler. Runs every 1 minute or configured cron schedule. */
 export function startReminderScheduler(): void {
   if (started) {
-    return;
-  }
-  if (!isGoogleSheetsConfigured()) {
-    logger.warn(
-      "Reminder scheduler not started: GOOGLE_SPREADSHEET_ID / GOOGLE_SERVICE_ACCOUNT_JSON are not configured yet.",
-    );
     return;
   }
 
@@ -137,6 +271,6 @@ export function startReminderScheduler(): void {
   });
   logger.info(
     { cron: env.reminderCronExpression },
-    "Reminder scheduler started successfully",
+    "Tenant-isolated reminder scheduler started successfully",
   );
 }

@@ -165,6 +165,7 @@ export function classifyGoogleError(
 
   const rawMsg = String(err?.message || err || "");
   const status = Number(err?.status || err?.code || err?.response?.status || 0);
+  const errorCode = String(err?.code || err?.errno || err?.cause?.code || "");
   const maskedId = meta?.spreadsheetId ? maskIdentifier(meta.spreadsheetId) : undefined;
 
   let classified: GoogleSheetsError;
@@ -199,12 +200,17 @@ export function classifyGoogleError(
   ) {
     classified = new GoogleSheetsRangeError(`Google Sheets Range Error in ${operation}: ${rawMsg}`);
   } else if (
+    errorCode.includes("ETIMEDOUT") ||
+    errorCode.includes("ECONNRESET") ||
+    errorCode.includes("ECONNREFUSED") ||
+    errorCode.includes("ENOTFOUND") ||
     rawMsg.includes("ETIMEDOUT") ||
     rawMsg.includes("ECONNRESET") ||
     rawMsg.includes("ECONNREFUSED") ||
     rawMsg.includes("ENOTFOUND") ||
     rawMsg.includes("network timeout") ||
     rawMsg.includes("timed out") ||
+    rawMsg.includes("Client network socket disconnected") ||
     status === 504
   ) {
     classified = new GoogleSheetsNetworkError(`Google Network Timeout in ${operation}: ${rawMsg}`);

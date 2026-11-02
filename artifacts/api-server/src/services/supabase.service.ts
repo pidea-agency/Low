@@ -14,6 +14,7 @@ export interface AppUser {
   role: "admin" | "staff";
   display_name?: string | null;
   status?: "active" | "suspended";
+  phone?: string | null;
   subscription_end_date?: string | null;
   subscription_notes?: string | null;
   plan_tier?: "plus" | "pro";
@@ -564,6 +565,7 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
         role: u.role || "staff",
         display_name: u.display_name,
         status: u.status || "active",
+        phone: u.phone || null,
         subscription_end_date: u.subscription_end_date || null,
         subscription_notes: u.subscription_notes || null,
         plan_tier: planTier,
@@ -579,10 +581,19 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
   }
 
   const tableName = env.supabaseTableName;
-  const { data, error } = await client
+  let { data, error } = await client
     .from(tableName)
-    .select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at")
+    .select("id, username, email, role, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at")
     .order("created_at", { ascending: false });
+
+  if (error && (error as any).code === "42703") {
+    const fallbackRes = await client
+      .from(tableName)
+      .select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at")
+      .order("created_at", { ascending: false });
+    data = fallbackRes.data as any;
+    error = fallbackRes.error;
+  }
 
   if (error) {
     logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
@@ -594,6 +605,7 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
       role: u.role || "staff",
       display_name: u.display_name,
       status: u.status || "active",
+      phone: u.phone || null,
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
@@ -614,6 +626,7 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
     role: u.role || "staff",
     display_name: u.display_name,
     status: u.status || "active",
+    phone: u.phone || null,
     subscription_end_date: u.subscription_end_date || null,
     subscription_notes: u.subscription_notes || null,
     plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
@@ -656,6 +669,7 @@ export async function createSupabaseUser(input: {
   role?: "admin" | "staff";
   display_name?: string;
   status?: "active" | "suspended";
+  phone?: string | null;
   subscription_end_date?: string;
   subscription_notes?: string;
   plan_tier?: "plus" | "pro";
@@ -706,6 +720,7 @@ export async function createSupabaseUser(input: {
       role,
       display_name: input.display_name?.trim() || username,
       status,
+      phone: input.phone?.trim() || null,
       subscription_end_date,
       subscription_notes,
       plan_tier,
@@ -730,6 +745,7 @@ export async function createSupabaseUser(input: {
       role: newUser.role,
       display_name: newUser.display_name,
       status: newUser.status,
+      phone: newUser.phone,
       subscription_end_date: newUser.subscription_end_date,
       subscription_notes: newUser.subscription_notes,
       plan_tier: newUser.plan_tier,
@@ -894,6 +910,7 @@ export async function updateSupabaseUser(
     display_name?: string;
     email?: string;
     status?: "active" | "suspended";
+    phone?: string | null;
     subscription_end_date?: string | null;
     subscription_notes?: string | null;
     plan_tier?: "plus" | "pro";
@@ -952,6 +969,7 @@ export async function updateSupabaseUser(
     if (input.role) user.role = input.role;
     if (input.display_name !== undefined) user.display_name = input.display_name.trim() || null;
     if (input.email !== undefined) user.email = input.email.trim() || null;
+    if (input.phone !== undefined) user.phone = input.phone ? input.phone.trim() : null;
     if (input.status !== undefined) user.status = input.status;
     if (input.subscription_end_date !== undefined) user.subscription_end_date = input.subscription_end_date;
     if (input.subscription_notes !== undefined) user.subscription_notes = input.subscription_notes;
@@ -984,6 +1002,7 @@ export async function updateSupabaseUser(
       role: user.role,
       display_name: user.display_name,
       status: user.status,
+      phone: user.phone,
       subscription_end_date: user.subscription_end_date,
       subscription_notes: user.subscription_notes,
       plan_tier: user.plan_tier,

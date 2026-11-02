@@ -10,7 +10,7 @@ describe("Cron Reminders Security & Authentication (Fail-Closed)", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    sweepSpy = vi.spyOn(reminderScheduler, "runReminderSweep").mockResolvedValue(undefined);
+    sweepSpy = vi.spyOn(reminderScheduler, "runReminderSweep").mockResolvedValue([]);
     // Mock sheets configured to isolate auth logic
     vi.spyOn(envModule, "isGoogleSheetsConfigured").mockReturnValue(true);
   });

@@ -3,6 +3,7 @@ import { LayoutDashboard, MessageSquare, Calendar, Moon, Sun, LogOut, Settings, 
 import { useTheme } from './theme-provider';
 import { useLogout, useGetCurrentUser } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearUserPoaStorage } from '@/lib/poa-storage';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalSearch } from './global-search';
 import { getNavItemsForRole } from '@/config/navigation';
@@ -22,8 +23,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   const handleLogout = () => {
     onNavigate?.();
+    const userId = currentUser?.id || (currentUser as any)?.userId;
+    const officeId = (currentUser as any)?.officeId || userId;
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
+        clearUserPoaStorage(officeId, userId);
         queryClient.clear();
         window.location.href = '/login';
       },

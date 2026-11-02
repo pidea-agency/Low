@@ -59,10 +59,10 @@ router.get("/cron/reminders", async (req, res) => {
   // --- Run the sweep ---
   const startedAt = Date.now();
   try {
-    await runReminderSweep();
+    const results = await runReminderSweep();
     const durationMs = Date.now() - startedAt;
-    logger.info({ durationMs }, "Cron reminder sweep completed successfully");
-    res.json({ ok: true, durationMs });
+    logger.info({ durationMs, officesCount: results?.length ?? 0 }, "Cron reminder sweep completed successfully");
+    res.json({ ok: true, durationMs, results });
   } catch (err) {
     const durationMs = Date.now() - startedAt;
     logger.error({ err, durationMs }, "Cron reminder sweep failed");

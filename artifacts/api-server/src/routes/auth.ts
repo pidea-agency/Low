@@ -94,7 +94,13 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
       displayName: verifiedUser.display_name || verifiedUser.username,
     });
 
+    const effectiveUserId = verifiedUser.id || verifiedUser.username;
+    const effectiveOfficeId = (verifiedUser as any)?.office_id || effectiveUserId;
+
     res.json({
+      id: effectiveUserId,
+      userId: effectiveUserId,
+      officeId: effectiveOfficeId,
       username: verifiedUser.username,
       role: verifiedUser.role,
       displayName: verifiedUser.display_name,
@@ -158,7 +164,13 @@ router.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (r
     displayName: adminUser.display_name || adminUser.username,
   });
 
+  const effectiveUserId = adminUser.id || adminUser.username;
+  const effectiveOfficeId = (adminUser as any)?.office_id || effectiveUserId;
+
   res.json({
+    id: effectiveUserId,
+    userId: effectiveUserId,
+    officeId: effectiveOfficeId,
     username: adminUser.username,
     role: adminUser.role,
     displayName: adminUser.display_name,
@@ -183,10 +195,11 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
     let ai_usage_count: number = 0;
     let isExpired = false;
     let isSuspended = false;
+    let user: any = null;
 
     try {
       const users = await listSupabaseUsers();
-      const user = users.find((u) => u.id === authUser.userId || u.username === authUser.username);
+      user = users.find((u) => u.id === authUser.userId || u.username === authUser.username);
       if (user) {
         status = user.status || "active";
         isSuspended = status === "suspended";
@@ -210,7 +223,13 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
       }
     } catch {}
 
+    const effectiveUserId = authUser.userId || user?.id || authUser.username;
+    const effectiveOfficeId = (user as any)?.office_id || effectiveUserId;
+
     res.json({
+      id: effectiveUserId,
+      userId: effectiveUserId,
+      officeId: effectiveOfficeId,
       username: authUser.username,
       role: authUser.role || "staff",
       displayName: authUser.displayName || authUser.username,

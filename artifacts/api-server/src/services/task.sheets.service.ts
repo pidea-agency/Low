@@ -1,7 +1,7 @@
-import { type sheets_v4 } from "googleapis";
+import { google, type sheets_v4 } from "googleapis";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
-import { getGoogleContext, GoogleSheetsError } from "./googleSheets.service";
+import { getGoogleContext, GoogleSheetsError, classifyGoogleError } from "./googleSheets.service";
 
 /**
  * Google Sheets service for Tasks (المهام) records.
@@ -66,16 +66,24 @@ export function invalidateTaskCache(): void {
 
 async function getTaskSheetId(officeId?: string): Promise<number> {
   const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
-  const spreadsheet = await ctx.sheets.spreadsheets.get({
-    spreadsheetId: ctx.spreadsheetId,
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === TASK_SHEET_NAME,
-  );
-  if (!sheet?.properties && sheet?.properties?.sheetId === undefined) {
-    throw new Error(`Sheet tab "${TASK_SHEET_NAME}" not found.`);
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId,
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === TASK_SHEET_NAME,
+    );
+    if (!sheet?.properties || sheet.properties.sheetId == null) {
+      throw new Error(`Sheet tab "${TASK_SHEET_NAME}" not found.`);
+    }
+    return sheet.properties.sheetId;
+  } catch (err: any) {
+    throw classifyGoogleError(err, "getTaskSheetId", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId,
+    });
   }
-  return sheet!.properties!.sheetId!;
 }
 
 /** Ensures the "Tasks" sheet tab exists with the correct header row. */
@@ -107,8 +115,11 @@ export async function ensureTaskSheetReady(officeId?: string): Promise<void> {
       requestBody: { values: [[...TASK_SHEET_COLUMNS]] },
     });
   } catch (err: any) {
-    if (err instanceof GoogleSheetsError) throw err;
-    logger.warn({ err }, "ensureTaskSheetReady warning");
+    throw classifyGoogleError(err, "ensureTaskSheetReady", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId,
+    });
   }
 }
 
@@ -128,29 +139,37 @@ async function fetchAllRawTaskRows(officeId?: string, forceRefresh = false): Pro
     taskDataCache !== null &&
     now - lastTaskCacheTime < TASK_CACHE_TTL_MS;
 
-  if (useCache) {
-    const headerRes = await ctx.sheets.spreadsheets.values.get({
+  try {
+    if (useCache) {
+      const headerRes = await ctx.sheets.spreadsheets.values.get({
+        spreadsheetId: ctx.spreadsheetId,
+        range: `${TASK_SHEET_NAME}!A1:${COL_LAST}1`,
+      });
+      const headers = ((headerRes.data.values?.[0] as string[]) ?? [...TASK_SHEET_COLUMNS]);
+      return { headers, rows: taskDataCache! };
+    }
+
+    const response = await ctx.sheets.spreadsheets.values.get({
       spreadsheetId: ctx.spreadsheetId,
-      range: `${TASK_SHEET_NAME}!A1:${COL_LAST}1`,
+      range: `${TASK_SHEET_NAME}!A1:${COL_LAST}`,
     });
-    const headers = ((headerRes.data.values?.[0] as string[]) ?? [...TASK_SHEET_COLUMNS]);
-    return { headers, rows: taskDataCache! };
+    const data = response.data.values ?? [];
+    const headers = (data[0] as string[]) ?? [...TASK_SHEET_COLUMNS];
+    const dataRows = data.slice(1);
+    const rows = dataRows
+      .map((row, index) => ({ id: index + 2, values: row as TaskRow }))
+      .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
+
+    taskDataCache = rows;
+    lastTaskCacheTime = now;
+    return { headers, rows };
+  } catch (err: any) {
+    throw classifyGoogleError(err, "fetchAllRawTaskRows", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId,
+    });
   }
-
-  const response = await ctx.sheets.spreadsheets.values.get({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${TASK_SHEET_NAME}!A1:${COL_LAST}`,
-  });
-  const data = response.data.values ?? [];
-  const headers = (data[0] as string[]) ?? [...TASK_SHEET_COLUMNS];
-  const dataRows = data.slice(1);
-  const rows = dataRows
-    .map((row, index) => ({ id: index + 2, values: row as TaskRow }))
-    .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
-
-  taskDataCache = rows;
-  lastTaskCacheTime = now;
-  return { headers, rows };
 }
 
 /**
@@ -217,21 +236,29 @@ export async function appendTaskRow(officeId: string, values: TaskRow): Promise<
   const paddedValues: string[] = Array.from({ length: TASK_COLS }, (_, i) => values[i] ?? "");
   paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
 
-  const response = await ctx.sheets.spreadsheets.values.append({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${TASK_SHEET_NAME}!A:${COL_LAST}`,
-    valueInputOption: "RAW",
-    insertDataOption: "OVERWRITE",
-    requestBody: { values: [paddedValues] },
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) return Number(match[1]);
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${TASK_SHEET_NAME}!A:${COL_LAST}`,
+      valueInputOption: "RAW",
+      insertDataOption: "OVERWRITE",
+      requestBody: { values: [paddedValues] },
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) return Number(match[1]);
 
-  const { rows } = await fetchAllRawTaskRows(officeId, true);
-  const last = rows[rows.length - 1];
-  if (!last) throw new Error("Failed to determine id of newly created Task row.");
-  return last.id;
+    const { rows } = await fetchAllRawTaskRows(officeId, true);
+    const last = rows[rows.length - 1];
+    if (!last) throw new Error("Failed to determine id of newly created Task row.");
+    return last.id;
+  } catch (err: any) {
+    throw classifyGoogleError(err, "appendTaskRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /**
@@ -252,12 +279,20 @@ export async function updateTaskRow(officeId: string, id: number, values: TaskRo
   const paddedValues: string[] = Array.from({ length: TASK_COLS }, (_, i) => values[i] ?? "");
   paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
 
-  await ctx.sheets.spreadsheets.values.update({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${TASK_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [paddedValues] },
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${TASK_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [paddedValues] },
+    });
+  } catch (err: any) {
+    throw classifyGoogleError(err, "updateTaskRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /**
@@ -276,23 +311,31 @@ export async function deleteTaskRow(officeId: string, id: number): Promise<void>
   const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   invalidateTaskCache();
   const sheetId = await getTaskSheetId(officeId);
-  await ctx.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: ctx.spreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id,
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id,
+              },
             },
           },
-        },
-      ],
-    },
-  });
+        ],
+      },
+    });
+  } catch (err: any) {
+    throw classifyGoogleError(err, "deleteTaskRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /** Assign office to a legacy/unassigned row (for migration) */

@@ -6,6 +6,8 @@
  * `ReminderChannel` and registering it; the scheduler's logic never changes.
  */
 export interface ReminderPayload {
+  officeId: string;
+  recipientPhone: string;
   sessionId: number;
   caseNumber: string | null;
   sessionDateHijri: string | null;

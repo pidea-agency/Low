@@ -1,7 +1,7 @@
-import { type sheets_v4 } from "googleapis";
+import { google, type sheets_v4 } from "googleapis";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
-import { getGoogleContext, GoogleSheetsError } from "./googleSheets.service";
+import { getGoogleContext, GoogleSheetsError, classifyGoogleError } from "./googleSheets.service";
 
 /**
  * Google Sheets service for Judgment (الأحكام) records.
@@ -68,16 +68,24 @@ export function invalidateJudgmentCache(): void {
 
 async function getJudgmentSheetId(officeId?: string): Promise<number> {
   const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
-  const spreadsheet = await ctx.sheets.spreadsheets.get({
-    spreadsheetId: ctx.spreadsheetId,
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === JUDGMENT_SHEET_NAME,
-  );
-  if (!sheet?.properties && sheet?.properties?.sheetId === undefined) {
-    throw new Error(`Sheet tab "${JUDGMENT_SHEET_NAME}" not found.`);
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId,
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === JUDGMENT_SHEET_NAME,
+    );
+    if (!sheet?.properties || sheet.properties.sheetId == null) {
+      throw new Error(`Sheet tab "${JUDGMENT_SHEET_NAME}" not found.`);
+    }
+    return sheet.properties.sheetId;
+  } catch (err: any) {
+    throw classifyGoogleError(err, "getJudgmentSheetId", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId,
+    });
   }
-  return sheet!.properties!.sheetId!;
 }
 
 /** Ensures the "Judgment" sheet tab exists with the correct header row. */
@@ -109,8 +117,11 @@ export async function ensureJudgmentSheetReady(officeId?: string): Promise<void>
       requestBody: { values: [[...JUDGMENT_SHEET_COLUMNS]] },
     });
   } catch (err: any) {
-    if (err instanceof GoogleSheetsError) throw err;
-    logger.warn({ err }, "ensureJudgmentSheetReady warning");
+    throw classifyGoogleError(err, "ensureJudgmentSheetReady", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId,
+    });
   }
 }
 
@@ -130,29 +141,37 @@ async function fetchAllRawJudgmentRows(officeId?: string, forceRefresh = false):
     judgmentDataCache !== null &&
     now - lastJudgmentCacheTime < JUDGMENT_CACHE_TTL_MS;
 
-  if (useCache) {
-    const headerRes = await ctx.sheets.spreadsheets.values.get({
+  try {
+    if (useCache) {
+      const headerRes = await ctx.sheets.spreadsheets.values.get({
+        spreadsheetId: ctx.spreadsheetId,
+        range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}1`,
+      });
+      const headers = ((headerRes.data.values?.[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS]);
+      return { headers, rows: judgmentDataCache! };
+    }
+
+    const response = await ctx.sheets.spreadsheets.values.get({
       spreadsheetId: ctx.spreadsheetId,
-      range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}1`,
+      range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}`,
     });
-    const headers = ((headerRes.data.values?.[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS]);
-    return { headers, rows: judgmentDataCache! };
+    const data = response.data.values ?? [];
+    const headers = (data[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS];
+    const dataRows = data.slice(1);
+    const rows = dataRows
+      .map((row, index) => ({ id: index + 2, values: row as JudgmentRow }))
+      .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
+
+    judgmentDataCache = rows;
+    lastJudgmentCacheTime = now;
+    return { headers, rows };
+  } catch (err: any) {
+    throw classifyGoogleError(err, "fetchAllRawJudgmentRows", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId,
+    });
   }
-
-  const response = await ctx.sheets.spreadsheets.values.get({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST}`,
-  });
-  const data = response.data.values ?? [];
-  const headers = (data[0] as string[]) ?? [...JUDGMENT_SHEET_COLUMNS];
-  const dataRows = data.slice(1);
-  const rows = dataRows
-    .map((row, index) => ({ id: index + 2, values: row as JudgmentRow }))
-    .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
-
-  judgmentDataCache = rows;
-  lastJudgmentCacheTime = now;
-  return { headers, rows };
 }
 
 /**
@@ -219,21 +238,29 @@ export async function appendJudgmentRow(officeId: string, values: JudgmentRow): 
   const paddedValues: string[] = Array.from({ length: JUDGMENT_COLS }, (_, i) => values[i] ?? "");
   paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
 
-  const response = await ctx.sheets.spreadsheets.values.append({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${JUDGMENT_SHEET_NAME}!A:${COL_LAST}`,
-    valueInputOption: "RAW",
-    insertDataOption: "OVERWRITE",
-    requestBody: { values: [paddedValues] },
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) return Number(match[1]);
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${JUDGMENT_SHEET_NAME}!A:${COL_LAST}`,
+      valueInputOption: "RAW",
+      insertDataOption: "OVERWRITE",
+      requestBody: { values: [paddedValues] },
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) return Number(match[1]);
 
-  const { rows } = await fetchAllRawJudgmentRows(officeId, true);
-  const last = rows[rows.length - 1];
-  if (!last) throw new Error("Failed to determine id of newly created Judgment row.");
-  return last.id;
+    const { rows } = await fetchAllRawJudgmentRows(officeId, true);
+    const last = rows[rows.length - 1];
+    if (!last) throw new Error("Failed to determine id of newly created Judgment row.");
+    return last.id;
+  } catch (err: any) {
+    throw classifyGoogleError(err, "appendJudgmentRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /**
@@ -254,12 +281,20 @@ export async function updateJudgmentRow(officeId: string, id: number, values: Ju
   const paddedValues: string[] = Array.from({ length: JUDGMENT_COLS }, (_, i) => values[i] ?? "");
   paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
 
-  await ctx.sheets.spreadsheets.values.update({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${JUDGMENT_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [paddedValues] },
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${JUDGMENT_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [paddedValues] },
+    });
+  } catch (err: any) {
+    throw classifyGoogleError(err, "updateJudgmentRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /**
@@ -278,23 +313,31 @@ export async function deleteJudgmentRow(officeId: string, id: number): Promise<v
   const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   invalidateJudgmentCache();
   const sheetId = await getJudgmentSheetId(officeId);
-  await ctx.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: ctx.spreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id,
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id,
+              },
             },
           },
-        },
-      ],
-    },
-  });
+        ],
+      },
+    });
+  } catch (err: any) {
+    throw classifyGoogleError(err, "deleteJudgmentRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /** Assign office to a legacy/unassigned row (for migration) */

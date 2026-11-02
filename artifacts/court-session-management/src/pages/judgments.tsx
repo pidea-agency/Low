@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getArabicDayName } from '@/lib/hijri';
-import { Gavel, Plus, Trash2, Calendar as CalendarIcon, User, Scale, Search, Edit3, Loader2, RefreshCw, CheckCircle2, XCircle, FileText, UserCheck } from 'lucide-react';
+import { Gavel, Plus, Trash2, Calendar as CalendarIcon, User, Scale, Search, Edit3, Loader2, RefreshCw, CheckCircle2, XCircle, FileText, UserCheck, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +61,7 @@ export default function JudgmentsPage() {
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Form State
+  const [formError, setFormError] = useState<string | null>(null);
   const [caseNumber, setCaseNumber] = useState('');
   const [court, setCourt] = useState('');
   const [plaintiff, setPlaintiff] = useState('');
@@ -108,6 +109,7 @@ export default function JudgmentsPage() {
   // Open modal for Create
   const handleOpenCreate = () => {
     setEditingRecord(null);
+    setFormError(null);
     setCaseNumber('');
     setCourt('');
     setPlaintiff('');
@@ -123,6 +125,7 @@ export default function JudgmentsPage() {
   // Open modal for Edit
   const handleOpenEdit = (rec: JudgmentRecord) => {
     setEditingRecord(rec);
+    setFormError(null);
     setCaseNumber(rec.caseNumber || '');
     setCourt(rec.court || '');
     setPlaintiff(rec.plaintiff || '');
@@ -138,16 +141,36 @@ export default function JudgmentsPage() {
   // Submit Save or Update
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!judgmentNumber.trim()) {
+    if (isSaving) return;
+
+    if (!caseNumber.trim()) {
+      const msg = 'يرجى إدخال رقم القضية.';
+      setFormError(msg);
       toast({
         title: 'تنبيه',
-        description: 'يرجى إدخال رقم الصك.',
+        description: msg,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!judgmentNumber.trim()) {
+      const msg = 'يرجى إدخال رقم الصك.';
+      setFormError(msg);
+      toast({
+        title: 'تنبيه',
+        description: msg,
         variant: 'destructive',
       });
       return;
     }
 
     setIsSaving(true);
+    setFormError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
     try {
       const payload = {
         caseNumber: caseNumber.trim(),
@@ -169,6 +192,7 @@ export default function JudgmentsPage() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(payload),
+          signal: controller.signal,
         });
       } else {
         // POST create
@@ -177,12 +201,19 @@ export default function JudgmentsPage() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(payload),
+          signal: controller.signal,
         });
       }
 
+      clearTimeout(timeoutId);
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'فشل حفظ الحكم.');
+        const refIdStr = errorData.refId ? ` رقم المرجع: ${errorData.refId}` : '';
+        const errMsg = errorData.error
+          ? (errorData.refId && errorData.error.includes(errorData.refId) ? errorData.error : `${errorData.error}${refIdStr}`)
+          : `تعذر حفظ الحكم في السيرفر.${refIdStr}`;
+        throw new Error(errMsg);
       }
 
       toast({
@@ -190,12 +221,19 @@ export default function JudgmentsPage() {
         description: editingRecord ? 'تم تحديث الحكم بنجاح.' : 'تم إضافة الحكم بنجاح.',
       });
 
+      setFormError(null);
       setIsOpen(false);
       await loadRecords(true);
     } catch (err: any) {
+      clearTimeout(timeoutId);
+      let message = err.message || 'فشل حفظ الحكم.';
+      if (err.name === 'AbortError') {
+        message = 'انتهت مهلة حفظ الحكم (20 ثانية). يرجى المحاولة مرة أخرى.';
+      }
+      setFormError(message);
       toast({
         title: 'خطأ',
-        description: err.message || 'فشل حفظ الحكم.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -570,18 +608,36 @@ export default function JudgmentsPage() {
           </DialogHeader>
 
           <form onSubmit={handleSave} className="space-y-4 py-2">
+            {formError && (
+              <div
+                role="alert"
+                className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-start gap-2"
+                data-testid="judgment-form-error"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="flex-1 font-medium">{formError}</div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="caseNumber" className="text-xs font-semibold">
-                  رقم القضية
+                  رقم القضية <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="caseNumber"
                   value={caseNumber}
-                  onChange={(e) => setCaseNumber(e.target.value)}
+                  onChange={(e) => {
+                    setCaseNumber(e.target.value);
+                    if (formError) setFormError(null);
+                  }}
                   placeholder="مثال: 44109283"
                   className="font-mono text-sm"
                   dir="ltr"
+                  required
+                  disabled={isSaving}
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى تعبئة هذا الحقل')}
+                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                 />
               </div>
 
@@ -592,11 +648,15 @@ export default function JudgmentsPage() {
                 <Input
                   id="judgmentNumber"
                   value={judgmentNumber}
-                  onChange={(e) => setJudgmentNumber(e.target.value)}
+                  onChange={(e) => {
+                    setJudgmentNumber(e.target.value);
+                    if (formError) setFormError(null);
+                  }}
                   placeholder="مثال: 443012948"
                   className="font-mono text-sm"
                   dir="ltr"
                   required
+                  disabled={isSaving}
                   onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى تعبئة هذا الحقل')}
                   onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                 />
@@ -614,6 +674,7 @@ export default function JudgmentsPage() {
                   onChange={(e) => setCourt(e.target.value)}
                   placeholder="مثال: المحكمة العامة بالرياض"
                   className="text-sm"
+                  disabled={isSaving}
                 />
               </div>
 
@@ -627,6 +688,7 @@ export default function JudgmentsPage() {
                   onChange={(e) => setAssignedLawyer(e.target.value)}
                   placeholder="اسم المحامي المتابع"
                   className="text-sm"
+                  disabled={isSaving}
                 />
               </div>
             </div>
@@ -642,6 +704,7 @@ export default function JudgmentsPage() {
                   onChange={(e) => setPlaintiff(e.target.value)}
                   placeholder="اسم المدعي"
                   className="text-sm"
+                  disabled={isSaving}
                 />
               </div>
 
@@ -655,6 +718,7 @@ export default function JudgmentsPage() {
                   onChange={(e) => setDefendant(e.target.value)}
                   placeholder="اسم المدعى عليه"
                   className="text-sm"
+                  disabled={isSaving}
                 />
               </div>
             </div>
@@ -671,6 +735,7 @@ export default function JudgmentsPage() {
                   placeholder="مثال: 1447/08/10"
                   className="font-mono text-sm"
                   dir="ltr"
+                  disabled={isSaving}
                 />
               </div>
 
@@ -678,7 +743,11 @@ export default function JudgmentsPage() {
                 <Label className="text-xs font-semibold">
                   الحكم
                 </Label>
-                <Select value={isFavorable} onValueChange={(val) => setIsFavorable(val as 'نهائي' | 'ابتدائي')}>
+                <Select
+                  value={isFavorable}
+                  onValueChange={(val) => setIsFavorable(val as 'نهائي' | 'ابتدائي')}
+                  disabled={isSaving}
+                >
                   <SelectTrigger className="h-10 text-sm">
                     <SelectValue placeholder="اختر نوع الحكم" />
                   </SelectTrigger>
@@ -700,6 +769,7 @@ export default function JudgmentsPage() {
                 onChange={(e) => setSummary(e.target.value)}
                 placeholder="منطوق الحكم والتفاصيل الأساسية للقرار..."
                 className="text-sm min-h-[90px] resize-none"
+                disabled={isSaving}
               />
             </div>
 
@@ -711,7 +781,7 @@ export default function JudgmentsPage() {
                 data-testid="button-save-judgment"
               >
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSaving ? 'جارٍ الحفظ...' : editingRecord ? 'تحديث الحكم' : 'حفظ الحكم'}
+                {isSaving ? 'جارٍ حفظ الحكم...' : editingRecord ? 'تحديث الحكم' : 'حفظ الحكم'}
               </Button>
               <Button
                 type="button"

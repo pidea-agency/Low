@@ -123,6 +123,8 @@ router.post("/settings/test-whatsapp", attachAuthUser, requireAdmin, async (_req
   try {
     const channel = new WhatsappReminderChannel();
     await channel.send({
+      officeId: "admin",
+      recipientPhone: s.whatsappNumber.trim(),
       sessionId: 999,
       caseNumber: "1445/اختباري/01",
       court: "المحكمة العامة بالرياض",

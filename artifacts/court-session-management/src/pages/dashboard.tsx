@@ -220,9 +220,10 @@ export default function DashboardPage() {
   }
 
   const isAdmin = currentUser?.role === 'admin';
-  const isUnlimited = isAdmin || currentUser?.ai_quota_limit === -1 || currentUser?.plan_tier === 'unlimited';
-  const aiUsed = currentUser?.ai_usage_count || 0;
-  const aiQuota = currentUser?.ai_quota_limit ?? 50;
+  const user = currentUser as any;
+  const isUnlimited = isAdmin || user?.ai_quota_limit === -1 || user?.plan_tier === 'unlimited';
+  const aiUsed = user?.ai_usage_count || 0;
+  const aiQuota = user?.ai_quota_limit ?? 50;
   const aiPercent = isUnlimited ? 100 : Math.min(100, Math.round((aiUsed / (aiQuota || 1)) * 100));
 
   return (
@@ -318,7 +319,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-foreground truncate">{currentUser.username}</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                    {isUnlimited ? 'باقة مفتوحة (مشرف)' : currentUser.plan_tier === 'pro' ? 'باقة برو (Pro)' : 'باقة بلس (Plus)'}
+                    {isUnlimited ? 'باقة مفتوحة (مشرف)' : (user?.plan_tier === 'pro' ? 'باقة برو (Pro)' : 'باقة بلس (Plus)')}
                   </span>
                 </div>
                 <p className="text-[11px] mt-0.5 flex items-center gap-1.5">

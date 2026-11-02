@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, AlertCircle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useGetCurrentUser } from '@workspace/api-client-react';
+import {
+  getStoredPoaRecords,
+  setStoredPoaRecords,
+  cleanLegacyPoaStorage,
+} from '@/lib/poa-storage';
 import moment from 'moment-hijri';
 import {
   Dialog,
@@ -37,8 +43,6 @@ export interface PowerOfAttorney {
   notes?: string;
   createdAt: string;
 }
-
-const LOCAL_KEY = 'legal_poa_records_v1';
 
 export type HijriDateValidation =
   | { status: 'empty'; days: 0; message: string }
@@ -115,6 +119,9 @@ function refreshDays(records: PowerOfAttorney[]): PowerOfAttorney[] {
 
 export default function PowerOfAttorneyPage() {
   const { toast } = useToast();
+  const { data: currentUser, isLoading: isUserLoading } = useGetCurrentUser();
+  const userId = currentUser?.id || (currentUser as any)?.userId;
+  const officeId = (currentUser as any)?.officeId || userId;
 
   const [records, setRecords] = useState<PowerOfAttorney[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,12 +133,18 @@ export default function PowerOfAttorneyPage() {
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Form State
+  const [formError, setFormError] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
   const [poaNumber, setPoaNumber] = useState('');
   const [issueDateHijri, setIssueDateHijri] = useState('');
   const [expiryDateHijri, setExpiryDateHijri] = useState('');
   const [expiryValidation, setExpiryValidation] = useState<HijriDateValidation>({ status: 'empty', days: 0, message: 'أدخل تاريخ الانتهاء' });
   const [notes, setNotes] = useState('');
+
+  // Clean un-migrated legacy key on mount
+  useEffect(() => {
+    cleanLegacyPoaStorage();
+  }, []);
 
   // Recalculate days live as user types expiry date
   useEffect(() => {
@@ -156,7 +169,9 @@ export default function PowerOfAttorneyPage() {
         }));
         const refreshed = refreshDays(parsed);
         setRecords(refreshed);
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(refreshed));
+        if (officeId && userId) {
+          setStoredPoaRecords(officeId, userId, refreshed);
+        }
         setIsLoading(false);
         return;
       }
@@ -169,35 +184,33 @@ export default function PowerOfAttorneyPage() {
     } catch (_) {
       // API unreachable — fall through to localStorage
     }
-    // Fallback: load from localStorage
-    try {
-      const saved = localStorage.getItem(LOCAL_KEY);
+    // Fallback: load from isolated localStorage
+    if (officeId && userId) {
+      const saved = getStoredPoaRecords<PowerOfAttorney>(officeId, userId);
       if (saved) {
-        setRecords(refreshDays(JSON.parse(saved)));
+        setRecords(refreshDays(saved));
       }
-    } catch (_) {}
+    }
     setIsLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [officeId, userId]);
 
   useEffect(() => {
-    // Fast initial display from localStorage
-    try {
-      const saved = localStorage.getItem(LOCAL_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setRecords(refreshDays(parsed));
-          setIsLoading(false);
-        }
-      }
-    } catch (_) {}
+    // Only read from storage and initiate load once the current user and office identity are ready
+    if (isUserLoading || !officeId || !userId) return;
+
+    // Fast initial display from isolated localStorage
+    const saved = getStoredPoaRecords<PowerOfAttorney>(officeId, userId);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      setRecords(refreshDays(saved));
+      setIsLoading(false);
+    }
     loadRecords();
-  }, [loadRecords]);
+  }, [isUserLoading, officeId, userId, loadRecords]);
 
   // ── Form helpers ──────────────────────────────────────────────────────────
 
   const resetForm = () => {
+    setFormError(null);
     setClientName('');
     setPoaNumber('');
     setIssueDateHijri('');
@@ -208,6 +221,7 @@ export default function PowerOfAttorneyPage() {
   };
 
   const handleOpenModal = (record?: PowerOfAttorney) => {
+    setFormError(null);
     if (record) {
       setEditingRecord(record);
       setClientName(record.clientName);
@@ -226,16 +240,22 @@ export default function PowerOfAttorneyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+
     if (!clientName.trim() || !poaNumber.trim()) {
-      toast({ title: 'تنبيه', description: 'يرجى تعبئة اسم العميل ورقم الوكالة.', variant: 'destructive' });
+      const msg = 'يرجى تعبئة اسم العميل ورقم الوكالة.';
+      setFormError(msg);
+      toast({ title: 'تنبيه', description: msg, variant: 'destructive' });
       return;
     }
     if (expiryDateHijri.trim()) {
       const val = parseAndValidateHijriDate(expiryDateHijri);
       if (val.status === 'invalid') {
+        const msg = 'تاريخ الانتهاء الهجري غير صالح. يرجى إدخال تاريخ صحيح مثل (10/01/1448).';
+        setFormError(msg);
         toast({
           title: 'تاريخ غير صالح',
-          description: 'تاريخ الانتهاء الهجري غير صالح. يرجى إدخال تاريخ صحيح مثل (10/01/1448).',
+          description: msg,
           variant: 'destructive',
         });
         return;
@@ -244,15 +264,23 @@ export default function PowerOfAttorneyPage() {
     if (issueDateHijri.trim()) {
       const issueVal = parseAndValidateHijriDate(issueDateHijri);
       if (issueVal.status === 'invalid') {
+        const msg = 'تاريخ الإصدار الهجري غير صالح. يرجى إدخال تاريخ صحيح مثل (10/01/1445).';
+        setFormError(msg);
         toast({
           title: 'تاريخ غير صالح',
-          description: 'تاريخ الإصدار الهجري غير صالح. يرجى إدخال تاريخ صحيح مثل (10/01/1445).',
+          description: msg,
           variant: 'destructive',
         });
         return;
       }
     }
+
     setIsSaving(true);
+    setFormError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
     const days = calculateDaysRemainingFromHijri(expiryDateHijri);
     const payload = {
       clientName: clientName.trim(),
@@ -264,60 +292,63 @@ export default function PowerOfAttorneyPage() {
     };
 
     try {
+      let res: Response;
       if (editingRecord?.sheetRowId) {
         // Update
-        const res = await fetch(`/api/poa/${editingRecord.sheetRowId}`, {
+        res = await fetch(`/api/poa/${editingRecord.sheetRowId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
           credentials: 'include',
+          signal: controller.signal,
         });
-        if (!res.ok) throw new Error(await res.text());
-        const updated: PowerOfAttorney = await res.json();
-        setRecords((prev) =>
-          prev.map((r) => (r.id === editingRecord.id ? { ...updated, sheetRowId: editingRecord.sheetRowId } : r))
-        );
-        toast({ title: 'تم التحديث', description: 'تم تحديث بيانات الوكالة في Google Sheets.' });
       } else {
         // Create
-        const res = await fetch('/api/poa', {
+        res = await fetch('/api/poa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...payload, createdAt: new Date().toISOString() }),
           credentials: 'include',
+          signal: controller.signal,
         });
-        if (!res.ok) throw new Error(await res.text());
-        const created: PowerOfAttorney = await res.json();
-        toast({ title: 'تمت الإضافة', description: 'تم حفظ الوكالة في Google Sheets بنجاح.' });
-        await loadRecords();
       }
-    } catch (_) {
-      // Offline fallback – save to localStorage only
-      if (editingRecord) {
-        const updated = { ...editingRecord, ...payload, daysRemaining: days };
-        setRecords((prev) => {
-          const next = prev.map((r) => (r.id === editingRecord.id ? updated : r));
-          localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
-          return next;
-        });
-        toast({ title: 'تم الحفظ محلياً', description: 'تعذر الوصول للشيت — تم الحفظ محلياً مؤقتاً.' });
-      } else {
-        const local: PowerOfAttorney = {
-          id: Date.now().toString(),
-          ...payload,
-          createdAt: new Date().toISOString(),
-        };
-        setRecords((prev) => {
-          const next = [local, ...prev];
-          localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
-          return next;
-        });
-        toast({ title: 'تم الحفظ محلياً', description: 'تعذر الوصول للشيت — تم الحفظ محلياً مؤقتاً.' });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const refIdStr = errorData.refId ? ` رقم المرجع: ${errorData.refId}` : '';
+        const errMsg = errorData.error
+          ? (errorData.refId && errorData.error.includes(errorData.refId) ? errorData.error : `${errorData.error}${refIdStr}`)
+          : `تعذر حفظ الوكالة في Google Sheets.${refIdStr}`;
+        throw new Error(errMsg);
       }
-    } finally {
-      setIsSaving(false);
+
+      const savedData: PowerOfAttorney = await res.json();
+      toast({
+        title: editingRecord ? 'تم التحديث' : 'تمت الإضافة',
+        description: editingRecord ? 'تم تحديث بيانات الوكالة في Google Sheets بنجاح.' : 'تم حفظ الوكالة في Google Sheets بنجاح.',
+      });
+
+      setFormError(null);
       setIsOpen(false);
       resetForm();
+      await loadRecords(true);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      let message = err.message || 'فشل حفظ الوكالة.';
+      if (err.name === 'AbortError') {
+        message = 'انتهت مهلة حفظ الوكالة (20 ثانية). يرجى المحاولة مرة أخرى.';
+      }
+      setFormError(message);
+      toast({
+        title: 'خطأ في حفظ الوكالة',
+        description: message,
+        variant: 'destructive',
+      });
+      // Do NOT claim fake success, do not save to local unconfirmed state, keep modal open
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -343,7 +374,9 @@ export default function PowerOfAttorneyPage() {
     }
     setRecords((prev) => {
       const next = prev.filter((r) => r.id !== record.id);
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
+      if (officeId && userId) {
+        setStoredPoaRecords(officeId, userId, next);
+      }
       return next;
     });
   };
@@ -398,6 +431,17 @@ export default function PowerOfAttorneyPage() {
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                {formError && (
+                  <div
+                    role="alert"
+                    className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-start gap-2"
+                    data-testid="poa-form-error"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div className="flex-1 font-medium">{formError}</div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Client Name */}
                   <div className="space-y-1.5 md:col-span-2">
@@ -409,7 +453,11 @@ export default function PowerOfAttorneyPage() {
                       id="poa-client-name"
                       placeholder="مثال: شركة الحلول القانونية / محمد أحمد"
                       value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
+                      onChange={(e) => {
+                        setClientName(e.target.value);
+                        if (formError) setFormError(null);
+                      }}
+                      disabled={isSaving}
                       required
                       onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى تعبئة هذا الحقل')}
                       onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
@@ -426,9 +474,13 @@ export default function PowerOfAttorneyPage() {
                       id="poa-number"
                       placeholder="مثال: 44589210"
                       value={poaNumber}
-                      onChange={(e) => setPoaNumber(e.target.value)}
+                      onChange={(e) => {
+                        setPoaNumber(e.target.value);
+                        if (formError) setFormError(null);
+                      }}
                       className="font-mono text-left"
                       dir="ltr"
+                      disabled={isSaving}
                       required
                       onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى تعبئة هذا الحقل')}
                       onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
@@ -445,8 +497,12 @@ export default function PowerOfAttorneyPage() {
                       id="poa-issue-date"
                       placeholder="مثال: 10/01/1445"
                       value={issueDateHijri}
-                      onChange={(e) => setIssueDateHijri(e.target.value)}
+                      onChange={(e) => {
+                        setIssueDateHijri(e.target.value);
+                        if (formError) setFormError(null);
+                      }}
                       className="font-mono"
+                      disabled={isSaving}
                     />
                   </div>
 
@@ -460,8 +516,12 @@ export default function PowerOfAttorneyPage() {
                       id="poa-expiry-date"
                       placeholder="مثال: 10/01/1448"
                       value={expiryDateHijri}
-                      onChange={(e) => setExpiryDateHijri(e.target.value)}
+                      onChange={(e) => {
+                        setExpiryDateHijri(e.target.value);
+                        if (formError) setFormError(null);
+                      }}
                       className="font-mono"
+                      disabled={isSaving}
                     />
                   </div>
 
@@ -496,7 +556,11 @@ export default function PowerOfAttorneyPage() {
                       placeholder="اكتب هنا صلاحيات الوكالة أو أية ملاحظات إضافية..."
                       rows={3}
                       value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
+                      onChange={(e) => {
+                        setNotes(e.target.value);
+                        if (formError) setFormError(null);
+                      }}
+                      disabled={isSaving}
                     />
                   </div>
                 </div>
@@ -505,9 +569,9 @@ export default function PowerOfAttorneyPage() {
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>
                     إلغاء
                   </Button>
-                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" disabled={isSaving}>
+                  <Button type="submit" data-testid="button-save-poa" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" disabled={isSaving}>
                     {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {editingRecord ? 'تحديث الوكالة' : 'حفظ في Google Sheets'}
+                    {isSaving ? 'جارٍ حفظ الوكالة...' : editingRecord ? 'تحديث الوكالة' : 'حفظ في Google Sheets'}
                   </Button>
                 </DialogFooter>
               </form>

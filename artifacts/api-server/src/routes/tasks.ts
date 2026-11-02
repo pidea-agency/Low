@@ -15,10 +15,14 @@ import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappC
 
 const router: IRouter = Router();
 
+function generateRefId(): string {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+
 function handleTaskError(res: any, err: any, defaultMsg: string): void {
   if (err instanceof GoogleBindingMissingError) {
     res.status(409).json({
-      error: "ربط المكتب غير مكتمل. تواصل مع المشرف",
+      error: `ربط المكتب غير مكتمل. تواصل مع المشرف. رقم المرجع: ${err.refId}`,
       code: "GOOGLE_BINDING_INCOMPLETE",
       refId: err.refId,
     });
@@ -26,7 +30,7 @@ function handleTaskError(res: any, err: any, defaultMsg: string): void {
   }
   if (err instanceof GoogleSettingsStoreError) {
     res.status(503).json({
-      error: "تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً.",
+      error: `تعذر الوصول إلى مخزن إعدادات المكتب. يرجى المحاولة لاحقاً. رقم المرجع: ${err.refId}`,
       code: "SETTINGS_STORE_UNAVAILABLE",
       refId: err.refId,
     });
@@ -34,13 +38,28 @@ function handleTaskError(res: any, err: any, defaultMsg: string): void {
   }
   if (err instanceof GoogleSheetsError) {
     res.status(err.statusCode).json({
-      error: err.userMessage,
+      error: `${err.userMessage} رقم المرجع: ${err.refId}`,
       refId: err.refId,
+      code: err.name,
     });
     return;
   }
-  logger.error({ err }, defaultMsg);
-  res.status(500).json({ error: defaultMsg });
+
+  const refId = generateRefId();
+  logger.error(
+    {
+      refId,
+      errName: err?.name,
+      errCode: err?.code,
+      message: err?.message || String(err),
+    },
+    defaultMsg,
+  );
+  res.status(500).json({
+    error: `${defaultMsg} رقم المرجع: ${refId}`,
+    refId,
+    code: "INTERNAL_ERROR",
+  });
 }
 
 // Stop all Tasks Excel Sheet read/write operations if subscription is suspended or expired
@@ -211,8 +230,20 @@ router.post("/tasks", attachAuthUser, requireAuth, async (req, res) => {
     };
 
     const rowId = await appendTaskRow(officeId, recordToRow(record, officeId));
-    logger.info({ rowId, officeId }, "Task record created");
-    res.status(201).json({ id: rowId, ...record });
+
+    // Read-after-write verification: confirm existence in sheet before replying
+    const verified = await getTaskRowById(officeId, rowId);
+    if (!verified) {
+      throw new GoogleSheetsError(
+        `Task record with rowId ${rowId} could not be confirmed upon re-reading.`,
+        502,
+        "تمت كتابة المهمة ولكن تعذر التحقق من وجودها في الشيت.",
+      );
+    }
+
+    const createdRecord = rowToRecord(verified.id, verified.values, verified.headers);
+    logger.info({ rowId, officeId }, "Task record created and verified");
+    res.status(201).json(createdRecord);
   } catch (err) {
     handleTaskError(res, err, "فشل حفظ المهمة.");
   }

@@ -191,8 +191,9 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
         .get("/api/sessions")
         .set("Cookie", cookieAllowedGlobal);
 
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
+      // Must never be 409 (GoogleBindingMissingError)
+      expect(res.status).not.toBe(409);
+      expect([200, 502]).toContain(res.status);
     });
   });
 

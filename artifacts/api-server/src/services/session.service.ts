@@ -249,9 +249,30 @@ export function sortSessionsByNearestTime(sessions: Session[]): Session[] {
   });
 }
 
-export async function listSessions(statusFilter?: SessionStatus, userId?: string): Promise<Session[]> {
-  await ensureSheetReady(userId);
-  const rows = await listRows(userId);
+export async function listSessions(officeId: string, statusFilter?: SessionStatus): Promise<Session[]>;
+export async function listSessions(statusFilter: SessionStatus | undefined, officeId: string): Promise<Session[]>;
+export async function listSessions(
+  arg1: string | SessionStatus | undefined,
+  arg2?: string | SessionStatus,
+): Promise<Session[]> {
+  let officeId: string | undefined;
+  let statusFilter: SessionStatus | undefined;
+
+  if (typeof arg1 === "string" && !["Upcoming", "Today", "Finished", "Cancelled"].includes(arg1)) {
+    officeId = arg1;
+    statusFilter = arg2 as SessionStatus | undefined;
+  } else {
+    statusFilter = arg1 as SessionStatus | undefined;
+    officeId = arg2 as string | undefined;
+  }
+
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to list sessions.");
+  }
+
+  const cleanOfficeId = officeId.trim();
+  await ensureSheetReady(cleanOfficeId);
+  const rows = await listRows(cleanOfficeId);
   let sessions = rows
     .map(({ id, values }) => {
       const s = rowToSession(id, values);
@@ -265,7 +286,7 @@ export async function listSessions(statusFilter?: SessionStatus, userId?: string
         updateRowCells(id, {
           [COLUMN_INDEX["Days Remaining"]]: expectedRemaining,
           [COLUMN_INDEX["Session Day"]]: expectedDay,
-        }, userId).catch((err) => logger.warn({ err, id, userId }, "Failed to auto-sync row cells"));
+        }, cleanOfficeId).catch((err) => logger.warn({ err, id, userId: cleanOfficeId }, "Failed to auto-sync row cells"));
       }
       return s;
     });
@@ -347,10 +368,13 @@ export async function deleteSession(id: number, userId?: string): Promise<boolea
 export async function markReminderSent(
   id: number,
   kind: "24h" | "6h",
-  userId?: string,
+  userId: string,
 ): Promise<void> {
+  if (!userId || !userId.trim()) {
+    throw new Error("officeId is required to mark reminder sent.");
+  }
   const colIndex = kind === "24h" ? COLUMN_INDEX["Reminder24"] : COLUMN_INDEX["Reminder6"];
-  await updateRowCells(id, { [colIndex]: "true" }, userId);
+  await updateRowCells(id, { [colIndex]: "true" }, userId.trim());
 }
 
 export interface DashboardStats {
@@ -369,7 +393,7 @@ export interface DashboardStats {
 
 export async function getDashboardStats(userId?: string): Promise<DashboardStats> {
   const [sessionsRes, poaRes, judgmentRes, taskRes] = await Promise.allSettled([
-    listSessions(undefined, userId),
+    userId ? listSessions(undefined, userId) : Promise.resolve([]),
     userId ? listPoaRows(userId) : Promise.resolve([]),
     userId ? listJudgmentRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] }),
     userId ? listTaskRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] }),

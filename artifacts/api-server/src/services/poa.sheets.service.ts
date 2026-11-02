@@ -1,7 +1,7 @@
-import { type sheets_v4 } from "googleapis";
+import { google, type sheets_v4 } from "googleapis";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
-import { getGoogleContext, GoogleSheetsError } from "./googleSheets.service";
+import { getGoogleContext, GoogleSheetsError, classifyGoogleError } from "./googleSheets.service";
 
 /**
  * Google Sheets service for Power of Attorney (Wakala) records.
@@ -65,16 +65,24 @@ export function invalidatePoaCache(): void {
 
 async function getPoaSheetId(officeId?: string): Promise<number> {
   const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
-  const spreadsheet = await ctx.sheets.spreadsheets.get({
-    spreadsheetId: ctx.spreadsheetId,
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === POA_SHEET_NAME,
-  );
-  if (!sheet?.properties && sheet?.properties?.sheetId === undefined) {
-    throw new Error(`Sheet tab "${POA_SHEET_NAME}" not found.`);
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId,
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === POA_SHEET_NAME,
+    );
+    if (!sheet?.properties || sheet.properties.sheetId == null) {
+      throw new Error(`Sheet tab "${POA_SHEET_NAME}" not found.`);
+    }
+    return sheet.properties.sheetId;
+  } catch (err: any) {
+    throw classifyGoogleError(err, "getPoaSheetId", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId,
+    });
   }
-  return sheet!.properties!.sheetId!;
 }
 
 /** Ensures the "Attorney" sheet tab exists with the correct header row. */
@@ -106,8 +114,11 @@ export async function ensurePoaSheetReady(officeId?: string): Promise<void> {
       requestBody: { values: [[...POA_SHEET_COLUMNS]] },
     });
   } catch (err: any) {
-    if (err instanceof GoogleSheetsError) throw err;
-    logger.warn({ err }, "ensurePoaSheetReady non-fatal warning");
+    throw classifyGoogleError(err, "ensurePoaSheetReady", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId,
+    });
   }
 }
 
@@ -123,18 +134,26 @@ async function fetchAllRawPoaRows(officeId?: string, forceRefresh = false): Prom
   await ensurePoaSheetReady(officeId);
   const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
 
-  const response = await ctx.sheets.spreadsheets.values.get({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${POA_SHEET_NAME}!A2:${COL_LAST}`,
-  });
-  const rows = response.data.values ?? [];
-  const result = rows
-    .map((row, index) => ({ id: index + 2, values: row as PoaRow }))
-    .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
+  try {
+    const response = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${POA_SHEET_NAME}!A2:${COL_LAST}`,
+    });
+    const rows = response.data.values ?? [];
+    const result = rows
+      .map((row, index) => ({ id: index + 2, values: row as PoaRow }))
+      .filter((row) => row.values.some((cell) => cell !== undefined && cell !== ""));
 
-  poaDataCache = result;
-  lastPoaCacheTime = now;
-  return result;
+    poaDataCache = result;
+    lastPoaCacheTime = now;
+    return result;
+  } catch (err: any) {
+    throw classifyGoogleError(err, "fetchAllRawPoaRows", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /**
@@ -193,21 +212,29 @@ export async function appendPoaRow(officeId: string, values: PoaRow): Promise<nu
   // Force stamp caller's office
   padded[POA_OFFICE_COL_INDEX] = officeId.trim();
 
-  const response = await ctx.sheets.spreadsheets.values.append({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${POA_SHEET_NAME}!A:${COL_LAST}`,
-    valueInputOption: "RAW",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [padded] },
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) return Number(match[1]);
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${POA_SHEET_NAME}!A:${COL_LAST}`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [padded] },
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) return Number(match[1]);
 
-  const rows = await fetchAllRawPoaRows(officeId, true);
-  const last = rows[rows.length - 1];
-  if (!last) throw new Error("Failed to determine id of newly created POA row.");
-  return last.id;
+    const rows = await fetchAllRawPoaRows(officeId, true);
+    const last = rows[rows.length - 1];
+    if (!last) throw new Error("Failed to determine id of newly created POA row.");
+    return last.id;
+  } catch (err: any) {
+    throw classifyGoogleError(err, "appendPoaRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /**
@@ -229,12 +256,20 @@ export async function updatePoaRow(officeId: string, id: number, values: PoaRow)
   const padded: string[] = Array.from({ length: POA_COLS }, (_, i) => values[i] ?? "");
   padded[POA_OFFICE_COL_INDEX] = officeId.trim();
 
-  await ctx.sheets.spreadsheets.values.update({
-    spreadsheetId: ctx.spreadsheetId,
-    range: `${POA_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [padded] },
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${POA_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [padded] },
+    });
+  } catch (err: any) {
+    throw classifyGoogleError(err, "updatePoaRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /**
@@ -253,23 +288,31 @@ export async function deletePoaRow(officeId: string, id: number): Promise<void> 
   const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
   invalidatePoaCache();
   const sheetId = await getPoaSheetId(officeId);
-  await ctx.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: ctx.spreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id,
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id,
+              },
             },
           },
-        },
-      ],
-    },
-  });
+        ],
+      },
+    });
+  } catch (err: any) {
+    throw classifyGoogleError(err, "deletePoaRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId,
+    });
+  }
 }
 
 /** Assign office to a legacy/unassigned row (for migration) */

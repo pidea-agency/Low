@@ -21,6 +21,7 @@ import {
   Loader2,
   RefreshCw,
   MessageCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -505,7 +506,11 @@ export default function TasksPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'فشل حفظ المهمة في جوجل شيت.');
+        const refIdStr = errData.refId ? ` رقم المرجع: ${errData.refId}` : '';
+        const errMsg = errData.error
+          ? (errData.refId && errData.error.includes(errData.refId) ? errData.error : `${errData.error}${refIdStr}`)
+          : `تعذر حفظ المهمة في جوجل شيت.${refIdStr}`;
+        throw new Error(errMsg);
       }
 
       toast({

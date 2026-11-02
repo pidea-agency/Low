@@ -65,7 +65,7 @@ async function runMigration() {
 
   // 1. Scan POA
   console.log("🔍 Scanning 'Attorney' (POA) sheet for unassigned records...");
-  const poaRows = await fetchAllRawPoaRows(true);
+  const poaRows = await fetchAllRawPoaRows(undefined, true);
   const unassignedPoa = poaRows.filter((r) => {
     const val = r.values[POA_OFFICE_COL_INDEX];
     return !val || !val.trim();
@@ -74,7 +74,7 @@ async function runMigration() {
 
   // 2. Scan Tasks
   console.log("🔍 Scanning 'Tasks' sheet for unassigned records...");
-  const { rows: taskRows } = await fetchAllRawTaskRows(true);
+  const { rows: taskRows } = await fetchAllRawTaskRows(undefined, true);
   const unassignedTasks = taskRows.filter((r) => {
     const val = r.values[TASK_OFFICE_COL_INDEX];
     return !val || !val.trim();
@@ -83,7 +83,7 @@ async function runMigration() {
 
   // 3. Scan Judgments
   console.log("🔍 Scanning 'Judgment' sheet for unassigned records...");
-  const { rows: judgmentRows } = await fetchAllRawJudgmentRows(true);
+  const { rows: judgmentRows } = await fetchAllRawJudgmentRows(undefined, true);
   const unassignedJudgments = judgmentRows.filter((r) => {
     const val = r.values[JUDGMENT_OFFICE_COL_INDEX];
     return !val || !val.trim();

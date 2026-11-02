@@ -143,16 +143,25 @@ function buildWhatsappPayloadAndHeaders(
   };
 }
 
+export function maskPhone(phone?: string | null): string {
+  if (!phone) return "";
+  const cleaned = phone.trim();
+  if (cleaned.length <= 3) return "***";
+  return "*".repeat(cleaned.length - 3) + cleaned.slice(-3);
+}
+
 export class WhatsappReminderChannel implements ReminderChannel {
   readonly name = "whatsapp";
 
-  async sendRaw(message: string): Promise<void> {
-    const settings = getSettings();
-    const phone = settings.whatsappNumber?.trim();
+  async sendRaw(message: string, recipientPhone?: string): Promise<void> {
+    const phone = recipientPhone?.trim();
 
     if (!phone) {
-      throw new Error("لم يتم إدخال رقم الواتساب في صفحة الإعدادات.");
+      throw new Error("Recipient phone number is required to send WhatsApp reminder.");
     }
+
+    const masked = maskPhone(phone);
+    const settings = getSettings();
 
     if (settings.whatsappApiUrl) {
       const requestConfig = buildWhatsappPayloadAndHeaders(
@@ -173,7 +182,7 @@ export class WhatsappReminderChannel implements ReminderChannel {
         if (!res.ok) {
           const bodyText = await res.text().catch(() => "");
           logger.error(
-            { status: res.status, bodyText, phone },
+            { status: res.status, bodyText, phone: masked },
             "WhatsApp Gateway API returned non-OK status",
           );
           throw new Error(
@@ -188,7 +197,7 @@ export class WhatsappReminderChannel implements ReminderChannel {
 
             if (parsed["instanceError"] || parsed["typeError"]) {
               const errMsg = (parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"]) as string;
-              logger.error({ errMsg, phone }, "Green API error in response body");
+              logger.error({ errMsg, phone: masked }, "Green API error in response body");
               if (String(errMsg).includes("notAuthorized")) {
                 throw new Error(
                   "⚠️ الـ Instance غير متصل بالواتساب — افتح console.greenapi.com واسحب QR Code بهاتفك.",
@@ -198,32 +207,35 @@ export class WhatsappReminderChannel implements ReminderChannel {
             }
 
             if (!parsed["idMessage"]) {
-              logger.warn({ bodyText, phone }, "Green API response has no idMessage — message may not have been sent");
+              logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage — message may not have been sent");
             }
           }
 
           logger.info(
-            { phone },
+            { phone: masked },
             "WhatsApp reminder sent via Gateway API successfully",
           );
         }
       } catch (err) {
-        logger.error({ err, phone }, "Failed to call WhatsApp Gateway API");
+        logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
         throw err;
       }
     } else {
       logger.info(
         {
-          phone,
-          message,
+          phone: masked,
         },
-        "[WhatsApp Reminder Triggered] Notification formatted for target number from Settings",
+        "[WhatsApp Reminder Triggered] Notification formatted for target recipient",
       );
     }
   }
 
   async send(payload: ReminderPayload): Promise<void> {
+    const phone = payload.recipientPhone?.trim();
+    if (!phone) {
+      throw new Error("Recipient phone number is required to send WhatsApp reminder.");
+    }
     const message = formatWhatsappMessage(payload);
-    return this.sendRaw(message);
+    return this.sendRaw(message, phone);
   }
 }

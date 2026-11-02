@@ -33405,6 +33405,10 @@ var init_env = __esm({
       },
       // --- Google Sheets (acts as the database in v1) ---
       // Settings UI takes precedence over env vars.
+      get globalSheetAllowedUserIds() {
+        const raw = readEnv("GLOBAL_SHEET_ALLOWED_USER_IDS") || "";
+        return raw.split(",").map((s) => s.trim()).filter(Boolean);
+      },
       get googleSpreadsheetId() {
         const stored = getSettings().googleSpreadsheetId;
         if (stored && stored.trim()) return stored.trim();
@@ -57255,11 +57259,34 @@ async function getUserGoogleCredentials(userId) {
     return cached.data;
   }
   const client = getSupabaseClient();
-  if (!client) return null;
+  if (!client) {
+    const local = loadLocalUsers();
+    const user = local.find((u) => u.id === userId || u.username === userId);
+    if (!user) return null;
+    let parsedJson = void 0;
+    if (user.google_service_account_json) {
+      try {
+        parsedJson = typeof user.google_service_account_json === "string" ? JSON.parse(user.google_service_account_json) : user.google_service_account_json;
+      } catch (err) {
+        logger.warn({ err, userId }, "Failed to parse local user google_service_account_json");
+      }
+    }
+    const creds = {
+      serviceAccountJson: parsedJson,
+      spreadsheetId: user.google_spreadsheet_id?.trim() || void 0,
+      sheetName: user.google_sheet_name?.trim() || void 0
+    };
+    userGoogleCredsCache.set(userId, { data: creds, timestamp: Date.now() });
+    return creds;
+  }
   try {
     const tableName = env.supabaseTableName;
     const { data, error } = await client.from(tableName).select("google_service_account_json, google_spreadsheet_id, google_sheet_name").eq("id", userId).single();
-    if (error || !data) return null;
+    if (error) {
+      if (error.code === "PGRST116") return null;
+      throw new AccountSourceUnavailableError(`Database error querying user Google credentials: ${error.message}`);
+    }
+    if (!data) return null;
     let parsedJson = void 0;
     if (data.google_service_account_json) {
       try {
@@ -57276,8 +57303,9 @@ async function getUserGoogleCredentials(userId) {
     userGoogleCredsCache.set(userId, { data: creds, timestamp: Date.now() });
     return creds;
   } catch (err) {
+    if (err instanceof AccountSourceUnavailableError) throw err;
     logger.error({ err, userId }, "Error getting user Google credentials from Supabase");
-    return null;
+    throw new AccountSourceUnavailableError(`Error accessing settings store for user ${userId}: ${err?.message}`);
   }
 }
 async function listSupabaseUsers() {
@@ -57295,6 +57323,7 @@ async function listSupabaseUsers() {
         role: u.role || "staff",
         display_name: u.display_name,
         status: u.status || "active",
+        phone: u.phone || null,
         subscription_end_date: u.subscription_end_date || null,
         subscription_notes: u.subscription_notes || null,
         plan_tier: planTier,
@@ -57309,7 +57338,12 @@ async function listSupabaseUsers() {
     });
   }
   const tableName = env.supabaseTableName;
-  const { data, error } = await client.from(tableName).select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").order("created_at", { ascending: false });
+  let { data, error } = await client.from(tableName).select("id, username, email, role, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").order("created_at", { ascending: false });
+  if (error && error.code === "42703") {
+    const fallbackRes = await client.from(tableName).select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").order("created_at", { ascending: false });
+    data = fallbackRes.data;
+    error = fallbackRes.error;
+  }
   if (error) {
     logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
     const local = loadLocalUsers();
@@ -57320,6 +57354,7 @@ async function listSupabaseUsers() {
       role: u.role || "staff",
       display_name: u.display_name,
       status: u.status || "active",
+      phone: u.phone || null,
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
@@ -57339,6 +57374,7 @@ async function listSupabaseUsers() {
     role: u.role || "staff",
     display_name: u.display_name,
     status: u.status || "active",
+    phone: u.phone || null,
     subscription_end_date: u.subscription_end_date || null,
     subscription_notes: u.subscription_notes || null,
     plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
@@ -57402,6 +57438,7 @@ async function createSupabaseUser(input) {
       role,
       display_name: input.display_name?.trim() || username,
       status,
+      phone: input.phone?.trim() || null,
       subscription_end_date,
       subscription_notes,
       plan_tier,
@@ -57424,6 +57461,7 @@ async function createSupabaseUser(input) {
       role: newUser.role,
       display_name: newUser.display_name,
       status: newUser.status,
+      phone: newUser.phone,
       subscription_end_date: newUser.subscription_end_date,
       subscription_notes: newUser.subscription_notes,
       plan_tier: newUser.plan_tier,
@@ -57584,6 +57622,7 @@ async function updateSupabaseUser(id, input) {
     if (input.role) user.role = input.role;
     if (input.display_name !== void 0) user.display_name = input.display_name.trim() || null;
     if (input.email !== void 0) user.email = input.email.trim() || null;
+    if (input.phone !== void 0) user.phone = input.phone ? input.phone.trim() : null;
     if (input.status !== void 0) user.status = input.status;
     if (input.subscription_end_date !== void 0) user.subscription_end_date = input.subscription_end_date;
     if (input.subscription_notes !== void 0) user.subscription_notes = input.subscription_notes;
@@ -57614,6 +57653,7 @@ async function updateSupabaseUser(id, input) {
       role: user.role,
       display_name: user.display_name,
       status: user.status,
+      phone: user.phone,
       subscription_end_date: user.subscription_end_date,
       subscription_notes: user.subscription_notes,
       plan_tier: user.plan_tier,
@@ -64842,7 +64882,12 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
       role: verifiedUser.role,
       displayName: verifiedUser.display_name || verifiedUser.username
     });
+    const effectiveUserId = verifiedUser.id || verifiedUser.username;
+    const effectiveOfficeId = verifiedUser?.office_id || effectiveUserId;
     res.json({
+      id: effectiveUserId,
+      userId: effectiveUserId,
+      officeId: effectiveOfficeId,
       username: verifiedUser.username,
       role: verifiedUser.role,
       displayName: verifiedUser.display_name,
@@ -64893,7 +64938,12 @@ router2.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (
     role: adminUser.role,
     displayName: adminUser.display_name || adminUser.username
   });
+  const effectiveUserId = adminUser.id || adminUser.username;
+  const effectiveOfficeId = adminUser?.office_id || effectiveUserId;
   res.json({
+    id: effectiveUserId,
+    userId: effectiveUserId,
+    officeId: effectiveOfficeId,
     username: adminUser.username,
     role: adminUser.role,
     displayName: adminUser.display_name
@@ -64916,9 +64966,10 @@ router2.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
     let ai_usage_count = 0;
     let isExpired = false;
     let isSuspended = false;
+    let user = null;
     try {
       const users = await listSupabaseUsers();
-      const user = users.find((u) => u.id === authUser.userId || u.username === authUser.username);
+      user = users.find((u) => u.id === authUser.userId || u.username === authUser.username);
       if (user) {
         status = user.status || "active";
         isSuspended = status === "suspended";
@@ -64939,7 +64990,12 @@ router2.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
       }
     } catch {
     }
+    const effectiveUserId = authUser.userId || user?.id || authUser.username;
+    const effectiveOfficeId = user?.office_id || effectiveUserId;
     res.json({
+      id: effectiveUserId,
+      userId: effectiveUserId,
+      officeId: effectiveOfficeId,
       username: authUser.username,
       role: authUser.role || "staff",
       displayName: authUser.displayName || authUser.username,
@@ -65013,6 +65069,28 @@ var GoogleSheetsConfigError = class extends GoogleSheetsError {
     this.name = "GoogleSheetsConfigError";
   }
 };
+var GoogleBindingMissingError = class extends GoogleSheetsError {
+  constructor(message = "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641", refId) {
+    super(
+      message,
+      409,
+      "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641",
+      refId
+    );
+    this.name = "GoogleBindingMissingError";
+  }
+};
+var GoogleSettingsStoreError = class extends GoogleSheetsError {
+  constructor(message = "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.", refId) {
+    super(
+      message,
+      503,
+      "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",
+      refId
+    );
+    this.name = "GoogleSettingsStoreError";
+  }
+};
 var GoogleSheetsAuthError = class extends GoogleSheetsError {
   constructor(message, refId) {
     super(
@@ -65079,6 +65157,7 @@ function classifyGoogleError(err, operation, meta) {
   }
   const rawMsg = String(err?.message || err || "");
   const status = Number(err?.status || err?.code || err?.response?.status || 0);
+  const errorCode = String(err?.code || err?.errno || err?.cause?.code || "");
   const maskedId = meta?.spreadsheetId ? maskIdentifier(meta.spreadsheetId) : void 0;
   let classified;
   if (status === 401 || rawMsg.includes("invalid_grant") || rawMsg.includes("Unauthorized") || rawMsg.includes("unauthorized_client") || rawMsg.includes("Authentication with Google failed")) {
@@ -65089,7 +65168,7 @@ function classifyGoogleError(err, operation, meta) {
     classified = new GoogleSheetsNotFoundError(`Google Spreadsheet Not Found in ${operation}: ${rawMsg}`);
   } else if (status === 400 || rawMsg.includes("Unable to parse range") || rawMsg.includes("badRequest") || rawMsg.includes("Sheet tab")) {
     classified = new GoogleSheetsRangeError(`Google Sheets Range Error in ${operation}: ${rawMsg}`);
-  } else if (rawMsg.includes("ETIMEDOUT") || rawMsg.includes("ECONNRESET") || rawMsg.includes("ECONNREFUSED") || rawMsg.includes("ENOTFOUND") || rawMsg.includes("network timeout") || rawMsg.includes("timed out") || status === 504) {
+  } else if (errorCode.includes("ETIMEDOUT") || errorCode.includes("ECONNRESET") || errorCode.includes("ECONNREFUSED") || errorCode.includes("ENOTFOUND") || rawMsg.includes("ETIMEDOUT") || rawMsg.includes("ECONNRESET") || rawMsg.includes("ECONNREFUSED") || rawMsg.includes("ENOTFOUND") || rawMsg.includes("network timeout") || rawMsg.includes("timed out") || rawMsg.includes("Client network socket disconnected") || status === 504) {
     classified = new GoogleSheetsNetworkError(`Google Network Timeout in ${operation}: ${rawMsg}`);
   } else {
     classified = new GoogleSheetsError(
@@ -65138,47 +65217,66 @@ function getDefaultClient() {
   }
   return defaultSheetsClient;
 }
-async function getGoogleContext(userId) {
-  if (userId) {
-    const userCreds = await getUserGoogleCredentials(userId);
-    if (userCreds && userCreds.serviceAccountJson && typeof userCreds.serviceAccountJson === "object") {
-      const credentials = userCreds.serviceAccountJson;
-      if (credentials.client_email && credentials.private_key) {
-        let client = userClientsMap.get(userId);
-        if (!client) {
-          try {
-            const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-            const auth = new import_googleapis.google.auth.JWT({
-              email: credentials.client_email,
-              key: privateKey,
-              scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-            });
-            client = import_googleapis.google.sheets({ version: "v4", auth });
-            userClientsMap.set(userId, client);
-          } catch (err) {
-            throw classifyGoogleError(err, "getGoogleContext.createClient", { userId });
-          }
-        }
-        const spreadsheetId = userCreds.spreadsheetId && userCreds.spreadsheetId.trim() || env.googleSpreadsheetId;
-        if (!spreadsheetId) {
-          throw new GoogleSheetsConfigError("\u0645\u0639\u0631\u0651\u0641 \u062C\u062F\u0648\u0644 Google Spreadsheet ID \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.");
-        }
-        const sheetName = userCreds.sheetName && userCreds.sheetName.trim() || env.googleSheetName || "Sessions";
-        return { sheets: client, spreadsheetId, sheetName };
-      }
+async function getGoogleContext(userId, defaultSheetName = "Sessions") {
+  const cleanUserId = userId?.trim();
+  const isAllowListed = cleanUserId ? env.globalSheetAllowedUserIds.includes(cleanUserId) : false;
+  if (isAllowListed) {
+    const globalSpreadsheetId = env.googleSpreadsheetId;
+    if (!globalSpreadsheetId) {
+      throw new GoogleSheetsConfigError(
+        "\u0625\u0639\u062F\u0627\u062F\u0627\u062A Google Sheets \u0627\u0644\u0639\u0627\u0645\u0629 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645."
+      );
     }
+    logger.info(
+      { userId: cleanUserId, defaultSheetName },
+      "[GoogleSheets] Intentional global sheet usage: user is on GLOBAL_SHEET_ALLOWED_USER_IDS allow-list"
+    );
+    return {
+      sheets: getDefaultClient(),
+      spreadsheetId: globalSpreadsheetId,
+      sheetName: defaultSheetName || env.googleSheetName || "Sessions"
+    };
   }
-  const globalSpreadsheetId = env.googleSpreadsheetId;
-  if (!globalSpreadsheetId) {
-    throw new GoogleSheetsConfigError(
-      "\u0644\u0645 \u064A\u062A\u0645 \u0625\u0639\u062F\u0627\u062F Google Sheets. \u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0645\u0644\u0641 Google Service Account JSON \u0648\u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 (Spreadsheet ID) \u0641\u064A \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u0648 \u0645\u062A\u063A\u064A\u0631\u0627\u062A \u0627\u0644\u0628\u064A\u0626\u0629."
+  if (!cleanUserId) {
+    throw new GoogleBindingMissingError("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645/\u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 Google Sheets.");
+  }
+  let userCreds = null;
+  try {
+    userCreds = await getUserGoogleCredentials(cleanUserId);
+  } catch (err) {
+    logger.error({ err, userId: cleanUserId }, "Failed to load user Google settings from store");
+    throw new GoogleSettingsStoreError(
+      `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645 ${cleanUserId}: ${err?.message || err}`
     );
   }
-  return {
-    sheets: getDefaultClient(),
-    spreadsheetId: globalSpreadsheetId,
-    sheetName: env.googleSheetName || "Sessions"
-  };
+  if (!userCreds) {
+    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
+  }
+  const spreadsheetId = userCreds.spreadsheetId?.trim();
+  if (!spreadsheetId) {
+    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
+  }
+  const credentials = userCreds.serviceAccountJson;
+  if (!credentials || typeof credentials !== "object" || !credentials.client_email?.trim() || !credentials.private_key?.trim()) {
+    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
+  }
+  let client = userClientsMap.get(cleanUserId);
+  if (!client) {
+    try {
+      const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+      const auth = new import_googleapis.google.auth.JWT({
+        email: credentials.client_email,
+        key: privateKey,
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+      });
+      client = import_googleapis.google.sheets({ version: "v4", auth });
+      userClientsMap.set(cleanUserId, client);
+    } catch (err) {
+      throw classifyGoogleError(err, "getGoogleContext.createClient", { userId: cleanUserId });
+    }
+  }
+  const sheetName = userCreds.sheetName?.trim() || defaultSheetName;
+  return { sheets: client, spreadsheetId, sheetName };
 }
 async function getSheetId(ctx) {
   try {
@@ -65574,27 +65672,6 @@ var POA_SHEET_COLUMNS = [
 var POA_COLS = POA_SHEET_COLUMNS.length;
 var COL_LAST = String.fromCharCode("A".charCodeAt(0) + POA_COLS - 1);
 var POA_OFFICE_COL_INDEX = 7;
-var sheetsClient = null;
-function getClient() {
-  if (!sheetsClient) {
-    const credentials = env.googleServiceAccountJson;
-    if (!credentials.client_email || !credentials.private_key) {
-      throw new Error(
-        "GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email/private_key."
-      );
-    }
-    const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-    const auth = new import_googleapis2.google.auth.JWT({
-      email: credentials.client_email,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-    });
-    sheetsClient = import_googleapis2.google.sheets({ version: "v4", auth });
-  }
-  return sheetsClient;
-}
-var poaSheetIdCache = null;
-var isPoaSheetReadyCache = false;
 var poaDataCache = null;
 var lastPoaCacheTime = 0;
 var POA_CACHE_TTL_MS = 15e3;
@@ -65602,63 +65679,69 @@ function invalidatePoaCache() {
   poaDataCache = null;
   lastPoaCacheTime = 0;
 }
-async function getPoaSheetId() {
-  if (poaSheetIdCache !== null) return poaSheetIdCache;
-  const sheets = getClient();
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId: env.googleSpreadsheetId
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === POA_SHEET_NAME
-  );
-  if (!sheet?.properties && sheet?.properties?.sheetId === void 0) {
-    throw new Error(`Sheet tab "${POA_SHEET_NAME}" not found.`);
-  }
-  poaSheetIdCache = sheet.properties.sheetId;
-  return poaSheetIdCache;
-}
-async function ensurePoaSheetReady() {
-  if (isPoaSheetReadyCache) return;
+async function getPoaSheetId(officeId) {
+  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
   try {
-    const sheets = getClient();
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: env.googleSpreadsheetId
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === POA_SHEET_NAME
+    );
+    if (!sheet?.properties || sheet.properties.sheetId == null) {
+      throw new Error(`Sheet tab "${POA_SHEET_NAME}" not found.`);
+    }
+    return sheet.properties.sheetId;
+  } catch (err) {
+    throw classifyGoogleError(err, "getPoaSheetId", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId
+    });
+  }
+}
+async function ensurePoaSheetReady(officeId) {
+  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
     });
     const existing = spreadsheet.data.sheets?.find(
       (s) => s.properties?.title === POA_SHEET_NAME
     );
     if (!existing) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: env.googleSpreadsheetId,
+      await ctx.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: ctx.spreadsheetId,
         requestBody: {
           requests: [{ addSheet: { properties: { title: POA_SHEET_NAME } } }]
         }
       });
-      poaSheetIdCache = null;
       logger.info(`Created sheet tab "${POA_SHEET_NAME}"`);
     }
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: env.googleSpreadsheetId,
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${POA_SHEET_NAME}!A1:${COL_LAST}1`,
       valueInputOption: "RAW",
       requestBody: { values: [[...POA_SHEET_COLUMNS]] }
     });
-    isPoaSheetReadyCache = true;
   } catch (err) {
-    isPoaSheetReadyCache = false;
-    logger.warn({ err }, "ensurePoaSheetReady non-fatal warning");
+    throw classifyGoogleError(err, "ensurePoaSheetReady", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId
+    });
   }
 }
-async function fetchAllRawPoaRows(forceRefresh = false) {
+async function fetchAllRawPoaRows(officeId, forceRefresh = false) {
   const now = Date.now();
   if (!forceRefresh && poaDataCache !== null && now - lastPoaCacheTime < POA_CACHE_TTL_MS) {
     return poaDataCache;
   }
-  await ensurePoaSheetReady();
+  await ensurePoaSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
   try {
-    const sheets = getClient();
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: env.googleSpreadsheetId,
+    const response = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${POA_SHEET_NAME}!A2:${COL_LAST}`
     });
     const rows = response.data.values ?? [];
@@ -65667,8 +65750,11 @@ async function fetchAllRawPoaRows(forceRefresh = false) {
     lastPoaCacheTime = now;
     return result;
   } catch (err) {
-    logger.warn({ err }, "Failed to fetch POA rows from Google Sheets, returning cached/empty");
-    return poaDataCache ?? [];
+    throw classifyGoogleError(err, "fetchAllRawPoaRows", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId
+    });
   }
 }
 async function listPoaRows(officeId, forceRefresh = false) {
@@ -65676,7 +65762,7 @@ async function listPoaRows(officeId, forceRefresh = false) {
     throw new Error("officeId is required to list POA records.");
   }
   const cleanOfficeId = officeId.trim();
-  const allRows = await fetchAllRawPoaRows(forceRefresh);
+  const allRows = await fetchAllRawPoaRows(cleanOfficeId, forceRefresh);
   return allRows.filter((r) => (r.values[POA_OFFICE_COL_INDEX] || "").trim() === cleanOfficeId);
 }
 async function getPoaRowById(officeId, id) {
@@ -65684,7 +65770,7 @@ async function getPoaRowById(officeId, id) {
     throw new Error("officeId is required to get a POA record.");
   }
   const cleanOfficeId = officeId.trim();
-  const allRows = await fetchAllRawPoaRows();
+  const allRows = await fetchAllRawPoaRows(cleanOfficeId);
   const match = allRows.find((r) => r.id === id);
   if (!match) return null;
   const rowOffice = (match.values[POA_OFFICE_COL_INDEX] || "").trim();
@@ -65698,24 +65784,32 @@ async function appendPoaRow(officeId, values) {
     throw new Error("officeId is required to create a POA record.");
   }
   invalidatePoaCache();
-  await ensurePoaSheetReady();
+  await ensurePoaSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
   const padded = Array.from({ length: POA_COLS }, (_, i) => values[i] ?? "");
   padded[POA_OFFICE_COL_INDEX] = officeId.trim();
-  const sheets = getClient();
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: env.googleSpreadsheetId,
-    range: `${POA_SHEET_NAME}!A:${COL_LAST}`,
-    valueInputOption: "RAW",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [padded] }
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) return Number(match[1]);
-  const rows = await fetchAllRawPoaRows(true);
-  const last = rows[rows.length - 1];
-  if (!last) throw new Error("Failed to determine id of newly created POA row.");
-  return last.id;
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${POA_SHEET_NAME}!A:${COL_LAST}`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [padded] }
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) return Number(match[1]);
+    const rows = await fetchAllRawPoaRows(officeId, true);
+    const last = rows[rows.length - 1];
+    if (!last) throw new Error("Failed to determine id of newly created POA row.");
+    return last.id;
+  } catch (err) {
+    throw classifyGoogleError(err, "appendPoaRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 async function updatePoaRow(officeId, id, values) {
   if (!officeId || !officeId.trim()) {
@@ -65725,16 +65819,24 @@ async function updatePoaRow(officeId, id, values) {
   if (!existing) {
     throw new Error("POA record not found for this office.");
   }
+  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
   invalidatePoaCache();
   const padded = Array.from({ length: POA_COLS }, (_, i) => values[i] ?? "");
   padded[POA_OFFICE_COL_INDEX] = officeId.trim();
-  const sheets = getClient();
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: env.googleSpreadsheetId,
-    range: `${POA_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [padded] }
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${POA_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [padded] }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updatePoaRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 async function deletePoaRow(officeId, id) {
   if (!officeId || !officeId.trim()) {
@@ -65744,26 +65846,34 @@ async function deletePoaRow(officeId, id) {
   if (!existing) {
     throw new Error("POA record not found for this office.");
   }
+  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
   invalidatePoaCache();
-  const sheets = getClient();
-  const sheetId = await getPoaSheetId();
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: env.googleSpreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id
+  const sheetId = await getPoaSheetId(officeId);
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id
+              }
             }
           }
-        }
-      ]
-    }
-  });
+        ]
+      }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "deletePoaRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: POA_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 
 // src/services/judgment.sheets.service.ts
@@ -65798,27 +65908,6 @@ var JUDGMENT_SHEET_COLUMNS = [
 var JUDGMENT_COLS = JUDGMENT_SHEET_COLUMNS.length;
 var COL_LAST2 = String.fromCharCode("A".charCodeAt(0) + JUDGMENT_COLS - 1);
 var JUDGMENT_OFFICE_COL_INDEX = 10;
-var sheetsClient2 = null;
-function getClient2() {
-  if (!sheetsClient2) {
-    const credentials = env.googleServiceAccountJson;
-    if (!credentials.client_email || !credentials.private_key) {
-      throw new Error(
-        "GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email/private_key."
-      );
-    }
-    const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-    const auth = new import_googleapis3.google.auth.JWT({
-      email: credentials.client_email,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-    });
-    sheetsClient2 = import_googleapis3.google.sheets({ version: "v4", auth });
-  }
-  return sheetsClient2;
-}
-var judgmentSheetIdCache = null;
-var isJudgmentSheetReadyCache = false;
 var judgmentDataCache = null;
 var lastJudgmentCacheTime = 0;
 var JUDGMENT_CACHE_TTL_MS = 15e3;
@@ -65826,69 +65915,75 @@ function invalidateJudgmentCache() {
   judgmentDataCache = null;
   lastJudgmentCacheTime = 0;
 }
-async function getJudgmentSheetId() {
-  if (judgmentSheetIdCache !== null) return judgmentSheetIdCache;
-  const sheets = getClient2();
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId: env.googleSpreadsheetId
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === JUDGMENT_SHEET_NAME
-  );
-  if (!sheet?.properties && sheet?.properties?.sheetId === void 0) {
-    throw new Error(`Sheet tab "${JUDGMENT_SHEET_NAME}" not found.`);
-  }
-  judgmentSheetIdCache = sheet.properties.sheetId;
-  return judgmentSheetIdCache;
-}
-async function ensureJudgmentSheetReady() {
-  if (isJudgmentSheetReadyCache) return;
+async function getJudgmentSheetId(officeId) {
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   try {
-    const sheets = getClient2();
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: env.googleSpreadsheetId
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === JUDGMENT_SHEET_NAME
+    );
+    if (!sheet?.properties || sheet.properties.sheetId == null) {
+      throw new Error(`Sheet tab "${JUDGMENT_SHEET_NAME}" not found.`);
+    }
+    return sheet.properties.sheetId;
+  } catch (err) {
+    throw classifyGoogleError(err, "getJudgmentSheetId", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId
+    });
+  }
+}
+async function ensureJudgmentSheetReady(officeId) {
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
     });
     const existing = spreadsheet.data.sheets?.find(
       (s) => s.properties?.title === JUDGMENT_SHEET_NAME
     );
     if (!existing) {
-      const addRes = await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: env.googleSpreadsheetId,
+      await ctx.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: ctx.spreadsheetId,
         requestBody: {
           requests: [{ addSheet: { properties: { title: JUDGMENT_SHEET_NAME } } }]
         }
       });
-      judgmentSheetIdCache = addRes.data.replies?.[0]?.addSheet?.properties?.sheetId ?? null;
       logger.info(`Created sheet tab "${JUDGMENT_SHEET_NAME}"`);
     }
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: env.googleSpreadsheetId,
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST2}1`,
       valueInputOption: "RAW",
       requestBody: { values: [[...JUDGMENT_SHEET_COLUMNS]] }
     });
-    isJudgmentSheetReadyCache = true;
   } catch (err) {
-    logger.warn({ err }, "ensureJudgmentSheetReady warning");
-    isJudgmentSheetReadyCache = true;
+    throw classifyGoogleError(err, "ensureJudgmentSheetReady", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId
+    });
   }
 }
-async function fetchAllRawJudgmentRows(forceRefresh = false) {
-  await ensureJudgmentSheetReady();
+async function fetchAllRawJudgmentRows(officeId, forceRefresh = false) {
+  await ensureJudgmentSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   const now = Date.now();
   const useCache = !forceRefresh && judgmentDataCache !== null && now - lastJudgmentCacheTime < JUDGMENT_CACHE_TTL_MS;
   try {
-    const sheets = getClient2();
     if (useCache) {
-      const headerRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: env.googleSpreadsheetId,
+      const headerRes = await ctx.sheets.spreadsheets.values.get({
+        spreadsheetId: ctx.spreadsheetId,
         range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST2}1`
       });
       const headers2 = headerRes.data.values?.[0] ?? [...JUDGMENT_SHEET_COLUMNS];
       return { headers: headers2, rows: judgmentDataCache };
     }
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: env.googleSpreadsheetId,
+    const response = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST2}`
     });
     const data = response.data.values ?? [];
@@ -65899,11 +65994,11 @@ async function fetchAllRawJudgmentRows(forceRefresh = false) {
     lastJudgmentCacheTime = now;
     return { headers, rows };
   } catch (err) {
-    logger.warn({ err }, "Failed to fetch Judgment rows from Google Sheets, returning cached/empty");
-    return {
-      headers: [...JUDGMENT_SHEET_COLUMNS],
-      rows: judgmentDataCache ?? []
-    };
+    throw classifyGoogleError(err, "fetchAllRawJudgmentRows", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId
+    });
   }
 }
 async function listJudgmentRowsWithHeaders(officeId, forceRefresh = false) {
@@ -65911,7 +66006,7 @@ async function listJudgmentRowsWithHeaders(officeId, forceRefresh = false) {
     throw new Error("officeId is required to list Judgment records.");
   }
   const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawJudgmentRows(forceRefresh);
+  const { headers, rows } = await fetchAllRawJudgmentRows(cleanOfficeId, forceRefresh);
   const officeColIdx = headers.findIndex((h) => h.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
   const actualColIdx = officeColIdx !== -1 ? officeColIdx : JUDGMENT_OFFICE_COL_INDEX;
   const filtered = rows.filter((r) => (r.values[actualColIdx] || "").trim() === cleanOfficeId);
@@ -65922,7 +66017,7 @@ async function getJudgmentRowById(officeId, id) {
     throw new Error("officeId is required to get a Judgment record.");
   }
   const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawJudgmentRows();
+  const { headers, rows } = await fetchAllRawJudgmentRows(cleanOfficeId);
   const match = rows.find((r) => r.id === id);
   if (!match) return null;
   const officeColIdx = headers.findIndex((h) => h.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
@@ -65937,24 +66032,32 @@ async function appendJudgmentRow(officeId, values) {
     throw new Error("officeId is required to create a Judgment record.");
   }
   invalidateJudgmentCache();
-  await ensureJudgmentSheetReady();
+  await ensureJudgmentSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   const paddedValues = Array.from({ length: JUDGMENT_COLS }, (_, i) => values[i] ?? "");
   paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
-  const sheets = getClient2();
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: env.googleSpreadsheetId,
-    range: `${JUDGMENT_SHEET_NAME}!A:${COL_LAST2}`,
-    valueInputOption: "RAW",
-    insertDataOption: "OVERWRITE",
-    requestBody: { values: [paddedValues] }
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) return Number(match[1]);
-  const { rows } = await fetchAllRawJudgmentRows(true);
-  const last = rows[rows.length - 1];
-  if (!last) throw new Error("Failed to determine id of newly created Judgment row.");
-  return last.id;
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${JUDGMENT_SHEET_NAME}!A:${COL_LAST2}`,
+      valueInputOption: "RAW",
+      insertDataOption: "OVERWRITE",
+      requestBody: { values: [paddedValues] }
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) return Number(match[1]);
+    const { rows } = await fetchAllRawJudgmentRows(officeId, true);
+    const last = rows[rows.length - 1];
+    if (!last) throw new Error("Failed to determine id of newly created Judgment row.");
+    return last.id;
+  } catch (err) {
+    throw classifyGoogleError(err, "appendJudgmentRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 async function updateJudgmentRow(officeId, id, values) {
   if (!officeId || !officeId.trim()) {
@@ -65964,16 +66067,24 @@ async function updateJudgmentRow(officeId, id, values) {
   if (!existing) {
     throw new Error("Judgment record not found for this office.");
   }
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   invalidateJudgmentCache();
   const paddedValues = Array.from({ length: JUDGMENT_COLS }, (_, i) => values[i] ?? "");
   paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
-  const sheets = getClient2();
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: env.googleSpreadsheetId,
-    range: `${JUDGMENT_SHEET_NAME}!A${id}:${COL_LAST2}${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [paddedValues] }
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${JUDGMENT_SHEET_NAME}!A${id}:${COL_LAST2}${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [paddedValues] }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateJudgmentRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 async function deleteJudgmentRow(officeId, id) {
   if (!officeId || !officeId.trim()) {
@@ -65983,26 +66094,34 @@ async function deleteJudgmentRow(officeId, id) {
   if (!existing) {
     throw new Error("Judgment record not found for this office.");
   }
+  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
   invalidateJudgmentCache();
-  const sheets = getClient2();
-  const sheetId = await getJudgmentSheetId();
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: env.googleSpreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id
+  const sheetId = await getJudgmentSheetId(officeId);
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id
+              }
             }
           }
-        }
-      ]
-    }
-  });
+        ]
+      }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "deleteJudgmentRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: JUDGMENT_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 
 // src/services/task.sheets.service.ts
@@ -66033,27 +66152,6 @@ var TASK_SHEET_COLUMNS = [
 var TASK_COLS = TASK_SHEET_COLUMNS.length;
 var COL_LAST3 = String.fromCharCode("A".charCodeAt(0) + TASK_COLS - 1);
 var TASK_OFFICE_COL_INDEX = 8;
-var sheetsClient3 = null;
-function getClient3() {
-  if (!sheetsClient3) {
-    const credentials = env.googleServiceAccountJson;
-    if (!credentials.client_email || !credentials.private_key) {
-      throw new Error(
-        "GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email/private_key."
-      );
-    }
-    const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-    const auth = new import_googleapis4.google.auth.JWT({
-      email: credentials.client_email,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-    });
-    sheetsClient3 = import_googleapis4.google.sheets({ version: "v4", auth });
-  }
-  return sheetsClient3;
-}
-var taskSheetIdCache = null;
-var isTaskSheetReadyCache = false;
 var taskDataCache = null;
 var lastTaskCacheTime = 0;
 var TASK_CACHE_TTL_MS = 15e3;
@@ -66061,69 +66159,75 @@ function invalidateTaskCache() {
   taskDataCache = null;
   lastTaskCacheTime = 0;
 }
-async function getTaskSheetId() {
-  if (taskSheetIdCache !== null) return taskSheetIdCache;
-  const sheets = getClient3();
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId: env.googleSpreadsheetId
-  });
-  const sheet = spreadsheet.data.sheets?.find(
-    (s) => s.properties?.title === TASK_SHEET_NAME
-  );
-  if (!sheet?.properties && sheet?.properties?.sheetId === void 0) {
-    throw new Error(`Sheet tab "${TASK_SHEET_NAME}" not found.`);
-  }
-  taskSheetIdCache = sheet.properties.sheetId;
-  return taskSheetIdCache;
-}
-async function ensureTaskSheetReady() {
-  if (isTaskSheetReadyCache) return;
+async function getTaskSheetId(officeId) {
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   try {
-    const sheets = getClient3();
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: env.googleSpreadsheetId
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === TASK_SHEET_NAME
+    );
+    if (!sheet?.properties || sheet.properties.sheetId == null) {
+      throw new Error(`Sheet tab "${TASK_SHEET_NAME}" not found.`);
+    }
+    return sheet.properties.sheetId;
+  } catch (err) {
+    throw classifyGoogleError(err, "getTaskSheetId", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId
+    });
+  }
+}
+async function ensureTaskSheetReady(officeId) {
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
     });
     const existing = spreadsheet.data.sheets?.find(
       (s) => s.properties?.title === TASK_SHEET_NAME
     );
     if (!existing) {
-      const addRes = await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: env.googleSpreadsheetId,
+      await ctx.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: ctx.spreadsheetId,
         requestBody: {
           requests: [{ addSheet: { properties: { title: TASK_SHEET_NAME } } }]
         }
       });
-      taskSheetIdCache = addRes.data.replies?.[0]?.addSheet?.properties?.sheetId ?? null;
       logger.info(`Created sheet tab "${TASK_SHEET_NAME}"`);
     }
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: env.googleSpreadsheetId,
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${TASK_SHEET_NAME}!A1:${COL_LAST3}1`,
       valueInputOption: "RAW",
       requestBody: { values: [[...TASK_SHEET_COLUMNS]] }
     });
-    isTaskSheetReadyCache = true;
   } catch (err) {
-    logger.warn({ err }, "ensureTaskSheetReady warning");
-    isTaskSheetReadyCache = true;
+    throw classifyGoogleError(err, "ensureTaskSheetReady", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId
+    });
   }
 }
-async function fetchAllRawTaskRows(forceRefresh = false) {
-  await ensureTaskSheetReady();
+async function fetchAllRawTaskRows(officeId, forceRefresh = false) {
+  await ensureTaskSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   const now = Date.now();
   const useCache = !forceRefresh && taskDataCache !== null && now - lastTaskCacheTime < TASK_CACHE_TTL_MS;
   try {
-    const sheets = getClient3();
     if (useCache) {
-      const headerRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: env.googleSpreadsheetId,
+      const headerRes = await ctx.sheets.spreadsheets.values.get({
+        spreadsheetId: ctx.spreadsheetId,
         range: `${TASK_SHEET_NAME}!A1:${COL_LAST3}1`
       });
       const headers2 = headerRes.data.values?.[0] ?? [...TASK_SHEET_COLUMNS];
       return { headers: headers2, rows: taskDataCache };
     }
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: env.googleSpreadsheetId,
+    const response = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
       range: `${TASK_SHEET_NAME}!A1:${COL_LAST3}`
     });
     const data = response.data.values ?? [];
@@ -66134,11 +66238,11 @@ async function fetchAllRawTaskRows(forceRefresh = false) {
     lastTaskCacheTime = now;
     return { headers, rows };
   } catch (err) {
-    logger.warn({ err }, "Failed to fetch Task rows from Google Sheets, returning cached/empty");
-    return {
-      headers: [...TASK_SHEET_COLUMNS],
-      rows: taskDataCache ?? []
-    };
+    throw classifyGoogleError(err, "fetchAllRawTaskRows", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId
+    });
   }
 }
 async function listTaskRowsWithHeaders(officeId, forceRefresh = false) {
@@ -66146,7 +66250,7 @@ async function listTaskRowsWithHeaders(officeId, forceRefresh = false) {
     throw new Error("officeId is required to list Task records.");
   }
   const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawTaskRows(forceRefresh);
+  const { headers, rows } = await fetchAllRawTaskRows(cleanOfficeId, forceRefresh);
   const officeColIdx = headers.findIndex((h) => h.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
   const actualColIdx = officeColIdx !== -1 ? officeColIdx : TASK_OFFICE_COL_INDEX;
   const filtered = rows.filter((r) => (r.values[actualColIdx] || "").trim() === cleanOfficeId);
@@ -66157,7 +66261,7 @@ async function getTaskRowById(officeId, id) {
     throw new Error("officeId is required to get a Task record.");
   }
   const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawTaskRows();
+  const { headers, rows } = await fetchAllRawTaskRows(cleanOfficeId);
   const match = rows.find((r) => r.id === id);
   if (!match) return null;
   const officeColIdx = headers.findIndex((h) => h.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
@@ -66172,24 +66276,32 @@ async function appendTaskRow(officeId, values) {
     throw new Error("officeId is required to create a Task record.");
   }
   invalidateTaskCache();
-  await ensureTaskSheetReady();
+  await ensureTaskSheetReady(officeId);
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   const paddedValues = Array.from({ length: TASK_COLS }, (_, i) => values[i] ?? "");
   paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
-  const sheets = getClient3();
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: env.googleSpreadsheetId,
-    range: `${TASK_SHEET_NAME}!A:${COL_LAST3}`,
-    valueInputOption: "RAW",
-    insertDataOption: "OVERWRITE",
-    requestBody: { values: [paddedValues] }
-  });
-  const updatedRange = response.data.updates?.updatedRange;
-  const match = updatedRange?.match(/![A-Z]+(\d+):/);
-  if (match) return Number(match[1]);
-  const { rows } = await fetchAllRawTaskRows(true);
-  const last = rows[rows.length - 1];
-  if (!last) throw new Error("Failed to determine id of newly created Task row.");
-  return last.id;
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${TASK_SHEET_NAME}!A:${COL_LAST3}`,
+      valueInputOption: "RAW",
+      insertDataOption: "OVERWRITE",
+      requestBody: { values: [paddedValues] }
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) return Number(match[1]);
+    const { rows } = await fetchAllRawTaskRows(officeId, true);
+    const last = rows[rows.length - 1];
+    if (!last) throw new Error("Failed to determine id of newly created Task row.");
+    return last.id;
+  } catch (err) {
+    throw classifyGoogleError(err, "appendTaskRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 async function updateTaskRow(officeId, id, values) {
   if (!officeId || !officeId.trim()) {
@@ -66199,16 +66311,24 @@ async function updateTaskRow(officeId, id, values) {
   if (!existing) {
     throw new Error("Task record not found for this office.");
   }
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   invalidateTaskCache();
   const paddedValues = Array.from({ length: TASK_COLS }, (_, i) => values[i] ?? "");
   paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
-  const sheets = getClient3();
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: env.googleSpreadsheetId,
-    range: `${TASK_SHEET_NAME}!A${id}:${COL_LAST3}${id}`,
-    valueInputOption: "RAW",
-    requestBody: { values: [paddedValues] }
-  });
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `${TASK_SHEET_NAME}!A${id}:${COL_LAST3}${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [paddedValues] }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateTaskRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 async function deleteTaskRow(officeId, id) {
   if (!officeId || !officeId.trim()) {
@@ -66218,26 +66338,34 @@ async function deleteTaskRow(officeId, id) {
   if (!existing) {
     throw new Error("Task record not found for this office.");
   }
+  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
   invalidateTaskCache();
-  const sheets = getClient3();
-  const sheetId = await getTaskSheetId();
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: env.googleSpreadsheetId,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: "ROWS",
-              startIndex: id - 1,
-              endIndex: id
+  const sheetId = await getTaskSheetId(officeId);
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id
+              }
             }
           }
-        }
-      ]
-    }
-  });
+        ]
+      }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "deleteTaskRow", {
+      spreadsheetId: ctx.spreadsheetId,
+      sheetName: TASK_SHEET_NAME,
+      userId: officeId
+    });
+  }
 }
 
 // src/services/session.service.ts
@@ -66455,9 +66583,22 @@ function sortSessionsByNearestTime(sessions) {
     return (b.id ?? 0) - (a.id ?? 0);
   });
 }
-async function listSessions(statusFilter, userId) {
-  await ensureSheetReady(userId);
-  const rows = await listRows(userId);
+async function listSessions(arg1, arg2) {
+  let officeId;
+  let statusFilter;
+  if (typeof arg1 === "string" && !["Upcoming", "Today", "Finished", "Cancelled"].includes(arg1)) {
+    officeId = arg1;
+    statusFilter = arg2;
+  } else {
+    statusFilter = arg1;
+    officeId = arg2;
+  }
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to list sessions.");
+  }
+  const cleanOfficeId = officeId.trim();
+  await ensureSheetReady(cleanOfficeId);
+  const rows = await listRows(cleanOfficeId);
   let sessions = rows.map(({ id, values }) => {
     const s = rowToSession(id, values);
     const expectedDay = computeSessionDayStr(s.sessionDateHijri, s.sessionTime);
@@ -66468,7 +66609,7 @@ async function listSessions(statusFilter, userId) {
       updateRowCells(id, {
         [COLUMN_INDEX["Days Remaining"]]: expectedRemaining,
         [COLUMN_INDEX["Session Day"]]: expectedDay
-      }, userId).catch((err) => logger.warn({ err, id, userId }, "Failed to auto-sync row cells"));
+      }, cleanOfficeId).catch((err) => logger.warn({ err, id, userId: cleanOfficeId }, "Failed to auto-sync row cells"));
     }
     return s;
   });
@@ -66553,12 +66694,15 @@ async function deleteSession(id, userId) {
   return true;
 }
 async function markReminderSent(id, kind, userId) {
+  if (!userId || !userId.trim()) {
+    throw new Error("officeId is required to mark reminder sent.");
+  }
   const colIndex = kind === "24h" ? COLUMN_INDEX["Reminder24"] : COLUMN_INDEX["Reminder6"];
-  await updateRowCells(id, { [colIndex]: "true" }, userId);
+  await updateRowCells(id, { [colIndex]: "true" }, userId.trim());
 }
 async function getDashboardStats(userId) {
   const [sessionsRes, poaRes, judgmentRes, taskRes] = await Promise.allSettled([
-    listSessions(void 0, userId),
+    userId ? listSessions(void 0, userId) : Promise.resolve([]),
     userId ? listPoaRows(userId) : Promise.resolve([]),
     userId ? listJudgmentRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] }),
     userId ? listTaskRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] })
@@ -82986,14 +83130,21 @@ function buildWhatsappPayloadAndHeaders(url, phone, token, message, instanceId) 
     })
   };
 }
+function maskPhone(phone) {
+  if (!phone) return "";
+  const cleaned = phone.trim();
+  if (cleaned.length <= 3) return "***";
+  return "*".repeat(cleaned.length - 3) + cleaned.slice(-3);
+}
 var WhatsappReminderChannel = class {
   name = "whatsapp";
-  async sendRaw(message) {
-    const settings = getSettings();
-    const phone = settings.whatsappNumber?.trim();
+  async sendRaw(message, recipientPhone) {
+    const phone = recipientPhone?.trim();
     if (!phone) {
-      throw new Error("\u0644\u0645 \u064A\u062A\u0645 \u0625\u062F\u062E\u0627\u0644 \u0631\u0642\u0645 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0641\u064A \u0635\u0641\u062D\u0629 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A.");
+      throw new Error("Recipient phone number is required to send WhatsApp reminder.");
     }
+    const masked = maskPhone(phone);
+    const settings = getSettings();
     if (settings.whatsappApiUrl) {
       const requestConfig = buildWhatsappPayloadAndHeaders(
         settings.whatsappApiUrl.trim(),
@@ -83011,7 +83162,7 @@ var WhatsappReminderChannel = class {
         if (!res.ok) {
           const bodyText = await res.text().catch(() => "");
           logger.error(
-            { status: res.status, bodyText, phone },
+            { status: res.status, bodyText, phone: masked },
             "WhatsApp Gateway API returned non-OK status"
           );
           throw new Error(
@@ -83027,7 +83178,7 @@ var WhatsappReminderChannel = class {
             }
             if (parsed["instanceError"] || parsed["typeError"]) {
               const errMsg = parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"];
-              logger.error({ errMsg, phone }, "Green API error in response body");
+              logger.error({ errMsg, phone: masked }, "Green API error in response body");
               if (String(errMsg).includes("notAuthorized")) {
                 throw new Error(
                   "\u26A0\uFE0F \u0627\u0644\u0640 Instance \u063A\u064A\u0631 \u0645\u062A\u0635\u0644 \u0628\u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u0627\u0641\u062A\u062D console.greenapi.com \u0648\u0627\u0633\u062D\u0628 QR Code \u0628\u0647\u0627\u062A\u0641\u0643."
@@ -83036,31 +83187,34 @@ var WhatsappReminderChannel = class {
               throw new Error(`Green API \u0623\u0631\u062C\u0639 \u062E\u0637\u0623: ${errMsg}`);
             }
             if (!parsed["idMessage"]) {
-              logger.warn({ bodyText, phone }, "Green API response has no idMessage \u2014 message may not have been sent");
+              logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage \u2014 message may not have been sent");
             }
           }
           logger.info(
-            { phone },
+            { phone: masked },
             "WhatsApp reminder sent via Gateway API successfully"
           );
         }
       } catch (err) {
-        logger.error({ err, phone }, "Failed to call WhatsApp Gateway API");
+        logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
         throw err;
       }
     } else {
       logger.info(
         {
-          phone,
-          message
+          phone: masked
         },
-        "[WhatsApp Reminder Triggered] Notification formatted for target number from Settings"
+        "[WhatsApp Reminder Triggered] Notification formatted for target recipient"
       );
     }
   }
   async send(payload) {
+    const phone = payload.recipientPhone?.trim();
+    if (!phone) {
+      throw new Error("Recipient phone number is required to send WhatsApp reminder.");
+    }
     const message = formatWhatsappMessage(payload);
-    return this.sendRaw(message);
+    return this.sendRaw(message, phone);
   }
 };
 
@@ -83068,6 +83222,22 @@ var WhatsappReminderChannel = class {
 var router5 = (0, import_express5.Router)();
 router5.use("/sessions", attachAuthUser, requireAuth, requireActiveSubscription);
 function handleRouteError(res, err, defaultMsg) {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641",
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId
+    });
+    return;
+  }
   if (err instanceof GoogleSheetsError) {
     res.status(err.statusCode).json({
       error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0645\u0635\u062F\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. ${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
@@ -83087,6 +83257,10 @@ router5.get("/sessions", async (req, res) => {
   }
   try {
     const userId = req.authUser?.userId;
+    if (!userId) {
+      res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
+      return;
+    }
     const sessions = await listSessions(parseResult.data.status, userId);
     const data = ListSessionsResponse.parse(sessions);
     res.json(data);
@@ -83190,9 +83364,21 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
   }
   try {
     const userId = req.authUser?.userId;
+    if (!userId) {
+      res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
+      return;
+    }
     const session = await getSessionById(id, userId);
     if (!session) {
       res.status(404).json({ error: "\u0627\u0644\u062C\u0644\u0633\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    const { listSupabaseUsers: listSupabaseUsers2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    const users = await listSupabaseUsers2();
+    const officeUser = users.find((u) => u.id === userId || u.username === userId);
+    const recipientPhone = req.body?.recipientPhone?.trim() || officeUser?.phone?.trim();
+    if (!recipientPhone) {
+      res.status(400).json({ error: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0642\u0645 \u0648\u0627\u062A\u0633\u0627\u0628 \u0645\u0633\u062C\u0644 \u0644\u0644\u0645\u0643\u062A\u0628 \u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0625\u0644\u064A\u0647." });
       return;
     }
     const hearingAt = computeHearingDateTime(session.sessionDateHijri, session.sessionTime);
@@ -83220,6 +83406,8 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
     }
     const channel = new WhatsappReminderChannel();
     await channel.send({
+      officeId: userId,
+      recipientPhone,
       sessionId: session.id,
       caseNumber: session.caseNumber,
       sessionDateHijri: session.sessionDateHijri,
@@ -83325,6 +83513,8 @@ router6.post("/settings/test-whatsapp", attachAuthUser, requireAdmin, async (_re
   try {
     const channel = new WhatsappReminderChannel();
     await channel.send({
+      officeId: "admin",
+      recipientPhone: s.whatsappNumber.trim(),
       sessionId: 999,
       caseNumber: "1445/\u0627\u062E\u062A\u0628\u0627\u0631\u064A/01",
       court: "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0628\u0627\u0644\u0631\u064A\u0627\u0636",
@@ -83473,8 +83663,14 @@ var ConsoleReminderChannel = class {
   name = "console";
   async send(payload) {
     const label = payload.kind === "24h" ? "tomorrow" : "in a few hours";
+    const maskedPhone = payload.recipientPhone ? payload.recipientPhone.length <= 3 ? "***" : "*".repeat(payload.recipientPhone.length - 3) + payload.recipientPhone.slice(-3) : "";
     logger.info(
-      { ...payload },
+      {
+        sessionId: payload.sessionId,
+        caseNumber: payload.caseNumber,
+        kind: payload.kind,
+        recipientPhone: maskedPhone
+      },
       `Reminder:
 Case ${payload.caseNumber ?? "(unknown)"}
 Hearing ${label} at ${payload.sessionTime ?? "(unknown time)"}.`
@@ -83487,14 +83683,20 @@ var channels = [
   new ConsoleReminderChannel(),
   new WhatsappReminderChannel()
 ];
-async function notify(payload) {
+async function notify(payload, officeId) {
+  if (!officeId || !officeId.trim()) {
+    throw new Error("officeId is required to send notifications.");
+  }
+  if (payload.officeId !== officeId) {
+    throw new Error("Mismatched officeId between payload and notify parameter.");
+  }
   await Promise.all(
     channels.map(async (channel) => {
       try {
         await channel.send(payload);
       } catch (err) {
         logger.error(
-          { err, channel: channel.name, payload },
+          { err, channel: channel.name, sessionId: payload.sessionId, officeId },
           "Reminder channel failed to send"
         );
       }
@@ -83503,7 +83705,14 @@ async function notify(payload) {
 }
 
 // src/scheduler/reminderScheduler.ts
+init_supabase_service();
 var MS_PER_HOUR = 60 * 60 * 1e3;
+function maskPhone2(phone) {
+  if (!phone) return "";
+  const cleaned = phone.trim();
+  if (cleaned.length <= 3) return "***";
+  return "*".repeat(cleaned.length - 3) + cleaned.slice(-3);
+}
 function formatRemainingTime(diffMs) {
   const totalMinutes = Math.floor(diffMs / 6e4);
   const days = Math.floor(totalMinutes / 1440);
@@ -83526,63 +83735,154 @@ function formatRemainingTime(diffMs) {
   return `\u0645\u062A\u0628\u0642\u064A ${parts.join(" \u0648 ")}`;
 }
 async function runReminderSweep() {
-  const sessions = await listSessions();
+  const results = [];
+  let offices = [];
+  try {
+    const users = await listSupabaseUsers();
+    offices = users.filter((u) => u.status !== "suspended");
+  } catch (err) {
+    logger.error({ err }, "Failed to list offices for reminder sweep");
+    return results;
+  }
   const now = /* @__PURE__ */ new Date();
-  for (const session of sessions) {
-    if (session.status === "Cancelled" || session.status === "Finished") {
-      continue;
-    }
-    const hearingAt = computeHearingDateTime(
-      session.sessionDateHijri,
-      session.sessionTime
+  for (const office of offices) {
+    const officeId = office.id;
+    const recipientPhone = office.phone?.trim() || null;
+    const hasBinding = Boolean(
+      (office.has_google_service || office.google_service_account_json) && office.google_spreadsheet_id
     );
-    if (!hearingAt) {
+    if (!hasBinding && !office.has_google_service && !office.google_spreadsheet_id) {
+      results.push({
+        officeId,
+        remindersFound: 0,
+        sent: 0,
+        skipped: 0,
+        failed: 0,
+        reason: "Google Sheets binding missing or incomplete"
+      });
       continue;
     }
-    const diffMs = hearingAt.getTime() - now.getTime();
-    const hoursLeft = diffMs / MS_PER_HOUR;
-    const remainingText = formatRemainingTime(diffMs);
-    if (!session.reminder24 && hoursLeft <= 24 && hoursLeft > 0) {
+    try {
+      let sessions = [];
+      try {
+        sessions = await listSessions(officeId);
+      } catch (err) {
+        if (err instanceof GoogleBindingMissingError || String(err?.message || "").toLowerCase().includes("binding")) {
+          results.push({
+            officeId,
+            remindersFound: 0,
+            sent: 0,
+            skipped: 0,
+            failed: 0,
+            reason: "Google Sheets binding missing or incomplete"
+          });
+          continue;
+        }
+        throw err;
+      }
+      let remindersFound = 0;
+      let sent = 0;
+      let skipped = 0;
+      for (const session of sessions) {
+        if (session.status === "Cancelled" || session.status === "Finished") {
+          continue;
+        }
+        const hearingAt = computeHearingDateTime(
+          session.sessionDateHijri,
+          session.sessionTime
+        );
+        if (!hearingAt) {
+          continue;
+        }
+        const diffMs = hearingAt.getTime() - now.getTime();
+        const hoursLeft = diffMs / MS_PER_HOUR;
+        const remainingText = formatRemainingTime(diffMs);
+        if (!session.reminder24 && hoursLeft <= 24 && hoursLeft > 0) {
+          remindersFound++;
+          if (!recipientPhone) {
+            skipped++;
+          } else {
+            const payload = {
+              officeId,
+              recipientPhone,
+              sessionId: session.id,
+              caseNumber: session.caseNumber,
+              sessionDateHijri: session.sessionDateHijri,
+              sessionTime: session.sessionTime,
+              kind: "24h",
+              remainingText,
+              court: session.court,
+              courtCircuit: session.courtCircuit,
+              plaintiff: session.plaintiff,
+              defendant: session.defendant,
+              caseSubject: session.caseSubject
+            };
+            await notify(payload, officeId);
+            await markReminderSent(session.id, "24h", officeId);
+            sent++;
+          }
+        }
+        if (!session.reminder6 && hoursLeft <= 6 && hoursLeft > 0) {
+          remindersFound++;
+          if (!recipientPhone) {
+            skipped++;
+          } else {
+            const payload = {
+              officeId,
+              recipientPhone,
+              sessionId: session.id,
+              caseNumber: session.caseNumber,
+              sessionDateHijri: session.sessionDateHijri,
+              sessionTime: session.sessionTime,
+              kind: "6h",
+              remainingText,
+              court: session.court,
+              courtCircuit: session.courtCircuit,
+              plaintiff: session.plaintiff,
+              defendant: session.defendant,
+              caseSubject: session.caseSubject
+            };
+            await notify(payload, officeId);
+            await markReminderSent(session.id, "6h", officeId);
+            sent++;
+          }
+        }
+      }
+      const officeResult = {
+        officeId,
+        remindersFound,
+        sent,
+        skipped,
+        failed: 0,
+        ...!recipientPhone ? { reason: "No authorized recipient phone registered for office" } : {}
+      };
       logger.info(
-        { sessionId: session.id, caseNumber: session.caseNumber, hoursLeft: hoursLeft.toFixed(2) },
-        "Triggering 24h session reminder"
+        {
+          officeId,
+          recipientPhone: maskPhone2(recipientPhone),
+          remindersFound,
+          sent,
+          skipped
+        },
+        "Office reminder sweep completed"
       );
-      await notify({
-        sessionId: session.id,
-        caseNumber: session.caseNumber,
-        sessionDateHijri: session.sessionDateHijri,
-        sessionTime: session.sessionTime,
-        kind: "24h",
-        remainingText,
-        court: session.court,
-        courtCircuit: session.courtCircuit,
-        plaintiff: session.plaintiff,
-        defendant: session.defendant,
-        caseSubject: session.caseSubject
-      });
-      await markReminderSent(session.id, "24h");
-    }
-    if (!session.reminder6 && hoursLeft <= 6 && hoursLeft > 0) {
-      logger.info(
-        { sessionId: session.id, caseNumber: session.caseNumber, hoursLeft: hoursLeft.toFixed(2) },
-        "Triggering 6h session reminder"
+      results.push(officeResult);
+    } catch (err) {
+      logger.error(
+        { officeId, err: err?.message || err },
+        "Error processing reminders for office"
       );
-      await notify({
-        sessionId: session.id,
-        caseNumber: session.caseNumber,
-        sessionDateHijri: session.sessionDateHijri,
-        sessionTime: session.sessionTime,
-        kind: "6h",
-        remainingText,
-        court: session.court,
-        courtCircuit: session.courtCircuit,
-        plaintiff: session.plaintiff,
-        defendant: session.defendant,
-        caseSubject: session.caseSubject
+      results.push({
+        officeId,
+        remindersFound: 0,
+        sent: 0,
+        skipped: 0,
+        failed: 1,
+        reason: err?.message || "Unknown error"
       });
-      await markReminderSent(session.id, "6h");
     }
   }
+  return results;
 }
 
 // src/routes/cron.ts
@@ -83612,10 +83912,10 @@ router8.get("/cron/reminders", async (req, res) => {
   }
   const startedAt = Date.now();
   try {
-    await runReminderSweep();
+    const results = await runReminderSweep();
     const durationMs = Date.now() - startedAt;
-    logger.info({ durationMs }, "Cron reminder sweep completed successfully");
-    res.json({ ok: true, durationMs });
+    logger.info({ durationMs, officesCount: results?.length ?? 0 }, "Cron reminder sweep completed successfully");
+    res.json({ ok: true, durationMs, results });
   } catch (err) {
     const durationMs = Date.now() - startedAt;
     logger.error({ err, durationMs }, "Cron reminder sweep failed");
@@ -83629,6 +83929,50 @@ var import_express9 = __toESM(require_express2(), 1);
 init_logger();
 var import_moment_hijri2 = __toESM(require_moment_hijri(), 1);
 var router9 = (0, import_express9.Router)();
+function generateRefId() {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+function handlePoaError(res, err, defaultMsg) {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: `\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId
+    });
+    return;
+  }
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: `${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      refId: err.refId,
+      code: err.name
+    });
+    return;
+  }
+  const refId = generateRefId();
+  logger.error(
+    {
+      refId,
+      errName: err?.name,
+      errCode: err?.code,
+      message: err?.message || String(err)
+    },
+    defaultMsg
+  );
+  res.status(500).json({
+    error: `${defaultMsg} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`,
+    refId,
+    code: "INTERNAL_ERROR"
+  });
+}
 router9.use("/poa", attachAuthUser, requireAuth, requireActiveSubscription);
 function calcDaysFromHijri(hijriDateStr) {
   if (!hijriDateStr?.trim()) return 0;
@@ -83687,7 +84031,7 @@ router9.get("/poa", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    await ensurePoaSheetReady();
+    await ensurePoaSheetReady(officeId);
     const forceRefresh = req.query.refresh === "true";
     const rows = await listPoaRows(officeId, forceRefresh);
     const records = rows.map(({ id, values }) => ({
@@ -83696,8 +84040,7 @@ router9.get("/poa", attachAuthUser, requireAuth, async (req, res) => {
     }));
     res.json(records);
   } catch (err) {
-    logger.error({ err }, "Failed to list POA records");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0627\u062A." });
+    handlePoaError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0627\u062A.");
   }
 });
 router9.post("/poa", attachAuthUser, requireAuth, async (req, res) => {
@@ -83712,7 +84055,7 @@ router9.post("/poa", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    await ensurePoaSheetReady();
+    await ensurePoaSheetReady(officeId);
     const record = {
       clientName: body.clientName.trim(),
       poaNumber: body.poaNumber.trim(),
@@ -83725,11 +84068,19 @@ router9.post("/poa", attachAuthUser, requireAuth, async (req, res) => {
       // Always use authenticated session officeId
     };
     const rowId = await appendPoaRow(officeId, recordToRow(record, officeId));
-    logger.info({ rowId, officeId }, "POA record created");
-    res.status(201).json({ ...record, sheetRowId: rowId });
+    const verified = await getPoaRowById(officeId, rowId);
+    if (!verified) {
+      throw new GoogleSheetsError(
+        `POA record with rowId ${rowId} could not be confirmed upon re-reading.`,
+        502,
+        "\u062A\u0645\u062A \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F\u0647\u0627 \u0641\u064A \u0627\u0644\u0634\u064A\u062A."
+      );
+    }
+    const savedRecord = { ...rowToRecord(verified.values), sheetRowId: verified.id };
+    logger.info({ rowId, officeId }, "POA record created and verified");
+    res.status(201).json(savedRecord);
   } catch (err) {
-    logger.error({ err }, "Failed to create POA record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
+    handlePoaError(res, err, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0648\u0643\u0627\u0644\u0629.");
   }
 });
 router9.put("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
@@ -83745,7 +84096,7 @@ router9.put("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
   }
   const body = req.body;
   try {
-    await ensurePoaSheetReady();
+    await ensurePoaSheetReady(officeId);
     const existing = await getPoaRowById(officeId, rowId);
     if (!existing) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
@@ -83767,8 +84118,7 @@ router9.put("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
     logger.info({ rowId, officeId }, "POA record updated");
     res.json({ ...updated, sheetRowId: rowId });
   } catch (err) {
-    logger.error({ err }, "Failed to update POA record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
+    handlePoaError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629.");
   }
 });
 router9.delete("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
@@ -83792,8 +84142,7 @@ router9.delete("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
     logger.info({ rowId, officeId }, "POA record deleted");
     res.status(204).send();
   } catch (err) {
-    logger.error({ err }, "Failed to delete POA record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
+    handlePoaError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629.");
   }
 });
 var poa_default = router9;
@@ -83802,6 +84151,50 @@ var poa_default = router9;
 var import_express10 = __toESM(require_express2(), 1);
 init_logger();
 var router10 = (0, import_express10.Router)();
+function generateRefId2() {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+function handleJudgmentError(res, err, defaultMsg) {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: `\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId
+    });
+    return;
+  }
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: `${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      refId: err.refId,
+      code: err.name
+    });
+    return;
+  }
+  const refId = generateRefId2();
+  logger.error(
+    {
+      refId,
+      errName: err?.name,
+      errCode: err?.code,
+      message: err?.message || String(err)
+    },
+    defaultMsg
+  );
+  res.status(500).json({
+    error: `${defaultMsg} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`,
+    refId,
+    code: "INTERNAL_ERROR"
+  });
+}
 router10.use("/judgments", attachAuthUser, requireAuth, requireActiveSubscription);
 function normalizeJudgmentType(val) {
   const trimmed = (val || "").trim();
@@ -83877,14 +84270,13 @@ router10.get("/judgments", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    await ensureJudgmentSheetReady();
+    await ensureJudgmentSheetReady(officeId);
     const forceRefresh = req.query.refresh === "true";
     const { headers, rows } = await listJudgmentRowsWithHeaders(officeId, forceRefresh);
     const records = rows.map(({ id, values }) => rowToRecord2(id, values, headers));
     res.json(records);
   } catch (err) {
-    logger.error({ err }, "Failed to list Judgment records");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u062D\u0643\u0627\u0645." });
+    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u062D\u0643\u0627\u0645.");
   }
 });
 router10.get("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -83899,7 +84291,7 @@ router10.get("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => 
     return;
   }
   try {
-    await ensureJudgmentSheetReady();
+    await ensureJudgmentSheetReady(officeId);
     const match = await getJudgmentRowById(officeId, id);
     if (!match) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
@@ -83907,8 +84299,7 @@ router10.get("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => 
     }
     res.json(rowToRecord2(match.id, match.values, match.headers));
   } catch (err) {
-    logger.error({ err }, "Failed to get Judgment record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0643\u0645." });
+    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0643\u0645.");
   }
 });
 router10.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
@@ -83922,15 +84313,19 @@ router10.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
     res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
+  if (!body.judgmentNumber?.trim()) {
+    res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0635\u0643 \u0645\u0637\u0644\u0648\u0628." });
+    return;
+  }
   try {
-    await ensureJudgmentSheetReady();
+    await ensureJudgmentSheetReady(officeId);
     const record = {
       caseNumber: body.caseNumber.trim(),
       court: body.court?.trim() || "",
       plaintiff: body.plaintiff?.trim() || "",
       defendant: body.defendant?.trim() || "",
       assignedLawyer: body.assignedLawyer?.trim() || "",
-      judgmentNumber: body.judgmentNumber?.trim() || "",
+      judgmentNumber: body.judgmentNumber.trim(),
       judgmentDate: body.judgmentDate?.trim() || "",
       summary: body.summary?.trim() || "",
       isFavorable: normalizeJudgmentType(body.isFavorable || ""),
@@ -83939,11 +84334,19 @@ router10.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
       // Always use authenticated session officeId
     };
     const rowId = await appendJudgmentRow(officeId, recordToRow2(record, officeId));
-    logger.info({ rowId, officeId }, "Judgment record created");
-    res.status(201).json({ id: rowId, ...record });
+    const verified = await getJudgmentRowById(officeId, rowId);
+    if (!verified) {
+      throw new GoogleSheetsError(
+        `Judgment record with rowId ${rowId} could not be confirmed upon re-reading.`,
+        502,
+        "\u062A\u0645\u062A \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u062D\u0643\u0645 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F\u0647 \u0641\u064A \u0627\u0644\u0634\u064A\u062A."
+      );
+    }
+    const createdRecord = rowToRecord2(verified.id, verified.values, verified.headers);
+    logger.info({ rowId, officeId }, "Judgment record created and verified");
+    res.status(201).json(createdRecord);
   } catch (err) {
-    logger.error({ err }, "Failed to create Judgment record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0643\u0645." });
+    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0643\u0645.");
   }
 });
 router10.put("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -83959,7 +84362,7 @@ router10.put("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => 
   }
   const body = req.body;
   try {
-    await ensureJudgmentSheetReady();
+    await ensureJudgmentSheetReady(officeId);
     const existing = await getJudgmentRowById(officeId, id);
     if (!existing) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
@@ -83984,8 +84387,7 @@ router10.put("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => 
     logger.info({ id, officeId }, "Judgment record updated");
     res.json({ id, ...updated });
   } catch (err) {
-    logger.error({ err }, "Failed to update Judgment record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645." });
+    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645.");
   }
 });
 router10.delete("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -84009,8 +84411,7 @@ router10.delete("/judgments/:id", attachAuthUser, requireAuth, async (req, res) 
     logger.info({ id, officeId }, "Judgment record deleted");
     res.status(204).send();
   } catch (err) {
-    logger.error({ err }, "Failed to delete Judgment record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u0643\u0645." });
+    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u0643\u0645.");
   }
 });
 var judgments_default = router10;
@@ -84019,6 +84420,50 @@ var judgments_default = router10;
 var import_express11 = __toESM(require_express2(), 1);
 init_logger();
 var router11 = (0, import_express11.Router)();
+function generateRefId3() {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+function handleTaskError(res, err, defaultMsg) {
+  if (err instanceof GoogleBindingMissingError) {
+    res.status(409).json({
+      error: `\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      code: "GOOGLE_BINDING_INCOMPLETE",
+      refId: err.refId
+    });
+    return;
+  }
+  if (err instanceof GoogleSettingsStoreError) {
+    res.status(503).json({
+      error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      code: "SETTINGS_STORE_UNAVAILABLE",
+      refId: err.refId
+    });
+    return;
+  }
+  if (err instanceof GoogleSheetsError) {
+    res.status(err.statusCode).json({
+      error: `${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
+      refId: err.refId,
+      code: err.name
+    });
+    return;
+  }
+  const refId = generateRefId3();
+  logger.error(
+    {
+      refId,
+      errName: err?.name,
+      errCode: err?.code,
+      message: err?.message || String(err)
+    },
+    defaultMsg
+  );
+  res.status(500).json({
+    error: `${defaultMsg} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`,
+    refId,
+    code: "INTERNAL_ERROR"
+  });
+}
 router11.use("/tasks", attachAuthUser, requireAuth, requireActiveSubscription);
 var FIELD_KEYS2 = {
   "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629": "title",
@@ -84091,14 +84536,13 @@ router11.get("/tasks", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    await ensureTaskSheetReady();
+    await ensureTaskSheetReady(officeId);
     const forceRefresh = req.query.refresh === "true";
     const { headers, rows } = await listTaskRowsWithHeaders(officeId, forceRefresh);
     const records = rows.map(({ id, values }) => rowToRecord3(id, values, headers));
     res.json(records);
   } catch (err) {
-    logger.error({ err }, "Failed to list Task records");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0627\u0645." });
+    handleTaskError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0627\u0645.");
   }
 });
 router11.get("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -84113,7 +84557,7 @@ router11.get("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    await ensureTaskSheetReady();
+    await ensureTaskSheetReady(officeId);
     const match = await getTaskRowById(officeId, id);
     if (!match) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
@@ -84121,8 +84565,7 @@ router11.get("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
     }
     res.json(rowToRecord3(match.id, match.values, match.headers));
   } catch (err) {
-    logger.error({ err }, "Failed to get Task record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0645\u0629." });
+    handleTaskError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0645\u0629.");
   }
 });
 router11.post("/tasks", attachAuthUser, requireAuth, async (req, res) => {
@@ -84137,7 +84580,7 @@ router11.post("/tasks", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    await ensureTaskSheetReady();
+    await ensureTaskSheetReady(officeId);
     const record = {
       title: body.title.trim(),
       assignee: body.assignee?.trim() || "",
@@ -84151,11 +84594,19 @@ router11.post("/tasks", attachAuthUser, requireAuth, async (req, res) => {
       // Always use authenticated session officeId
     };
     const rowId = await appendTaskRow(officeId, recordToRow3(record, officeId));
-    logger.info({ rowId, officeId }, "Task record created");
-    res.status(201).json({ id: rowId, ...record });
+    const verified = await getTaskRowById(officeId, rowId);
+    if (!verified) {
+      throw new GoogleSheetsError(
+        `Task record with rowId ${rowId} could not be confirmed upon re-reading.`,
+        502,
+        "\u062A\u0645\u062A \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u0645\u0647\u0645\u0629 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F\u0647\u0627 \u0641\u064A \u0627\u0644\u0634\u064A\u062A."
+      );
+    }
+    const createdRecord = rowToRecord3(verified.id, verified.values, verified.headers);
+    logger.info({ rowId, officeId }, "Task record created and verified");
+    res.status(201).json(createdRecord);
   } catch (err) {
-    logger.error({ err }, "Failed to create Task record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629." });
+    handleTaskError(res, err, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629.");
   }
 });
 router11.put("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -84171,7 +84622,7 @@ router11.put("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
   }
   const body = req.body;
   try {
-    await ensureTaskSheetReady();
+    await ensureTaskSheetReady(officeId);
     const existing = await getTaskRowById(officeId, id);
     if (!existing) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
@@ -84194,8 +84645,7 @@ router11.put("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
     logger.info({ id, officeId }, "Task record updated");
     res.json({ id, ...updated });
   } catch (err) {
-    logger.error({ err }, "Failed to update Task record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629." });
+    handleTaskError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629.");
   }
 });
 router11.delete("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
@@ -84219,8 +84669,7 @@ router11.delete("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
     logger.info({ id, officeId }, "Task record deleted");
     res.status(204).send();
   } catch (err) {
-    logger.error({ err }, "Failed to delete Task record");
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629." });
+    handleTaskError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629.");
   }
 });
 var tasks_default = router11;
@@ -84259,6 +84708,7 @@ router12.post("/users", requireAdmin, async (req, res) => {
       role,
       display_name,
       status,
+      phone,
       subscription_end_date,
       subscription_notes,
       plan_tier,
@@ -84284,6 +84734,7 @@ router12.post("/users", requireAdmin, async (req, res) => {
       role: role === "admin" ? "admin" : "staff",
       display_name,
       status: status || "active",
+      phone: phone?.trim() || null,
       subscription_end_date: subscription_end_date || null,
       subscription_notes: subscription_notes || null,
       plan_tier: plan_tier || (role === "admin" ? "pro" : "plus"),
@@ -84308,6 +84759,7 @@ router12.patch("/users/:id", requireAdmin, async (req, res) => {
       display_name,
       email,
       status,
+      phone,
       subscription_end_date,
       subscription_notes,
       plan_tier,
@@ -84331,6 +84783,7 @@ router12.patch("/users/:id", requireAdmin, async (req, res) => {
       display_name,
       email,
       status,
+      phone,
       subscription_end_date,
       subscription_notes,
       plan_tier,

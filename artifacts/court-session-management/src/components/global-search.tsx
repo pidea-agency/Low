@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useListSessions, useGetCurrentUser, type Session } from '@workspace/api-client-react';
+import { getStoredPoaRecords } from '@/lib/poa-storage';
 import {
   CommandDialog,
   CommandInput,
@@ -24,17 +25,17 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   const [, setLocation] = useLocation();
   const { data: sessions = [] } = useListSessions();
   const { data: currentUser } = useGetCurrentUser();
+  const userId = currentUser?.id || (currentUser as any)?.userId;
+  const officeId = (currentUser as any)?.officeId || userId;
   const [poaRecords, setPoaRecords] = useState<any[]>([]);
 
-  // Load POAs from local storage when search opens
+  // Load POAs from isolated local storage when search opens
   useEffect(() => {
-    if (open) {
-      try {
-        const raw = localStorage.getItem('legal_poa_records_v1');
-        if (raw) setPoaRecords(JSON.parse(raw));
-      } catch {}
+    if (open && officeId && userId) {
+      const records = getStoredPoaRecords(officeId, userId);
+      if (records) setPoaRecords(records);
     }
-  }, [open]);
+  }, [open, officeId, userId]);
 
   // Listen for Ctrl+K or Cmd+K shortcut globally
   useEffect(() => {

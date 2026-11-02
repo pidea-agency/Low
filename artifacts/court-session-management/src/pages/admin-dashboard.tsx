@@ -45,6 +45,7 @@ import { Link, useLocation } from 'wouter';
 import { useGetCurrentUser, useLogout } from '@workspace/api-client-react';
 import { validatePassword, PASSWORD_POLICY } from '@workspace/api-zod';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearUserPoaStorage } from '@/lib/poa-storage';
 
 export interface AppUser {
   id: string;
@@ -231,6 +232,7 @@ export default function AdminDashboardPage() {
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(false);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const activeAdminCount = users.filter((u) => u.role === 'admin' && u.status !== 'suspended').length;
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -390,6 +392,7 @@ export default function AdminDashboardPage() {
   const handleAdminLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
+        clearUserPoaStorage();
         queryClient.clear();
         navigate('/admin/login', { replace: true });
       },
@@ -551,6 +554,9 @@ export default function AdminDashboardPage() {
         email: '',
         password: '',
         role: 'staff',
+        plan_tier: 'plus',
+        billing_cycle: 'annual',
+        ai_quota_limit: 50,
         subscription_end_date: computeEndDate('1m'),
         subscription_notes: '',
         google_service_account_json: '',
@@ -673,13 +679,17 @@ ${handoverData.subscriptionEndDate ? `تاريخ الانتهاء: ${handoverDat
         targetDate: customRenewDate || '',
         isFromCurrentEnd: false,
         daysCount: 0,
+        ruleDescription: 'تاريخ انتهاء مخصص محدد يدوياً',
       };
     }
 
     const daysMap: Record<string, number> = { '1m': 30, '3m': 90, '6m': 180, '1y': 365 };
     const daysCount = daysMap[renewDuration] || 30;
     const targetDate = computeEndDate(renewDuration, baseDate);
-    return { targetDate, isFromCurrentEnd, daysCount };
+    const ruleDescription = isFromCurrentEnd
+      ? `تم التمديد على رصيد الاشتراك المتبقي (+${daysCount} يوماً)`
+      : `تم التمديد ابتداءً من اليوم (+${daysCount} يوماً)`;
+    return { targetDate, isFromCurrentEnd, daysCount, ruleDescription };
   };
 
   // Renew or extend subscription
