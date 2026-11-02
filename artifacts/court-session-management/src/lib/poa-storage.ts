@@ -7,6 +7,120 @@
 
 export const LEGACY_POA_STORAGE_KEY = 'legal_poa_records_v1';
 export const POA_STORAGE_PREFIX = 'legal_poa_records_v2';
+export const POA_PENDING_STORAGE_PREFIX = 'legal_poa_pending_v1';
+
+export interface PendingPoaPayload {
+  clientName: string;
+  poaNumber: string;
+  issueDateHijri: string;
+  expiryDateHijri: string;
+  daysRemaining: number;
+  notes?: string;
+}
+
+export interface PendingPoaRecord {
+  tempId: string;
+  createdAt: string;
+  payload: PendingPoaPayload;
+  retryCount: number;
+  lastError?: string;
+}
+
+/**
+ * Builds the isolated storage key for pending POA records for a specific office and user.
+ */
+export function poaPendingStorageKey(officeId: string, userId: string): string {
+  const cleanOffice = (officeId || '').trim();
+  const cleanUser = (userId || '').trim();
+  if (!cleanOffice || !cleanUser) {
+    return '';
+  }
+  return `${POA_PENDING_STORAGE_PREFIX}:${cleanOffice}:${cleanUser}`;
+}
+
+/**
+ * Safely reads pending unsynced POA records for the given office and user account.
+ * Always returns an array (empty array if none or error).
+ */
+export function getPendingPoaRecords(officeId?: string, userId?: string): PendingPoaRecord[] {
+  if (!officeId || !userId || !officeId.trim() || !userId.trim()) {
+    return [];
+  }
+  const key = poaPendingStorageKey(officeId, userId);
+  if (!key) return [];
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Safely writes pending unsynced POA records for the given office and user account.
+ */
+export function setPendingPoaRecords(
+  officeId?: string,
+  userId?: string,
+  records: PendingPoaRecord[] = [],
+): void {
+  if (!officeId || !userId || !officeId.trim() || !userId.trim()) {
+    return;
+  }
+  const key = poaPendingStorageKey(officeId, userId);
+  if (!key) return;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(records));
+  } catch (err) {
+    console.warn('[POA Storage] Failed to write pending POA records to localStorage:', err);
+  }
+}
+
+/**
+ * Appends a new pending POA record to isolated storage.
+ */
+export function addPendingPoaRecord(
+  officeId: string | undefined,
+  userId: string | undefined,
+  record: PendingPoaRecord,
+): void {
+  const current = getPendingPoaRecords(officeId, userId);
+  const exists = current.some((r) => r.tempId === record.tempId || r.payload.poaNumber === record.payload.poaNumber);
+  if (!exists) {
+    setPendingPoaRecords(officeId, userId, [record, ...current]);
+  } else {
+    const updated = current.map((r) =>
+      r.tempId === record.tempId || r.payload.poaNumber === record.payload.poaNumber
+        ? { ...r, ...record, tempId: r.tempId }
+        : r
+    );
+    setPendingPoaRecords(officeId, userId, updated);
+  }
+}
+
+/**
+ * Removes a specific pending POA record by its tempId from isolated storage.
+ */
+export function removePendingPoaRecord(
+  officeId: string | undefined,
+  userId: string | undefined,
+  tempId: string,
+): void {
+  const current = getPendingPoaRecords(officeId, userId);
+  const filtered = current.filter((r) => r.tempId !== tempId);
+  setPendingPoaRecords(officeId, userId, filtered);
+}
+
+/**
+ * Checks whether the user has any pending unsynced POA records in storage.
+ */
+export function hasPendingPoaRecords(officeId?: string, userId?: string): boolean {
+  return getPendingPoaRecords(officeId, userId).length > 0;
+}
 
 /**
  * Builds the isolated storage key for a specific office and user account.
@@ -75,12 +189,16 @@ export function clearUserPoaStorage(officeId?: string, userId?: string): void {
       if (key) {
         localStorage.removeItem(key);
       }
+      const pendingKey = poaPendingStorageKey(officeId, userId);
+      if (pendingKey) {
+        localStorage.removeItem(pendingKey);
+      }
     } else {
-      // Clear all POA v2 keys across all offices/users in this browser
+      // Clear all POA v2 keys and pending keys across all offices/users in this browser
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith(`${POA_STORAGE_PREFIX}:`)) {
+        if (k && (k.startsWith(`${POA_STORAGE_PREFIX}:`)) || (k && k.startsWith(`${POA_PENDING_STORAGE_PREFIX}:`))) {
           keysToRemove.push(k);
         }
       }

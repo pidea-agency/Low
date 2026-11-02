@@ -3,7 +3,7 @@ import { LayoutDashboard, MessageSquare, Calendar, Moon, Sun, LogOut, Settings, 
 import { useTheme } from './theme-provider';
 import { useLogout, useGetCurrentUser } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearUserPoaStorage } from '@/lib/poa-storage';
+import { clearUserPoaStorage, hasPendingPoaRecords } from '@/lib/poa-storage';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalSearch } from './global-search';
 import { getNavItemsForRole } from '@/config/navigation';
@@ -25,6 +25,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     onNavigate?.();
     const userId = currentUser?.id || (currentUser as any)?.userId;
     const officeId = (currentUser as any)?.officeId || userId;
+
+    if (officeId && userId && hasPendingPoaRecords(officeId, userId)) {
+      const confirmed = window.confirm('لديك وكالات غير محفوظة بعد. تسجيل الخروج سيحذفها.');
+      if (!confirmed) {
+        return;
+      }
+    }
+
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
         clearUserPoaStorage(officeId, userId);

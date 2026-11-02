@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, AlertCircle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,11 @@ import {
   getStoredPoaRecords,
   setStoredPoaRecords,
   cleanLegacyPoaStorage,
+  getPendingPoaRecords,
+  setPendingPoaRecords,
+  addPendingPoaRecord,
+  removePendingPoaRecord,
+  PendingPoaRecord,
 } from '@/lib/poa-storage';
 import moment from 'moment-hijri';
 import {
@@ -42,6 +47,10 @@ export interface PowerOfAttorney {
   daysRemaining: number;
   notes?: string;
   createdAt: string;
+  isPending?: boolean;
+  tempId?: string;
+  retryCount?: number;
+  lastError?: string;
 }
 
 export type HijriDateValidation =
@@ -123,7 +132,10 @@ export default function PowerOfAttorneyPage() {
   const userId = currentUser?.id || (currentUser as any)?.userId;
   const officeId = (currentUser as any)?.officeId || userId;
 
-  const [records, setRecords] = useState<PowerOfAttorney[]>([]);
+  const [confirmedRecords, setConfirmedRecords] = useState<PowerOfAttorney[]>([]);
+  const [pendingRecords, setPendingRecords] = useState<PendingPoaRecord[]>([]);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [pendingDeleteTarget, setPendingDeleteTarget] = useState<PendingPoaRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,7 +180,7 @@ export default function PowerOfAttorneyPage() {
           sheetRowId: d.sheetRowId ?? idx + 2,
         }));
         const refreshed = refreshDays(parsed);
-        setRecords(refreshed);
+        setConfirmedRecords(refreshed);
         if (officeId && userId) {
           setStoredPoaRecords(officeId, userId, refreshed);
         }
@@ -188,7 +200,7 @@ export default function PowerOfAttorneyPage() {
     if (officeId && userId) {
       const saved = getStoredPoaRecords<PowerOfAttorney>(officeId, userId);
       if (saved) {
-        setRecords(refreshDays(saved));
+        setConfirmedRecords(refreshDays(saved));
       }
     }
     setIsLoading(false);
@@ -198,10 +210,14 @@ export default function PowerOfAttorneyPage() {
     // Only read from storage and initiate load once the current user and office identity are ready
     if (isUserLoading || !officeId || !userId) return;
 
-    // Fast initial display from isolated localStorage
+    // Load isolated pending records
+    const pending = getPendingPoaRecords(officeId, userId);
+    setPendingRecords(pending);
+
+    // Fast initial display of cached confirmed records
     const saved = getStoredPoaRecords<PowerOfAttorney>(officeId, userId);
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      setRecords(refreshDays(saved));
+      setConfirmedRecords(refreshDays(saved));
       setIsLoading(false);
     }
     loadRecords();
@@ -325,6 +341,17 @@ export default function PowerOfAttorneyPage() {
       }
 
       const savedData: PowerOfAttorney = await res.json();
+
+      // Clear any matching pending record on server save
+      if (officeId && userId) {
+        const currentPending = getPendingPoaRecords(officeId, userId);
+        const matching = currentPending.find((p) => p.payload.poaNumber === payload.poaNumber);
+        if (matching) {
+          removePendingPoaRecord(officeId, userId, matching.tempId);
+          setPendingRecords(getPendingPoaRecords(officeId, userId));
+        }
+      }
+
       toast({
         title: editingRecord ? 'تم التحديث' : 'تمت الإضافة',
         description: editingRecord ? 'تم تحديث بيانات الوكالة في Google Sheets بنجاح.' : 'تم حفظ الوكالة في Google Sheets بنجاح.',
@@ -340,22 +367,136 @@ export default function PowerOfAttorneyPage() {
       if (err.name === 'AbortError') {
         message = 'انتهت مهلة حفظ الوكالة (20 ثانية). يرجى المحاولة مرة أخرى.';
       }
+
+      // Store in isolated pending storage for new additions so user data is never lost
+      if (officeId && userId && !editingRecord) {
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const pendingItem: PendingPoaRecord = {
+          tempId,
+          createdAt: new Date().toISOString(),
+          payload,
+          retryCount: 0,
+          lastError: message,
+        };
+        addPendingPoaRecord(officeId, userId, pendingItem);
+        setPendingRecords(getPendingPoaRecords(officeId, userId));
+      }
+
       setFormError(message);
       toast({
         title: 'خطأ في حفظ الوكالة',
         description: message,
         variant: 'destructive',
       });
-      // Do NOT claim fake success, do not save to local unconfirmed state, keep modal open
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleRetryPending = async (record: PowerOfAttorney) => {
+    if (!record.tempId || retryingId) return;
+    setRetryingId(record.tempId);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    try {
+      const res = await fetch('/api/poa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': record.tempId,
+        },
+        body: JSON.stringify({
+          clientName: record.clientName,
+          poaNumber: record.poaNumber,
+          issueDateHijri: record.issueDateHijri,
+          expiryDateHijri: record.expiryDateHijri,
+          daysRemaining: record.daysRemaining,
+          notes: record.notes || '',
+          createdAt: record.createdAt || new Date().toISOString(),
+        }),
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const refIdStr = errorData.refId ? ` رقم المرجع: ${errorData.refId}` : '';
+        const errMsg = errorData.error
+          ? (errorData.refId && errorData.error.includes(errorData.refId) ? errorData.error : `${errorData.error}${refIdStr}`)
+          : `تعذر حفظ الوكالة في Google Sheets.${refIdStr}`;
+        throw new Error(errMsg);
+      }
+
+      // Save confirmed by server! Remove from pending storage
+      if (officeId && userId) {
+        removePendingPoaRecord(officeId, userId, record.tempId);
+        setPendingRecords(getPendingPoaRecords(officeId, userId));
+      }
+
+      toast({
+        title: 'تم حفظ الوكالة بنجاح',
+        description: 'تم تأكيد حفظ الوكالة ومزامنتها مع Google Sheets.',
+      });
+
+      await loadRecords(true);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      let message = err.message || 'فشل حفظ الوكالة.';
+      if (err.name === 'AbortError') {
+        message = 'انتهت مهلة حفظ الوكالة (20 ثانية). يرجى المحاولة مرة أخرى.';
+      }
+
+      // Increment retry count in pending storage
+      if (officeId && userId && record.tempId) {
+        const current = getPendingPoaRecords(officeId, userId);
+        const updated = current.map((p) =>
+          p.tempId === record.tempId
+            ? { ...p, retryCount: p.retryCount + 1, lastError: message }
+            : p
+        );
+        setPendingPoaRecords(officeId, userId, updated);
+        setPendingRecords(updated);
+      }
+
+      toast({
+        title: 'فشلت إعادة محاولة الحفظ',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleConfirmDeletePending = () => {
+    if (!pendingDeleteTarget || !officeId || !userId) return;
+    removePendingPoaRecord(officeId, userId, pendingDeleteTarget.tempId);
+    setPendingRecords(getPendingPoaRecords(officeId, userId));
+    setPendingDeleteTarget(null);
+    toast({
+      title: 'تم الحذف',
+      description: 'تم حذف الوكالة المعلقة من السجل المحلي.',
+    });
   };
 
   const handleDeleteConfirmed = async () => {
     const record = deleteTarget;
     setDeleteTarget(null);
     if (!record) return;
+
+    if (record.isPending && record.tempId) {
+      if (officeId && userId) {
+        removePendingPoaRecord(officeId, userId, record.tempId);
+        setPendingRecords(getPendingPoaRecords(officeId, userId));
+      }
+      toast({ title: 'تم الحذف', description: 'تم حذف الوكالة المعلقة من السجل المحلي.' });
+      return;
+    }
+
     try {
       if (record.sheetRowId) {
         const res = await fetch(`/api/poa/${record.sheetRowId}`, {
@@ -372,7 +513,7 @@ export default function PowerOfAttorneyPage() {
     } catch (_) {
       toast({ title: 'تم الحذف محلياً', description: 'تعذر الحذف من الشيت — تم الحذف محلياً.' });
     }
-    setRecords((prev) => {
+    setConfirmedRecords((prev) => {
       const next = prev.filter((r) => r.id !== record.id);
       if (officeId && userId) {
         setStoredPoaRecords(officeId, userId, next);
@@ -383,7 +524,31 @@ export default function PowerOfAttorneyPage() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const filteredRecords = records.filter(
+  const mergedRecords = useMemo(() => {
+    const pendingMapped: PowerOfAttorney[] = pendingRecords.map((p) => ({
+      id: `pending-${p.tempId}`,
+      tempId: p.tempId,
+      isPending: true,
+      retryCount: p.retryCount,
+      lastError: p.lastError,
+      clientName: p.payload.clientName,
+      poaNumber: p.payload.poaNumber,
+      issueDateHijri: p.payload.issueDateHijri,
+      expiryDateHijri: p.payload.expiryDateHijri,
+      daysRemaining: p.payload.expiryDateHijri
+        ? calculateDaysRemainingFromHijri(p.payload.expiryDateHijri)
+        : p.payload.daysRemaining,
+      notes: p.payload.notes,
+      createdAt: p.createdAt,
+    }));
+
+    const confirmedPoaNumbers = new Set(confirmedRecords.map((c) => c.poaNumber));
+    const dedupedPending = pendingMapped.filter((p) => !confirmedPoaNumbers.has(p.poaNumber));
+
+    return [...dedupedPending, ...confirmedRecords];
+  }, [confirmedRecords, pendingRecords]);
+
+  const filteredRecords = mergedRecords.filter(
     (r) =>
       r.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.poaNumber.includes(searchQuery) ||
@@ -619,36 +784,87 @@ export default function PowerOfAttorneyPage() {
             return (
               <div
                 key={record.id}
-                className="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden"
+                className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden ${
+                  record.isPending
+                    ? 'border-amber-500/50 bg-amber-500/5'
+                    : 'border-border bg-card'
+                }`}
               >
                 {/* Status bar */}
-                <div className={`absolute top-0 right-0 left-0 h-1 ${isExpired ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                <div
+                  className={`absolute top-0 right-0 left-0 h-1 ${
+                    record.isPending
+                      ? 'bg-amber-500'
+                      : isExpired
+                      ? 'bg-rose-500'
+                      : isWarning
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+                  }`}
+                />
 
                 <div className="flex items-start justify-between gap-2 pt-1">
                   <div className="space-y-0.5 min-w-0">
-                    <h3 className="font-bold text-base line-clamp-1">{record.clientName}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-base line-clamp-1">{record.clientName}</h3>
+                      {record.isPending && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-medium text-xs bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          <Clock className="w-3 h-3 animate-pulse" />
+                          بانتظار الحفظ
+                          {record.retryCount && record.retryCount > 0 ? ` (المحاولة ${record.retryCount})` : ''}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
                       <FileKey className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                       <span>{record.poaNumber}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => handleOpenModal(record)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      title="تعديل"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(record)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
-                      title="حذف"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {record.isPending ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid={`button-retry-poa-${record.tempId}`}
+                        disabled={retryingId === record.tempId}
+                        onClick={() => handleRetryPending(record)}
+                        className="h-8 gap-1.5 text-xs border-amber-500/40 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                        title="إعادة محاولة الحفظ في Google Sheets"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${retryingId === record.tempId ? 'animate-spin' : ''}`} />
+                        <span>{retryingId === record.tempId ? 'جارٍ الحفظ...' : 'إعادة المحاولة'}</span>
+                      </Button>
+                      <button
+                        data-testid={`button-delete-pending-poa-${record.tempId}`}
+                        onClick={() => {
+                          const raw = pendingRecords.find((p) => p.tempId === record.tempId);
+                          if (raw) setPendingDeleteTarget(raw);
+                        }}
+                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                        title="حذف الوكالة المعلقة"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleOpenModal(record)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        title="تعديل"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(record)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                        title="حذف"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Days remaining */}
@@ -737,6 +953,53 @@ export default function PowerOfAttorneyPage() {
               className="bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-600"
             >
               نعم، احذف الوكالة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Pending Delete Confirmation Dialog ────────────────────────────── */}
+      <AlertDialog
+        open={!!pendingDeleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent dir="rtl" className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-500">
+              <Trash2 className="w-5 h-5" />
+              حذف الوكالة المعلقة
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              هل أنت متأكد من حذف الوكالة المعلقة{' '}
+              <span className="font-bold text-foreground">
+                {pendingDeleteTarget?.payload.clientName}
+              </span>
+              {pendingDeleteTarget?.payload.poaNumber ? (
+                <>
+                  {' '}
+                  — رقم{' '}
+                  <span className="font-mono text-foreground">
+                    {pendingDeleteTarget.payload.poaNumber}
+                  </span>
+                </>
+              ) : null}
+              ؟
+              <br />
+              <span className="text-rose-500 font-medium">
+                سيتم حذفها من الذاكرة المحلية ولن تتم إعادة محاولة حفظها في Google Sheets.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 flex-row-reverse sm:flex-row-reverse">
+            <AlertDialogCancel onClick={() => setPendingDeleteTarget(null)}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="button-confirm-delete-pending-poa"
+              onClick={handleConfirmDeletePending}
+              className="bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-600"
+            >
+              نعم، احذف الوكالة المعلقة
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
