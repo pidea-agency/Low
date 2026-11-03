@@ -33393,7 +33393,7 @@ var init_env = __esm({
     env = {
       get sessionSecret() {
         const val = readEnv("SESSION_SECRET");
-        if (true) {
+        if (!process.env.VERCEL) {
           if (!val || val === "court_session_secret_fallback_key") {
             throw new MissingEnvVarError(
               "SESSION_SECRET",

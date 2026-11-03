@@ -4,7 +4,7 @@ import { logger } from "./lib/logger";
 import { startReminderScheduler } from "./scheduler/reminderScheduler";
 
 // Validate required secrets on startup in production
-if (env.isProduction) {
+if (env.isProduction && !process.env.VERCEL) {
   void env.sessionSecret;
 }
 

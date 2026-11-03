@@ -83,7 +83,7 @@ function requireEnv(key: string, hint?: string): string {
 export const env = {
   get sessionSecret(): string {
     const val = readEnv("SESSION_SECRET");
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
       if (!val || val === "court_session_secret_fallback_key") {
         throw new MissingEnvVarError(
           "SESSION_SECRET",
