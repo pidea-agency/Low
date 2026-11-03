@@ -3,7 +3,8 @@
   "services": {
     "api-server": {
       "root": "artifacts/api-server",
-      "framework": "express"
+      "framework": "express",
+      "outputDirectory": "dist"
     },
     "court-session-management": {
       "root": "artifacts/court-session-management",

@@ -65,7 +65,6 @@ async function buildAll() {
       "@opentelemetry/*",
       "@google-cloud/*",
       "@google/*",
-      "googleapis",
       "firebase-admin",
       "@parcel/watcher",
       "@sentry/profiling-node",
@@ -138,7 +137,6 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     },
     external: [
       "*.node",
-      "googleapis",
       "@google-cloud/*",
       "@google/*",
       "firebase-admin",
