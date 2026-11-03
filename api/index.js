@@ -33528,27 +33528,6 @@ var init_env = __esm({
   }
 });
 
-// ../../node_modules/cookie-signature/index.js
-var require_cookie_signature3 = __commonJS({
-  "../../node_modules/cookie-signature/index.js"(exports2) {
-    var crypto5 = require("crypto");
-    exports2.sign = function(val, secret) {
-      if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
-      if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
-    };
-    exports2.unsign = function(val, secret) {
-      if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
-      if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      var str = val.slice(0, val.lastIndexOf(".")), mac = exports2.sign(str, secret);
-      return sha1(mac) == sha1(val) ? str : false;
-    };
-    function sha1(str) {
-      return crypto5.createHash("sha1").update(str).digest("hex");
-    }
-  }
-});
-
 // ../../node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs
 function getTraceContextExtractor() {
   return globalThis[EXTRACTOR_KEY];
@@ -64378,7 +64357,7 @@ init_env();
 init_logger();
 
 // src/middlewares/auth.middleware.ts
-var import_cookie_signature = __toESM(require_cookie_signature3(), 1);
+var import_cookie_signature = __toESM(require_cookie_signature(), 1);
 init_env();
 init_logger();
 init_supabase_service();
