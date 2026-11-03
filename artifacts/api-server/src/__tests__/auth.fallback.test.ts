@@ -55,7 +55,7 @@ describe("Auth Backdoor Removal & Single Source of Truth", () => {
 
     expect(adminRes.status).toBe(200);
     expect(adminRes.body.username).toBe("123456");
-    expect(adminRes.body.role).toBe("admin");
+    expect(adminRes.body.role).toBe("super_admin");
   });
 
   it("rejects a real account with a wrong password, even if password is in the old fallback list", async () => {

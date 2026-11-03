@@ -19,8 +19,8 @@ describe("Power of Attorney (POA) Save Path & Error Handling (/api/poa)", () => 
   });
 
   const officeBCookie = createSignedSessionCookie({
-    username: "123456",
-    userId: "local-admin",
+    username: "admin1",
+    userId: "local-office-admin",
   });
 
   let originalAllowList: string | undefined;

@@ -336,7 +336,39 @@ components:
       type: object
       required: [username]
       properties:
+        id:
+          type: string
         username:
+          type: string
+        userId:
+          type: string
+        role:
+          type: string
+        displayName:
+          type: string
+        adminId:
+          type: string
+        officeName:
+          type: string
+        status:
+          type: string
+        isSuspended:
+          type: boolean
+        isExpired:
+          type: boolean
+        subscription_end_date:
+          type: string
+        plan_tier:
+          type: string
+        billing_cycle:
+          type: string
+        ai_quota_limit:
+          type: integer
+        ai_usage_count:
+          type: integer
+        daysRemaining:
+          type: integer
+        subscriptionWarning:
           type: string
 
     DashboardStats:

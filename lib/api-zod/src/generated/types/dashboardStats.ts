@@ -12,11 +12,4 @@ export interface DashboardStats {
   upcomingHearings: number;
   finishedHearings: number;
   totalPoas: number;
-  favorableJudgments?: number;
-  unfavorableJudgments?: number;
-  totalTasks?: number;
-  inProgressTasks?: number;
-  completedTasks?: number;
-  urgentTasks?: number;
 }
-

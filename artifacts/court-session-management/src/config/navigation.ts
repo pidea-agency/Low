@@ -9,6 +9,8 @@ import {
   CheckSquare,
   Shield,
   Settings,
+  Users,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   APP_NAVIGATION_CONFIG,
@@ -32,6 +34,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   CheckSquare,
   Shield,
   Settings,
+  Users,
+  ShieldAlert,
 };
 
 export interface AppNavItem {

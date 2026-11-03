@@ -21,18 +21,23 @@ export interface LoginInput {
 }
 
 export interface AuthUser {
-  username: string;
   id?: string;
+  username: string;
+  userId?: string;
   role?: string;
-  display_name?: string | null;
-  email?: string | null;
-  status?: 'active' | 'suspended';
-  subscription_end_date?: string | null;
-  subscriptionWarning?: string | null;
-  daysRemaining?: number | null;
-  has_custom_sheets?: boolean;
-  google_spreadsheet_id?: string | null;
-  google_sheet_name?: string | null;
+  displayName?: string;
+  adminId?: string;
+  officeName?: string;
+  status?: string;
+  isSuspended?: boolean;
+  isExpired?: boolean;
+  subscription_end_date?: string;
+  plan_tier?: string;
+  billing_cycle?: string;
+  ai_quota_limit?: number;
+  ai_usage_count?: number;
+  daysRemaining?: number;
+  subscriptionWarning?: string;
 }
 
 export interface DashboardStats {
@@ -41,21 +46,6 @@ export interface DashboardStats {
   upcomingHearings: number;
   finishedHearings: number;
   totalPoas: number;
-  favorableJudgments?: number;
-  unfavorableJudgments?: number;
-}
-
-export interface Judgment {
-  id: number;
-  court: string;
-  plaintiff: string;
-  defendant: string;
-  assignedLawyer: string;
-  judgmentNumber: string;
-  judgmentDate: string;
-  summary: string;
-  isFavorable: 'نعم' | 'لا' | string;
-  createdAt: string;
 }
 
 export interface MessageInput {
@@ -174,7 +164,10 @@ export interface Session {
   sessionType: string | null;
   /** @nullable */
   sessionDateHijri: string | null;
-  /** @nullable */
+  /**
+     * Arabic day name (e.g. الخميس, الأحد)
+     * @nullable
+     */
   sessionDay?: string | null;
   /** @nullable */
   sessionTime: string | null;

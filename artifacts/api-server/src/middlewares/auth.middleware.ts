@@ -11,7 +11,7 @@ import {
 export interface SessionCookiePayload {
   username: string;
   userId?: string;
-  role?: string;
+  role?: "super_admin" | "admin" | "staff" | string;
   displayName?: string;
   issuedAt: number;
 }
@@ -204,7 +204,24 @@ export function requireAuth(
   next();
 }
 
-/** Rejects the request with 403 unless the authenticated user has the 'admin' role. */
+/** Rejects the request with 403 unless the authenticated user has the 'super_admin' role. */
+export function requireSuperAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!req.authUser) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  if (req.authUser.role !== "super_admin") {
+    res.status(403).json({ error: "هذا الإجراء يتطلب صلاحيات مدير النظام (Super Admin)." });
+    return;
+  }
+  next();
+}
+
+/** Rejects the request with 403 unless the authenticated user has the 'admin' (Office Admin) role. */
 export function requireAdmin(
   req: Request,
   res: Response,
@@ -215,17 +232,54 @@ export function requireAdmin(
     return;
   }
   if (req.authUser.role !== "admin") {
-    res.status(403).json({ error: "هذا الإجراء يتطلب صلاحيات المشرف العام (Admin)." });
+    res.status(403).json({ error: "هذا الإجراء يتطلب صلاحيات مدير المكتب (Admin)." });
+    return;
+  }
+  next();
+}
+
+/** Allows both 'super_admin' and 'admin'. */
+export function requireAdminOrAbove(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!req.authUser) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  if (req.authUser.role !== "super_admin" && req.authUser.role !== "admin") {
+    res.status(403).json({ error: "هذا الإجراء يتطلب صلاحيات إدارية." });
     return;
   }
   next();
 }
 
 /**
- * Rejects requests with 403 if the user's subscription is suspended, expired, or invalid.
+ * Blocks super_admin from accessing office-specific legal records (sessions, poa, judgments, tasks, reports, ai).
+ * Super Admins only manage office accounts and subscriptions, maintaining complete privacy of office records.
+ */
+export function blockSuperAdminFromOfficeData(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (req.authUser?.role === "super_admin") {
+    res.status(403).json({
+      error: "غير مصرح لمشرف المنصة بالوصول إلى بيانات وقضايا المكاتب الخاصة.",
+    });
+    return;
+  }
+  next();
+}
+
+/**
+ * Rejects requests with 403 if the office's subscription is suspended, expired, or invalid.
  * Rejects requests with 503 if the subscription state cannot be verified (e.g. database error).
  * Fails closed: ONLY verified active subscriptions call next().
- * Admins always retain their management access.
+ * - Super Admin is exempt.
+ * - Office Admin is evaluated against their own subscription.
+ * - Staff is evaluated against their linked Office Admin (admin_id).
  */
 export async function requireActiveSubscription(
   req: Request,
@@ -237,8 +291,8 @@ export async function requireActiveSubscription(
     return;
   }
 
-  // Admins always have access
-  if (req.authUser.role === "admin") {
+  // Super admins are always exempt from subscription blocks
+  if (req.authUser.role === "super_admin") {
     next();
     return;
   }
@@ -247,7 +301,7 @@ export async function requireActiveSubscription(
   const refId = `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
   try {
-    // Check real account state from trusted server source (Supabase / local store)
+    // Check real account state from trusted server source
     const current = await findUserByIdOrUsername(identifier);
 
     if (!current) {
@@ -259,44 +313,82 @@ export async function requireActiveSubscription(
       return;
     }
 
-    if (current.role === "admin") {
+    if (current.role === "super_admin") {
       next();
       return;
     }
 
-    if (current.status === "suspended") {
+    // Determine target admin whose subscription governs this request
+    let officeAdmin: import("../services/supabase.service").AppUser | null = null;
+
+    if (current.role === "admin") {
+      officeAdmin = current;
+    } else {
+      // Role is staff -> must be linked to an office admin
+      if (!current.admin_id) {
+        logger.warn({ refId, identifier }, "Subscription check failed: staff user has no admin_id linked");
+        res.status(403).json({
+          error: "حساب المحامي غير مرتبط بأي مكتب حتى الآن. يرجى التواصل مع الإدارة لربط الحساب.",
+          refId,
+        });
+        return;
+      }
+
+      officeAdmin = await findUserByIdOrUsername(current.admin_id);
+      if (!officeAdmin || officeAdmin.role !== "admin") {
+        logger.warn({ refId, identifier, adminId: current.admin_id }, "Subscription check failed: linked office admin not found");
+        res.status(403).json({
+          error: "تعذر العثور على مكتب المحاماة المرتبط بهذا الحساب.",
+          refId,
+        });
+        return;
+      }
+    }
+
+    // Check office suspension
+    if (officeAdmin.status === "suspended") {
+      const msg = current.role === "staff"
+        ? "تم إيقاف اشتراك المكتب مؤقتاً من قِبل إدارة المنظومة. يرجى التواصل مع مدير المكتب."
+        : "تم إيقاف اشتراك هذا المكتب مؤقتاً من قِبل إدارة المنظومة. تم إيقاف المزامنة والخدمات.";
       res.status(403).json({
-        error: "تم إيقاف اشتراك هذا الحساب مؤقتاً من قِبل إدارة المنظومة. تم إيقاف المزامنة مع الإكسل والتقارير والذكاء الاصطناعي.",
+        error: msg,
         isSuspended: true,
         refId,
       });
       return;
     }
 
-    if (!current.subscription_end_date) {
-      logger.warn({ refId, identifier, user: current.username }, "Subscription check failed: missing subscription_end_date");
+    // Check office subscription date
+    if (!officeAdmin.subscription_end_date) {
+      logger.warn({ refId, identifier, officeAdmin: officeAdmin.username }, "Subscription check failed: missing subscription_end_date on office admin");
+      const msg = current.role === "staff"
+        ? "اشتراك المكتب غير مفعل. يرجى التواصل مع مدير المكتب."
+        : "لم يتم تحديد تاريخ انتهاء الاشتراك لهذا المكتب. يرجى مراجعة إدارة المنظومة.";
       res.status(403).json({
-        error: "لم يتم تحديد تاريخ انتهاء الاشتراك لهذا الحساب. يرجى التواصل مع المشرف العام.",
+        error: msg,
         refId,
       });
       return;
     }
 
-    const expiryTime = new Date(current.subscription_end_date).getTime();
+    const expiryTime = new Date(officeAdmin.subscription_end_date).getTime();
     if (isNaN(expiryTime)) {
-      logger.warn({ refId, identifier, invalidDate: current.subscription_end_date }, "Subscription check failed: invalid subscription_end_date");
+      logger.warn({ refId, identifier, invalidDate: officeAdmin.subscription_end_date }, "Subscription check failed: invalid subscription_end_date");
       res.status(403).json({
-        error: "تاريخ انتهاء الاشتراك المسجل غير صالح. يرجى مراجعة إدارة المنظومة.",
+        error: "تاريخ انتهاء اشتراك المكتب المسجل غير صالح. يرجى مراجعة إدارة المنظومة.",
         refId,
       });
       return;
     }
 
     if (expiryTime < Date.now()) {
+      const msg = current.role === "staff"
+        ? "عذراً، انتهت فترة اشتراك المكتب في المنظومة. يرجى التواصل مع مدير المكتب لتجديد الاشتراك."
+        : "عذراً، انتهت فترة اشتراك مكتبكم في المنظومة. تم إيقاف اتصال النظام بالإكسل وتوليد التقارير وتحليل الرسائل بالذكاء الاصطناعي. يرجى التواصل مع إدارة المنظومة لتجديد الاشتراك.";
       res.status(403).json({
-        error: "عذراً، انتهت فترة اشتراكك في المنظومة. تم إيقاف اتصال النظام بالإكسل وتوليد التقارير وتحليل الرسائل بالذكاء الاصطناعي. يرجى التواصل مع المشرف العام لتجديد الاشتراك.",
+        error: msg,
         isExpired: true,
-        subscription_end_date: current.subscription_end_date,
+        subscription_end_date: current.role === "admin" ? officeAdmin.subscription_end_date : undefined,
         refId,
       });
       return;
@@ -312,4 +404,3 @@ export async function requireActiveSubscription(
     });
   }
 }
-

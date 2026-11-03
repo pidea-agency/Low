@@ -19,7 +19,7 @@ import {
 import { isGoogleSheetsConfigured } from "../config/env";
 import { GoogleSheetsError, GoogleBindingMissingError, GoogleSettingsStoreError } from "../services/googleSheets.service";
 import { logger } from "../lib/logger";
-import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
+import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
 import { computeHearingDateTime } from "../utils/hijri";
 import type { Response } from "express";
@@ -27,7 +27,8 @@ import type { Response } from "express";
 const router: IRouter = Router();
 
 // Stop all Excel Sheet read/write operations if the user's subscription is suspended or expired
-router.use("/sessions", attachAuthUser, requireAuth, requireActiveSubscription);
+// Super Admins are blocked from office sessions data
+router.use("/sessions", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 
 function handleRouteError(res: Response, err: any, defaultMsg: string): void {
   if (err instanceof GoogleBindingMissingError) {

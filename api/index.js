@@ -18978,14 +18978,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto5 = require("crypto");
+    var crypto6 = require("crypto");
     var Stats = require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto5.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto6.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router14;
+    module2.exports = Router15;
     module2.exports.Route = Route;
-    function Router14(options) {
-      if (!(this instanceof Router14)) {
-        return new Router14(options);
+    function Router15(options) {
+      if (!(this instanceof Router15)) {
+        return new Router15(options);
       }
       const opts = options || {};
-      function router14(req, res, next) {
-        router14.handle(req, res, next);
+      function router15(req, res, next) {
+        router15.handle(req, res, next);
       }
-      Object.setPrototypeOf(router14, this);
-      router14.caseSensitive = opts.caseSensitive;
-      router14.mergeParams = opts.mergeParams;
-      router14.params = {};
-      router14.strict = opts.strict;
-      router14.stack = [];
-      return router14;
+      Object.setPrototypeOf(router15, this);
+      router15.caseSensitive = opts.caseSensitive;
+      router15.mergeParams = opts.mergeParams;
+      router15.params = {};
+      router15.strict = opts.strict;
+      router15.stack = [];
+      return router15;
     }
-    Router14.prototype = function() {
+    Router15.prototype = function() {
     };
-    Router14.prototype.param = function param(name, fn) {
+    Router15.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router14.prototype.handle = function handle(req, res, callback) {
+    Router15.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router14.prototype.use = function use(handler2) {
+    Router15.prototype.use = function use(handler2) {
       let offset = 0;
       let path4 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router14.prototype.route = function route(path4) {
+    Router15.prototype.route = function route(path4) {
       const route2 = new Route(path4);
       const layer = new Layer(path4, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router14.prototype[method] = function(path4) {
+      Router15.prototype[method] = function(path4) {
         const route = this.route(path4);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve4 = require("node:path").resolve;
     var once = require_once();
-    var Router14 = require_router();
+    var Router15 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router14 = null;
+      var router15 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router14 === null) {
-            router14 = new Router14({
+          if (router15 === null) {
+            router15 = new Router15({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router14;
+          return router15;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router14 = this.router;
+      var router15 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router14.use(path4, fn2);
+          return router15.use(path4, fn2);
         }
         debug(".use app under %s", path4);
         fn2.mountpath = path4;
         fn2.parent = this;
-        router14.use(path4, function mounted_app(req, res, next) {
+        router15.use(path4, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22472,17 +22472,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto5 = require("crypto");
+    var crypto6 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports2.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto5.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto6.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router14 = require_router();
+    var Router15 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router14.Route;
-    exports2.Router = Router14;
+    exports2.Route = Router15.Route;
+    exports2.Router = Router15;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -24112,11 +24112,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto5 = require("crypto");
+    var crypto6 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -24125,7 +24125,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto5.createHash("sha1").update(str).digest("hex");
+      return crypto6.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -32741,24 +32741,50 @@ var init_api = __esm({
       "password": stringType().min(1)
     });
     LoginResponse = objectType({
-      "username": stringType()
+      "id": stringType().optional(),
+      "username": stringType(),
+      "userId": stringType().optional(),
+      "role": stringType().optional(),
+      "displayName": stringType().optional(),
+      "adminId": stringType().optional(),
+      "officeName": stringType().optional(),
+      "status": stringType().optional(),
+      "isSuspended": booleanType().optional(),
+      "isExpired": booleanType().optional(),
+      "subscription_end_date": stringType().optional(),
+      "plan_tier": stringType().optional(),
+      "billing_cycle": stringType().optional(),
+      "ai_quota_limit": numberType().optional(),
+      "ai_usage_count": numberType().optional(),
+      "daysRemaining": numberType().optional(),
+      "subscriptionWarning": stringType().optional()
     });
     LogoutResponse = voidType();
     GetCurrentUserResponse = objectType({
-      "username": stringType()
+      "id": stringType().optional(),
+      "username": stringType(),
+      "userId": stringType().optional(),
+      "role": stringType().optional(),
+      "displayName": stringType().optional(),
+      "adminId": stringType().optional(),
+      "officeName": stringType().optional(),
+      "status": stringType().optional(),
+      "isSuspended": booleanType().optional(),
+      "isExpired": booleanType().optional(),
+      "subscription_end_date": stringType().optional(),
+      "plan_tier": stringType().optional(),
+      "billing_cycle": stringType().optional(),
+      "ai_quota_limit": numberType().optional(),
+      "ai_usage_count": numberType().optional(),
+      "daysRemaining": numberType().optional(),
+      "subscriptionWarning": stringType().optional()
     });
     GetDashboardStatsResponse = objectType({
       "totalCases": numberType(),
       "todayHearings": numberType(),
       "upcomingHearings": numberType(),
       "finishedHearings": numberType(),
-      "totalPoas": numberType(),
-      "favorableJudgments": numberType().optional(),
-      "unfavorableJudgments": numberType().optional(),
-      "totalTasks": numberType().optional(),
-      "inProgressTasks": numberType().optional(),
-      "completedTasks": numberType().optional(),
-      "urgentTasks": numberType().optional()
+      "totalPoas": numberType()
     });
     AnalyzeMessageBody = objectType({
       "message": stringType().min(1).describe("Raw court SMS text pasted by the secretary")
@@ -32788,6 +32814,7 @@ var init_api = __esm({
       "caseSubject": stringType().nullable(),
       "sessionType": stringType().nullable(),
       "sessionDateHijri": stringType().nullable(),
+      "sessionDay": stringType().nullish().describe("Arabic day name (e.g. \u0627\u0644\u062E\u0645\u064A\u0633, \u0627\u0644\u0623\u062D\u062F)"),
       "sessionTime": stringType().nullable(),
       "notes": stringType().nullable(),
       "status": enumType(["Upcoming", "Today", "Finished", "Cancelled"]),
@@ -32819,6 +32846,7 @@ var init_api = __esm({
       "caseSubject": stringType().nullable(),
       "sessionType": stringType().nullable(),
       "sessionDateHijri": stringType().nullable(),
+      "sessionDay": stringType().nullish().describe("Arabic day name (e.g. \u0627\u0644\u062E\u0645\u064A\u0633, \u0627\u0644\u0623\u062D\u062F)"),
       "sessionTime": stringType().nullable(),
       "notes": stringType().nullable(),
       "status": enumType(["Upcoming", "Today", "Finished", "Cancelled"]),
@@ -32840,6 +32868,7 @@ var init_api = __esm({
       "caseSubject": stringType().nullable(),
       "sessionType": stringType().nullable(),
       "sessionDateHijri": stringType().nullable(),
+      "sessionDay": stringType().nullish().describe("Arabic day name (e.g. \u0627\u0644\u062E\u0645\u064A\u0633, \u0627\u0644\u0623\u062D\u062F)"),
       "sessionTime": stringType().nullable(),
       "notes": stringType().nullable(),
       "status": enumType(["Upcoming", "Today", "Finished", "Cancelled"]),
@@ -32874,6 +32903,7 @@ var init_api = __esm({
       "caseSubject": stringType().nullable(),
       "sessionType": stringType().nullable(),
       "sessionDateHijri": stringType().nullable(),
+      "sessionDay": stringType().nullish().describe("Arabic day name (e.g. \u0627\u0644\u062E\u0645\u064A\u0633, \u0627\u0644\u0623\u062D\u062F)"),
       "sessionTime": stringType().nullable(),
       "notes": stringType().nullable(),
       "status": enumType(["Upcoming", "Today", "Finished", "Cancelled"]),
@@ -33166,6 +33196,8 @@ var init_src = __esm({
     init_types2();
     init_password_policy();
     init_navigation_policy();
+    init_api();
+    init_types2();
   }
 });
 
@@ -56880,27 +56912,93 @@ var require_bcryptjs = __commonJS({
   }
 });
 
+// src/lib/encryption.ts
+function getEncryptionKey() {
+  const secret = process.env.SETTINGS_ENCRYPTION_KEY || env.sessionSecret || "court_system_secure_fallback_key";
+  return import_crypto.default.createHash("sha256").update(secret).digest();
+}
+function encryptSecret(plainText) {
+  if (!plainText) return "";
+  const key = getEncryptionKey();
+  const iv = import_crypto.default.randomBytes(IV_LENGTH);
+  const cipher = import_crypto.default.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(plainText, "utf-8", "hex");
+  encrypted += cipher.final("hex");
+  const authTag = cipher.getAuthTag();
+  return `enc:v1:${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
+}
+function decryptSecret(cipherText) {
+  if (!cipherText) return "";
+  if (!cipherText.startsWith("enc:v1:")) {
+    return cipherText;
+  }
+  const parts = cipherText.split(":");
+  if (parts.length !== 5) {
+    throw new Error("Invalid encrypted format");
+  }
+  const iv = Buffer.from(parts[2], "hex");
+  const authTag = Buffer.from(parts[3], "hex");
+  const encrypted = parts[4];
+  const key = getEncryptionKey();
+  const decipher = import_crypto.default.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, "hex", "utf-8");
+  decrypted += decipher.final("utf-8");
+  return decrypted;
+}
+function isEncrypted(text) {
+  return typeof text === "string" && text.startsWith("enc:v1:");
+}
+var import_crypto, ALGORITHM, IV_LENGTH;
+var init_encryption = __esm({
+  "src/lib/encryption.ts"() {
+    "use strict";
+    import_crypto = __toESM(require("crypto"), 1);
+    init_env();
+    ALGORITHM = "aes-256-gcm";
+    IV_LENGTH = 12;
+  }
+});
+
 // src/services/supabase.service.ts
 var supabase_service_exports = {};
 __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
+  checkAndIncrementOfficeAiUsage: () => checkAndIncrementOfficeAiUsage,
   clearUserAuthCache: () => clearUserAuthCache,
   countActiveAdmins: () => countActiveAdmins,
+  createOfficeMember: () => createOfficeMember,
+  createSupabaseAdmin: () => createSupabaseAdmin,
   createSupabaseUser: () => createSupabaseUser,
+  deleteOfficeMember: () => deleteOfficeMember,
+  deleteSupabaseAdmin: () => deleteSupabaseAdmin,
   deleteSupabaseUser: () => deleteSupabaseUser,
+  disconnectOfficeGoogleBinding: () => disconnectOfficeGoogleBinding,
   ensureDefaultAdmin: () => ensureDefaultAdmin,
   findUserByIdOrUsername: () => findUserByIdOrUsername,
+  getOfficeGoogleBinding: () => getOfficeGoogleBinding,
   getSupabaseClient: () => getSupabaseClient,
   getUserGoogleCredentials: () => getUserGoogleCredentials,
   getUserSessionVersion: () => getUserSessionVersion,
   incrementUserAiUsage: () => incrementUserAiUsage,
   invalidateUserGoogleCache: () => invalidateUserGoogleCache,
+  linkMemberToAdmin: () => linkMemberToAdmin,
+  listOfficeMembers: () => listOfficeMembers,
+  listSupabaseAdmins: () => listSupabaseAdmins,
   listSupabaseUsers: () => listSupabaseUsers,
+  listUnlinkedMembers: () => listUnlinkedMembers,
   loadLocalUsers: () => loadLocalUsers,
+  resetAdminAiUsage: () => resetAdminAiUsage,
   resetUserAiUsage: () => resetUserAiUsage,
   revokeUserSessions: () => revokeUserSessions,
   saveLocalUsers: () => saveLocalUsers,
+  saveOfficeGoogleBinding: () => saveOfficeGoogleBinding,
+  setupFirstSuperAdmin: () => setupFirstSuperAdmin,
+  toggleAdminStatus: () => toggleAdminStatus,
+  toggleOfficeMemberStatus: () => toggleOfficeMemberStatus,
   toggleUserStatus: () => toggleUserStatus,
+  updateOfficeMember: () => updateOfficeMember,
+  updateSupabaseAdmin: () => updateSupabaseAdmin,
   updateSupabaseUser: () => updateSupabaseUser,
   verifySupabaseUser: () => verifySupabaseUser
 });
@@ -56946,18 +57044,58 @@ function loadLocalUsers() {
         const raw = (0, import_fs3.readFileSync)(p, "utf-8");
         const list = JSON.parse(raw);
         if (Array.isArray(list) && list.length > 0) {
+          let hasAdmin = false;
+          let hasSuperAdmin = false;
           const normalized = list.map((u) => {
-            const isAdmin = u.role === "admin";
-            const planTier = u.plan_tier || (isAdmin ? "pro" : "plus");
-            const quota = u.ai_quota_limit !== void 0 ? u.ai_quota_limit : isAdmin ? -1 : planTier === "pro" ? 300 : 50;
+            let role = u.role || "staff";
+            if (role === "admin" && (u.id === "local-admin" || u.username === "123456")) {
+              role = "super_admin";
+            }
+            if (role === "super_admin") hasSuperAdmin = true;
+            if (role === "admin") hasAdmin = true;
+            const isOfficeAdmin = role === "admin";
+            const isSuper = role === "super_admin";
+            const planTier = u.plan_tier || (isSuper ? "pro" : isOfficeAdmin ? "plus" : void 0);
+            const quota = u.ai_quota_limit !== void 0 ? u.ai_quota_limit : isSuper ? -1 : isOfficeAdmin ? planTier === "pro" ? 300 : 100 : void 0;
             return {
               ...u,
-              plan_tier: planTier,
-              billing_cycle: u.billing_cycle || "annual",
-              ai_quota_limit: quota,
-              ai_usage_count: u.ai_usage_count || 0
+              role,
+              admin_id: u.admin_id || null,
+              office_name: u.office_name || (isOfficeAdmin ? "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A" : null),
+              plan_tier: isSuper || isOfficeAdmin ? planTier : void 0,
+              billing_cycle: isSuper || isOfficeAdmin ? u.billing_cycle || "annual" : void 0,
+              ai_quota_limit: isSuper || isOfficeAdmin ? quota : void 0,
+              ai_usage_count: isSuper || isOfficeAdmin ? u.ai_usage_count || 0 : void 0
             };
           });
+          if (!hasAdmin) {
+            const adminHash = import_bcryptjs.default.hashSync("123456", 10);
+            const oneYearFromNow2 = /* @__PURE__ */ new Date();
+            oneYearFromNow2.setFullYear(oneYearFromNow2.getFullYear() + 1);
+            normalized.push({
+              id: "local-office-admin",
+              username: "admin1",
+              email: "office.admin@law.local",
+              role: "admin",
+              display_name: "\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 (\u0623\u062F\u0645\u0646)",
+              office_name: "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A",
+              status: "active",
+              subscription_end_date: oneYearFromNow2.toISOString(),
+              subscription_notes: "\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A \u0645\u0639\u062A\u0645\u062F \u0644\u0644\u0645\u0643\u062A\u0628",
+              plan_tier: "plus",
+              billing_cycle: "annual",
+              ai_quota_limit: 100,
+              ai_usage_count: 0,
+              password_hash: adminHash,
+              admin_id: null,
+              created_at: (/* @__PURE__ */ new Date()).toISOString()
+            });
+          }
+          for (const u of normalized) {
+            if (u.role === "staff" && !u.admin_id && (u.id === "local-lawyer-default" || u.username === "12345")) {
+              u.admin_id = "local-office-admin";
+            }
+          }
           _localUsersCache = normalized;
           return normalized;
         }
@@ -56965,7 +57103,8 @@ function loadLocalUsers() {
     } catch {
     }
   }
-  const adminHash = import_bcryptjs.default.hashSync("123456", 10);
+  const superHash = import_bcryptjs.default.hashSync("123456", 10);
+  const officeAdminHash = import_bcryptjs.default.hashSync("123456", 10);
   const lawyerHash = import_bcryptjs.default.hashSync("12345", 10);
   const oneYearFromNow = /* @__PURE__ */ new Date();
   oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
@@ -56974,20 +57113,36 @@ function loadLocalUsers() {
       id: "local-admin",
       username: "123456",
       email: "admin@law.internal",
-      role: "admin",
-      display_name: "\u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 (\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629)",
+      role: "super_admin",
+      display_name: "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629 (Super Admin)",
       status: "active",
       subscription_end_date: null,
-      subscription_notes: "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u062F\u0627\u0626\u0645",
+      subscription_notes: "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u062F\u0627\u0626\u0645 \u0644\u0644\u0645\u0646\u0638\u0648\u0645\u0629",
       plan_tier: "pro",
       billing_cycle: "annual",
       ai_quota_limit: -1,
-      // Unlimited for master admin
       ai_usage_count: 0,
-      has_google_service: false,
-      google_spreadsheet_id: null,
-      google_sheet_name: null,
-      password_hash: adminHash,
+      admin_id: null,
+      office_name: null,
+      password_hash: superHash,
+      created_at: (/* @__PURE__ */ new Date()).toISOString()
+    },
+    {
+      id: "local-office-admin",
+      username: "admin1",
+      email: "office.admin@law.local",
+      role: "admin",
+      display_name: "\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 (\u0623\u062F\u0645\u0646)",
+      office_name: "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A",
+      status: "active",
+      subscription_end_date: oneYearFromNow.toISOString(),
+      subscription_notes: "\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A \u0645\u0639\u062A\u0645\u062F \u0644\u0644\u0645\u0643\u062A\u0628",
+      plan_tier: "plus",
+      billing_cycle: "annual",
+      ai_quota_limit: 100,
+      ai_usage_count: 0,
+      admin_id: null,
+      password_hash: officeAdminHash,
       created_at: (/* @__PURE__ */ new Date()).toISOString()
     },
     {
@@ -56997,15 +57152,7 @@ function loadLocalUsers() {
       role: "staff",
       display_name: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
       status: "active",
-      subscription_end_date: oneYearFromNow.toISOString(),
-      subscription_notes: "\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A \u0645\u0639\u062A\u0645\u062F (\u0628\u0627\u0642\u0629 \u0628\u0644\u0633 - Plus)",
-      plan_tier: "plus",
-      billing_cycle: "annual",
-      ai_quota_limit: 50,
-      ai_usage_count: 0,
-      has_google_service: false,
-      google_spreadsheet_id: null,
-      google_sheet_name: null,
+      admin_id: "local-office-admin",
       password_hash: lawyerHash,
       created_at: (/* @__PURE__ */ new Date()).toISOString()
     }
@@ -57067,15 +57214,15 @@ async function ensureDefaultAdmin() {
           username: defaultUsername,
           email: `${defaultUsername}@law.local`,
           password_hash,
-          role: "admin",
-          display_name: "\u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 (\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629)",
+          role: "super_admin",
+          display_name: "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629 (Super Admin)",
           status: "active"
         }
       ]);
       if (insertErr) {
-        logger.error({ insertErr }, "Failed to create default admin in Supabase");
+        logger.error({ insertErr }, "Failed to create default super admin in Supabase");
       } else {
-        logger.info({ username: defaultUsername }, "Seeded default admin user in Supabase");
+        logger.info({ username: defaultUsername }, "Seeded default super admin user in Supabase");
       }
     }
   } catch (err) {
@@ -57103,10 +57250,16 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
       username: user.username,
       email: user.email,
       role: user.role || "staff",
+      admin_id: user.admin_id || null,
+      office_name: user.office_name || null,
       display_name: user.display_name,
       status: user.status || "active",
       subscription_end_date: user.subscription_end_date || null,
       subscription_notes: user.subscription_notes || null,
+      plan_tier: user.plan_tier,
+      billing_cycle: user.billing_cycle,
+      ai_quota_limit: user.ai_quota_limit,
+      ai_usage_count: user.ai_usage_count || 0,
       google_spreadsheet_id: user.google_spreadsheet_id,
       google_sheet_name: user.google_sheet_name,
       created_at: user.created_at
@@ -57114,7 +57267,7 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
   }
   try {
     const tableName = env.supabaseTableName;
-    const { data, error } = await client.from(tableName).select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, password_hash, google_spreadsheet_id, google_sheet_name, created_at").or(`username.ilike.${cleanIdentifier},email.ilike.${cleanIdentifier}`).limit(1);
+    const { data, error } = await client.from(tableName).select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, password_hash, google_spreadsheet_id, google_sheet_name, created_at").or(`username.ilike.${cleanIdentifier},email.ilike.${cleanIdentifier}`).limit(1);
     if (error) {
       logger.error({ error }, "Error querying Supabase in verifySupabaseUser");
       throw new Error(`Account database error: ${error.message}`);
@@ -57144,10 +57297,16 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
       username: record.username,
       email: record.email,
       role: record.role || "staff",
+      admin_id: record.admin_id || null,
+      office_name: record.office_name || null,
       display_name: record.display_name,
       status: record.status || "active",
       subscription_end_date: record.subscription_end_date || null,
       subscription_notes: record.subscription_notes || null,
+      plan_tier: record.plan_tier,
+      billing_cycle: record.billing_cycle,
+      ai_quota_limit: record.ai_quota_limit,
+      ai_usage_count: record.ai_usage_count || 0,
       google_spreadsheet_id: record.google_spreadsheet_id,
       google_sheet_name: record.google_sheet_name,
       created_at: record.created_at
@@ -57179,11 +57338,14 @@ async function findUserByIdOrUsername(identifier) {
       username: user.username,
       email: user.email,
       role: user.role || "staff",
+      admin_id: user.admin_id || null,
+      office_name: user.office_name || null,
       display_name: user.display_name,
       status: user.status || "active",
       subscription_end_date: user.subscription_end_date || null,
-      plan_tier: user.plan_tier || (user.role === "admin" ? "pro" : "plus"),
-      billing_cycle: user.billing_cycle || "annual",
+      subscription_notes: user.subscription_notes || null,
+      plan_tier: user.plan_tier,
+      billing_cycle: user.billing_cycle,
       ai_quota_limit: user.ai_quota_limit,
       ai_usage_count: user.ai_usage_count || 0,
       google_spreadsheet_id: user.google_spreadsheet_id,
@@ -57195,7 +57357,7 @@ async function findUserByIdOrUsername(identifier) {
   }
   try {
     const tableName = env.supabaseTableName;
-    const { data, error } = await client.from(tableName).select("id, username, email, role, display_name, status, subscription_end_date, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at").or(`id.eq.${identifier},username.ilike.${clean}`).limit(1);
+    const { data, error } = await client.from(tableName).select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at").or(`id.eq.${identifier},username.ilike.${clean}`).limit(1);
     if (error) {
       logger.error({ error, identifier }, "Supabase query error in findUserByIdOrUsername");
       throw new AccountSourceUnavailableError(`Account database error: ${error.message}`);
@@ -57210,11 +57372,14 @@ async function findUserByIdOrUsername(identifier) {
       username: u.username,
       email: u.email,
       role: u.role || "staff",
+      admin_id: u.admin_id || null,
+      office_name: u.office_name || null,
       display_name: u.display_name,
       status: u.status || "active",
       subscription_end_date: u.subscription_end_date || null,
-      plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
-      billing_cycle: u.billing_cycle || "annual",
+      subscription_notes: u.subscription_notes || null,
+      plan_tier: u.plan_tier,
+      billing_cycle: u.billing_cycle,
       ai_quota_limit: u.ai_quota_limit,
       ai_usage_count: u.ai_usage_count || 0,
       google_spreadsheet_id: u.google_spreadsheet_id,
@@ -57230,144 +57395,178 @@ async function findUserByIdOrUsername(identifier) {
   }
 }
 async function getUserGoogleCredentials(userId) {
-  if (!userId || userId === "local-admin" || userId === "local-default") {
+  if (!userId || userId === "local-admin") {
     return null;
   }
   const cached = userGoogleCredsCache.get(userId);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data;
   }
+  const user = await findUserByIdOrUsername(userId);
+  if (!user) return null;
+  if (user.role === "super_admin") {
+    return null;
+  }
+  let targetAdminId;
+  if (user.role === "staff") {
+    if (!user.admin_id) {
+      return null;
+    }
+    targetAdminId = user.admin_id;
+  } else {
+    targetAdminId = user.id;
+  }
+  const admin = await findUserByIdOrUsername(targetAdminId);
+  if (!admin || admin.status === "suspended") {
+    return null;
+  }
   const client = getSupabaseClient();
+  let rawJson = null;
+  let spreadsheetId = null;
+  let sheetName = null;
   if (!client) {
     const local = loadLocalUsers();
-    const user = local.find((u) => u.id === userId || u.username === userId);
-    if (!user) return null;
-    let parsedJson = void 0;
-    if (user.google_service_account_json) {
-      try {
-        parsedJson = typeof user.google_service_account_json === "string" ? JSON.parse(user.google_service_account_json) : user.google_service_account_json;
-      } catch (err) {
-        logger.warn({ err, userId }, "Failed to parse local user google_service_account_json");
+    const adminRecord = local.find((u) => u.id === targetAdminId || u.username === targetAdminId);
+    if (!adminRecord) return null;
+    rawJson = adminRecord.google_service_account_json || null;
+    spreadsheetId = adminRecord.google_spreadsheet_id?.trim() || null;
+    sheetName = adminRecord.google_sheet_name?.trim() || "Sessions";
+  } else {
+    try {
+      const tableName = env.supabaseTableName;
+      const { data, error } = await client.from(tableName).select("google_service_account_json, google_spreadsheet_id, google_sheet_name").eq("id", targetAdminId).single();
+      if (error) {
+        if (error.code === "PGRST116") return null;
+        throw new AccountSourceUnavailableError(`Database error querying user Google credentials: ${error.message}`);
       }
-    }
-    const creds = {
-      serviceAccountJson: parsedJson,
-      spreadsheetId: user.google_spreadsheet_id?.trim() || void 0,
-      sheetName: user.google_sheet_name?.trim() || void 0
-    };
-    userGoogleCredsCache.set(userId, { data: creds, timestamp: Date.now() });
-    return creds;
-  }
-  try {
-    const tableName = env.supabaseTableName;
-    const { data, error } = await client.from(tableName).select("google_service_account_json, google_spreadsheet_id, google_sheet_name").eq("id", userId).single();
-    if (error) {
-      if (error.code === "PGRST116") return null;
-      throw new AccountSourceUnavailableError(`Database error querying user Google credentials: ${error.message}`);
-    }
-    if (!data) return null;
-    let parsedJson = void 0;
-    if (data.google_service_account_json) {
-      try {
-        parsedJson = typeof data.google_service_account_json === "string" ? JSON.parse(data.google_service_account_json) : data.google_service_account_json;
-      } catch (err) {
-        logger.warn({ err, userId }, "Failed to parse user google_service_account_json");
+      if (data) {
+        rawJson = data.google_service_account_json || null;
+        spreadsheetId = data.google_spreadsheet_id?.trim() || null;
+        sheetName = data.google_sheet_name?.trim() || "Sessions";
       }
+    } catch (err) {
+      if (err instanceof AccountSourceUnavailableError) throw err;
+      logger.error({ err, targetAdminId }, "Error getting admin Google credentials from Supabase");
+      throw new AccountSourceUnavailableError(`Error accessing settings store for office ${targetAdminId}: ${err?.message}`);
     }
-    const creds = {
-      serviceAccountJson: parsedJson,
-      spreadsheetId: data.google_spreadsheet_id?.trim() || void 0,
-      sheetName: data.google_sheet_name?.trim() || void 0
-    };
-    userGoogleCredsCache.set(userId, { data: creds, timestamp: Date.now() });
-    return creds;
-  } catch (err) {
-    if (err instanceof AccountSourceUnavailableError) throw err;
-    logger.error({ err, userId }, "Error getting user Google credentials from Supabase");
-    throw new AccountSourceUnavailableError(`Error accessing settings store for user ${userId}: ${err?.message}`);
   }
+  let parsedJson = void 0;
+  if (rawJson) {
+    try {
+      const decrypted = decryptSecret(rawJson);
+      parsedJson = typeof decrypted === "string" ? JSON.parse(decrypted) : decrypted;
+    } catch (err) {
+      logger.warn({ err, targetAdminId }, "Failed to decrypt/parse google_service_account_json");
+    }
+  }
+  const creds = {
+    serviceAccountJson: parsedJson,
+    spreadsheetId: spreadsheetId || void 0,
+    sheetName: sheetName || "Sessions"
+  };
+  userGoogleCredsCache.set(userId, { data: creds, timestamp: Date.now() });
+  return creds;
 }
-async function listSupabaseUsers() {
-  const client = getSupabaseClient();
-  if (!client) {
-    const local = loadLocalUsers();
-    return local.map((u) => {
-      const isAdmin = u.role === "admin";
-      const planTier = u.plan_tier || (isAdmin ? "pro" : "plus");
-      const quota = u.ai_quota_limit !== void 0 ? u.ai_quota_limit : isAdmin ? -1 : planTier === "pro" ? 300 : 50;
+async function checkAndIncrementOfficeAiUsage(userId) {
+  const user = await findUserByIdOrUsername(userId);
+  if (!user) {
+    throw new Error("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0633\u062C\u0644 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645.");
+  }
+  if (user.role === "super_admin") {
+    throw new Error("\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629 \u0644\u0627 \u064A\u0642\u0648\u0645 \u0628\u0625\u062C\u0631\u0627\u0621 \u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0642\u0636\u0627\u064A\u0627.");
+  }
+  let targetAdminId;
+  if (user.role === "staff") {
+    if (!user.admin_id) {
       return {
-        id: u.id,
-        username: u.username,
-        email: u.email,
-        role: u.role || "staff",
-        display_name: u.display_name,
-        status: u.status || "active",
-        phone: u.phone || null,
-        subscription_end_date: u.subscription_end_date || null,
-        subscription_notes: u.subscription_notes || null,
-        plan_tier: planTier,
-        billing_cycle: u.billing_cycle || "annual",
-        ai_quota_limit: quota,
-        ai_usage_count: u.ai_usage_count || 0,
-        has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-        google_spreadsheet_id: u.google_spreadsheet_id || null,
-        google_sheet_name: u.google_sheet_name || null,
-        created_at: u.created_at
+        allowed: false,
+        remaining: 0,
+        limit: 0,
+        currentUsage: 0,
+        plan_tier: "plus",
+        error: "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0645\u0631\u062A\u0628\u0637 \u0628\u0645\u0643\u062A\u0628 \u0628\u0639\u062F. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629."
       };
-    });
+    }
+    targetAdminId = user.admin_id;
+  } else {
+    targetAdminId = user.id;
   }
-  const tableName = env.supabaseTableName;
-  let { data, error } = await client.from(tableName).select("id, username, email, role, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").order("created_at", { ascending: false });
-  if (error && error.code === "42703") {
-    const fallbackRes = await client.from(tableName).select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").order("created_at", { ascending: false });
-    data = fallbackRes.data;
-    error = fallbackRes.error;
+  const currentLock = officeAiLocks.get(targetAdminId) || Promise.resolve();
+  let releaseLock = () => {
+  };
+  const nextLock = new Promise((resolve4) => {
+    releaseLock = resolve4;
+  });
+  officeAiLocks.set(targetAdminId, currentLock.then(() => nextLock));
+  await currentLock;
+  try {
+    const admin = await findUserByIdOrUsername(targetAdminId);
+    if (!admin) {
+      return {
+        allowed: false,
+        remaining: 0,
+        limit: 0,
+        currentUsage: 0,
+        plan_tier: "plus",
+        error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0645\u0631\u062A\u0628\u0637."
+      };
+    }
+    if (admin.status === "suspended") {
+      return {
+        allowed: false,
+        remaining: 0,
+        limit: 0,
+        currentUsage: 0,
+        plan_tier: admin.plan_tier || "plus",
+        error: user.role === "staff" ? "\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627\u064B. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628." : "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0624\u0642\u062A\u0627\u064B. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u0644\u062A\u0641\u0639\u064A\u0644."
+      };
+    }
+    if (admin.subscription_end_date) {
+      const expiry = new Date(admin.subscription_end_date).getTime();
+      if (expiry < Date.now()) {
+        return {
+          allowed: false,
+          remaining: 0,
+          limit: 0,
+          currentUsage: admin.ai_usage_count || 0,
+          plan_tier: admin.plan_tier || "plus",
+          error: user.role === "staff" ? "\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0646\u062A\u0647\u064A. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." : "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643."
+        };
+      }
+    }
+    const planTier = admin.plan_tier || "plus";
+    const quotaLimit = admin.ai_quota_limit !== void 0 ? admin.ai_quota_limit : planTier === "pro" ? 300 : 100;
+    const currentUsage = admin.ai_usage_count || 0;
+    if (quotaLimit !== -1 && currentUsage >= quotaLimit) {
+      const msg = user.role === "staff" ? "\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0631\u0635\u064A\u062F \u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0644\u0645\u0643\u062A\u0628 \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u062A\u0631\u0642\u064A\u0629 \u0627\u0644\u0628\u0627\u0642\u0629." : `\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u062D\u062F \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647 \u0644\u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0645\u0643\u062A\u0628 (${currentUsage}/${quotaLimit}). \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u062A\u0631\u0642\u064A\u0629 \u0627\u0644\u0628\u0627\u0642\u0629.`;
+      return {
+        allowed: false,
+        remaining: 0,
+        limit: quotaLimit,
+        currentUsage,
+        plan_tier: planTier,
+        error: msg
+      };
+    }
+    const newUsage = currentUsage + 1;
+    await updateSupabaseUser(admin.id, { ai_usage_count: newUsage });
+    return {
+      allowed: true,
+      remaining: quotaLimit === -1 ? 999999 : Math.max(0, quotaLimit - newUsage),
+      limit: quotaLimit,
+      currentUsage: newUsage,
+      plan_tier: planTier
+    };
+  } finally {
+    releaseLock();
+    if (officeAiLocks.get(targetAdminId) === nextLock) {
+      officeAiLocks.delete(targetAdminId);
+    }
   }
-  if (error) {
-    logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
-    const local = loadLocalUsers();
-    return local.map((u) => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      role: u.role || "staff",
-      display_name: u.display_name,
-      status: u.status || "active",
-      phone: u.phone || null,
-      subscription_end_date: u.subscription_end_date || null,
-      subscription_notes: u.subscription_notes || null,
-      plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
-      billing_cycle: u.billing_cycle || "annual",
-      ai_quota_limit: u.ai_quota_limit !== void 0 ? u.ai_quota_limit : u.plan_tier === "pro" ? 300 : 50,
-      ai_usage_count: u.ai_usage_count || 0,
-      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-      google_spreadsheet_id: u.google_spreadsheet_id || null,
-      google_sheet_name: u.google_sheet_name || null,
-      created_at: u.created_at
-    }));
-  }
-  return (data || []).map((u) => ({
-    id: u.id,
-    username: u.username,
-    email: u.email,
-    role: u.role || "staff",
-    display_name: u.display_name,
-    status: u.status || "active",
-    phone: u.phone || null,
-    subscription_end_date: u.subscription_end_date || null,
-    subscription_notes: u.subscription_notes || null,
-    plan_tier: u.plan_tier || (u.role === "admin" ? "pro" : "plus"),
-    billing_cycle: u.billing_cycle || "annual",
-    ai_quota_limit: u.ai_quota_limit !== void 0 ? u.ai_quota_limit : u.plan_tier === "pro" ? 300 : 50,
-    ai_usage_count: u.ai_usage_count || 0,
-    has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-    google_spreadsheet_id: u.google_spreadsheet_id || null,
-    google_sheet_name: u.google_sheet_name || null,
-    created_at: u.created_at
-  }));
 }
 function sanitizeGoogleServiceJson(raw) {
-  if (!raw || !raw.trim()) return null;
+  if (!raw) return null;
+  if (typeof raw === "string" && !raw.trim()) return null;
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw.trim()) : raw;
     if (!parsed || typeof parsed !== "object") {
@@ -57380,6 +57579,337 @@ function sanitizeGoogleServiceJson(raw) {
   } catch (err) {
     throw new Error(err.message || "\u0635\u064A\u063A\u0629 Google Service Account JSON \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629.");
   }
+}
+async function listSupabaseUsers() {
+  const client = getSupabaseClient();
+  if (!client) {
+    const local = loadLocalUsers();
+    return local.map((u) => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role || "staff",
+      admin_id: u.admin_id || null,
+      office_name: u.office_name || null,
+      display_name: u.display_name,
+      status: u.status || "active",
+      phone: u.phone || null,
+      subscription_end_date: u.subscription_end_date || null,
+      subscription_notes: u.subscription_notes || null,
+      plan_tier: u.plan_tier,
+      billing_cycle: u.billing_cycle,
+      ai_quota_limit: u.ai_quota_limit,
+      ai_usage_count: u.ai_usage_count || 0,
+      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
+      google_spreadsheet_id: u.google_spreadsheet_id || null,
+      google_sheet_name: u.google_sheet_name || null,
+      created_at: u.created_at
+    }));
+  }
+  const tableName = env.supabaseTableName;
+  const { data, error } = await client.from(tableName).select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").order("created_at", { ascending: false });
+  if (error) {
+    logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
+    const local = loadLocalUsers();
+    return local.map((u) => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role || "staff",
+      admin_id: u.admin_id || null,
+      office_name: u.office_name || null,
+      display_name: u.display_name,
+      status: u.status || "active",
+      phone: u.phone || null,
+      subscription_end_date: u.subscription_end_date || null,
+      subscription_notes: u.subscription_notes || null,
+      plan_tier: u.plan_tier,
+      billing_cycle: u.billing_cycle,
+      ai_quota_limit: u.ai_quota_limit,
+      ai_usage_count: u.ai_usage_count || 0,
+      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
+      google_spreadsheet_id: u.google_spreadsheet_id || null,
+      google_sheet_name: u.google_sheet_name || null,
+      created_at: u.created_at
+    }));
+  }
+  return (data || []).map((u) => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    role: u.role || "staff",
+    admin_id: u.admin_id || null,
+    office_name: u.office_name || null,
+    display_name: u.display_name,
+    status: u.status || "active",
+    phone: u.phone || null,
+    subscription_end_date: u.subscription_end_date || null,
+    subscription_notes: u.subscription_notes || null,
+    plan_tier: u.plan_tier,
+    billing_cycle: u.billing_cycle,
+    ai_quota_limit: u.ai_quota_limit,
+    ai_usage_count: u.ai_usage_count || 0,
+    has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
+    google_spreadsheet_id: u.google_spreadsheet_id || null,
+    google_sheet_name: u.google_sheet_name || null,
+    created_at: u.created_at
+  }));
+}
+async function listSupabaseAdmins() {
+  const allUsers = await listSupabaseUsers();
+  const officeAdmins = allUsers.filter((u) => u.role === "admin");
+  const staffUsers = allUsers.filter((u) => u.role === "staff");
+  return officeAdmins.map((admin) => {
+    const memberCount = staffUsers.filter((s2) => s2.admin_id === admin.id).length;
+    return {
+      ...admin,
+      member_count: memberCount
+    };
+  });
+}
+async function createSupabaseAdmin(input) {
+  const username = input.username.trim().toLowerCase();
+  const officeName = input.office_name.trim();
+  if (!officeName) {
+    throw new Error("\u0627\u0633\u0645 \u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0645\u0637\u0644\u0648\u0628.");
+  }
+  const planTier = input.plan_tier || "plus";
+  const quota = input.ai_quota_limit !== void 0 ? Number(input.ai_quota_limit) : planTier === "pro" ? 300 : 100;
+  return createSupabaseUser({
+    username,
+    password: input.password,
+    email: input.email,
+    display_name: input.display_name?.trim() || officeName,
+    role: "admin",
+    office_name: officeName,
+    status: "active",
+    phone: input.phone,
+    plan_tier: planTier,
+    billing_cycle: input.billing_cycle || "annual",
+    subscription_end_date: input.subscription_end_date,
+    subscription_notes: input.subscription_notes,
+    ai_quota_limit: quota
+  });
+}
+async function updateSupabaseAdmin(id, input) {
+  return updateSupabaseUser(id, input);
+}
+async function toggleAdminStatus(id, status) {
+  const updated = await toggleUserStatus(id, status);
+  if (updated.status === "suspended") {
+    revokeUserSessions(id);
+    const allUsers = await listSupabaseUsers();
+    for (const u of allUsers) {
+      if (u.role === "staff" && u.admin_id === id) {
+        revokeUserSessions(u.id);
+      }
+    }
+  }
+  return updated;
+}
+async function resetAdminAiUsage(id) {
+  return updateSupabaseUser(id, { ai_usage_count: 0 });
+}
+async function deleteSupabaseAdmin(id) {
+  const allUsers = await listSupabaseUsers();
+  for (const u of allUsers) {
+    if (u.role === "staff" && u.admin_id === id) {
+      try {
+        await updateSupabaseUser(u.id, { admin_id: null });
+        revokeUserSessions(u.id);
+      } catch {
+      }
+    }
+  }
+  await deleteSupabaseUser(id);
+}
+async function listUnlinkedMembers() {
+  const allUsers = await listSupabaseUsers();
+  return allUsers.filter((u) => u.role === "staff" && !u.admin_id);
+}
+async function linkMemberToAdmin(memberId, adminId) {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff") {
+    throw new Error("\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.");
+  }
+  const updated = await updateSupabaseUser(memberId, { admin_id: adminId });
+  clearUserAuthCache(memberId);
+  revokeUserSessions(memberId);
+  return updated;
+}
+async function setupFirstSuperAdmin(input) {
+  const allUsers = await listSupabaseUsers();
+  const hasSuper = allUsers.some((u) => u.role === "super_admin");
+  if (hasSuper) {
+    throw new Error("\u062A\u0645 \u0625\u0639\u062F\u0627\u062F \u062D\u0633\u0627\u0628 \u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629 \u0645\u0633\u0628\u0642\u0627\u064B. \u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0646\u0634\u0627\u0621 \u062D\u0633\u0627\u0628 \u0625\u0636\u0627\u0641\u064A \u0639\u0628\u0631 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u0627\u0631.");
+  }
+  const passwordVal = validatePassword(input.password, { username: input.username, email: input.email });
+  if (!passwordVal.isValid) {
+    throw new Error(passwordVal.message);
+  }
+  return createSupabaseUser({
+    username: input.username,
+    password: input.password,
+    email: input.email,
+    display_name: input.display_name || "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629",
+    role: "super_admin",
+    status: "active"
+  });
+}
+async function listOfficeMembers(adminId) {
+  const allUsers = await listSupabaseUsers();
+  return allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId).map((u) => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    role: "staff",
+    admin_id: adminId,
+    display_name: u.display_name,
+    status: u.status || "active",
+    phone: u.phone,
+    created_at: u.created_at
+  }));
+}
+async function createOfficeMember(adminId, input) {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("\u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  if (admin.status === "suspended") {
+    throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0623\u0639\u0636\u0627\u0621 \u062C\u062F\u062F \u0644\u0623\u0646 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627\u064B.");
+  }
+  const user = await createSupabaseUser({
+    username: input.username,
+    password: input.password,
+    display_name: input.display_name,
+    email: input.email,
+    phone: input.phone,
+    role: "staff",
+    admin_id: adminId,
+    status: input.status || "active"
+  });
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: "staff",
+    admin_id: adminId,
+    display_name: user.display_name,
+    status: user.status,
+    phone: user.phone,
+    created_at: user.created_at
+  };
+}
+async function updateOfficeMember(adminId, memberId, input) {
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff" || member.admin_id !== adminId) {
+    throw new Error("\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0627 \u064A\u0646\u062A\u0645\u064A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628.");
+  }
+  const updated = await updateSupabaseUser(memberId, {
+    password: input.password,
+    display_name: input.display_name,
+    email: input.email,
+    phone: input.phone,
+    status: input.status
+  });
+  return {
+    id: updated.id,
+    username: updated.username,
+    email: updated.email,
+    role: "staff",
+    admin_id: adminId,
+    display_name: updated.display_name,
+    status: updated.status,
+    phone: updated.phone,
+    created_at: updated.created_at
+  };
+}
+async function deleteOfficeMember(adminId, memberId) {
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff" || member.admin_id !== adminId) {
+    throw new Error("\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0627 \u064A\u0646\u062A\u0645\u064A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628.");
+  }
+  await deleteSupabaseUser(memberId);
+}
+async function toggleOfficeMemberStatus(adminId, memberId, status) {
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff" || member.admin_id !== adminId) {
+    throw new Error("\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0627 \u064A\u0646\u062A\u0645\u064A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628.");
+  }
+  const newStatus = status || (member.status === "suspended" ? "active" : "suspended");
+  return updateOfficeMember(adminId, memberId, { status: newStatus });
+}
+async function getOfficeGoogleBinding(adminId) {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("\u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  const creds = await getUserGoogleCredentials(adminId);
+  const clientEmail = creds?.serviceAccountJson?.client_email || null;
+  return {
+    is_connected: Boolean(creds?.serviceAccountJson && creds.spreadsheetId),
+    client_email: clientEmail,
+    spreadsheet_id: creds?.spreadsheetId || null,
+    sheet_name: creds?.sheetName || "Sessions",
+    office_name: admin.office_name || admin.display_name || null
+  };
+}
+async function saveOfficeGoogleBinding(adminId, input) {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("\u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  const sanitized = sanitizeGoogleServiceJson(input.service_account_json);
+  if (!sanitized) {
+    throw new Error("\u0645\u0644\u0641 Google Service Account JSON \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  const parsed = JSON.parse(sanitized);
+  const clientEmail = parsed.client_email;
+  const encrypted = encryptSecret(sanitized);
+  await updateSupabaseUser(adminId, {
+    google_service_account_json: encrypted,
+    google_spreadsheet_id: input.spreadsheet_id.trim(),
+    google_sheet_name: (input.sheet_name || "Sessions").trim()
+  });
+  invalidateUserGoogleCache(adminId);
+  const allUsers = await listSupabaseUsers();
+  for (const u of allUsers) {
+    if (u.admin_id === adminId) {
+      invalidateUserGoogleCache(u.id);
+    }
+  }
+  logger.info(
+    { adminId, clientEmail, spreadsheetId: input.spreadsheet_id.trim() },
+    "[AUDIT] Office Google Sheet binding updated successfully"
+  );
+  return {
+    success: true,
+    message: "\u062A\u0645 \u062D\u0641\u0638 \u0631\u0628\u0637 Google Sheet \u0644\u0644\u0645\u0643\u062A\u0628 \u0628\u0646\u062C\u0627\u062D \u0648\u062A\u0634\u0641\u064A\u0631 \u0627\u0644\u0645\u0641\u0627\u062A\u064A\u062D \u0628\u0623\u0645\u0627\u0646!",
+    client_email: clientEmail
+  };
+}
+async function disconnectOfficeGoogleBinding(adminId) {
+  await updateSupabaseUser(adminId, {
+    google_service_account_json: null,
+    google_spreadsheet_id: null,
+    google_sheet_name: null
+  });
+  invalidateUserGoogleCache(adminId);
+  const allUsers = await listSupabaseUsers();
+  for (const u of allUsers) {
+    if (u.admin_id === adminId) {
+      invalidateUserGoogleCache(u.id);
+    }
+  }
+  logger.info({ adminId }, "[AUDIT] Office Google Sheet binding disconnected");
+  return {
+    success: true,
+    message: "\u062A\u0645 \u0642\u0637\u0639 \u0631\u0628\u0637 Google Sheet \u0628\u0646\u062C\u0627\u062D."
+  };
 }
 async function createSupabaseUser(input) {
   const username = input.username.trim().toLowerCase();
@@ -57394,15 +57924,23 @@ async function createSupabaseUser(input) {
   if (!passwordValidation.isValid) {
     throw new Error(passwordValidation.message);
   }
-  const sanitizedGoogleJson = sanitizeGoogleServiceJson(input.google_service_account_json);
+  const role = input.role || "staff";
+  const isSuper = role === "super_admin";
+  const isOfficeAdmin = role === "admin";
+  let encryptedGoogleJson = null;
+  if (input.google_service_account_json && isOfficeAdmin) {
+    const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
+    if (sanitized) {
+      encryptedGoogleJson = encryptSecret(sanitized);
+    }
+  }
   const password_hash = await import_bcryptjs.default.hash(password, 10);
   const status = input.status || "active";
-  const subscription_end_date = input.subscription_end_date || null;
-  const subscription_notes = input.subscription_notes?.trim() || null;
-  const role = input.role || "staff";
-  const plan_tier = input.plan_tier || (role === "admin" ? "pro" : "plus");
-  const billing_cycle = input.billing_cycle || "annual";
-  const ai_quota_limit = input.ai_quota_limit !== void 0 ? input.ai_quota_limit : role === "admin" ? -1 : plan_tier === "pro" ? 300 : 50;
+  const subscription_end_date = isOfficeAdmin ? input.subscription_end_date || null : null;
+  const subscription_notes = isOfficeAdmin ? input.subscription_notes?.trim() || null : null;
+  const plan_tier = isSuper ? "pro" : isOfficeAdmin ? input.plan_tier || "plus" : void 0;
+  const billing_cycle = isSuper || isOfficeAdmin ? input.billing_cycle || "annual" : void 0;
+  const ai_quota_limit = isSuper ? -1 : isOfficeAdmin ? input.ai_quota_limit !== void 0 ? input.ai_quota_limit : plan_tier === "pro" ? 300 : 100 : void 0;
   const ai_usage_count = 0;
   const client = getSupabaseClient();
   if (!client) {
@@ -57411,10 +57949,12 @@ async function createSupabaseUser(input) {
       throw new Error(`\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 "${username}" \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B.`);
     }
     const newUser = {
-      id: `local-${import_crypto.default.randomUUID()}`,
+      id: `local-${import_crypto2.default.randomUUID()}`,
       username,
       email: input.email?.trim() || null,
       role,
+      admin_id: role === "staff" ? input.admin_id || null : null,
+      office_name: isOfficeAdmin ? input.office_name?.trim() || null : null,
       display_name: input.display_name?.trim() || username,
       status,
       phone: input.phone?.trim() || null,
@@ -57424,10 +57964,10 @@ async function createSupabaseUser(input) {
       billing_cycle,
       ai_quota_limit,
       ai_usage_count,
-      google_service_account_json: sanitizedGoogleJson,
-      google_spreadsheet_id: input.google_spreadsheet_id?.trim() || null,
-      google_sheet_name: input.google_sheet_name?.trim() || null,
-      has_google_service: Boolean(sanitizedGoogleJson),
+      google_service_account_json: encryptedGoogleJson,
+      google_spreadsheet_id: isOfficeAdmin ? input.google_spreadsheet_id?.trim() || null : null,
+      google_sheet_name: isOfficeAdmin ? input.google_sheet_name?.trim() || null : null,
+      has_google_service: Boolean(encryptedGoogleJson),
       password_hash,
       created_at: (/* @__PURE__ */ new Date()).toISOString()
     };
@@ -57438,6 +57978,8 @@ async function createSupabaseUser(input) {
       username: newUser.username,
       email: newUser.email,
       role: newUser.role,
+      admin_id: newUser.admin_id,
+      office_name: newUser.office_name,
       display_name: newUser.display_name,
       status: newUser.status,
       phone: newUser.phone,
@@ -57463,19 +58005,22 @@ async function createSupabaseUser(input) {
     email: input.email?.trim() || null,
     password_hash,
     role,
+    admin_id: role === "staff" ? input.admin_id || null : null,
+    office_name: isOfficeAdmin ? input.office_name?.trim() || null : null,
     display_name: input.display_name?.trim() || username,
     status,
+    phone: input.phone?.trim() || null,
     subscription_end_date,
     subscription_notes,
     plan_tier,
     billing_cycle,
     ai_quota_limit,
     ai_usage_count,
-    google_service_account_json: sanitizedGoogleJson,
-    google_spreadsheet_id: input.google_spreadsheet_id?.trim() || null,
-    google_sheet_name: input.google_sheet_name?.trim() || null
+    google_service_account_json: encryptedGoogleJson,
+    google_spreadsheet_id: isOfficeAdmin ? input.google_spreadsheet_id?.trim() || null : null,
+    google_sheet_name: isOfficeAdmin ? input.google_sheet_name?.trim() || null : null
   };
-  const { data, error } = await client.from(tableName).insert([newUserData]).select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at").single();
+  const { data, error } = await client.from(tableName).insert([newUserData]).select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at").single();
   if (error) {
     logger.error({ error }, "Failed to insert user into Supabase");
     throw new Error(`\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
@@ -57485,15 +58030,18 @@ async function createSupabaseUser(input) {
     username: data.username,
     email: data.email,
     role: data.role,
+    admin_id: data.admin_id || null,
+    office_name: data.office_name || null,
     display_name: data.display_name,
     status: data.status || "active",
+    phone: data.phone || null,
     subscription_end_date: data.subscription_end_date || null,
     subscription_notes: data.subscription_notes || null,
-    plan_tier: data.plan_tier || plan_tier,
-    billing_cycle: data.billing_cycle || billing_cycle,
-    ai_quota_limit: data.ai_quota_limit ?? ai_quota_limit,
+    plan_tier: data.plan_tier,
+    billing_cycle: data.billing_cycle,
+    ai_quota_limit: data.ai_quota_limit,
     ai_usage_count: data.ai_usage_count ?? 0,
-    has_google_service: Boolean(sanitizedGoogleJson),
+    has_google_service: Boolean(encryptedGoogleJson),
     google_spreadsheet_id: data.google_spreadsheet_id,
     google_sheet_name: data.google_sheet_name,
     created_at: data.created_at
@@ -57503,23 +58051,23 @@ async function countActiveAdmins(excludeUserId) {
   const client = getSupabaseClient();
   if (!client) {
     const local = loadLocalUsers();
-    return local.filter((u) => u.role === "admin" && u.status === "active" && u.id !== excludeUserId).length;
+    return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
   }
   try {
     const tableName = env.supabaseTableName;
-    let query = client.from(tableName).select("id", { count: "exact", head: true }).eq("role", "admin").eq("status", "active");
+    let query = client.from(tableName).select("id", { count: "exact", head: true }).in("role", ["admin", "super_admin"]).eq("status", "active");
     if (excludeUserId) {
       query = query.neq("id", excludeUserId);
     }
     const { count, error } = await query;
     if (error || count === null) {
       const local = loadLocalUsers();
-      return local.filter((u) => u.role === "admin" && u.status === "active" && u.id !== excludeUserId).length;
+      return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
     }
     return count;
   } catch {
     const local = loadLocalUsers();
-    return local.filter((u) => u.role === "admin" && u.status === "active" && u.id !== excludeUserId).length;
+    return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
   }
 }
 async function deleteSupabaseUser(id) {
@@ -57530,7 +58078,7 @@ async function deleteSupabaseUser(id) {
     if (!userToDelete) {
       throw new Error("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.");
     }
-    if (userToDelete.role === "admin" && userToDelete.status === "active") {
+    if ((userToDelete.role === "admin" || userToDelete.role === "super_admin") && userToDelete.status === "active") {
       const otherAdmins = await countActiveAdmins(id);
       if (otherAdmins === 0) {
         throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u0636\u0645\u0627\u0646 \u0627\u0633\u062A\u0645\u0631\u0627\u0631\u064A\u0629 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645.");
@@ -57545,7 +58093,7 @@ async function deleteSupabaseUser(id) {
   invalidateUserGoogleCache(id);
   const tableName = env.supabaseTableName;
   const { data: targetUser } = await client.from(tableName).select("role, status").eq("id", id).maybeSingle();
-  if (targetUser && targetUser.role === "admin" && targetUser.status === "active") {
+  if (targetUser && (targetUser.role === "admin" || targetUser.role === "super_admin") && targetUser.status === "active") {
     const otherAdmins = await countActiveAdmins(id);
     if (otherAdmins === 0) {
       throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u0636\u0645\u0627\u0646 \u0627\u0633\u062A\u0645\u0631\u0627\u0631\u064A\u0629 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645.");
@@ -57562,22 +58110,20 @@ async function deleteSupabaseUser(id) {
 async function updateSupabaseUser(id, input) {
   const client = getSupabaseClient();
   if (input.role === "staff" || input.status === "suspended") {
-    let isCurrentlyActiveAdmin = false;
+    let isCurrentlyActiveSuper = false;
     if (!client) {
       const local = loadLocalUsers();
       const user = local.find((u) => u.id === id);
-      isCurrentlyActiveAdmin = user?.role === "admin" && user?.status === "active";
+      isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
     } else {
       const tableName2 = env.supabaseTableName;
       const { data: user } = await client.from(tableName2).select("role, status").eq("id", id).maybeSingle();
-      isCurrentlyActiveAdmin = user?.role === "admin" && user?.status === "active";
+      isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
     }
-    if (isCurrentlyActiveAdmin) {
+    if (isCurrentlyActiveSuper) {
       const remainingAdmins = await countActiveAdmins(id);
       if (remainingAdmins === 0) {
-        throw new Error(
-          input.role === "staff" ? "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0646\u0632\u064A\u0644 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0646\u0634\u0637 \u0625\u0644\u0649 \u0645\u062D\u0627\u0645\u064D. \u064A\u062C\u0628 \u062A\u0639\u064A\u064A\u0646 \u0645\u0634\u0631\u0641 \u0622\u062E\u0631 \u0623\u0648\u0644\u0627\u064B." : "\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u062C\u0628 \u0623\u0646 \u064A\u062A\u0648\u0641\u0631 \u0645\u0634\u0631\u0641 \u0641\u0639\u0651\u0627\u0644 \u0622\u062E\u0631 \u0623\u0648\u0644\u0627\u064B."
-        );
+        throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u064A\u0642\u0627\u0641 \u0623\u0648 \u062A\u0646\u0632\u064A\u0644 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629.");
       }
     }
   }
@@ -57599,27 +58145,33 @@ async function updateSupabaseUser(id, input) {
       user.password_hash = await import_bcryptjs.default.hash(input.password.trim(), 10);
     }
     if (input.role) user.role = input.role;
+    if (input.admin_id !== void 0) user.admin_id = input.admin_id;
+    if (input.office_name !== void 0) user.office_name = input.office_name ? input.office_name.trim() : null;
     if (input.display_name !== void 0) user.display_name = input.display_name.trim() || null;
     if (input.email !== void 0) user.email = input.email.trim() || null;
     if (input.phone !== void 0) user.phone = input.phone ? input.phone.trim() : null;
     if (input.status !== void 0) user.status = input.status;
     if (input.subscription_end_date !== void 0) user.subscription_end_date = input.subscription_end_date;
     if (input.subscription_notes !== void 0) user.subscription_notes = input.subscription_notes;
-    if (input.plan_tier !== void 0) {
-      user.plan_tier = input.plan_tier;
-      if (input.ai_quota_limit === void 0) {
-        user.ai_quota_limit = user.role === "admin" ? -1 : user.plan_tier === "pro" ? 300 : 50;
-      }
-    }
+    if (input.plan_tier !== void 0) user.plan_tier = input.plan_tier;
     if (input.billing_cycle !== void 0) user.billing_cycle = input.billing_cycle;
     if (input.ai_quota_limit !== void 0) user.ai_quota_limit = input.ai_quota_limit;
     if (input.ai_usage_count !== void 0) user.ai_usage_count = input.ai_usage_count;
     if (input.google_service_account_json !== void 0) {
-      user.google_service_account_json = sanitizeGoogleServiceJson(input.google_service_account_json);
-      user.has_google_service = Boolean(user.google_service_account_json);
+      if (!input.google_service_account_json) {
+        user.google_service_account_json = null;
+        user.has_google_service = false;
+      } else if (isEncrypted(input.google_service_account_json)) {
+        user.google_service_account_json = input.google_service_account_json;
+        user.has_google_service = true;
+      } else {
+        const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
+        user.google_service_account_json = sanitized ? encryptSecret(sanitized) : null;
+        user.has_google_service = Boolean(sanitized);
+      }
     }
-    if (input.google_spreadsheet_id !== void 0) user.google_spreadsheet_id = input.google_spreadsheet_id.trim() || null;
-    if (input.google_sheet_name !== void 0) user.google_sheet_name = input.google_sheet_name.trim() || null;
+    if (input.google_spreadsheet_id !== void 0) user.google_spreadsheet_id = input.google_spreadsheet_id ? input.google_spreadsheet_id.trim() : null;
+    if (input.google_sheet_name !== void 0) user.google_sheet_name = input.google_sheet_name ? input.google_sheet_name.trim() : null;
     saveLocalUsers(local);
     clearUserAuthCache(id);
     if (input.password && input.password.trim()) {
@@ -57630,6 +58182,8 @@ async function updateSupabaseUser(id, input) {
       username: user.username,
       email: user.email,
       role: user.role,
+      admin_id: user.admin_id,
+      office_name: user.office_name,
       display_name: user.display_name,
       status: user.status,
       phone: user.phone,
@@ -57668,8 +58222,11 @@ async function updateSupabaseUser(id, input) {
     updates.password_hash = await import_bcryptjs.default.hash(input.password.trim(), 10);
   }
   if (input.role) updates.role = input.role;
+  if (input.admin_id !== void 0) updates.admin_id = input.admin_id;
+  if (input.office_name !== void 0) updates.office_name = input.office_name ? input.office_name.trim() : null;
   if (input.display_name !== void 0) updates.display_name = input.display_name.trim() || null;
   if (input.email !== void 0) updates.email = input.email.trim() || null;
+  if (input.phone !== void 0) updates.phone = input.phone ? input.phone.trim() : null;
   if (input.status !== void 0) updates.status = input.status;
   if (input.subscription_end_date !== void 0) updates.subscription_end_date = input.subscription_end_date;
   if (input.subscription_notes !== void 0) updates.subscription_notes = input.subscription_notes?.trim() || null;
@@ -57678,19 +58235,24 @@ async function updateSupabaseUser(id, input) {
   if (input.ai_quota_limit !== void 0) updates.ai_quota_limit = input.ai_quota_limit;
   if (input.ai_usage_count !== void 0) updates.ai_usage_count = input.ai_usage_count;
   if (input.google_service_account_json !== void 0) {
-    updates.google_service_account_json = sanitizeGoogleServiceJson(input.google_service_account_json);
+    if (!input.google_service_account_json) {
+      updates.google_service_account_json = null;
+    } else {
+      const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
+      updates.google_service_account_json = sanitized ? encryptSecret(sanitized) : null;
+    }
   }
   if (input.google_spreadsheet_id !== void 0) {
-    updates.google_spreadsheet_id = input.google_spreadsheet_id.trim() || null;
+    updates.google_spreadsheet_id = input.google_spreadsheet_id ? input.google_spreadsheet_id.trim() : null;
   }
   if (input.google_sheet_name !== void 0) {
-    updates.google_sheet_name = input.google_sheet_name.trim() || null;
+    updates.google_sheet_name = input.google_sheet_name ? input.google_sheet_name.trim() : null;
   }
   if (Object.keys(updates).length === 0) {
     throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0639\u062F\u064A\u0644.");
   }
   invalidateUserGoogleCache(id);
-  const { data, error } = await client.from(tableName).update(updates).eq("id", id).select("id, username, email, role, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").single();
+  const { data, error } = await client.from(tableName).update(updates).eq("id", id).select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").single();
   if (error) {
     logger.error({ error, id }, "Failed to update user in Supabase");
     throw new Error(`\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
@@ -57704,38 +58266,22 @@ async function updateSupabaseUser(id, input) {
     username: data.username,
     email: data.email,
     role: data.role,
+    admin_id: data.admin_id || null,
+    office_name: data.office_name || null,
     display_name: data.display_name,
     status: data.status || "active",
+    phone: data.phone || null,
     subscription_end_date: data.subscription_end_date || null,
     subscription_notes: data.subscription_notes || null,
-    plan_tier: data.plan_tier || input.plan_tier || "plus",
-    billing_cycle: data.billing_cycle || input.billing_cycle || "annual",
-    ai_quota_limit: data.ai_quota_limit ?? 50,
+    plan_tier: data.plan_tier,
+    billing_cycle: data.billing_cycle,
+    ai_quota_limit: data.ai_quota_limit,
     ai_usage_count: data.ai_usage_count ?? 0,
     has_google_service: Boolean(data.google_service_account_json && data.google_service_account_json.trim().length > 10),
     google_spreadsheet_id: data.google_spreadsheet_id,
     google_sheet_name: data.google_sheet_name,
     created_at: data.created_at
   };
-}
-async function incrementUserAiUsage(userId) {
-  try {
-    const local = loadLocalUsers();
-    const index = local.findIndex((u) => u.id === userId || u.username === userId);
-    if (index !== -1) {
-      const u = local[index];
-      u.ai_usage_count = (u.ai_usage_count || 0) + 1;
-      saveLocalUsers(local);
-      return {
-        ai_usage_count: u.ai_usage_count,
-        ai_quota_limit: u.ai_quota_limit !== void 0 ? u.ai_quota_limit : u.plan_tier === "pro" ? 300 : 50,
-        plan_tier: u.plan_tier || "plus"
-      };
-    }
-  } catch (err) {
-    logger.warn({ err, userId }, "Failed to increment user AI usage");
-  }
-  return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
 }
 async function resetUserAiUsage(userId) {
   return updateSupabaseUser(userId, { ai_usage_count: 0 });
@@ -57749,7 +58295,20 @@ async function toggleUserStatus(id, explicitStatus) {
   const newStatus = explicitStatus || (target.status === "suspended" ? "active" : "suspended");
   return updateSupabaseUser(id, { status: newStatus });
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache;
+async function incrementUserAiUsage(userId) {
+  try {
+    const res = await checkAndIncrementOfficeAiUsage(userId);
+    return {
+      ai_usage_count: res.currentUsage,
+      ai_quota_limit: res.limit,
+      plan_tier: res.plan_tier
+    };
+  } catch (err) {
+    logger.warn({ err, userId }, "Failed to increment user AI usage");
+    return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
+  }
+}
+var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -57757,10 +58316,11 @@ var init_supabase_service = __esm({
     import_bcryptjs = __toESM(require_bcryptjs(), 1);
     import_fs3 = require("fs");
     import_path3 = require("path");
-    import_crypto = __toESM(require("crypto"), 1);
+    import_crypto2 = __toESM(require("crypto"), 1);
     init_src();
     init_env();
     init_logger();
+    init_encryption();
     _supabaseClient = null;
     _lastUrl = void 0;
     _lastKey = void 0;
@@ -57779,6 +58339,7 @@ var init_supabase_service = __esm({
     ALT_LOCAL_USERS_FILE = (0, import_path3.resolve)(process.cwd(), "local_users.json");
     TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
     _localUsersCache = null;
+    officeAiLocks = /* @__PURE__ */ new Map();
   }
 });
 
@@ -68495,22 +69056,22 @@ var require_crypto2 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto5 = require("crypto");
+    var crypto6 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto5.createHash("sha256").update(str).digest("base64");
+        return crypto6.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto5.randomBytes(count).toString("base64");
+        return crypto6.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto5.createVerify("RSA-SHA256");
+        const verifier = crypto6.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto5.createSign("RSA-SHA256");
+        const signer = crypto6.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -68528,7 +69089,7 @@ var require_crypto2 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto5.createHash("sha256").update(str).digest("hex");
+        return crypto6.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -68540,7 +69101,7 @@ var require_crypto2 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto5.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto6.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -69446,10 +70007,10 @@ var require_oauth2client = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto5 = (0, crypto_1.createCrypto)();
-        const randomString = crypto5.randomBytesBase64(96);
+        const crypto6 = (0, crypto_1.createCrypto)();
+        const randomString = crypto6.randomBytesBase64(96);
         const codeVerifier = randomString.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto5.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto6.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -69890,7 +70451,7 @@ var require_oauth2client = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto5 = (0, crypto_1.createCrypto)();
+        const crypto6 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -69903,7 +70464,7 @@ var require_oauth2client = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto5.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto6.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -69914,7 +70475,7 @@ var require_oauth2client = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto5.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto6.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -69931,7 +70492,7 @@ var require_oauth2client = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto5.verify(cert, signed, signature);
+        const verified = await crypto6.verify(cert, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt);
         }
@@ -70306,14 +70867,14 @@ var require_buffer_equal_constant_time = __commonJS({
 var require_jwa = __commonJS({
   "../../node_modules/.pnpm/jwa@2.0.1/node_modules/jwa/index.js"(exports2, module2) {
     var Buffer4 = require_safe_buffer().Buffer;
-    var crypto5 = require("crypto");
+    var crypto6 = require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util2 = require("util");
     var MSG_INVALID_ALGORITHM = '"%s" is not a valid algorithm.\n  Supported algorithms are:\n  "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512" and "none".';
     var MSG_INVALID_SECRET = "secret must be a string or buffer";
     var MSG_INVALID_VERIFIER_KEY = "key must be a string or a buffer";
     var MSG_INVALID_SIGNER_KEY = "key must be a string, a buffer or an object";
-    var supportsKeyObjects = typeof crypto5.createPublicKey === "function";
+    var supportsKeyObjects = typeof crypto6.createPublicKey === "function";
     if (supportsKeyObjects) {
       MSG_INVALID_VERIFIER_KEY += " or a KeyObject";
       MSG_INVALID_SECRET += "or a KeyObject";
@@ -70403,17 +70964,17 @@ var require_jwa = __commonJS({
       return function sign(thing, secret) {
         checkIsSecretKey(secret);
         thing = normalizeInput(thing);
-        var hmac = crypto5.createHmac("sha" + bits, secret);
+        var hmac = crypto6.createHmac("sha" + bits, secret);
         var sig = (hmac.update(thing), hmac.digest("base64"));
         return fromBase64(sig);
       };
     }
     var bufferEqual;
-    var timingSafeEqual = "timingSafeEqual" in crypto5 ? function timingSafeEqual2(a, b) {
+    var timingSafeEqual = "timingSafeEqual" in crypto6 ? function timingSafeEqual2(a, b) {
       if (a.byteLength !== b.byteLength) {
         return false;
       }
-      return crypto5.timingSafeEqual(a, b);
+      return crypto6.timingSafeEqual(a, b);
     } : function timingSafeEqual2(a, b) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
@@ -70430,7 +70991,7 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto5.createSign("RSA-SHA" + bits);
+        var signer = crypto6.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign(privateKey, "base64"));
         return fromBase64(sig);
       };
@@ -70440,7 +71001,7 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto5.createVerify("RSA-SHA" + bits);
+        var verifier = crypto6.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify(publicKey, signature, "base64");
       };
@@ -70449,11 +71010,11 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto5.createSign("RSA-SHA" + bits);
+        var signer = crypto6.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign({
           key: privateKey,
-          padding: crypto5.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto5.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto6.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto6.constants.RSA_PSS_SALTLEN_DIGEST
         }, "base64"));
         return fromBase64(sig);
       };
@@ -70463,12 +71024,12 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto5.createVerify("RSA-SHA" + bits);
+        var verifier = crypto6.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify({
           key: publicKey,
-          padding: crypto5.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto5.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto6.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto6.constants.RSA_PSS_SALTLEN_DIGEST
         }, signature, "base64");
       };
     }
@@ -73266,14 +73827,14 @@ var require_awsrequestsigner = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign(crypto5, key, msg) {
-      return await crypto5.signWithHmacSha256(key, msg);
+    async function sign(crypto6, key, msg) {
+      return await crypto6.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto5, key, dateStamp, region, serviceName) {
-      const kDate = await sign(crypto5, `AWS4${key}`, dateStamp);
-      const kRegion = await sign(crypto5, kDate, region);
-      const kService = await sign(crypto5, kRegion, serviceName);
-      const kSigning = await sign(crypto5, kService, "aws4_request");
+    async function getSigningKey(crypto6, key, dateStamp, region, serviceName) {
+      const kDate = await sign(crypto6, `AWS4${key}`, dateStamp);
+      const kRegion = await sign(crypto6, kDate, region);
+      const kService = await sign(crypto6, kRegion, serviceName);
+      const kSigning = await sign(crypto6, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -74987,24 +75548,24 @@ var require_googleauth = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto5 = (0, crypto_1.createCrypto)();
+        const crypto6 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign = await crypto5.sign(client.key, data);
+          const sign = await crypto6.sign(client.key, data);
           return sign;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto5, creds.client_email, data, endpoint);
+        return this.signBlob(crypto6, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto5, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto6, emailOrUniqueId, data, endpoint) {
         const url = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url.href,
           data: {
-            payload: crypto5.encodeBase64StringUtf8(data)
+            payload: crypto6.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -76523,10 +77084,10 @@ var require_v1 = __commonJS({
         context;
         sites;
         violatingSites;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.sites = new Resource$Sites(this.context);
           this.violatingSites = new Resource$Violatingsites(this.context);
@@ -76650,10 +77211,10 @@ var require_v12 = __commonJS({
       class Acceleratedmobilepageurl {
         context;
         ampUrls;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.ampUrls = new Resource$Ampurls(this.context);
         }
@@ -76741,10 +77302,10 @@ var require_v13 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -77628,10 +78189,10 @@ var require_v1beta1 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -78347,10 +78908,10 @@ var require_v14 = __commonJS({
         operations;
         organizations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accessPolicies = new Resource$Accesspolicies(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -79610,10 +80171,10 @@ var require_v1beta = __commonJS({
         context;
         accessPolicies;
         operations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accessPolicies = new Resource$Accesspolicies(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -80164,10 +80725,10 @@ var require_v15 = __commonJS({
       class Acmedns {
         context;
         acmeChallengeSets;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.acmeChallengeSets = new Resource$Acmechallengesets(this.context);
         }
@@ -80283,10 +80844,10 @@ var require_v16 = __commonJS({
       class Addressvalidation {
         context;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.v1 = new Resource$V1(this.context);
         }
@@ -80403,10 +80964,10 @@ var require_v1_2 = __commonJS({
         context;
         accounts;
         creatives;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.creatives = new Resource$Creatives(this.context);
@@ -80652,10 +81213,10 @@ var require_v1_3 = __commonJS({
         directDeals;
         performanceReport;
         pretargetingConfig;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.billingInfo = new Resource$Billinginfo(this.context);
@@ -81352,10 +81913,10 @@ var require_v1_4 = __commonJS({
         products;
         proposals;
         pubprofiles;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.billingInfo = new Resource$Billinginfo(this.context);
@@ -82613,10 +83174,10 @@ var require_v2beta1 = __commonJS({
         accounts;
         bidders;
         buyers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.bidders = new Resource$Bidders(this.context);
@@ -85416,10 +85977,10 @@ var require_v17 = __commonJS({
         context;
         sites;
         violatingSites;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.sites = new Resource$Sites(this.context);
           this.violatingSites = new Resource$Violatingsites(this.context);
@@ -85544,10 +86105,10 @@ var require_datatransfer_v1 = __commonJS({
         context;
         applications;
         transfers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.applications = new Resource$Applications(this.context);
           this.transfers = new Resource$Transfers(this.context);
@@ -85753,10 +86314,10 @@ var require_directory_v1 = __commonJS({
         twoStepVerification;
         users;
         verificationCodes;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.asps = new Resource$Asps(this.context);
           this.channels = new Resource$Channels(this.context);
@@ -89829,10 +90390,10 @@ var require_reports_v1 = __commonJS({
         customerUsageReports;
         entityUsageReports;
         userUsageReport;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.activities = new Resource$Activities(this.context);
           this.channels = new Resource$Channels(this.context);
@@ -90110,10 +90671,10 @@ var require_v18 = __commonJS({
       class Admob {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -90358,10 +90919,10 @@ var require_v1beta2 = __commonJS({
       class Admob {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -91100,10 +91661,10 @@ var require_v1_42 = __commonJS({
         reports;
         savedadstyles;
         urlchannels;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.adclients = new Resource$Adclients(this.context);
@@ -92479,10 +93040,10 @@ var require_v2 = __commonJS({
       class Adsense {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -93628,10 +94189,10 @@ var require_v4_1 = __commonJS({
         customchannels;
         reports;
         urlchannels;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.adclients = new Resource$Adclients(this.context);
@@ -94534,10 +95095,10 @@ var require_v19 = __commonJS({
       class Adsenseplatform {
         context;
         platforms;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.platforms = new Resource$Platforms(this.context);
         }
@@ -94924,10 +95485,10 @@ var require_v1alpha = __commonJS({
         context;
         accounts;
         platforms;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.platforms = new Resource$Platforms(this.context);
@@ -95630,10 +96191,10 @@ var require_v110 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -95979,10 +96540,10 @@ var require_v111 = __commonJS({
         projects;
         publishers;
         reasoningEngines;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.batchPredictionJobs = new Resource$Batchpredictionjobs(this.context);
           this.datasets = new Resource$Datasets(this.context);
@@ -115968,10 +116529,10 @@ var require_v1beta12 = __commonJS({
         projects;
         publishers;
         reasoningEngines;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.batchPredictionJobs = new Resource$Batchpredictionjobs(this.context);
           this.datasets = new Resource$Datasets(this.context);
@@ -141335,10 +141896,10 @@ var require_v112 = __commonJS({
         forecast;
         history;
         mapTypes;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.currentConditions = new Resource$Currentconditions(this.context);
           this.forecast = new Resource$Forecast(this.context);
@@ -141548,10 +142109,10 @@ var require_v1beta13 = __commonJS({
         context;
         alerts;
         v1beta1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.alerts = new Resource$Alerts(this.context);
           this.v1beta1 = new Resource$V1beta1(this.context);
@@ -141954,10 +142515,10 @@ var require_v113 = __commonJS({
       class Alloydb {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -143249,10 +143810,10 @@ var require_v1alpha2 = __commonJS({
       class Alloydb {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -144544,10 +145105,10 @@ var require_v1beta3 = __commonJS({
       class Alloydb {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -145880,10 +146441,10 @@ var require_v3 = __commonJS({
         metadata;
         provisioning;
         userDeletion;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.data = new Resource$Data(this.context);
           this.management = new Resource$Management(this.context);
@@ -148905,10 +149466,10 @@ var require_v1alpha3 = __commonJS({
         accounts;
         accountSummaries;
         properties;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.accountSummaries = new Resource$Accountsummaries(this.context);
@@ -154109,10 +154670,10 @@ var require_v1beta4 = __commonJS({
         accounts;
         accountSummaries;
         properties;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.accountSummaries = new Resource$Accountsummaries(this.context);
@@ -155912,10 +156473,10 @@ var require_v1alpha4 = __commonJS({
         context;
         properties;
         v1alpha;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.properties = new Resource$Properties(this.context);
           this.v1alpha = new Resource$V1alpha(this.context);
@@ -156126,10 +156687,10 @@ var require_v1beta5 = __commonJS({
       class Analyticsdata {
         context;
         properties;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.properties = new Resource$Properties(this.context);
         }
@@ -156530,10 +157091,10 @@ var require_v114 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -157684,10 +158245,10 @@ var require_v1beta14 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -158342,10 +158903,10 @@ var require_v4 = __commonJS({
         context;
         reports;
         userActivity;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.reports = new Resource$Reports(this.context);
           this.userActivity = new Resource$Useractivity(this.context);
@@ -158471,10 +159032,10 @@ var require_v115 = __commonJS({
         customers;
         operations;
         partners;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -159435,10 +159996,10 @@ var require_v116 = __commonJS({
         storelayoutpages;
         users;
         webapps;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.devices = new Resource$Devices(this.context);
           this.enrollmentTokens = new Resource$Enrollmenttokens(this.context);
@@ -161976,10 +162537,10 @@ var require_v117 = __commonJS({
         enterprises;
         provisioningInfo;
         signupUrls;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.enterprises = new Resource$Enterprises(this.context);
           this.provisioningInfo = new Resource$Provisioninginfo(this.context);
@@ -163203,10 +163764,10 @@ var require_v1_1 = __commonJS({
       class Androidpublisher {
         context;
         inapppurchases;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.inapppurchases = new Resource$Inapppurchases(this.context);
         }
@@ -163262,10 +163823,10 @@ var require_v118 = __commonJS({
     (function(androidpublisher_v12) {
       class Androidpublisher {
         context;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
         }
       }
@@ -163286,10 +163847,10 @@ var require_v22 = __commonJS({
       class Androidpublisher {
         context;
         purchases;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.purchases = new Resource$Purchases(this.context);
         }
@@ -163407,10 +163968,10 @@ var require_v32 = __commonJS({
         reviews;
         systemapks;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.applications = new Resource$Applications(this.context);
           this.apprecovery = new Resource$Apprecovery(this.context);
@@ -167896,10 +168457,10 @@ var require_v119 = __commonJS({
       class Apigateway {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -168873,10 +169434,10 @@ var require_v1beta6 = __commonJS({
       class Apigateway {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -169882,10 +170443,10 @@ var require_v120 = __commonJS({
       class Apigeeregistry {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -173097,10 +173658,10 @@ var require_v121 = __commonJS({
       class Apihub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -176008,10 +176569,10 @@ var require_v23 = __commonJS({
         keys;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.keys = new Resource$Keys(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -176371,10 +176932,10 @@ var require_v1alpha5 = __commonJS({
       class Apim {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -177175,10 +177736,10 @@ var require_v122 = __commonJS({
         context;
         apps;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.apps = new Resource$Apps(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -179013,10 +179574,10 @@ var require_v1alpha6 = __commonJS({
         context;
         apps;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.apps = new Resource$Apps(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -180003,10 +180564,10 @@ var require_v1beta7 = __commonJS({
         context;
         apps;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.apps = new Resource$Apps(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -182006,10 +182567,10 @@ var require_v123 = __commonJS({
       class Apphub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -183190,10 +183751,10 @@ var require_v1alpha7 = __commonJS({
       class Apphub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -184466,10 +185027,10 @@ var require_v124 = __commonJS({
       class Appsactivity {
         context;
         activities;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.activities = new Resource$Activities(this.context);
         }
@@ -184555,10 +185116,10 @@ var require_v1alpha1 = __commonJS({
         context;
         tables;
         workspaces;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.tables = new Resource$Tables(this.context);
           this.workspaces = new Resource$Workspaces(this.context);
@@ -184991,10 +185552,10 @@ var require_v125 = __commonJS({
       class Areainsights {
         context;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.v1 = new Resource$V1(this.context);
         }
@@ -185080,10 +185641,10 @@ var require_v126 = __commonJS({
       class Artifactregistry {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -187120,10 +187681,10 @@ var require_v1beta15 = __commonJS({
       class Artifactregistry {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -187935,10 +188496,10 @@ var require_v1beta22 = __commonJS({
       class Artifactregistry {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -188868,10 +189429,10 @@ var require_v127 = __commonJS({
       class Assuredworkloads {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -189455,10 +190016,10 @@ var require_v1beta16 = __commonJS({
       class Assuredworkloads {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -190045,10 +190606,10 @@ var require_v128 = __commonJS({
         context;
         bidders;
         buyers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.bidders = new Resource$Bidders(this.context);
           this.buyers = new Resource$Buyers(this.context);
@@ -191337,10 +191898,10 @@ var require_v1alpha8 = __commonJS({
         context;
         bidders;
         buyers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.bidders = new Resource$Bidders(this.context);
           this.buyers = new Resource$Buyers(this.context);
@@ -192817,10 +193378,10 @@ var require_v1beta8 = __commonJS({
       class Authorizedbuyersmarketplace {
         context;
         curators;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.curators = new Resource$Curators(this.context);
         }
@@ -193075,10 +193636,10 @@ var require_v129 = __commonJS({
       class Backupdr {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -194661,10 +195222,10 @@ var require_v130 = __commonJS({
       class Baremetalsolution {
         context;
         operations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
         }
@@ -194809,10 +195370,10 @@ var require_v1alpha12 = __commonJS({
       class Baremetalsolution {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -194917,10 +195478,10 @@ var require_v24 = __commonJS({
       class Baremetalsolution {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -196399,10 +196960,10 @@ var require_v131 = __commonJS({
       class Batch {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -196933,10 +197494,10 @@ var require_v132 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -198615,10 +199176,10 @@ var require_v1alpha9 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -201549,10 +202110,10 @@ var require_v133 = __commonJS({
       class Biglake {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -202101,10 +202662,10 @@ var require_v25 = __commonJS({
         rowAccessPolicies;
         tabledata;
         tables;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.datasets = new Resource$Datasets(this.context);
           this.jobs = new Resource$Jobs(this.context);
@@ -203627,10 +204188,10 @@ var require_v134 = __commonJS({
       class Bigqueryconnection {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -203917,10 +204478,10 @@ var require_v1beta17 = __commonJS({
       class Bigqueryconnection {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -204269,10 +204830,10 @@ var require_v135 = __commonJS({
       class Bigquerydatapolicy {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -204616,10 +205177,10 @@ var require_v136 = __commonJS({
       class Bigquerydatatransfer {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -205746,10 +206307,10 @@ var require_v137 = __commonJS({
       class Bigqueryreservation {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -206783,10 +207344,10 @@ var require_v1alpha22 = __commonJS({
       class Bigqueryreservation {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -207295,10 +207856,10 @@ var require_v1beta18 = __commonJS({
       class Bigqueryreservation {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -207978,10 +208539,10 @@ var require_v138 = __commonJS({
     (function(bigtableadmin_v12) {
       class Bigtableadmin {
         context;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
         }
       }
@@ -208003,10 +208564,10 @@ var require_v26 = __commonJS({
         context;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -210562,10 +211123,10 @@ var require_v139 = __commonJS({
       class Billingbudgets {
         context;
         billingAccounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.billingAccounts = new Resource$Billingaccounts(this.context);
         }
@@ -210753,10 +211314,10 @@ var require_v1beta19 = __commonJS({
       class Billingbudgets {
         context;
         billingAccounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.billingAccounts = new Resource$Billingaccounts(this.context);
         }
@@ -210977,10 +211538,10 @@ var require_v140 = __commonJS({
         context;
         projects;
         systempolicy;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.systempolicy = new Resource$Systempolicy(this.context);
@@ -211702,10 +212263,10 @@ var require_v1beta110 = __commonJS({
         context;
         projects;
         systempolicy;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.systempolicy = new Resource$Systempolicy(this.context);
@@ -212242,10 +212803,10 @@ var require_v141 = __commonJS({
       class Blockchainnodeengine {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -212662,10 +213223,10 @@ var require_v27 = __commonJS({
         pages;
         posts;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.blogs = new Resource$Blogs(this.context);
           this.comments = new Resource$Comments(this.context);
@@ -213003,10 +213564,10 @@ var require_v33 = __commonJS({
         posts;
         postUserInfos;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.blogs = new Resource$Blogs(this.context);
           this.blogUserInfos = new Resource$Bloguserinfos(this.context);
@@ -214125,10 +214686,10 @@ var require_v142 = __commonJS({
         promooffer;
         series;
         volumes;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.bookshelves = new Resource$Bookshelves(this.context);
           this.cloudloading = new Resource$Cloudloading(this.context);
@@ -215923,10 +216484,10 @@ var require_v143 = __commonJS({
       class Businessprofileperformance {
         context;
         locations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
         }
@@ -216106,10 +216667,10 @@ var require_v34 = __commonJS({
         events;
         freebusy;
         settings;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.acl = new Resource$Acl(this.context);
           this.calendarList = new Resource$Calendarlist(this.context);
@@ -217331,10 +217892,10 @@ var require_v144 = __commonJS({
       class Certificatemanager {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -218545,10 +219106,10 @@ var require_v145 = __commonJS({
         media;
         spaces;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customEmojis = new Resource$Customemojis(this.context);
           this.media = new Resource$Media(this.context);
@@ -219813,10 +220374,10 @@ var require_v1alpha10 = __commonJS({
         accounts;
         aisafety;
         media;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.aisafety = new Resource$Aisafety(this.context);
@@ -220393,10 +220954,10 @@ var require_v146 = __commonJS({
       class Chromemanagement {
         context;
         customers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
         }
@@ -221530,10 +222091,10 @@ var require_v147 = __commonJS({
         context;
         customers;
         media;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.media = new Resource$Media(this.context);
@@ -222063,10 +222624,10 @@ var require_v148 = __commonJS({
       class Chromeuxreport {
         context;
         records;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.records = new Resource$Records(this.context);
         }
@@ -222183,10 +222744,10 @@ var require_v28 = __commonJS({
         context;
         divisions;
         elections;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.divisions = new Resource$Divisions(this.context);
           this.elections = new Resource$Elections(this.context);
@@ -222373,10 +222934,10 @@ var require_v149 = __commonJS({
         invitations;
         registrations;
         userProfiles;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.courses = new Resource$Courses(this.context);
           this.invitations = new Resource$Invitations(this.context);
@@ -225533,10 +226094,10 @@ var require_v150 = __commonJS({
         operations;
         savedQueries;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.assets = new Resource$Assets(this.context);
           this.effectiveIamPolicies = new Resource$Effectiveiampolicies(this.context);
@@ -226327,10 +226888,10 @@ var require_v1beta111 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -226643,10 +227204,10 @@ var require_v1p1beta1 = __commonJS({
         context;
         iamPolicies;
         resources;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.iamPolicies = new Resource$Iampolicies(this.context);
           this.resources = new Resource$Resources(this.context);
@@ -226743,10 +227304,10 @@ var require_v1p4beta1 = __commonJS({
       class Cloudasset {
         context;
         v1p4beta1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.v1p4beta1 = new Resource$V1p4beta1(this.context);
         }
@@ -226833,10 +227394,10 @@ var require_v1p5beta1 = __commonJS({
       class Cloudasset {
         context;
         assets;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.assets = new Resource$Assets(this.context);
         }
@@ -226896,10 +227457,10 @@ var require_v1p7beta1 = __commonJS({
         context;
         operations;
         v1p7beta1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.v1p7beta1 = new Resource$V1p7beta1(this.context);
@@ -227051,10 +227612,10 @@ var require_v151 = __commonJS({
         organizations;
         projects;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.billingAccounts = new Resource$Billingaccounts(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -227685,10 +228246,10 @@ var require_v1beta9 = __commonJS({
         billingAccounts;
         skuGroups;
         skus;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.billingAccounts = new Resource$Billingaccounts(this.context);
           this.skuGroups = new Resource$Skugroups(this.context);
@@ -228330,10 +228891,10 @@ var require_v152 = __commonJS({
         operations;
         projects;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.githubDotComWebhook = new Resource$Githubdotcomwebhook(this.context);
           this.locations = new Resource$Locations(this.context);
@@ -230479,10 +231040,10 @@ var require_v1alpha13 = __commonJS({
       class Cloudbuild {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -230741,10 +231302,10 @@ var require_v1alpha23 = __commonJS({
       class Cloudbuild {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -231003,10 +231564,10 @@ var require_v1beta112 = __commonJS({
       class Cloudbuild {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -231265,10 +231826,10 @@ var require_v29 = __commonJS({
       class Cloudbuild {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -232043,10 +232604,10 @@ var require_v153 = __commonJS({
         integrators;
         operations;
         products;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.integrators = new Resource$Integrators(this.context);
@@ -234184,10 +234745,10 @@ var require_v154 = __commonJS({
       class Cloudcontrolspartner {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -234651,10 +235212,10 @@ var require_v1beta10 = __commonJS({
       class Cloudcontrolspartner {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -235151,10 +235712,10 @@ var require_v210 = __commonJS({
         context;
         controller;
         debugger;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.controller = new Resource$Controller(this.context);
           this.debugger = new Resource$Debugger(this.context);
@@ -235486,10 +236047,10 @@ var require_v155 = __commonJS({
       class Clouddeploy {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -237474,10 +238035,10 @@ var require_v1beta113 = __commonJS({
       class Clouderrorreporting {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -237927,10 +238488,10 @@ var require_v156 = __commonJS({
         context;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -238406,10 +238967,10 @@ var require_v1beta23 = __commonJS({
         context;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -238783,10 +239344,10 @@ var require_v211 = __commonJS({
       class Cloudfunctions {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -239451,10 +240012,10 @@ var require_v2alpha = __commonJS({
       class Cloudfunctions {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -240119,10 +240680,10 @@ var require_v2beta = __commonJS({
       class Cloudfunctions {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -240840,10 +241401,10 @@ var require_v157 = __commonJS({
         inboundSamlSsoProfiles;
         inboundSsoAssignments;
         policies;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.devices = new Resource$Devices(this.context);
@@ -242862,10 +243423,10 @@ var require_v1beta114 = __commonJS({
         inboundSsoAssignments;
         orgUnits;
         policies;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.devices = new Resource$Devices(this.context);
@@ -244956,10 +245517,10 @@ var require_v158 = __commonJS({
       class Cloudiot {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -245747,10 +246308,10 @@ var require_v159 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -247943,10 +248504,10 @@ var require_v1alpha11 = __commonJS({
       class Cloudlocationfinder {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -248170,10 +248731,10 @@ var require_v212 = __commonJS({
       class Cloudprofiler {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -248362,10 +248923,10 @@ var require_v160 = __commonJS({
         operations;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.liens = new Resource$Liens(this.context);
@@ -249567,10 +250128,10 @@ var require_v1beta115 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -250088,10 +250649,10 @@ var require_v213 = __commonJS({
         context;
         folders;
         operations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -250489,10 +251050,10 @@ var require_v2beta12 = __commonJS({
         context;
         folders;
         operations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -250898,10 +251459,10 @@ var require_v35 = __commonJS({
         tagBindings;
         tagKeys;
         tagValues;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.effectiveTags = new Resource$Effectivetags(this.context);
           this.folders = new Resource$Folders(this.context);
@@ -252946,10 +253507,10 @@ var require_v161 = __commonJS({
         context;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -253424,10 +253985,10 @@ var require_v1beta116 = __commonJS({
       class Cloudscheduler {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -253813,10 +254374,10 @@ var require_v162 = __commonJS({
         settings;
         stats;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.debug = new Resource$Debug(this.context);
           this.indexing = new Resource$Indexing(this.context);
@@ -255610,10 +256171,10 @@ var require_v163 = __commonJS({
         context;
         operations;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.users = new Resource$Users(this.context);
@@ -255929,10 +256490,10 @@ var require_v1alpha14 = __commonJS({
       class Cloudshell {
         context;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.users = new Resource$Users(this.context);
         }
@@ -256187,10 +256748,10 @@ var require_v214 = __commonJS({
         caseClassifications;
         cases;
         media;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.caseClassifications = new Resource$Caseclassifications(this.context);
           this.cases = new Resource$Cases(this.context);
@@ -256646,10 +257207,10 @@ var require_v2beta2 = __commonJS({
         caseClassifications;
         cases;
         media;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.caseClassifications = new Resource$Caseclassifications(this.context);
           this.cases = new Resource$Cases(this.context);
@@ -257225,10 +257786,10 @@ var require_v215 = __commonJS({
       class Cloudtasks {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -257915,10 +258476,10 @@ var require_v2beta22 = __commonJS({
         context;
         api;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.api = new Resource$Api(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -258771,10 +259332,10 @@ var require_v2beta3 = __commonJS({
       class Cloudtasks {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -259497,10 +260058,10 @@ var require_v164 = __commonJS({
       class Cloudtrace {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -259628,10 +260189,10 @@ var require_v216 = __commonJS({
       class Cloudtrace {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -259738,10 +260299,10 @@ var require_v2beta13 = __commonJS({
       class Cloudtrace {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -259966,10 +260527,10 @@ var require_v165 = __commonJS({
       class Composer {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -260931,10 +261492,10 @@ var require_v1beta117 = __commonJS({
       class Composer {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -262057,10 +262618,10 @@ var require_alpha = __commonJS({
         zoneQueuedResources;
         zones;
         zoneVmExtensionPolicies;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.acceleratorTypes = new Resource$Acceleratortypes(this.context);
           this.addresses = new Resource$Addresses(this.context);
@@ -295334,10 +295895,10 @@ var require_beta = __commonJS({
         wireGroups;
         zoneOperations;
         zones;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.acceleratorTypes = new Resource$Acceleratortypes(this.context);
           this.addresses = new Resource$Addresses(this.context);
@@ -325220,10 +325781,10 @@ var require_v166 = __commonJS({
         vpnTunnels;
         zoneOperations;
         zones;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.acceleratorTypes = new Resource$Acceleratortypes(this.context);
           this.addresses = new Resource$Addresses(this.context);
@@ -351133,10 +351694,10 @@ var require_v167 = __commonJS({
       class Config {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -352353,10 +352914,10 @@ var require_v168 = __commonJS({
       class Connectors {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -354836,10 +355397,10 @@ var require_v217 = __commonJS({
       class Connectors {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -355524,10 +356085,10 @@ var require_v1alpha15 = __commonJS({
       class Contactcenteraiplatform {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -355970,10 +356531,10 @@ var require_v169 = __commonJS({
       class Contactcenterinsights {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -361297,10 +361858,10 @@ var require_v170 = __commonJS({
       class Container {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -363498,10 +364059,10 @@ var require_v1beta118 = __commonJS({
       class Container {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -365761,10 +366322,10 @@ var require_v171 = __commonJS({
       class Containeranalysis {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -367195,10 +367756,10 @@ var require_v1alpha16 = __commonJS({
         context;
         projects;
         providers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.providers = new Resource$Providers(this.context);
@@ -368288,10 +368849,10 @@ var require_v1beta119 = __commonJS({
       class Containeranalysis {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -369847,10 +370408,10 @@ var require_v2_1 = __commonJS({
         returnpolicyonline;
         shippingsettings;
         shoppingadsprogram;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.accountstatuses = new Resource$Accountstatuses(this.context);
@@ -374217,10 +374778,10 @@ var require_v218 = __commonJS({
         products;
         productstatuses;
         shippingsettings;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.accountstatuses = new Resource$Accountstatuses(this.context);
@@ -376886,10 +377447,10 @@ var require_v172 = __commonJS({
       class Contentwarehouse {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -378097,10 +378658,10 @@ var require_v173 = __commonJS({
       class Css {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -378582,10 +379143,10 @@ var require_v174 = __commonJS({
       class Customsearch {
         context;
         cse;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.cse = new Resource$Cse(this.context);
         }
@@ -378713,10 +379274,10 @@ var require_v175 = __commonJS({
         entries;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.catalog = new Resource$Catalog(this.context);
           this.entries = new Resource$Entries(this.context);
@@ -381009,10 +381570,10 @@ var require_v1beta120 = __commonJS({
         catalog;
         entries;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.catalog = new Resource$Catalog(this.context);
           this.entries = new Resource$Entries(this.context);
@@ -382829,10 +383390,10 @@ var require_v1b3 = __commonJS({
       class Dataflow {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -384292,10 +384853,10 @@ var require_v1beta121 = __commonJS({
       class Dataform {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -386601,10 +387162,10 @@ var require_v176 = __commonJS({
       class Datafusion {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -387248,10 +387809,10 @@ var require_v1beta122 = __commonJS({
       class Datafusion {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -388116,10 +388677,10 @@ var require_v1beta123 = __commonJS({
       class Datalabeling {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -389738,10 +390299,10 @@ var require_v177 = __commonJS({
       class Datalineage {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -390422,10 +390983,10 @@ var require_v178 = __commonJS({
       class Datamigration {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -392536,10 +393097,10 @@ var require_v1beta124 = __commonJS({
       class Datamigration {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -393506,10 +394067,10 @@ var require_v179 = __commonJS({
       class Datapipelines {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -393833,10 +394394,10 @@ var require_v180 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -400296,10 +400857,10 @@ var require_v181 = __commonJS({
         archiveJobs;
         authorization;
         portabilityArchive;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accessType = new Resource$Accesstype(this.context);
           this.archiveJobs = new Resource$Archivejobs(this.context);
@@ -400535,10 +401096,10 @@ var require_v1beta11 = __commonJS({
         archiveJobs;
         authorization;
         portabilityArchive;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accessType = new Resource$Accesstype(this.context);
           this.archiveJobs = new Resource$Archivejobs(this.context);
@@ -400803,10 +401364,10 @@ var require_v182 = __commonJS({
       class Dataproc {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -404849,10 +405410,10 @@ var require_v1beta24 = __commonJS({
       class Dataproc {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -406879,10 +407440,10 @@ var require_v183 = __commonJS({
       class Datastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -407469,10 +408030,10 @@ var require_v1beta125 = __commonJS({
       class Datastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -407561,10 +408122,10 @@ var require_v1beta32 = __commonJS({
       class Datastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -407870,10 +408431,10 @@ var require_v184 = __commonJS({
       class Datastream {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -408925,10 +409486,10 @@ var require_v1alpha17 = __commonJS({
       class Datastream {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -409988,10 +410549,10 @@ var require_alpha2 = __commonJS({
         resources;
         typeProviders;
         types;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.compositeTypes = new Resource$Compositetypes(this.context);
           this.deployments = new Resource$Deployments(this.context);
@@ -411062,10 +411623,10 @@ var require_v219 = __commonJS({
         operations;
         resources;
         types;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.deployments = new Resource$Deployments(this.context);
           this.manifests = new Resource$Manifests(this.context);
@@ -411672,10 +412233,10 @@ var require_v2beta4 = __commonJS({
         resources;
         typeProviders;
         types;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.compositeTypes = new Resource$Compositetypes(this.context);
           this.deployments = new Resource$Deployments(this.context);
@@ -412749,10 +413310,10 @@ var require_v185 = __commonJS({
       class Developerconnect {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -414130,10 +414691,10 @@ var require_v3_3 = __commonJS({
         userRolePermissions;
         userRoles;
         videoFormats;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accountActiveAdSummaries = new Resource$Accountactiveadsummaries(this.context);
           this.accountPermissionGroups = new Resource$Accountpermissiongroups(this.context);
@@ -420629,10 +421190,10 @@ var require_v3_4 = __commonJS({
         userRolePermissions;
         userRoles;
         videoFormats;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accountActiveAdSummaries = new Resource$Accountactiveadsummaries(this.context);
           this.accountPermissionGroups = new Resource$Accountpermissiongroups(this.context);
@@ -427105,10 +427666,10 @@ var require_v3_5 = __commonJS({
       class Dfareporting {
         context;
         media;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
         }
@@ -427234,10 +427795,10 @@ var require_v42 = __commonJS({
         userRolePermissions;
         userRoles;
         videoFormats;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accountActiveAdSummaries = new Resource$Accountactiveadsummaries(this.context);
           this.accountPermissionGroups = new Resource$Accountpermissiongroups(this.context);
@@ -434335,10 +434896,10 @@ var require_v220 = __commonJS({
       class Dialogflow {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -443043,10 +443604,10 @@ var require_v2beta14 = __commonJS({
       class Dialogflow {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -451325,10 +451886,10 @@ var require_v36 = __commonJS({
       class Dialogflow {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -456367,10 +456928,10 @@ var require_v3beta1 = __commonJS({
       class Dialogflow {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -461581,10 +462142,10 @@ var require_v186 = __commonJS({
         context;
         assetlinks;
         statements;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.assetlinks = new Resource$Assetlinks(this.context);
           this.statements = new Resource$Statements(this.context);
@@ -461738,10 +462299,10 @@ var require_v187 = __commonJS({
       class Discovery {
         context;
         apis;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.apis = new Resource$Apis(this.context);
         }
@@ -461858,10 +462419,10 @@ var require_v188 = __commonJS({
         context;
         media;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -469159,10 +469720,10 @@ var require_v1alpha18 = __commonJS({
         context;
         media;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -478623,10 +479184,10 @@ var require_v1beta20 = __commonJS({
         context;
         media;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -486859,10 +487420,10 @@ var require_v189 = __commonJS({
         sdfdownloadtasks;
         targetingTypes;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.advertisers = new Resource$Advertisers(this.context);
           this.combinedAudiences = new Resource$Combinedaudiences(this.context);
@@ -491690,10 +492251,10 @@ var require_v1beta21 = __commonJS({
         media;
         sdfdownloadtask;
         sdfdownloadtasks;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.sdfdownloadtask = new Resource$Sdfdownloadtask(this.context);
@@ -491844,10 +492405,10 @@ var require_v1beta25 = __commonJS({
         context;
         media;
         sdfdownloadtasks;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.sdfdownloadtasks = new Resource$Sdfdownloadtasks(this.context);
@@ -491952,10 +492513,10 @@ var require_v1dev = __commonJS({
         context;
         media;
         sdfdownloadtasks;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.sdfdownloadtasks = new Resource$Sdfdownloadtasks(this.context);
@@ -492072,10 +492633,10 @@ var require_v221 = __commonJS({
         sdfdownloadtasks;
         targetingTypes;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.advertisers = new Resource$Advertisers(this.context);
           this.combinedAudiences = new Resource$Combinedaudiences(this.context);
@@ -497362,10 +497923,10 @@ var require_v37 = __commonJS({
         sdfdownloadtasks;
         targetingTypes;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.advertisers = new Resource$Advertisers(this.context);
           this.combinedAudiences = new Resource$Combinedaudiences(this.context);
@@ -502757,10 +503318,10 @@ var require_v43 = __commonJS({
         sdfuploadtasks;
         targetingTypes;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.advertisers = new Resource$Advertisers(this.context);
           this.combinedAudiences = new Resource$Combinedaudiences(this.context);
@@ -508244,10 +508805,10 @@ var require_v222 = __commonJS({
         locations;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.infoTypes = new Resource$Infotypes(this.context);
           this.locations = new Resource$Locations(this.context);
@@ -513036,10 +513597,10 @@ var require_v190 = __commonJS({
         resourceRecordSets;
         responsePolicies;
         responsePolicyRules;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.changes = new Resource$Changes(this.context);
           this.dnsKeys = new Resource$Dnskeys(this.context);
@@ -514340,10 +514901,10 @@ var require_v1beta26 = __commonJS({
         resourceRecordSets;
         responsePolicies;
         responsePolicyRules;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.changes = new Resource$Changes(this.context);
           this.dnsKeys = new Resource$Dnskeys(this.context);
@@ -515644,10 +516205,10 @@ var require_v223 = __commonJS({
         resourceRecordSets;
         responsePolicies;
         responsePolicyRules;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.changes = new Resource$Changes(this.context);
           this.dnsKeys = new Resource$Dnskeys(this.context);
@@ -516859,10 +517420,10 @@ var require_v2beta15 = __commonJS({
         policies;
         projects;
         resourceRecordSets;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.changes = new Resource$Changes(this.context);
           this.dnsKeys = new Resource$Dnskeys(this.context);
@@ -517590,10 +518151,10 @@ var require_v191 = __commonJS({
       class Docs {
         context;
         documents;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.documents = new Resource$Documents(this.context);
         }
@@ -517740,10 +518301,10 @@ var require_v192 = __commonJS({
         context;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -518782,10 +519343,10 @@ var require_v1beta27 = __commonJS({
       class Documentai {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -519039,10 +519600,10 @@ var require_v1beta33 = __commonJS({
       class Documentai {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -520290,10 +520851,10 @@ var require_v193 = __commonJS({
       class Domains {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -521189,10 +521750,10 @@ var require_v1alpha24 = __commonJS({
       class Domains {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -522088,10 +522649,10 @@ var require_v1beta126 = __commonJS({
       class Domains {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -523029,10 +523590,10 @@ var require_v194 = __commonJS({
         ip;
         nameserver;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.autnum = new Resource$Autnum(this.context);
           this.domain = new Resource$Domain(this.context);
@@ -523429,10 +523990,10 @@ var require_v1_12 = __commonJS({
         context;
         queries;
         reports;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.queries = new Resource$Queries(this.context);
           this.reports = new Resource$Reports(this.context);
@@ -523641,10 +524202,10 @@ var require_v195 = __commonJS({
     (function(doubleclickbidmanager_v12) {
       class Doubleclickbidmanager {
         context;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
         }
       }
@@ -523665,10 +524226,10 @@ var require_v224 = __commonJS({
       class Doubleclickbidmanager {
         context;
         queries;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.queries = new Resource$Queries(this.context);
         }
@@ -523955,10 +524516,10 @@ var require_v225 = __commonJS({
         conversion;
         reports;
         savedColumns;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.conversion = new Resource$Conversion(this.context);
           this.reports = new Resource$Reports(this.context);
@@ -524387,10 +524948,10 @@ var require_v226 = __commonJS({
         replies;
         revisions;
         teamdrives;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.about = new Resource$About(this.context);
           this.apps = new Resource$Apps(this.context);
@@ -526757,10 +527318,10 @@ var require_v38 = __commonJS({
         replies;
         revisions;
         teamdrives;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.about = new Resource$About(this.context);
           this.accessproposals = new Resource$Accessproposals(this.context);
@@ -528569,10 +529130,10 @@ var require_v227 = __commonJS({
       class Driveactivity {
         context;
         activity;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.activity = new Resource$Activity(this.context);
         }
@@ -528660,10 +529221,10 @@ var require_v228 = __commonJS({
         labels;
         limits;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.labels = new Resource$Labels(this.context);
           this.limits = new Resource$Limits(this.context);
@@ -529535,10 +530096,10 @@ var require_v2beta5 = __commonJS({
         labels;
         limits;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.labels = new Resource$Labels(this.context);
           this.limits = new Resource$Limits(this.context);
@@ -530442,10 +531003,10 @@ var require_v196 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -531174,10 +531735,10 @@ var require_v197 = __commonJS({
       class Eventarc {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -533375,10 +533936,10 @@ var require_v1beta127 = __commonJS({
       class Eventarc {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -533887,10 +534448,10 @@ var require_v1alpha19 = __commonJS({
         context;
         claims;
         pages;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.claims = new Resource$Claims(this.context);
           this.pages = new Resource$Pages(this.context);
@@ -534164,10 +534725,10 @@ var require_v198 = __commonJS({
       class Fcm {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -534262,10 +534823,10 @@ var require_v1beta128 = __commonJS({
       class Fcmdata {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -534369,10 +534930,10 @@ var require_v199 = __commonJS({
       class File4 {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -535166,10 +535727,10 @@ var require_v1beta129 = __commonJS({
       class File4 {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -536186,10 +536747,10 @@ var require_v1beta130 = __commonJS({
         availableProjects;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.availableProjects = new Resource$Availableprojects(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -537427,10 +537988,10 @@ var require_v1100 = __commonJS({
         jwks;
         oauthClients;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.jwks = new Resource$Jwks(this.context);
           this.oauthClients = new Resource$Oauthclients(this.context);
@@ -539037,10 +539598,10 @@ var require_v1beta28 = __commonJS({
         jwks;
         oauthClients;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.jwks = new Resource$Jwks(this.context);
           this.oauthClients = new Resource$Oauthclients(this.context);
@@ -540837,10 +541398,10 @@ var require_v1101 = __commonJS({
         context;
         media;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -541713,10 +542274,10 @@ var require_v1alpha20 = __commonJS({
         context;
         apps;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.apps = new Resource$Apps(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -542505,10 +543066,10 @@ var require_v1102 = __commonJS({
       class Firebaseapphosting {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -543350,10 +543911,10 @@ var require_v1beta29 = __commonJS({
       class Firebaseapphosting {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -544227,10 +544788,10 @@ var require_v1beta30 = __commonJS({
       class Firebasedatabase {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -544514,10 +545075,10 @@ var require_v1103 = __commonJS({
       class Firebasedataconnect {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -545341,10 +545902,10 @@ var require_v1beta31 = __commonJS({
       class Firebasedataconnect {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -546202,10 +546763,10 @@ var require_v1104 = __commonJS({
         managedShortLinks;
         shortLinks;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.managedShortLinks = new Resource$Managedshortlinks(this.context);
           this.shortLinks = new Resource$Shortlinks(this.context);
@@ -546428,10 +546989,10 @@ var require_v1105 = __commonJS({
         context;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -546646,10 +547207,10 @@ var require_v1beta131 = __commonJS({
         context;
         projects;
         sites;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.sites = new Resource$Sites(this.context);
@@ -548842,10 +549403,10 @@ var require_v1106 = __commonJS({
       class Firebaseml {
         context;
         operations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
         }
@@ -548964,10 +549525,10 @@ var require_v1beta210 = __commonJS({
       class Firebaseml {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -549224,10 +549785,10 @@ var require_v2beta6 = __commonJS({
       class Firebaseml {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -549410,10 +549971,10 @@ var require_v1107 = __commonJS({
       class Firebaserules {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -549817,10 +550378,10 @@ var require_v1beta34 = __commonJS({
       class Firebasestorage {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -550104,10 +550665,10 @@ var require_v1108 = __commonJS({
       class Firestore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -551876,10 +552437,10 @@ var require_v1beta132 = __commonJS({
       class Firestore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -552625,10 +553186,10 @@ var require_v1beta211 = __commonJS({
       class Firestore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -553000,10 +553561,10 @@ var require_v1109 = __commonJS({
       class Fitness {
         context;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.users = new Resource$Users(this.context);
         }
@@ -553494,10 +554055,10 @@ var require_v1110 = __commonJS({
       class Forms {
         context;
         forms;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.forms = new Resource$Forms(this.context);
         }
@@ -553883,10 +554444,10 @@ var require_v1111 = __commonJS({
         scores;
         snapshots;
         stats;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accesstokens = new Resource$Accesstokens(this.context);
           this.achievementDefinitions = new Resource$Achievementdefinitions(this.context);
@@ -555209,10 +555770,10 @@ var require_v1configuration = __commonJS({
         context;
         achievementConfigurations;
         leaderboardConfigurations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.achievementConfigurations = new Resource$Achievementconfigurations(this.context);
           this.leaderboardConfigurations = new Resource$Leaderboardconfigurations(this.context);
@@ -555580,10 +556141,10 @@ var require_v1management = __commonJS({
         events;
         players;
         scores;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.achievements = new Resource$Achievements(this.context);
           this.applications = new Resource$Applications(this.context);
@@ -556211,10 +556772,10 @@ var require_v1112 = __commonJS({
       class Gameservices {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -556531,10 +557092,10 @@ var require_v1beta35 = __commonJS({
       class Gameservices {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -556881,10 +557442,10 @@ var require_v1113 = __commonJS({
     (function(genomics_v12) {
       class Genomics {
         context;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
         }
       }
@@ -556906,10 +557467,10 @@ var require_v1alpha25 = __commonJS({
         context;
         operations;
         pipelines;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.pipelines = new Resource$Pipelines(this.context);
@@ -557238,10 +557799,10 @@ var require_v2alpha1 = __commonJS({
         pipelines;
         projects;
         workers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.pipelines = new Resource$Pipelines(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -557515,10 +558076,10 @@ var require_v1114 = __commonJS({
       class Gkebackup {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -559573,10 +560134,10 @@ var require_v1115 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -561522,10 +562083,10 @@ var require_v1alpha21 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -563590,10 +564151,10 @@ var require_v1alpha26 = __commonJS({
       class Gkehub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -564132,10 +564693,10 @@ var require_v1beta36 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -566080,10 +566641,10 @@ var require_v1beta133 = __commonJS({
       class Gkehub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -566649,10 +567210,10 @@ var require_v229 = __commonJS({
       class Gkehub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -567017,10 +567578,10 @@ var require_v2alpha2 = __commonJS({
       class Gkehub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -567385,10 +567946,10 @@ var require_v2beta7 = __commonJS({
       class Gkehub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -567815,10 +568376,10 @@ var require_v1116 = __commonJS({
       class Gkeonprem {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -570370,10 +570931,10 @@ var require_v1117 = __commonJS({
       class Gmail {
         context;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.users = new Resource$Users(this.context);
         }
@@ -572940,10 +573501,10 @@ var require_v1118 = __commonJS({
       class Gmailpostmastertools {
         context;
         domains;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.domains = new Resource$Domains(this.context);
         }
@@ -573101,10 +573662,10 @@ var require_v1beta134 = __commonJS({
       class Gmailpostmastertools {
         context;
         domains;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.domains = new Resource$Domains(this.context);
         }
@@ -573294,10 +573855,10 @@ var require_v1119 = __commonJS({
       class Groupsmigration {
         context;
         archive;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.archive = new Resource$Archive(this.context);
         }
@@ -573384,10 +573945,10 @@ var require_v1120 = __commonJS({
       class Groupssettings {
         context;
         groups;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.groups = new Resource$Groups(this.context);
         }
@@ -573533,10 +574094,10 @@ var require_v1121 = __commonJS({
       class Healthcare {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -578350,10 +578911,10 @@ var require_v1beta135 = __commonJS({
       class Healthcare {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -584007,10 +584568,10 @@ var require_v1122 = __commonJS({
         context;
         agentUsers;
         devices;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.agentUsers = new Resource$Agentusers(this.context);
           this.devices = new Resource$Devices(this.context);
@@ -584229,10 +584790,10 @@ var require_v1123 = __commonJS({
         permissions;
         projects;
         roles;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.iamPolicies = new Resource$Iampolicies(this.context);
           this.locations = new Resource$Locations(this.context);
@@ -588462,10 +589023,10 @@ var require_v230 = __commonJS({
       class Iam {
         context;
         policies;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.policies = new Resource$Policies(this.context);
         }
@@ -588683,10 +589244,10 @@ var require_v2beta8 = __commonJS({
       class Iam {
         context;
         policies;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.policies = new Resource$Policies(this.context);
         }
@@ -588942,10 +589503,10 @@ var require_v1124 = __commonJS({
         context;
         locations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -589256,10 +589817,10 @@ var require_v1125 = __commonJS({
         context;
         projects;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.v1 = new Resource$V1(this.context);
@@ -589911,10 +590472,10 @@ var require_v1beta136 = __commonJS({
       class Iap {
         context;
         v1beta1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.v1beta1 = new Resource$V1beta1(this.context);
         }
@@ -590066,10 +590627,10 @@ var require_v1alpha27 = __commonJS({
         context;
         ideas;
         platforms;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.ideas = new Resource$Ideas(this.context);
           this.platforms = new Resource$Platforms(this.context);
@@ -590334,10 +590895,10 @@ var require_v1beta37 = __commonJS({
       class Ideahub {
         context;
         platforms;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.platforms = new Resource$Platforms(this.context);
         }
@@ -590600,10 +591161,10 @@ var require_v231 = __commonJS({
         defaultSupportedIdps;
         projects;
         v2;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.defaultSupportedIdps = new Resource$Defaultsupportedidps(this.context);
@@ -592246,10 +592807,10 @@ var require_v39 = __commonJS({
       class Identitytoolkit {
         context;
         relyingparty;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.relyingparty = new Resource$Relyingparty(this.context);
         }
@@ -592910,10 +593471,10 @@ var require_v1126 = __commonJS({
       class Ids {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -593326,10 +593887,10 @@ var require_v310 = __commonJS({
       class Indexing {
         context;
         urlNotifications;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.urlNotifications = new Resource$Urlnotifications(this.context);
         }
@@ -593447,10 +594008,10 @@ var require_v1alpha28 = __commonJS({
         callback;
         connectorPlatformRegions;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.callback = new Resource$Callback(this.context);
           this.connectorPlatformRegions = new Resource$Connectorplatformregions(this.context);
@@ -596205,10 +596766,10 @@ var require_v232 = __commonJS({
         companies;
         jobs;
         v2;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.companies = new Resource$Companies(this.context);
           this.jobs = new Resource$Jobs(this.context);
@@ -596755,10 +597316,10 @@ var require_v311 = __commonJS({
       class Jobs {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -597264,10 +597825,10 @@ var require_v3p1beta1 = __commonJS({
       class Jobs {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -597812,10 +598373,10 @@ var require_v44 = __commonJS({
       class Jobs {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -598622,10 +599183,10 @@ var require_v1127 = __commonJS({
         context;
         media;
         notes;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.notes = new Resource$Notes(this.context);
@@ -598908,10 +599469,10 @@ var require_v1128 = __commonJS({
       class Kgsearch {
         context;
         entities;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.entities = new Resource$Entities(this.context);
         }
@@ -598998,10 +599559,10 @@ var require_v1129 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -599200,10 +599761,10 @@ var require_v1130 = __commonJS({
       class Language {
         context;
         documents;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.documents = new Resource$Documents(this.context);
         }
@@ -599442,10 +600003,10 @@ var require_v1beta137 = __commonJS({
       class Language {
         context;
         documents;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.documents = new Resource$Documents(this.context);
         }
@@ -599590,10 +600151,10 @@ var require_v1beta212 = __commonJS({
       class Language {
         context;
         documents;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.documents = new Resource$Documents(this.context);
         }
@@ -599832,10 +600393,10 @@ var require_v233 = __commonJS({
       class Language {
         context;
         documents;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.documents = new Resource$Documents(this.context);
         }
@@ -600056,10 +600617,10 @@ var require_v1131 = __commonJS({
       class Libraryagent {
         context;
         shelves;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.shelves = new Resource$Shelves(this.context);
         }
@@ -600304,10 +600865,10 @@ var require_v1132 = __commonJS({
       class Licensing {
         context;
         licenseAssignments;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.licenseAssignments = new Resource$Licenseassignments(this.context);
         }
@@ -600573,10 +601134,10 @@ var require_v2beta9 = __commonJS({
       class Lifesciences {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -600840,10 +601401,10 @@ var require_v1133 = __commonJS({
         context;
         accountReports;
         detailedLeadReports;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accountReports = new Resource$Accountreports(this.context);
           this.detailedLeadReports = new Resource$Detailedleadreports(this.context);
@@ -600977,10 +601538,10 @@ var require_v234 = __commonJS({
         projects;
         sinks;
         v2;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.billingAccounts = new Resource$Billingaccounts(this.context);
           this.entries = new Resource$Entries(this.context);
@@ -609204,10 +609765,10 @@ var require_v1134 = __commonJS({
       class Looker {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -609869,10 +610430,10 @@ var require_v1135 = __commonJS({
       class Managedidentities {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -611314,10 +611875,10 @@ var require_v1alpha110 = __commonJS({
       class Managedidentities {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -612759,10 +613320,10 @@ var require_v1beta138 = __commonJS({
       class Managedidentities {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -614241,10 +614802,10 @@ var require_v1136 = __commonJS({
       class Managedkafka {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -617240,10 +617801,10 @@ var require_v1137 = __commonJS({
       class Manufacturers {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -617566,10 +618127,10 @@ var require_v1alpha29 = __commonJS({
       class Marketingplatformadmin {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -617785,10 +618346,10 @@ var require_v235 = __commonJS({
         context;
         conferenceRecords;
         spaces;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.conferenceRecords = new Resource$Conferencerecords(this.context);
           this.spaces = new Resource$Spaces(this.context);
@@ -618377,10 +618938,10 @@ var require_v1138 = __commonJS({
       class Memcache {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -618886,10 +619447,10 @@ var require_v1beta213 = __commonJS({
       class Memcache {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -619458,10 +620019,10 @@ var require_accounts_v1 = __commonJS({
         context;
         accounts;
         termsOfService;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.termsOfService = new Resource$Termsofservice(this.context);
@@ -621779,10 +622340,10 @@ var require_accounts_v1beta = __commonJS({
         context;
         accounts;
         termsOfService;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.termsOfService = new Resource$Termsofservice(this.context);
@@ -624129,10 +624690,10 @@ var require_conversions_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -624350,10 +624911,10 @@ var require_conversions_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -624571,10 +625132,10 @@ var require_datasources_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -624831,10 +625392,10 @@ var require_datasources_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -625091,10 +625652,10 @@ var require_inventories_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -625330,10 +625891,10 @@ var require_inventories_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -625570,10 +626131,10 @@ var require_issueresolution_v1 = __commonJS({
         context;
         accounts;
         issueresolution;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.issueresolution = new Resource$Issueresolution(this.context);
@@ -625740,10 +626301,10 @@ var require_issueresolution_v1beta = __commonJS({
         context;
         accounts;
         issueresolution;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.issueresolution = new Resource$Issueresolution(this.context);
@@ -625909,10 +626470,10 @@ var require_lfp_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -626187,10 +626748,10 @@ var require_lfp_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -626465,10 +627026,10 @@ var require_notifications_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -626656,10 +627217,10 @@ var require_notifications_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -626847,10 +627408,10 @@ var require_ordertracking_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -626918,10 +627479,10 @@ var require_ordertracking_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -626989,10 +627550,10 @@ var require_products_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627189,10 +627750,10 @@ var require_products_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627389,10 +627950,10 @@ var require_promotions_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627520,10 +628081,10 @@ var require_promotions_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627651,10 +628212,10 @@ var require_quota_v1 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627722,10 +628283,10 @@ var require_quota_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627793,10 +628354,10 @@ var require_reports_v12 = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627864,10 +628425,10 @@ var require_reports_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -627935,10 +628496,10 @@ var require_reviews_v1beta = __commonJS({
       class Merchantapi {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -628372,10 +628933,10 @@ var require_v1139 = __commonJS({
       class Metastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -629925,10 +630486,10 @@ var require_v1alpha30 = __commonJS({
       class Metastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -631598,10 +632159,10 @@ var require_v1beta38 = __commonJS({
       class Metastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -633271,10 +633832,10 @@ var require_v236 = __commonJS({
       class Metastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -633810,10 +634371,10 @@ var require_v2alpha3 = __commonJS({
       class Metastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -634568,10 +635129,10 @@ var require_v2beta10 = __commonJS({
       class Metastore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -635378,10 +635939,10 @@ var require_v1140 = __commonJS({
       class Migrationcenter {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -637387,10 +637948,10 @@ var require_v1alpha111 = __commonJS({
       class Migrationcenter {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -639587,10 +640148,10 @@ var require_v1141 = __commonJS({
       class Ml {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -641100,10 +641661,10 @@ var require_v1142 = __commonJS({
         locations;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -641677,10 +642238,10 @@ var require_v312 = __commonJS({
         projects;
         services;
         uptimeCheckIps;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -643520,10 +644081,10 @@ var require_v1143 = __commonJS({
         context;
         accounts;
         locations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.locations = new Resource$Locations(this.context);
@@ -644094,10 +644655,10 @@ var require_v1144 = __commonJS({
       class Mybusinessbusinesscalls {
         context;
         locations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
         }
@@ -644254,10 +644815,10 @@ var require_v1145 = __commonJS({
         chains;
         googleLocations;
         locations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
           this.attributes = new Resource$Attributes(this.context);
@@ -644821,10 +645382,10 @@ var require_v1146 = __commonJS({
       class Mybusinesslodging {
         context;
         locations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
         }
@@ -644979,10 +645540,10 @@ var require_v1147 = __commonJS({
       class Mybusinessnotifications {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -645099,10 +645660,10 @@ var require_v1148 = __commonJS({
         context;
         locations;
         placeActionTypeMetadata;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
           this.placeActionTypeMetadata = new Resource$Placeactiontypemetadata(this.context);
@@ -645355,10 +645916,10 @@ var require_v1149 = __commonJS({
       class Mybusinessqanda {
         context;
         locations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
         }
@@ -645643,10 +646204,10 @@ var require_v1150 = __commonJS({
         context;
         locations;
         verificationTokens;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.locations = new Resource$Locations(this.context);
           this.verificationTokens = new Resource$Verificationtokens(this.context);
@@ -645899,10 +646460,10 @@ var require_v1151 = __commonJS({
       class Netapp {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -648019,10 +648580,10 @@ var require_v1beta139 = __commonJS({
       class Netapp {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -650231,10 +650792,10 @@ var require_v1152 = __commonJS({
       class Networkconnectivity {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -653305,10 +653866,10 @@ var require_v1alpha112 = __commonJS({
       class Networkconnectivity {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -654324,10 +654885,10 @@ var require_v1153 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -655544,10 +656105,10 @@ var require_v1beta140 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -656658,10 +657219,10 @@ var require_v1154 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -661382,10 +661943,10 @@ var require_v1beta141 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -666554,10 +667115,10 @@ var require_v1155 = __commonJS({
       class Networkservices {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -669415,10 +669976,10 @@ var require_v1beta142 = __commonJS({
       class Networkservices {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -672329,10 +672890,10 @@ var require_v1156 = __commonJS({
       class Notebooks {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -674284,10 +674845,10 @@ var require_v237 = __commonJS({
       class Notebooks {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -675215,10 +675776,10 @@ var require_v238 = __commonJS({
       class Oauth2 {
         context;
         userinfo;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.userinfo = new Resource$Userinfo(this.context);
         }
@@ -675382,10 +675943,10 @@ var require_v1157 = __commonJS({
       class Observability {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -675708,10 +676269,10 @@ var require_v1158 = __commonJS({
       class Ondemandscanning {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -675986,10 +676547,10 @@ var require_v1beta143 = __commonJS({
       class Ondemandscanning {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -676296,10 +676857,10 @@ var require_v1159 = __commonJS({
       class Oracledatabase {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -677692,10 +678253,10 @@ var require_v239 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -678610,10 +679171,10 @@ var require_v1160 = __commonJS({
       class Osconfig {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -679590,10 +680151,10 @@ var require_v1alpha31 = __commonJS({
       class Osconfig {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -680183,10 +680744,10 @@ var require_v1beta39 = __commonJS({
       class Osconfig {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -680811,10 +681372,10 @@ var require_v240 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -681779,10 +682340,10 @@ var require_v2beta11 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -682792,10 +683353,10 @@ var require_v1161 = __commonJS({
       class Oslogin {
         context;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.users = new Resource$Users(this.context);
         }
@@ -683053,10 +683614,10 @@ var require_v1alpha32 = __commonJS({
         context;
         projects;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.users = new Resource$Users(this.context);
@@ -683469,10 +684030,10 @@ var require_v1beta40 = __commonJS({
         context;
         projects;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.users = new Resource$Users(this.context);
@@ -683921,10 +684482,10 @@ var require_v5 = __commonJS({
       class Pagespeedonline {
         context;
         pagespeedapi;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.pagespeedapi = new Resource$Pagespeedapi(this.context);
         }
@@ -684010,10 +684571,10 @@ var require_v1162 = __commonJS({
       class Parallelstore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -684459,10 +685020,10 @@ var require_v1beta41 = __commonJS({
       class Parallelstore {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -684940,10 +685501,10 @@ var require_v1163 = __commonJS({
       class Parametermanager {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -685416,10 +685977,10 @@ var require_v1164 = __commonJS({
       class Paymentsresellersubscription {
         context;
         partners;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.partners = new Resource$Partners(this.context);
         }
@@ -685903,10 +686464,10 @@ var require_v1165 = __commonJS({
         contactGroups;
         otherContacts;
         people;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.contactGroups = new Resource$Contactgroups(this.context);
           this.otherContacts = new Resource$Othercontacts(this.context);
@@ -686716,10 +687277,10 @@ var require_v1166 = __commonJS({
       class Places {
         context;
         places;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.places = new Resource$Places(this.context);
         }
@@ -686934,10 +687495,10 @@ var require_v313 = __commonJS({
       class Playablelocations {
         context;
         v3;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.v3 = new Resource$V3(this.context);
         }
@@ -687080,10 +687641,10 @@ var require_v1167 = __commonJS({
       class Playcustomapp {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -687181,10 +687742,10 @@ var require_v1alpha113 = __commonJS({
         anomalies;
         apps;
         vitals;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.anomalies = new Resource$Anomalies(this.context);
           this.apps = new Resource$Apps(this.context);
@@ -687960,10 +688521,10 @@ var require_v1beta144 = __commonJS({
         anomalies;
         apps;
         vitals;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.anomalies = new Resource$Anomalies(this.context);
           this.apps = new Resource$Apps(this.context);
@@ -688769,10 +689330,10 @@ var require_v1alpha114 = __commonJS({
       class Playgrouping {
         context;
         apps;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.apps = new Resource$Apps(this.context);
         }
@@ -688907,10 +689468,10 @@ var require_v1168 = __commonJS({
         context;
         deviceRecall;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.deviceRecall = new Resource$Devicerecall(this.context);
           this.v1 = new Resource$V1(this.context);
@@ -689066,10 +689627,10 @@ var require_v1169 = __commonJS({
         activities;
         comments;
         people;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.activities = new Resource$Activities(this.context);
           this.comments = new Resource$Comments(this.context);
@@ -689404,10 +689965,10 @@ var require_v1170 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -689625,10 +690186,10 @@ var require_v1beta145 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -689879,10 +690440,10 @@ var require_v1171 = __commonJS({
         operations;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -690973,10 +691534,10 @@ var require_v1alpha33 = __commonJS({
         operations;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -691486,10 +692047,10 @@ var require_v1beta42 = __commonJS({
         operations;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -691999,10 +692560,10 @@ var require_v1beta146 = __commonJS({
         operations;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -692551,10 +693112,10 @@ var require_v1172 = __commonJS({
       class Policytroubleshooter {
         context;
         iam;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.iam = new Resource$Iam(this.context);
         }
@@ -692613,10 +693174,10 @@ var require_v1beta43 = __commonJS({
       class Policytroubleshooter {
         context;
         iam;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.iam = new Resource$Iam(this.context);
         }
@@ -692708,10 +693269,10 @@ var require_v1173 = __commonJS({
         context;
         forecast;
         mapTypes;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.forecast = new Resource$Forecast(this.context);
           this.mapTypes = new Resource$Maptypes(this.context);
@@ -692845,10 +693406,10 @@ var require_v1174 = __commonJS({
         context;
         assets;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.assets = new Resource$Assets(this.context);
           this.users = new Resource$Users(this.context);
@@ -693050,10 +693611,10 @@ var require_v1175 = __commonJS({
       class Privateca {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -694465,10 +695026,10 @@ var require_v1beta147 = __commonJS({
       class Privateca {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -695028,10 +695589,10 @@ var require_v1alpha115 = __commonJS({
         installer;
         nodes;
         policies;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.deployments = new Resource$Deployments(this.context);
@@ -697714,10 +698275,10 @@ var require_v1176 = __commonJS({
       class Publicca {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -697794,10 +698355,10 @@ var require_v1alpha116 = __commonJS({
       class Publicca {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -697874,10 +698435,10 @@ var require_v1beta148 = __commonJS({
       class Publicca {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -697991,10 +698552,10 @@ var require_v1177 = __commonJS({
       class Pubsub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -699458,10 +700019,10 @@ var require_v1beta1a = __commonJS({
         context;
         subscriptions;
         topics;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.subscriptions = new Resource$Subscriptions(this.context);
           this.topics = new Resource$Topics(this.context);
@@ -699948,10 +700509,10 @@ var require_v1beta214 = __commonJS({
       class Pubsub {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -700646,10 +701207,10 @@ var require_v1178 = __commonJS({
         admin;
         cursor;
         topicStats;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.admin = new Resource$Admin(this.context);
           this.cursor = new Resource$Cursor(this.context);
@@ -701696,10 +702257,10 @@ var require_v1179 = __commonJS({
       class Rapidmigrationassessment {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -702271,10 +702832,10 @@ var require_v1180 = __commonJS({
       class Readerrevenuesubscriptionlinking {
         context;
         publications;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.publications = new Resource$Publications(this.context);
         }
@@ -702460,10 +703021,10 @@ var require_v1181 = __commonJS({
         context;
         bidders;
         buyers;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.bidders = new Resource$Bidders(this.context);
           this.buyers = new Resource$Buyers(this.context);
@@ -703694,10 +704255,10 @@ var require_v1alpha34 = __commonJS({
       class Realtimebidding {
         context;
         bidders;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.bidders = new Resource$Bidders(this.context);
         }
@@ -703887,10 +704448,10 @@ var require_v1182 = __commonJS({
       class Recaptchaenterprise {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -704660,10 +705221,10 @@ var require_v1beta149 = __commonJS({
       class Recommendationengine {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -705463,10 +706024,10 @@ var require_v1183 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.billingAccounts = new Resource$Billingaccounts(this.context);
           this.folders = new Resource$Folders(this.context);
@@ -707144,10 +707705,10 @@ var require_v1beta150 = __commonJS({
         organizations;
         projects;
         recommenders;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.billingAccounts = new Resource$Billingaccounts(this.context);
           this.folders = new Resource$Folders(this.context);
@@ -709048,10 +709609,10 @@ var require_v1184 = __commonJS({
       class Redis {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -710064,10 +710625,10 @@ var require_v1beta151 = __commonJS({
       class Redis {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -711114,10 +711675,10 @@ var require_v1185 = __commonJS({
         media;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.media = new Resource$Media(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -711346,10 +711907,10 @@ var require_v1alpha35 = __commonJS({
       class Remotebuildexecution {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -711728,10 +712289,10 @@ var require_v241 = __commonJS({
         blobs;
         operations;
         v2;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.actionResults = new Resource$Actionresults(this.context);
           this.actions = new Resource$Actions(this.context);
@@ -712092,10 +712653,10 @@ var require_v1186 = __commonJS({
         customers;
         resellernotify;
         subscriptions;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.resellernotify = new Resource$Resellernotify(this.context);
@@ -712679,10 +713240,10 @@ var require_v1187 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -713051,10 +713612,10 @@ var require_v242 = __commonJS({
       class Retail {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -715306,10 +715867,10 @@ var require_v2alpha4 = __commonJS({
       class Retail {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -718167,10 +718728,10 @@ var require_v2beta16 = __commonJS({
       class Retail {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -720610,10 +721171,10 @@ var require_v1188 = __commonJS({
         context;
         namespaces;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.namespaces = new Resource$Namespaces(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -722819,10 +723380,10 @@ var require_v1alpha117 = __commonJS({
       class Run {
         context;
         namespaces;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.namespaces = new Resource$Namespaces(this.context);
         }
@@ -722978,10 +723539,10 @@ var require_v1beta152 = __commonJS({
         customresourcedefinitions;
         namespaces;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customresourcedefinitions = new Resource$Customresourcedefinitions(this.context);
           this.namespaces = new Resource$Namespaces(this.context);
@@ -723169,10 +723730,10 @@ var require_v243 = __commonJS({
       class Run {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -724773,10 +725334,10 @@ var require_v1189 = __commonJS({
       class Runtimeconfig {
         context;
         operations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
         }
@@ -724895,10 +725456,10 @@ var require_v1beta153 = __commonJS({
       class Runtimeconfig {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -725655,10 +726216,10 @@ var require_v1beta154 = __commonJS({
       class Saasservicemgmt {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -727061,10 +727622,10 @@ var require_v45 = __commonJS({
         threatLists;
         threatListUpdates;
         threatMatches;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.encodedFullHashes = new Resource$Encodedfullhashes(this.context);
           this.encodedUpdates = new Resource$Encodedupdates(this.context);
@@ -727353,10 +727914,10 @@ var require_v52 = __commonJS({
         hashes;
         hashList;
         hashLists;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.hashes = new Resource$Hashes(this.context);
           this.hashList = new Resource$Hashlist(this.context);
@@ -727557,10 +728118,10 @@ var require_v1alpha118 = __commonJS({
         installer;
         nodes;
         policies;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.deployments = new Resource$Deployments(this.context);
@@ -730245,10 +730806,10 @@ var require_v1190 = __commonJS({
         processes;
         projects;
         scripts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.processes = new Resource$Processes(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -730819,10 +731380,10 @@ var require_v0 = __commonJS({
         context;
         customers;
         searchAds360Fields;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.customers = new Resource$Customers(this.context);
           this.searchAds360Fields = new Resource$Searchads360fields(this.context);
@@ -731088,10 +731649,10 @@ var require_v1191 = __commonJS({
         sites;
         urlInspection;
         urlTestingTools;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.searchanalytics = new Resource$Searchanalytics(this.context);
           this.sitemaps = new Resource$Sitemaps(this.context);
@@ -731527,10 +732088,10 @@ var require_v1192 = __commonJS({
       class Secretmanager {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -732564,10 +733125,10 @@ var require_v1beta155 = __commonJS({
       class Secretmanager {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -733133,10 +733694,10 @@ var require_v1beta215 = __commonJS({
       class Secretmanager {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -734207,10 +734768,10 @@ var require_v1193 = __commonJS({
       class Securesourcemanager {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -736188,10 +736749,10 @@ var require_v1194 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -741927,10 +742488,10 @@ var require_v1beta156 = __commonJS({
       class Securitycenter {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -742687,10 +743248,10 @@ var require_v1beta216 = __commonJS({
         folders;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.folders = new Resource$Folders(this.context);
           this.organizations = new Resource$Organizations(this.context);
@@ -744754,10 +745315,10 @@ var require_v1p1alpha1 = __commonJS({
       class Securitycenter {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -744911,10 +745472,10 @@ var require_v1p1beta12 = __commonJS({
       class Securitycenter {
         context;
         organizations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
         }
@@ -745848,10 +746409,10 @@ var require_v1195 = __commonJS({
         context;
         organizations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.organizations = new Resource$Organizations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -746669,10 +747230,10 @@ var require_v1196 = __commonJS({
         context;
         operations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.services = new Resource$Services(this.context);
@@ -747139,10 +747700,10 @@ var require_v1beta157 = __commonJS({
         context;
         operations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.services = new Resource$Services(this.context);
@@ -747667,10 +748228,10 @@ var require_v1197 = __commonJS({
       class Servicecontrol {
         context;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.services = new Resource$Services(this.context);
         }
@@ -747789,10 +748350,10 @@ var require_v244 = __commonJS({
       class Servicecontrol {
         context;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.services = new Resource$Services(this.context);
         }
@@ -747913,10 +748474,10 @@ var require_v1198 = __commonJS({
       class Servicedirectory {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -748701,10 +749262,10 @@ var require_v1beta158 = __commonJS({
       class Servicedirectory {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -749621,10 +750182,10 @@ var require_v1199 = __commonJS({
         context;
         operations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.services = new Resource$Services(this.context);
@@ -750376,10 +750937,10 @@ var require_v1200 = __commonJS({
         context;
         operations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.services = new Resource$Services(this.context);
@@ -751368,10 +751929,10 @@ var require_v1beta44 = __commonJS({
         context;
         operations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.services = new Resource$Services(this.context);
@@ -751630,10 +752191,10 @@ var require_v1201 = __commonJS({
         context;
         operations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.services = new Resource$Services(this.context);
@@ -751971,10 +752532,10 @@ var require_v1beta159 = __commonJS({
         context;
         operations;
         services;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.services = new Resource$Services(this.context);
@@ -752709,10 +753270,10 @@ var require_v46 = __commonJS({
       class Sheets {
         context;
         spreadsheets;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.spreadsheets = new Resource$Spreadsheets(this.context);
         }
@@ -753305,10 +753866,10 @@ var require_v1202 = __commonJS({
       class Siteverification {
         context;
         webResource;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.webResource = new Resource$Webresource(this.context);
         }
@@ -753574,10 +754135,10 @@ var require_v1203 = __commonJS({
       class Slides {
         context;
         presentations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.presentations = new Resource$Presentations(this.context);
         }
@@ -753792,10 +754353,10 @@ var require_v1204 = __commonJS({
       class Smartdevicemanagement {
         context;
         enterprises;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.enterprises = new Resource$Enterprises(this.context);
         }
@@ -754090,10 +754651,10 @@ var require_v1205 = __commonJS({
         buildingInsights;
         dataLayers;
         geoTiff;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.buildingInsights = new Resource$Buildinginsights(this.context);
           this.dataLayers = new Resource$Datalayers(this.context);
@@ -754255,10 +754816,10 @@ var require_v1206 = __commonJS({
       class Sourcerepo {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -754654,10 +755215,10 @@ var require_v1207 = __commonJS({
         context;
         projects;
         scans;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.scans = new Resource$Scans(this.context);
@@ -757864,10 +758425,10 @@ var require_v1208 = __commonJS({
         operations;
         projects;
         speech;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -758361,10 +758922,10 @@ var require_v1p1beta13 = __commonJS({
         operations;
         projects;
         speech;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -758856,10 +759417,10 @@ var require_v2beta17 = __commonJS({
       class Speech {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -759009,10 +759570,10 @@ var require_v1beta45 = __commonJS({
         sslCerts;
         tiers;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.backupRuns = new Resource$Backupruns(this.context);
           this.databases = new Resource$Databases(this.context);
@@ -760514,10 +761075,10 @@ var require_v1209 = __commonJS({
         sslCerts;
         tiers;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.backupRuns = new Resource$Backupruns(this.context);
           this.Backups = new Resource$Backups(this.context);
@@ -762745,10 +763306,10 @@ var require_v1beta46 = __commonJS({
         sslCerts;
         tiers;
         users;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.backupRuns = new Resource$Backupruns(this.context);
           this.backups = new Resource$Backups(this.context);
@@ -765009,10 +765570,10 @@ var require_v1210 = __commonJS({
         objects;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.anywhereCaches = new Resource$Anywherecaches(this.context);
           this.bucketAccessControls = new Resource$Bucketaccesscontrols(this.context);
@@ -767603,10 +768164,10 @@ var require_v1beta217 = __commonJS({
         defaultObjectAccessControls;
         objectAccessControls;
         objects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.bucketAccessControls = new Resource$Bucketaccesscontrols(this.context);
           this.buckets = new Resource$Buckets(this.context);
@@ -768704,10 +769265,10 @@ var require_v1211 = __commonJS({
       class Storagebatchoperations {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -769123,10 +769684,10 @@ var require_v1212 = __commonJS({
         projects;
         transferJobs;
         transferOperations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.googleServiceAccounts = new Resource$Googleserviceaccounts(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -769728,10 +770289,10 @@ var require_v1213 = __commonJS({
         photos;
         photoSequence;
         photoSequences;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.photo = new Resource$Photo(this.context);
           this.photos = new Resource$Photos(this.context);
@@ -770231,10 +770792,10 @@ var require_v1214 = __commonJS({
       class Sts {
         context;
         v1;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.v1 = new Resource$V1(this.context);
         }
@@ -770293,10 +770854,10 @@ var require_v1beta47 = __commonJS({
       class Sts {
         context;
         v1beta;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.v1beta = new Resource$V1beta(this.context);
         }
@@ -770387,10 +770948,10 @@ var require_v1215 = __commonJS({
       class Tagmanager {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -771988,10 +772549,10 @@ var require_v245 = __commonJS({
       class Tagmanager {
         context;
         accounts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.accounts = new Resource$Accounts(this.context);
         }
@@ -775356,10 +775917,10 @@ var require_v1216 = __commonJS({
         context;
         tasklists;
         tasks;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.tasklists = new Resource$Tasklists(this.context);
           this.tasks = new Resource$Tasks(this.context);
@@ -775845,10 +776406,10 @@ var require_v1217 = __commonJS({
         applicationDetailService;
         projects;
         testEnvironmentCatalog;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.applicationDetailService = new Resource$Applicationdetailservice(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -776241,10 +776802,10 @@ var require_v1218 = __commonJS({
         projects;
         text;
         voices;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -776527,10 +777088,10 @@ var require_v1beta160 = __commonJS({
         projects;
         text;
         voices;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
           this.text = new Resource$Text(this.context);
@@ -776775,10 +777336,10 @@ var require_v1beta310 = __commonJS({
       class Toolresults {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -777847,10 +778408,10 @@ var require_v1219 = __commonJS({
       class Tpu {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -778434,10 +778995,10 @@ var require_v1alpha119 = __commonJS({
       class Tpu {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -779021,10 +779582,10 @@ var require_v246 = __commonJS({
       class Tpu {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -779827,10 +780388,10 @@ var require_v2alpha12 = __commonJS({
       class Tpu {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -780804,10 +781365,10 @@ var require_v247 = __commonJS({
       class Trafficdirector {
         context;
         discovery;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.discovery = new Resource$Discovery(this.context);
         }
@@ -780866,10 +781427,10 @@ var require_v314 = __commonJS({
       class Trafficdirector {
         context;
         discovery;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.discovery = new Resource$Discovery(this.context);
         }
@@ -780960,10 +781521,10 @@ var require_v1220 = __commonJS({
       class Transcoder {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -781259,10 +781820,10 @@ var require_v1beta161 = __commonJS({
       class Transcoder {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -781584,10 +782145,10 @@ var require_v248 = __commonJS({
         detections;
         languages;
         translations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.detections = new Resource$Detections(this.context);
           this.languages = new Resource$Languages(this.context);
@@ -781782,10 +782343,10 @@ var require_v315 = __commonJS({
       class Translate {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -783413,10 +783974,10 @@ var require_v3beta12 = __commonJS({
       class Translate {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -784109,10 +784670,10 @@ var require_v1221 = __commonJS({
       class Travelimpactmodel {
         context;
         flights;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.flights = new Resource$Flights(this.context);
         }
@@ -784229,10 +784790,10 @@ var require_v1222 = __commonJS({
         context;
         matters;
         operations;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.matters = new Resource$Matters(this.context);
           this.operations = new Resource$Operations(this.context);
@@ -785323,10 +785884,10 @@ var require_v1223 = __commonJS({
         context;
         featuretiles;
         terraintiles;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.featuretiles = new Resource$Featuretiles(this.context);
           this.terraintiles = new Resource$Terraintiles(this.context);
@@ -785448,10 +786009,10 @@ var require_v1224 = __commonJS({
       class Verifiedaccess {
         context;
         challenge;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.challenge = new Resource$Challenge(this.context);
         }
@@ -785540,10 +786101,10 @@ var require_v249 = __commonJS({
       class Verifiedaccess {
         context;
         challenge;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.challenge = new Resource$Challenge(this.context);
         }
@@ -785664,10 +786225,10 @@ var require_v1225 = __commonJS({
       class Versionhistory {
         context;
         platforms;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.platforms = new Resource$Platforms(this.context);
         }
@@ -785872,10 +786433,10 @@ var require_v1226 = __commonJS({
         operations;
         projects;
         videos;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -786205,10 +786766,10 @@ var require_v1beta218 = __commonJS({
       class Videointelligence {
         context;
         videos;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.videos = new Resource$Videos(this.context);
         }
@@ -786267,10 +786828,10 @@ var require_v1p1beta14 = __commonJS({
       class Videointelligence {
         context;
         videos;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.videos = new Resource$Videos(this.context);
         }
@@ -786329,10 +786890,10 @@ var require_v1p2beta1 = __commonJS({
       class Videointelligence {
         context;
         videos;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.videos = new Resource$Videos(this.context);
         }
@@ -786391,10 +786952,10 @@ var require_v1p3beta1 = __commonJS({
       class Videointelligence {
         context;
         videos;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.videos = new Resource$Videos(this.context);
         }
@@ -786504,10 +787065,10 @@ var require_v1227 = __commonJS({
         locations;
         operations;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.files = new Resource$Files(this.context);
           this.images = new Resource$Images(this.context);
@@ -787818,10 +788379,10 @@ var require_v1p1beta15 = __commonJS({
         files;
         images;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.files = new Resource$Files(this.context);
           this.images = new Resource$Images(this.context);
@@ -788273,10 +788834,10 @@ var require_v1p2beta12 = __commonJS({
         files;
         images;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.files = new Resource$Files(this.context);
           this.images = new Resource$Images(this.context);
@@ -788763,10 +789324,10 @@ var require_v1228 = __commonJS({
       class Vmmigration {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -790712,10 +791273,10 @@ var require_v1alpha120 = __commonJS({
       class Vmmigration {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -792693,10 +793254,10 @@ var require_v1229 = __commonJS({
       class Vmwareengine {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -795761,10 +796322,10 @@ var require_v1230 = __commonJS({
       class Vpcaccess {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -796060,10 +796621,10 @@ var require_v1beta162 = __commonJS({
       class Vpcaccess {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -796410,10 +796971,10 @@ var require_v1231 = __commonJS({
         transitclass;
         transitobject;
         walletobjects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.eventticketclass = new Resource$Eventticketclass(this.context);
           this.eventticketobject = new Resource$Eventticketobject(this.context);
@@ -799580,10 +800141,10 @@ var require_v1232 = __commonJS({
       class Webfonts {
         context;
         webfonts;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.webfonts = new Resource$Webfonts(this.context);
         }
@@ -799671,10 +800232,10 @@ var require_v316 = __commonJS({
         searchanalytics;
         sitemaps;
         sites;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.searchanalytics = new Resource$Searchanalytics(this.context);
           this.sitemaps = new Resource$Sitemaps(this.context);
@@ -800010,10 +800571,10 @@ var require_v1233 = __commonJS({
         projects;
         threatLists;
         uris;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.hashes = new Resource$Hashes(this.context);
           this.projects = new Resource$Projects(this.context);
@@ -800351,10 +800912,10 @@ var require_v1234 = __commonJS({
       class Websecurityscanner {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -800818,10 +801379,10 @@ var require_v1alpha36 = __commonJS({
       class Websecurityscanner {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -801285,10 +801846,10 @@ var require_v1beta48 = __commonJS({
       class Websecurityscanner {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -801789,10 +802350,10 @@ var require_v1235 = __commonJS({
       class Workflowexecutions {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -802166,10 +802727,10 @@ var require_v1beta49 = __commonJS({
       class Workflowexecutions {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -802377,10 +802938,10 @@ var require_v1236 = __commonJS({
       class Workflows {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -802766,10 +803327,10 @@ var require_v1beta50 = __commonJS({
       class Workflows {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -803157,10 +803718,10 @@ var require_v1237 = __commonJS({
       class Workloadmanager {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -803898,10 +804459,10 @@ var require_v1238 = __commonJS({
         context;
         operations;
         subscriptions;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.operations = new Resource$Operations(this.context);
           this.subscriptions = new Resource$Subscriptions(this.context);
@@ -804175,10 +804736,10 @@ var require_v1239 = __commonJS({
       class Workstations {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -805212,10 +805773,10 @@ var require_v1beta51 = __commonJS({
       class Workstations {
         context;
         projects;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.projects = new Resource$Projects(this.context);
         }
@@ -806252,10 +806813,10 @@ var require_v317 = __commonJS({
         videoTrainability;
         watermarks;
         youtube;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.abuseReports = new Resource$Abusereports(this.context);
           this.activities = new Resource$Activities(this.context);
@@ -809082,10 +809643,10 @@ var require_v1240 = __commonJS({
     (function(youtubeAnalytics_v12) {
       class Youtubeanalytics {
         context;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
         }
       }
@@ -809108,10 +809669,10 @@ var require_v250 = __commonJS({
         groupItems;
         groups;
         reports;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.groupItems = new Resource$Groupitems(this.context);
           this.groups = new Resource$Groups(this.context);
@@ -809430,10 +809991,10 @@ var require_v1241 = __commonJS({
         jobs;
         media;
         reportTypes;
-        constructor(options, google2) {
+        constructor(options, google3) {
           this.context = {
             _options: options || {},
-            google: google2
+            google: google3
           };
           this.jobs = new Resource$Jobs(this.context);
           this.media = new Resource$Media(this.context);
@@ -812211,22 +812772,22 @@ var require_crypto5 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto5 = require("crypto");
+    var crypto6 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto5.createHash("sha256").update(str).digest("base64");
+        return crypto6.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto5.randomBytes(count).toString("base64");
+        return crypto6.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto5.createVerify("RSA-SHA256");
+        const verifier = crypto6.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto5.createSign("RSA-SHA256");
+        const signer = crypto6.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -812244,7 +812805,7 @@ var require_crypto5 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto5.createHash("sha256").update(str).digest("hex");
+        return crypto6.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -812256,7 +812817,7 @@ var require_crypto5 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto5.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto6.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -812947,10 +813508,10 @@ var require_oauth2client2 = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto5 = (0, crypto_1.createCrypto)();
-        const randomString = crypto5.randomBytesBase64(96);
+        const crypto6 = (0, crypto_1.createCrypto)();
+        const randomString = crypto6.randomBytesBase64(96);
         const codeVerifier = randomString.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto5.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto6.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -813391,7 +813952,7 @@ var require_oauth2client2 = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto5 = (0, crypto_1.createCrypto)();
+        const crypto6 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -813404,7 +813965,7 @@ var require_oauth2client2 = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto5.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto6.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -813415,7 +813976,7 @@ var require_oauth2client2 = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto5.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto6.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -813432,7 +813993,7 @@ var require_oauth2client2 = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto5.verify(cert, signed, signature);
+        const verified = await crypto6.verify(cert, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt);
         }
@@ -816002,14 +816563,14 @@ var require_awsrequestsigner2 = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign(crypto5, key, msg) {
-      return await crypto5.signWithHmacSha256(key, msg);
+    async function sign(crypto6, key, msg) {
+      return await crypto6.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto5, key, dateStamp, region, serviceName) {
-      const kDate = await sign(crypto5, `AWS4${key}`, dateStamp);
-      const kRegion = await sign(crypto5, kDate, region);
-      const kService = await sign(crypto5, kRegion, serviceName);
-      const kSigning = await sign(crypto5, kService, "aws4_request");
+    async function getSigningKey(crypto6, key, dateStamp, region, serviceName) {
+      const kDate = await sign(crypto6, `AWS4${key}`, dateStamp);
+      const kRegion = await sign(crypto6, kDate, region);
+      const kService = await sign(crypto6, kRegion, serviceName);
+      const kSigning = await sign(crypto6, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -816975,7 +817536,7 @@ var require_gdchclient = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.GdchClient = exports2.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
-    var crypto5 = require("crypto");
+    var crypto6 = require("crypto");
     var fs4 = require("fs");
     var https2 = require("https");
     var oauth2client_1 = require_oauth2client2();
@@ -817166,7 +817727,7 @@ var require_gdchclient = __commonJS({
         const encodedHeader = this.base64UrlEncode(JSON.stringify(header));
         const encodedPayload = this.base64UrlEncode(JSON.stringify(payload));
         const signingInput = `${encodedHeader}.${encodedPayload}`;
-        const signature = crypto5.sign("sha256", Buffer.from(signingInput), {
+        const signature = crypto6.sign("sha256", Buffer.from(signingInput), {
           key: this.privateKey,
           dsaEncoding: "ieee-p1363"
         });
@@ -818027,24 +818588,24 @@ var require_googleauth2 = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto5 = (0, crypto_1.createCrypto)();
+        const crypto6 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign = await crypto5.sign(client.key, data);
+          const sign = await crypto6.sign(client.key, data);
           return sign;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto5, creds.client_email, data, endpoint);
+        return this.signBlob(crypto6, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto5, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto6, emailOrUniqueId, data, endpoint) {
         const url = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url.href,
           data: {
-            payload: crypto5.encodeBase64StringUtf8(data)
+            payload: crypto6.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -818481,8 +819042,8 @@ var require_src11 = __commonJS({
     Object.defineProperty(exports2, "GoogleApis", { enumerable: true, get: function() {
       return googleapis_1.GoogleApis;
     } });
-    var google2 = new googleapis_1.GoogleApis();
-    exports2.google = google2;
+    var google3 = new googleapis_1.GoogleApis();
+    exports2.google = google3;
     exports2.Common = require_src7();
     exports2.Auth = require_src10();
     var v1_1 = require_v1();
@@ -827303,7 +827864,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express14 = __toESM(require_express2(), 1);
+var import_express15 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -827312,7 +827873,7 @@ var import_fs4 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express13 = __toESM(require_express2(), 1);
+var import_express14 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -827446,13 +828007,33 @@ function requireAuth(req, res, next) {
   }
   next();
 }
+function requireSuperAdmin(req, res, next) {
+  if (!req.authUser) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  if (req.authUser.role !== "super_admin") {
+    res.status(403).json({ error: "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u064A\u062A\u0637\u0644\u0628 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 (Super Admin)." });
+    return;
+  }
+  next();
+}
 function requireAdmin(req, res, next) {
   if (!req.authUser) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
   if (req.authUser.role !== "admin") {
-    res.status(403).json({ error: "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u064A\u062A\u0637\u0644\u0628 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 (Admin)." });
+    res.status(403).json({ error: "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u064A\u062A\u0637\u0644\u0628 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 (Admin)." });
+    return;
+  }
+  next();
+}
+function blockSuperAdminFromOfficeData(req, res, next) {
+  if (req.authUser?.role === "super_admin") {
+    res.status(403).json({
+      error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D \u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629 \u0628\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0648\u0642\u0636\u0627\u064A\u0627 \u0627\u0644\u0645\u0643\u0627\u062A\u0628 \u0627\u0644\u062E\u0627\u0635\u0629."
+    });
     return;
   }
   next();
@@ -827462,7 +828043,7 @@ async function requireActiveSubscription(req, res, next) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  if (req.authUser.role === "admin") {
+  if (req.authUser.role === "super_admin") {
     next();
     return;
   }
@@ -827478,40 +828059,65 @@ async function requireActiveSubscription(req, res, next) {
       });
       return;
     }
-    if (current.role === "admin") {
+    if (current.role === "super_admin") {
       next();
       return;
     }
-    if (current.status === "suspended") {
+    let officeAdmin = null;
+    if (current.role === "admin") {
+      officeAdmin = current;
+    } else {
+      if (!current.admin_id) {
+        logger.warn({ refId, identifier }, "Subscription check failed: staff user has no admin_id linked");
+        res.status(403).json({
+          error: "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0645\u0631\u062A\u0628\u0637 \u0628\u0623\u064A \u0645\u0643\u062A\u0628 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0631\u0628\u0637 \u0627\u0644\u062D\u0633\u0627\u0628.",
+          refId
+        });
+        return;
+      }
+      officeAdmin = await findUserByIdOrUsername(current.admin_id);
+      if (!officeAdmin || officeAdmin.role !== "admin") {
+        logger.warn({ refId, identifier, adminId: current.admin_id }, "Subscription check failed: linked office admin not found");
+        res.status(403).json({
+          error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628.",
+          refId
+        });
+        return;
+      }
+    }
+    if (officeAdmin.status === "suspended") {
+      const msg = current.role === "staff" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628." : "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0648\u0627\u0644\u062E\u062F\u0645\u0627\u062A.";
       res.status(403).json({
-        error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0625\u0643\u0633\u0644 \u0648\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A.",
+        error: msg,
         isSuspended: true,
         refId
       });
       return;
     }
-    if (!current.subscription_end_date) {
-      logger.warn({ refId, identifier, user: current.username }, "Subscription check failed: missing subscription_end_date");
+    if (!officeAdmin.subscription_end_date) {
+      logger.warn({ refId, identifier, officeAdmin: officeAdmin.username }, "Subscription check failed: missing subscription_end_date on office admin");
+      const msg = current.role === "staff" ? "\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628." : "\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062F \u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629.";
       res.status(403).json({
-        error: "\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062F \u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0644\u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645.",
+        error: msg,
         refId
       });
       return;
     }
-    const expiryTime = new Date(current.subscription_end_date).getTime();
+    const expiryTime = new Date(officeAdmin.subscription_end_date).getTime();
     if (isNaN(expiryTime)) {
-      logger.warn({ refId, identifier, invalidDate: current.subscription_end_date }, "Subscription check failed: invalid subscription_end_date");
+      logger.warn({ refId, identifier, invalidDate: officeAdmin.subscription_end_date }, "Subscription check failed: invalid subscription_end_date");
       res.status(403).json({
-        error: "\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0633\u062C\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629.",
+        error: "\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u0633\u062C\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629.",
         refId
       });
       return;
     }
     if (expiryTime < Date.now()) {
+      const msg = current.role === "staff" ? "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." : "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643 \u0645\u0643\u062A\u0628\u0643\u0645 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0627\u0644\u0625\u0643\u0633\u0644 \u0648\u062A\u0648\u0644\u064A\u062F \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.";
       res.status(403).json({
-        error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0627\u0644\u0625\u0643\u0633\u0644 \u0648\u062A\u0648\u0644\u064A\u062F \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
+        error: msg,
         isExpired: true,
-        subscription_end_date: current.subscription_end_date,
+        subscription_end_date: current.role === "admin" ? officeAdmin.subscription_end_date : void 0,
         refId
       });
       return;
@@ -827527,7 +828133,7 @@ async function requireActiveSubscription(req, res, next) {
 }
 
 // src/middlewares/rate-limiter.middleware.ts
-var import_crypto2 = __toESM(require("crypto"), 1);
+var import_crypto3 = __toESM(require("crypto"), 1);
 init_env();
 init_supabase_service();
 init_logger();
@@ -827680,7 +828286,7 @@ function createSharedRateLimiter(options = {}) {
         const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
         const defaultMessage = `\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A. \u062D\u0627\u0648\u0644 \u0628\u0639\u062F ${minutes} \u062F\u0642\u064A\u0642\u0629.`;
         const message = options.message ? options.message.includes("${minutes}") ? options.message.replace("${minutes}", String(minutes)) : options.message : defaultMessage;
-        const usernameHash = cleanUsername ? import_crypto2.default.createHash("sha256").update(cleanUsername).digest("hex").slice(0, 10) : "none";
+        const usernameHash = cleanUsername ? import_crypto3.default.createHash("sha256").update(cleanUsername).digest("hex").slice(0, 10) : "none";
         logger.warn(
           {
             ip: safeIp,
@@ -827723,7 +828329,7 @@ function createSharedRateLimiter(options = {}) {
             incPromises.push(store.increment(accountKey, windowMs));
           }
           await Promise.all(incPromises);
-          const usernameHash = cleanUsername ? import_crypto2.default.createHash("sha256").update(cleanUsername).digest("hex").slice(0, 10) : "none";
+          const usernameHash = cleanUsername ? import_crypto3.default.createHash("sha256").update(cleanUsername).digest("hex").slice(0, 10) : "none";
           logger.info(
             {
               ip: safeIp,
@@ -827799,10 +828405,48 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
       res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
       return;
     }
+    let subscriptionWarning = null;
+    let daysRemaining = null;
     if (verifiedUser.role === "staff") {
+      if (!verifiedUser.admin_id) {
+        res.status(403).json({
+          error: "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0645\u0631\u062A\u0628\u0637 \u0628\u0623\u064A \u0645\u0643\u062A\u0628 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0631\u0628\u0637 \u0627\u0644\u062D\u0633\u0627\u0628 \u0628\u0645\u0643\u062A\u0628\u0643.",
+          isUnlinked: true
+        });
+        return;
+      }
+      const officeAdmin = await findUserByIdOrUsername(verifiedUser.admin_id);
+      if (!officeAdmin || officeAdmin.role !== "admin") {
+        res.status(403).json({
+          error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628."
+        });
+        return;
+      }
+      if (officeAdmin.status === "suspended") {
+        res.status(403).json({
+          error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0624\u0642\u062A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628.",
+          isSuspended: true
+        });
+        return;
+      }
+      if (!officeAdmin.subscription_end_date) {
+        res.status(403).json({
+          error: "\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628."
+        });
+        return;
+      }
+      const expiryTime = new Date(officeAdmin.subscription_end_date).getTime();
+      if (expiryTime < Date.now()) {
+        res.status(403).json({
+          error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
+          isExpired: true
+        });
+        return;
+      }
+    } else if (verifiedUser.role === "admin") {
       if (verifiedUser.status === "suspended") {
         res.status(403).json({
-          error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.",
+          error: "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0634\u062A\u0631\u0627\u0643 \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A.",
           isSuspended: true
         });
         return;
@@ -827812,21 +828456,17 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
         const now = Date.now();
         if (expiryTime < now) {
           res.status(403).json({
-            error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
+            error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0627\u0646\u062A\u0647\u062A \u0641\u062A\u0631\u0629 \u0627\u0634\u062A\u0631\u0627\u0643 \u0645\u0643\u062A\u0628\u0643\u0645 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643.",
             isExpired: true,
             subscription_end_date: verifiedUser.subscription_end_date
           });
           return;
         }
-      }
-    }
-    let subscriptionWarning = null;
-    let daysRemaining = null;
-    if (verifiedUser.subscription_end_date) {
-      const diffMs = new Date(verifiedUser.subscription_end_date).getTime() - Date.now();
-      daysRemaining = Math.ceil(diffMs / (1e3 * 60 * 60 * 24));
-      if (daysRemaining <= 3 && daysRemaining >= 0) {
-        subscriptionWarning = `\u062A\u0646\u0628\u064A\u0647: \u064A\u0646\u062A\u0647\u064A \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u062E\u0644\u0627\u0644 ${daysRemaining === 0 ? "\u0627\u0644\u064A\u0648\u0645" : `${daysRemaining} ${daysRemaining === 1 ? "\u064A\u0648\u0645" : daysRemaining === 2 ? "\u064A\u0648\u0645\u064A\u0646" : "\u0623\u064A\u0627\u0645"}`}. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062A\u062C\u062F\u064A\u062F.`;
+        const diffMs = expiryTime - now;
+        daysRemaining = Math.ceil(diffMs / (1e3 * 60 * 60 * 24));
+        if (daysRemaining <= 3 && daysRemaining >= 0) {
+          subscriptionWarning = `\u062A\u0646\u0628\u064A\u0647: \u064A\u0646\u062A\u0647\u064A \u0627\u0634\u062A\u0631\u0627\u0643 \u0645\u0643\u062A\u0628\u0643\u0645 \u062E\u0644\u0627\u0644 ${daysRemaining === 0 ? "\u0627\u0644\u064A\u0648\u0645" : `${daysRemaining} ${daysRemaining === 1 ? "\u064A\u0648\u0645" : daysRemaining === 2 ? "\u064A\u0648\u0645\u064A\u0646" : "\u0623\u064A\u0627\u0645"}`}. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062A\u062C\u062F\u064A\u062F.`;
+        }
       }
     }
     setSessionCookie(res, {
@@ -827836,16 +828476,18 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
       displayName: verifiedUser.display_name || verifiedUser.username
     });
     const effectiveUserId = verifiedUser.id || verifiedUser.username;
-    const effectiveOfficeId = verifiedUser?.office_id || effectiveUserId;
+    const effectiveOfficeId = verifiedUser.admin_id || effectiveUserId;
     res.json({
       id: effectiveUserId,
       userId: effectiveUserId,
       officeId: effectiveOfficeId,
       username: verifiedUser.username,
       role: verifiedUser.role,
+      adminId: verifiedUser.admin_id || null,
+      officeName: verifiedUser.office_name || null,
       displayName: verifiedUser.display_name,
       status: verifiedUser.status || "active",
-      subscription_end_date: verifiedUser.subscription_end_date,
+      subscription_end_date: verifiedUser.role === "admin" ? verifiedUser.subscription_end_date : null,
       subscriptionWarning,
       daysRemaining
     });
@@ -827879,7 +828521,7 @@ router2.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (
     res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
     return;
   }
-  if (adminUser.role !== "admin") {
+  if (adminUser.role !== "admin" && adminUser.role !== "super_admin") {
     res.status(403).json({
       error: "\u0639\u0630\u0631\u0627\u064B\u060C \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0644\u064A\u0633 \u0644\u062F\u064A\u0647 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062F\u062E\u0648\u0644 \u0644\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0645\u0634\u0631\u0641."
     });
@@ -827892,13 +828534,14 @@ router2.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (
     displayName: adminUser.display_name || adminUser.username
   });
   const effectiveUserId = adminUser.id || adminUser.username;
-  const effectiveOfficeId = adminUser?.office_id || effectiveUserId;
+  const effectiveOfficeId = adminUser.admin_id || effectiveUserId;
   res.json({
     id: effectiveUserId,
     userId: effectiveUserId,
     officeId: effectiveOfficeId,
     username: adminUser.username,
     role: adminUser.role,
+    officeName: adminUser.office_name || null,
     displayName: adminUser.display_name
   });
 });
@@ -827913,12 +828556,14 @@ router2.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
     let subscriptionWarning = null;
     let daysRemaining = null;
     let status = "active";
-    let plan_tier = "plus";
-    let billing_cycle = "annual";
-    let ai_quota_limit = 50;
+    let plan_tier = void 0;
+    let billing_cycle = void 0;
+    let ai_quota_limit = void 0;
     let ai_usage_count = 0;
     let isExpired = false;
     let isSuspended = false;
+    let officeName = null;
+    let adminId = null;
     let user = null;
     try {
       const users = await listSupabaseUsers();
@@ -827926,31 +828571,51 @@ router2.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
       if (user) {
         status = user.status || "active";
         isSuspended = status === "suspended";
-        plan_tier = user.plan_tier || (user.role === "admin" ? "pro" : "plus");
-        billing_cycle = user.billing_cycle || "annual";
-        ai_quota_limit = user.ai_quota_limit !== void 0 ? user.ai_quota_limit : user.role === "admin" ? -1 : plan_tier === "pro" ? 300 : 50;
-        ai_usage_count = user.ai_usage_count || 0;
-        subscription_end_date = user.subscription_end_date || null;
-        if (subscription_end_date) {
-          const diffMs = new Date(subscription_end_date).getTime() - Date.now();
-          daysRemaining = Math.ceil(diffMs / (1e3 * 60 * 60 * 24));
-          if (daysRemaining < 0) {
-            isExpired = true;
-          } else if (daysRemaining <= 3) {
-            subscriptionWarning = `\u062A\u0646\u0628\u064A\u0647: \u064A\u0646\u062A\u0647\u064A \u0627\u0634\u062A\u0631\u0627\u0643\u0643 \u062E\u0644\u0627\u0644 ${daysRemaining === 0 ? "\u0627\u0644\u064A\u0648\u0645" : `${daysRemaining} ${daysRemaining === 1 ? "\u064A\u0648\u0645" : daysRemaining === 2 ? "\u064A\u0648\u0645\u064A\u0646" : "\u0623\u064A\u0627\u0645"}`}. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062A\u062C\u062F\u064A\u062F.`;
+        adminId = user.admin_id || null;
+        officeName = user.office_name || null;
+        if (user.role === "super_admin") {
+          plan_tier = "pro";
+          ai_quota_limit = -1;
+        } else if (user.role === "admin") {
+          plan_tier = user.plan_tier || "plus";
+          billing_cycle = user.billing_cycle || "annual";
+          ai_quota_limit = user.ai_quota_limit !== void 0 ? user.ai_quota_limit : plan_tier === "pro" ? 300 : 100;
+          ai_usage_count = user.ai_usage_count || 0;
+          subscription_end_date = user.subscription_end_date || null;
+          if (subscription_end_date) {
+            const diffMs = new Date(subscription_end_date).getTime() - Date.now();
+            daysRemaining = Math.ceil(diffMs / (1e3 * 60 * 60 * 24));
+            if (daysRemaining < 0) {
+              isExpired = true;
+            } else if (daysRemaining <= 3) {
+              subscriptionWarning = `\u062A\u0646\u0628\u064A\u0647: \u064A\u0646\u062A\u0647\u064A \u0627\u0634\u062A\u0631\u0627\u0643 \u0645\u0643\u062A\u0628\u0643\u0645 \u062E\u0644\u0627\u0644 ${daysRemaining === 0 ? "\u0627\u0644\u064A\u0648\u0645" : `${daysRemaining} ${daysRemaining === 1 ? "\u064A\u0648\u0645" : daysRemaining === 2 ? "\u064A\u0648\u0645\u064A\u0646" : "\u0623\u064A\u0627\u0645"}`}. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u0644\u062A\u062C\u062F\u064A\u062F.`;
+            }
+          }
+        } else if (user.role === "staff") {
+          if (user.admin_id) {
+            const officeAdmin = users.find((u) => u.id === user.admin_id);
+            if (officeAdmin) {
+              officeName = officeAdmin.office_name || officeAdmin.display_name || null;
+              isSuspended = officeAdmin.status === "suspended";
+              if (officeAdmin.subscription_end_date) {
+                isExpired = new Date(officeAdmin.subscription_end_date).getTime() < Date.now();
+              }
+            }
           }
         }
       }
     } catch {
     }
     const effectiveUserId = authUser.userId || user?.id || authUser.username;
-    const effectiveOfficeId = user?.office_id || effectiveUserId;
+    const effectiveOfficeId = adminId || effectiveUserId;
     res.json({
       id: effectiveUserId,
       userId: effectiveUserId,
       officeId: effectiveOfficeId,
       username: authUser.username,
       role: authUser.role || "staff",
+      adminId,
+      officeName,
       displayName: authUser.displayName || authUser.username,
       status,
       isSuspended,
@@ -828009,17 +828674,6 @@ var GoogleSheetsError = class extends Error {
     this.refId = refId || `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     this.statusCode = statusCode;
     this.userMessage = userMessage;
-  }
-};
-var GoogleSheetsConfigError = class extends GoogleSheetsError {
-  constructor(message, refId) {
-    super(
-      message,
-      503,
-      "\u0625\u0639\u062F\u0627\u062F\u0627\u062A Google Sheets \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u0632\u0648\u064A\u062F \u0645\u0644\u0641 Service Account \u0648\u0645\u0639\u0631\u0641 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.",
-      refId
-    );
-    this.name = "GoogleSheetsConfigError";
   }
 };
 var GoogleBindingMissingError = class extends GoogleSheetsError {
@@ -828146,50 +828800,9 @@ function classifyGoogleError(err, operation, meta) {
   );
   return classified;
 }
-var defaultSheetsClient = null;
 var userClientsMap = /* @__PURE__ */ new Map();
-function getDefaultClient() {
-  if (!defaultSheetsClient) {
-    const credentials = env.googleServiceAccountJson;
-    if (!credentials || !credentials.client_email || !credentials.private_key) {
-      throw new GoogleSheetsConfigError(
-        "\u0645\u0644\u0641 Google Service Account JSON \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645. \u064A\u0631\u062C\u0649 \u0625\u0636\u0627\u0641\u062A\u0647 \u0641\u064A \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0641\u064A \u0645\u062A\u063A\u064A\u0631\u0627\u062A \u0627\u0644\u0628\u064A\u0626\u0629."
-      );
-    }
-    try {
-      const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-      const auth = new import_googleapis.google.auth.JWT({
-        email: credentials.client_email,
-        key: privateKey,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-      });
-      defaultSheetsClient = import_googleapis.google.sheets({ version: "v4", auth });
-    } catch (err) {
-      throw classifyGoogleError(err, "getDefaultClient");
-    }
-  }
-  return defaultSheetsClient;
-}
 async function getGoogleContext(userId, defaultSheetName = "Sessions") {
   const cleanUserId = userId?.trim();
-  const isAllowListed = cleanUserId ? env.globalSheetAllowedUserIds.includes(cleanUserId) : false;
-  if (isAllowListed) {
-    const globalSpreadsheetId = env.googleSpreadsheetId;
-    if (!globalSpreadsheetId) {
-      throw new GoogleSheetsConfigError(
-        "\u0625\u0639\u062F\u0627\u062F\u0627\u062A Google Sheets \u0627\u0644\u0639\u0627\u0645\u0629 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645."
-      );
-    }
-    logger.info(
-      { userId: cleanUserId, defaultSheetName },
-      "[GoogleSheets] Intentional global sheet usage: user is on GLOBAL_SHEET_ALLOWED_USER_IDS allow-list"
-    );
-    return {
-      sheets: getDefaultClient(),
-      spreadsheetId: globalSpreadsheetId,
-      sheetName: defaultSheetName || env.googleSheetName || "Sessions"
-    };
-  }
   if (!cleanUserId) {
     throw new GoogleBindingMissingError("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645/\u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 Google Sheets.");
   }
@@ -829744,7 +830357,7 @@ async function saveSessionReport(id, report, userId) {
 // src/routes/dashboard.ts
 init_logger();
 var router3 = (0, import_express3.Router)();
-router3.get("/dashboard/stats", attachAuthUser, requireAuth, async (req, res) => {
+router3.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
   try {
     const userId = req.authUser?.userId;
     const stats = await getDashboardStats(userId);
@@ -845790,28 +846403,24 @@ function extractWithRules(message) {
   return result;
 }
 async function analyzeCourtMessage(message, userId) {
-  let userRecord = null;
-  let quotaLimit = 50;
+  let quotaLimit = 100;
   let currentUsage = 0;
   let userPlanTier = "plus";
   if (userId) {
     try {
-      const { loadLocalUsers: loadLocalUsers2 } = (init_supabase_service(), __toCommonJS(supabase_service_exports));
-      const users = loadLocalUsers2();
-      userRecord = users.find((u) => u.id === userId || u.username === userId);
-      if (userRecord) {
-        userPlanTier = userRecord.plan_tier || (userRecord.role === "admin" ? "pro" : "plus");
-        quotaLimit = userRecord.ai_quota_limit !== void 0 ? userRecord.ai_quota_limit : userPlanTier === "pro" ? 300 : 50;
-        currentUsage = userRecord.ai_usage_count || 0;
-        if (quotaLimit !== -1 && currentUsage >= quotaLimit) {
-          throw new AiExtractionError(
-            `\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u062D\u062F \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647 \u0644\u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0628\u0627\u0642\u0629 (${userPlanTier === "pro" ? "Pro" : "Plus"}) \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631 (${currentUsage}/${quotaLimit}). \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0631\u0635\u064A\u062F \u0623\u0648 \u0627\u0644\u062A\u0631\u0642\u064A\u0629 \u0644\u0628\u0627\u0642\u0629 \u0623\u0639\u0644\u0649.`
-          );
-        }
+      const { checkAndIncrementOfficeAiUsage: checkAndIncrementOfficeAiUsage2 } = (init_supabase_service(), __toCommonJS(supabase_service_exports));
+      const quotaRes = await checkAndIncrementOfficeAiUsage2(userId);
+      if (!quotaRes.allowed) {
+        throw new AiExtractionError(
+          quotaRes.error || `\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u062D\u062F \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647 \u0644\u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0644\u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0631\u0635\u064A\u062F \u0623\u0648 \u0627\u0644\u062A\u0631\u0642\u064A\u0629.`
+        );
       }
+      quotaLimit = quotaRes.limit;
+      currentUsage = quotaRes.currentUsage;
+      userPlanTier = quotaRes.plan_tier;
     } catch (err) {
       if (err instanceof AiExtractionError) throw err;
-      logger.warn({ err }, "Could not check user AI quota, proceeding with analysis");
+      logger.warn({ err, userId }, "Could not check office AI quota, proceeding with analysis");
     }
   }
   const settings = getSettings();
@@ -845907,21 +846516,6 @@ async function analyzeCourtMessage(message, userId) {
       "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u062C\u0644\u0633\u0629 \u0643\u0627\u0641\u064A\u0629 \u0641\u064A \u0627\u0644\u0646\u0635 \u0627\u0644\u0645\u062F\u062E\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0627\u0644\u0646\u0635 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0631\u0642\u0645 \u0642\u0636\u064A\u0629 \u0623\u0648 \u0645\u062D\u0643\u0645\u0629 \u0623\u0648 \u0645\u0648\u0639\u062F \u062C\u0644\u0633\u0629."
     );
   }
-  if (userRecord && userId) {
-    try {
-      const { loadLocalUsers: loadLocalUsers2, saveLocalUsers: saveLocalUsers2 } = (init_supabase_service(), __toCommonJS(supabase_service_exports));
-      const users = loadLocalUsers2();
-      const u = users.find((x2) => x2.id === userRecord.id);
-      if (u) {
-        u.ai_usage_count = (u.ai_usage_count || 0) + 1;
-        currentUsage = u.ai_usage_count;
-        saveLocalUsers2(users);
-        logger.info({ userId, usage: u.ai_usage_count, quota: quotaLimit }, "User AI quota incremented");
-      }
-    } catch (err) {
-      logger.warn({ err }, "Could not increment user AI quota");
-    }
-  }
   return {
     ...result,
     ai_usage_count: currentUsage,
@@ -845937,6 +846531,7 @@ router4.post(
   "/ai/analyze",
   attachAuthUser,
   requireAuth,
+  blockSuperAdminFromOfficeData,
   requireActiveSubscription,
   async (req, res) => {
     const parseResult = AnalyzeMessageBody.safeParse(req.body);
@@ -846170,7 +846765,7 @@ var WhatsappReminderChannel = class {
 
 // src/routes/sessions.ts
 var router5 = (0, import_express5.Router)();
-router5.use("/sessions", attachAuthUser, requireAuth, requireActiveSubscription);
+router5.use("/sessions", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function handleRouteError(res, err, defaultMsg) {
   if (err instanceof GoogleBindingMissingError) {
     res.status(409).json({
@@ -846381,37 +846976,215 @@ var sessions_default = router5;
 
 // src/routes/settings.ts
 var import_express6 = __toESM(require_express2(), 1);
+var import_googleapis2 = __toESM(require_src11(), 1);
 init_settings_store();
 init_logger();
+init_supabase_service();
 var router6 = (0, import_express6.Router)();
-function parseBody(body) {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return { ok: false };
-  const b = body;
-  const allowed = [
-    "aiApiKey",
-    "aiModel",
-    "aiBaseUrl",
-    "googleSpreadsheetId",
-    "googleSheetName",
-    "hfApiToken",
-    "hfModel",
-    "whatsappNumber",
-    "whatsappApiUrl",
-    "whatsappToken",
-    "whatsappInstanceId",
-    "supabaseUrl",
-    "supabaseKey",
-    "supabaseTableName"
-  ];
-  const data = {};
-  for (const key of allowed) {
-    const val = b[key];
-    if (val !== void 0) {
-      if (typeof val !== "string") return { ok: false };
-      data[key] = val;
-    }
+var testAttemptsMap = /* @__PURE__ */ new Map();
+function checkTestRateLimit(key) {
+  const now = Date.now();
+  const entry = testAttemptsMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    testAttemptsMap.set(key, { count: 1, resetAt: now + 60 * 1e3 });
+    return true;
   }
-  return { ok: true, data };
+  if (entry.count >= 5) {
+    return false;
+  }
+  entry.count += 1;
+  return true;
+}
+function extractSpreadsheetId(input) {
+  if (!input) return "";
+  const trimmed = input.trim();
+  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  return trimmed.split("/")[0].split("?")[0].trim();
+}
+router6.use("/settings", attachAuthUser, requireAdmin);
+router6.get("/settings/google-binding", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const binding = await getOfficeGoogleBinding(adminId);
+    res.json(binding);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch Google Sheet binding status");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u062D\u0627\u0644\u0629 \u0631\u0628\u0637 Google Sheet." });
+  }
+});
+router6.post("/settings/google-test", async (req, res) => {
+  const adminId = req.authUser.userId;
+  const ip = req.ip || req.socket.remoteAddress || adminId;
+  if (!checkTestRateLimit(`google-test:${ip}`)) {
+    res.status(429).json({
+      error: "\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 (\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 5 \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0641\u064A \u0627\u0644\u062F\u0642\u064A\u0642\u0629). \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 \u062F\u0642\u064A\u0642\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."
+    });
+    return;
+  }
+  try {
+    const { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
+    let rawJson = service_account_json;
+    if (!rawJson) {
+      const existing = await getUserGoogleCredentials(adminId);
+      if (existing?.serviceAccountJson) {
+        rawJson = existing.serviceAccountJson;
+      }
+    }
+    if (!rawJson) {
+      res.status(400).json({ error: "\u064A\u0631\u062C\u0649 \u062A\u0632\u0648\u064A\u062F \u0645\u0644\u0641 Service Account JSON \u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644." });
+      return;
+    }
+    if (!spreadsheet_url_or_id || !spreadsheet_url_or_id.trim()) {
+      res.status(400).json({ error: "\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0631\u0627\u0628\u0637 \u062C\u062F\u0648\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Google Sheet \u0623\u0648 \u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 (Spreadsheet ID)." });
+      return;
+    }
+    const spreadsheetId = extractSpreadsheetId(spreadsheet_url_or_id);
+    if (!spreadsheetId || spreadsheetId.length < 10) {
+      res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (Spreadsheet ID) \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u062A\u0623\u0643\u062F \u0645\u0646 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0643\u0627\u0645\u0644\u0627\u064B." });
+      return;
+    }
+    const targetSheetName = (sheet_name || "Sessions").trim();
+    let parsedJson;
+    try {
+      parsedJson = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
+    } catch {
+      res.status(400).json({ error: "\u0635\u064A\u063A\u0629 \u0645\u0644\u0641 JSON \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u062D\u0629 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0644\u0641." });
+      return;
+    }
+    if (!parsedJson.client_email || !parsedJson.private_key) {
+      res.status(400).json({
+        error: "\u0645\u0644\u0641 JSON \u064A\u0646\u0642\u0635\u0647 \u0623\u062D\u062F \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629: client_email \u0623\u0648 private_key. \u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u062D\u0645\u064A\u0644 \u0645\u0641\u062A\u0627\u062D Service Account \u0628\u0635\u064A\u063A\u0629 JSON \u0645\u0646 Google Cloud Console."
+      });
+      return;
+    }
+    const privateKey = parsedJson.private_key.replace(/\\n/g, "\n");
+    const auth = new import_googleapis2.google.auth.JWT({
+      email: parsedJson.client_email,
+      key: privateKey,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+    });
+    const sheets = import_googleapis2.google.sheets({ version: "v4", auth });
+    let metadata;
+    try {
+      const metaRes = await sheets.spreadsheets.get({ spreadsheetId });
+      metadata = metaRes.data;
+    } catch (err) {
+      const status = err?.status || err?.code || 500;
+      const message = String(err?.message || "");
+      if (status === 403 || message.includes("permission") || message.includes("The caller does not have permission")) {
+        res.status(403).json({
+          error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (403): \u062A\u0623\u0643\u062F \u0645\u0646 \u0641\u062A\u062D \u0632\u0631 '\u0645\u0634\u0627\u0631\u0643\u0629' \u0641\u064A Google Sheet \u0648\u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0648\u0631\u0642\u0629 \u0645\u0639 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0628\u0631\u0645\u062C\u064A (${parsedJson.client_email}) \u0648\u0645\u0646\u062D\u0647 \u0635\u0644\u0627\u062D\u064A\u0629 '\u0645\u062D\u0631\u0631' (Editor).`,
+          client_email: parsedJson.client_email
+        });
+        return;
+      }
+      if (status === 404 || message.includes("Requested entity was not found")) {
+        res.status(404).json({
+          error: `\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (404): \u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u062D\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u0640 Google Sheet \u0623\u0648 \u0627\u0644\u0640 Spreadsheet ID (${spreadsheetId}).`
+        });
+        return;
+      }
+      if (message.includes("SERVICE_DISABLED") || message.includes("has not used the Google Sheets API") || message.includes("API has not been used")) {
+        res.status(400).json({
+          error: "\u0648\u0627\u062C\u0647\u0629 Google Sheets API \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644\u0629 \u0641\u064A \u0645\u0634\u0631\u0648\u0639 Google Cloud. \u064A\u0631\u062C\u0649 \u0627\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 Google Cloud Console \u0648\u062A\u0641\u0639\u064A\u0644 Google Sheets API \u062B\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629."
+        });
+        return;
+      }
+      throw err;
+    }
+    const sheetTabs = metadata.sheets?.map((s2) => s2.properties?.title) || [];
+    const tabExists = sheetTabs.includes(targetSheetName);
+    if (!tabExists) {
+      try {
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: { title: targetSheetName }
+                }
+              }
+            ]
+          }
+        });
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `'${targetSheetName}'!A1:Q1`,
+          valueInputOption: "RAW",
+          requestBody: {
+            values: [[...SHEET_COLUMNS]]
+          }
+        });
+      } catch (err) {
+        logger.warn({ err }, "Could not auto-create missing sheet tab during test, proceeding");
+      }
+    }
+    await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `'${targetSheetName}'!A1:B2`
+    });
+    res.json({
+      success: true,
+      message: "\u062A\u0645 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets \u0628\u0646\u062C\u0627\u062D \u0648\u0642\u0631\u0627\u0621\u0629 \u0648\u0631\u0642\u0629 \u0627\u0644\u0639\u0645\u0644 \u0628\u0634\u0643\u0644 \u0633\u0644\u064A\u0645!",
+      spreadsheet_id: spreadsheetId,
+      sheet_name: targetSheetName,
+      client_email: parsedJson.client_email,
+      sheet_title: metadata.properties?.title || "Google Sheet"
+    });
+  } catch (err) {
+    logger.error({ err }, "Google test connection failed");
+    res.status(400).json({
+      error: err.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0641\u062A\u0627\u062D \u0648\u0627\u0644\u0631\u0627\u0628\u0637."
+    });
+  }
+});
+router6.post("/settings/google-bind", async (req, res) => {
+  const adminId = req.authUser.userId;
+  try {
+    const { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
+    if (!service_account_json) {
+      res.status(400).json({ error: "\u0645\u0644\u0641 Service Account JSON \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    const spreadsheetId = extractSpreadsheetId(spreadsheet_url_or_id);
+    if (!spreadsheetId) {
+      res.status(400).json({ error: "\u0631\u0627\u0628\u0637 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0623\u0648 \u0627\u0644\u0640 Spreadsheet ID \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    const targetSheetName = (sheet_name || "Sessions").trim();
+    const jsonStr = typeof service_account_json === "string" ? service_account_json : JSON.stringify(service_account_json);
+    const result = await saveOfficeGoogleBinding(adminId, {
+      service_account_json: jsonStr,
+      spreadsheet_id: spreadsheetId,
+      sheet_name: targetSheetName
+    });
+    res.json({
+      ...result,
+      spreadsheet_id: spreadsheetId,
+      sheet_name: targetSheetName
+    });
+  } catch (err) {
+    logger.error({ err, adminId }, "Failed to bind Google Sheet to office");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0631\u0628\u0637 Google Sheet \u0644\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+router6.post("/settings/google-disconnect", async (req, res) => {
+  const adminId = req.authUser.userId;
+  try {
+    const result = await disconnectOfficeGoogleBinding(adminId);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err, adminId }, "Failed to disconnect Google Sheet");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0644\u063A\u0627\u0621 \u0631\u0628\u0637 Google Sheet." });
+  }
+});
+function maskToken(token) {
+  if (token.length <= 6) return "***";
+  return token.slice(0, 6) + "***";
 }
 function buildSettingsResponse(s2) {
   return {
@@ -846435,18 +847208,13 @@ function buildSettingsResponse(s2) {
     supabaseTableName: s2.supabaseTableName ?? "app_users"
   };
 }
-router6.get("/settings", attachAuthUser, requireAdmin, (_req, res) => {
+router6.get("/settings", (_req, res) => {
   const s2 = getSettings();
   res.json(buildSettingsResponse(s2));
 });
-router6.put("/settings", attachAuthUser, requireAdmin, (req, res) => {
-  const parsed = parseBody(req.body);
-  if (!parsed.ok) {
-    res.status(400).json({ error: "Invalid settings payload." });
-    return;
-  }
+router6.put("/settings", (req, res) => {
   try {
-    const updated = saveSettings(parsed.data);
+    const updated = saveSettings(req.body);
     logger.info("Settings saved via API");
     res.json(buildSettingsResponse(updated));
   } catch (err) {
@@ -846454,7 +847222,7 @@ router6.put("/settings", attachAuthUser, requireAdmin, (req, res) => {
     res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A." });
   }
 });
-router6.post("/settings/test-whatsapp", attachAuthUser, requireAdmin, async (_req, res) => {
+router6.post("/settings/test-whatsapp", async (_req, res) => {
   const s2 = getSettings();
   if (!s2.whatsappNumber?.trim()) {
     res.status(400).json({ error: "\u064A\u0631\u062C\u0649 \u0643\u062A\u0627\u0628\u0629 \u0631\u0642\u0645 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0648\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0623\u0648\u0644\u0627\u064B." });
@@ -846483,17 +847251,13 @@ router6.post("/settings/test-whatsapp", attachAuthUser, requireAdmin, async (_re
     res.status(400).json({ error: msg });
   }
 });
-function maskToken(token) {
-  if (token.length <= 6) return "***";
-  return token.slice(0, 6) + "***";
-}
 var settings_default = router6;
 
 // src/routes/reports.ts
 var import_express7 = __toESM(require_express2(), 1);
 init_logger();
 var router7 = (0, import_express7.Router)();
-router7.get("/sessions/:id/report", attachAuthUser, requireAuth, requireActiveSubscription, async (req, res) => {
+router7.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid session id." });
@@ -846520,7 +847284,7 @@ router7.get("/sessions/:id/report", attachAuthUser, requireAuth, requireActiveSu
     res.status(500).json({ error: err?.message || "Failed to fetch session report." });
   }
 });
-router7.put("/sessions/:id/report", attachAuthUser, requireAuth, requireActiveSubscription, async (req, res) => {
+router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid session id." });
@@ -846554,7 +847318,7 @@ var reports_default = router7;
 
 // src/routes/cron.ts
 var import_express8 = __toESM(require_express2(), 1);
-var import_crypto3 = __toESM(require("crypto"), 1);
+var import_crypto4 = __toESM(require("crypto"), 1);
 init_env();
 init_logger();
 
@@ -846838,9 +847602,9 @@ async function runReminderSweep() {
 // src/routes/cron.ts
 var router8 = (0, import_express8.Router)();
 function safeCompare(a, b) {
-  const hashA = import_crypto3.default.createHash("sha256").update(a).digest();
-  const hashB = import_crypto3.default.createHash("sha256").update(b).digest();
-  return import_crypto3.default.timingSafeEqual(hashA, hashB);
+  const hashA = import_crypto4.default.createHash("sha256").update(a).digest();
+  const hashB = import_crypto4.default.createHash("sha256").update(b).digest();
+  return import_crypto4.default.timingSafeEqual(hashA, hashB);
 }
 router8.get("/cron/reminders", async (req, res) => {
   const secret = env.cronSecret;
@@ -846923,7 +847687,7 @@ function handlePoaError(res, err, defaultMsg) {
     code: "INTERNAL_ERROR"
   });
 }
-router9.use("/poa", attachAuthUser, requireAuth, requireActiveSubscription);
+router9.use("/poa", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function calcDaysFromHijri(hijriDateStr) {
   if (!hijriDateStr?.trim()) return 0;
   try {
@@ -847145,7 +847909,7 @@ function handleJudgmentError(res, err, defaultMsg) {
     code: "INTERNAL_ERROR"
   });
 }
-router10.use("/judgments", attachAuthUser, requireAuth, requireActiveSubscription);
+router10.use("/judgments", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function normalizeJudgmentType(val) {
   const trimmed = (val || "").trim();
   if (trimmed === "\u0627\u0628\u062A\u062F\u0627\u0626\u064A" || trimmed === "\u0644\u0627") return "\u0627\u0628\u062A\u062F\u0627\u0626\u064A";
@@ -847414,7 +848178,7 @@ function handleTaskError(res, err, defaultMsg) {
     code: "INTERNAL_ERROR"
   });
 }
-router11.use("/tasks", attachAuthUser, requireAuth, requireActiveSubscription);
+router11.use("/tasks", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 var FIELD_KEYS2 = {
   "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629": "title",
   "\u0627\u0644\u0645\u0643\u0644\u0641": "assignee",
@@ -847632,42 +848396,27 @@ init_env();
 init_logger();
 var router12 = (0, import_express12.Router)();
 router12.use("/users", attachAuthUser, requireAdmin);
-router12.get("/users", async (_req, res) => {
+router12.get("/users", async (req, res) => {
   try {
-    const isConfigured = isSupabaseConfigured();
-    const users = await listSupabaseUsers();
+    const adminId = req.authUser.userId;
+    const users = await listOfficeMembers(adminId);
     res.json({
-      isSupabaseConfigured: isConfigured,
+      isSupabaseConfigured: isSupabaseConfigured(),
       users
     });
   } catch (err) {
-    logger.error({ err }, "Failed to fetch users");
+    logger.error({ err }, "Failed to fetch office members");
     res.status(500).json({
-      error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646.",
+      error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0643\u062A\u0628.",
       isSupabaseConfigured: isSupabaseConfigured(),
       users: []
     });
   }
 });
-router12.post("/users", requireAdmin, async (req, res) => {
+router12.post("/users", async (req, res) => {
   try {
-    const {
-      username,
-      email,
-      password,
-      role,
-      display_name,
-      status,
-      phone,
-      subscription_end_date,
-      subscription_notes,
-      plan_tier,
-      billing_cycle,
-      ai_quota_limit,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name
-    } = req.body;
+    const adminId = req.authUser.userId;
+    const { username, email, password, display_name, status, phone } = req.body;
     if (!username || !password) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
       return;
@@ -847677,48 +848426,175 @@ router12.post("/users", requireAdmin, async (req, res) => {
       res.status(400).json({ error: passwordValidation.message, code: passwordValidation.reason });
       return;
     }
-    const newUser = await createSupabaseUser({
+    const newMember = await createOfficeMember(adminId, {
       username,
       email,
       password,
-      role: role === "admin" ? "admin" : "staff",
       display_name,
       status: status || "active",
-      phone: phone?.trim() || null,
-      subscription_end_date: subscription_end_date || null,
-      subscription_notes: subscription_notes || null,
-      plan_tier: plan_tier || (role === "admin" ? "pro" : "plus"),
-      billing_cycle: billing_cycle || "annual",
-      ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name
+      phone: phone?.trim() || null
     });
-    res.status(201).json(newUser);
+    res.status(201).json(newMember);
   } catch (err) {
-    logger.error({ err }, "Failed to create user");
-    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645." });
+    logger.error({ err }, "Failed to create office member");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u062D\u0633\u0627\u0628 \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628." });
   }
 });
-router12.patch("/users/:id", requireAdmin, async (req, res) => {
+router12.patch("/users/:id", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const id = String(req.params.id);
+    const { password, display_name, email, status, phone } = req.body;
+    if (password !== void 0 && typeof password === "string" && password.trim() !== "") {
+      const passwordValidation = validatePassword(password, { email });
+      if (!passwordValidation.isValid) {
+        res.status(400).json({ error: passwordValidation.message, code: passwordValidation.reason });
+        return;
+      }
+    }
+    const updated = await updateOfficeMember(adminId, id, {
+      password,
+      display_name,
+      email,
+      status,
+      phone
+    });
+    res.json(updated);
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to update office member");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+router12.post("/users/:id/toggle-status", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const id = String(req.params.id);
+    const { status } = req.body;
+    const updated = await toggleOfficeMemberStatus(adminId, id, status);
+    res.json(updated);
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to toggle member status");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u063A\u064A\u064A\u0631 \u062D\u0627\u0644\u0629 \u062D\u0633\u0627\u0628 \u0627\u0644\u0639\u0636\u0648." });
+  }
+});
+router12.delete("/users/:id", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const id = String(req.params.id);
+    if (adminId === id) {
+      res.status(400).json({ error: "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0646 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0639\u0636\u0627\u0621." });
+      return;
+    }
+    await deleteOfficeMember(adminId, id);
+    res.status(204).send();
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to delete office member");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+var users_default = router12;
+
+// src/routes/super-admin.ts
+var import_express13 = __toESM(require_express2(), 1);
+init_src();
+init_supabase_service();
+init_env();
+init_logger();
+var router13 = (0, import_express13.Router)();
+router13.post("/super-admin/setup-first", async (req, res) => {
+  try {
+    const { username, password, email, display_name } = req.body;
+    if (!username || !password) {
+      res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
+      return;
+    }
+    const admin = await setupFirstSuperAdmin({
+      username,
+      password,
+      email,
+      display_name
+    });
+    res.status(201).json(admin);
+  } catch (err) {
+    logger.error({ err }, "Failed in setupFirstSuperAdmin");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0639\u062F\u0627\u062F \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0623\u0648\u0644." });
+  }
+});
+router13.use("/super-admin", attachAuthUser, requireSuperAdmin);
+router13.get("/super-admin/admins", async (_req, res) => {
+  try {
+    const admins = await listSupabaseAdmins();
+    res.json({
+      isSupabaseConfigured: isSupabaseConfigured(),
+      admins
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch office admins");
+    res.status(500).json({
+      error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0643\u0627\u062A\u0628.",
+      admins: []
+    });
+  }
+});
+router13.post("/super-admin/admins", async (req, res) => {
+  try {
+    const {
+      username,
+      password,
+      office_name,
+      email,
+      display_name,
+      phone,
+      plan_tier,
+      billing_cycle,
+      subscription_end_date,
+      subscription_notes,
+      ai_quota_limit
+    } = req.body;
+    if (!username || !password || !office_name) {
+      res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u060C \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u060C \u0648\u0627\u0633\u0645 \u0627\u0644\u0645\u0643\u062A\u0628 \u062C\u0645\u064A\u0639\u0647\u0627 \u0645\u0637\u0644\u0648\u0628\u0629." });
+      return;
+    }
+    const passwordValidation = validatePassword(password, { username, email });
+    if (!passwordValidation.isValid) {
+      res.status(400).json({ error: passwordValidation.message, code: passwordValidation.reason });
+      return;
+    }
+    const newAdmin = await createSupabaseAdmin({
+      username,
+      password,
+      office_name,
+      email,
+      display_name,
+      phone,
+      plan_tier,
+      billing_cycle,
+      subscription_end_date,
+      subscription_notes,
+      ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0
+    });
+    res.status(201).json(newAdmin);
+  } catch (err) {
+    logger.error({ err }, "Failed to create office admin");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+router13.patch("/super-admin/admins/:id", async (req, res) => {
   try {
     const id = String(req.params.id);
     const {
       password,
-      role,
+      office_name,
       display_name,
       email,
-      status,
       phone,
-      subscription_end_date,
-      subscription_notes,
+      status,
       plan_tier,
       billing_cycle,
+      subscription_end_date,
+      subscription_notes,
       ai_quota_limit,
-      ai_usage_count,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name
+      ai_usage_count
     } = req.body;
     if (password !== void 0 && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
@@ -847727,81 +848603,133 @@ router12.patch("/users/:id", requireAdmin, async (req, res) => {
         return;
       }
     }
-    const updatedUser = await updateSupabaseUser(id, {
+    const updated = await updateSupabaseAdmin(id, {
       password,
-      role,
+      office_name,
       display_name,
       email,
-      status,
       phone,
-      subscription_end_date,
-      subscription_notes,
+      status,
       plan_tier,
       billing_cycle,
+      subscription_end_date,
+      subscription_notes,
       ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0,
-      ai_usage_count: ai_usage_count !== void 0 ? Number(ai_usage_count) : void 0,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name
+      ai_usage_count: ai_usage_count !== void 0 ? Number(ai_usage_count) : void 0
     });
-    res.json(updatedUser);
-  } catch (err) {
-    logger.error({ err, id: req.params.id }, "Failed to update user");
-    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645." });
-  }
-});
-router12.post("/users/:id/reset-ai-usage", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id);
-    const updated = await resetUserAiUsage(id);
     res.json(updated);
   } catch (err) {
-    logger.error({ err, id: req.params.id }, "Failed to reset AI usage");
-    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0635\u0641\u064A\u0631 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A." });
+    logger.error({ err, id: req.params.id }, "Failed to update office admin");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628." });
   }
 });
-router12.post("/users/:id/toggle-status", requireAdmin, async (req, res) => {
+router13.post("/super-admin/admins/:id/extend", async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { period } = req.body;
+    const admins = await listSupabaseAdmins();
+    const admin = admins.find((a) => a.id === id);
+    if (!admin) {
+      res.status(404).json({ error: "\u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    const now = /* @__PURE__ */ new Date();
+    let baseDate = now;
+    if (admin.subscription_end_date) {
+      const existing = new Date(admin.subscription_end_date);
+      if (existing > now) {
+        baseDate = existing;
+      }
+    }
+    const newDate = new Date(baseDate);
+    if (period === "1m") {
+      newDate.setMonth(newDate.getMonth() + 1);
+    } else {
+      newDate.setFullYear(newDate.getFullYear() + 1);
+    }
+    const updated = await updateSupabaseAdmin(id, {
+      subscription_end_date: newDate.toISOString(),
+      status: "active"
+      // Automatically reactivate if suspended
+    });
+    res.json(updated);
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to extend subscription");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0645\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." });
+  }
+});
+router13.post("/super-admin/admins/:id/toggle-status", async (req, res) => {
   try {
     const id = String(req.params.id);
     const { status } = req.body;
-    const updated = await toggleUserStatus(id, status);
+    const updated = await toggleAdminStatus(id, status);
     res.json(updated);
   } catch (err) {
-    logger.error({ err, id: req.params.id }, "Failed to toggle user status");
-    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u063A\u064A\u064A\u0631 \u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." });
+    logger.error({ err, id: req.params.id }, "Failed to toggle office admin status");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u063A\u064A\u064A\u0631 \u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0643\u062A\u0628." });
   }
 });
-router12.delete("/users/:id", requireAdmin, async (req, res) => {
+router13.post("/super-admin/admins/:id/reset-ai-usage", async (req, res) => {
   try {
     const id = String(req.params.id);
-    if (req.authUser?.userId === id) {
-      res.status(400).json({ error: "\u0644\u0627 \u064A\u0645\u0643\u0646\u0643 \u062D\u0630\u0641 \u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0630\u064A \u0642\u0645\u062A \u0628\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0647 \u062D\u0627\u0644\u064A\u0627\u064B." });
-      return;
-    }
-    await deleteSupabaseUser(id);
-    res.status(204).send();
+    const updated = await resetAdminAiUsage(id);
+    res.json(updated);
   } catch (err) {
-    logger.error({ err, id: req.params.id }, "Failed to delete user");
-    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645." });
+    logger.error({ err, id: req.params.id }, "Failed to reset office AI usage");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0635\u0641\u064A\u0631 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0644\u0645\u0643\u062A\u0628." });
   }
 });
-var users_default = router12;
+router13.delete("/super-admin/admins/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    await deleteSupabaseAdmin(id);
+    res.status(204).send();
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to delete office admin");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+router13.get("/super-admin/unlinked-members", async (_req, res) => {
+  try {
+    const unlinked = await listUnlinkedMembers();
+    res.json({ unlinked });
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch unlinked members");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0623\u0639\u0636\u0627\u0621 \u063A\u064A\u0631 \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u064A\u0646." });
+  }
+});
+router13.post("/super-admin/link-member", async (req, res) => {
+  try {
+    const { memberId, adminId } = req.body;
+    if (!memberId || !adminId) {
+      res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0639\u0636\u0648 \u0648\u0645\u0639\u0631\u0641 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
+      return;
+    }
+    const linked = await linkMemberToAdmin(memberId, adminId);
+    res.json({ success: true, member: linked });
+  } catch (err) {
+    logger.error({ err }, "Failed to link member to admin");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0631\u0628\u0637 \u0627\u0644\u0639\u0636\u0648 \u0628\u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+var super_admin_default = router13;
 
 // src/routes/index.ts
-var router13 = (0, import_express13.Router)();
-router13.use(health_default);
-router13.use(auth_default);
-router13.use(dashboard_default);
-router13.use(ai_default);
-router13.use(sessions_default);
-router13.use(settings_default);
-router13.use(reports_default);
-router13.use(cron_default);
-router13.use(poa_default);
-router13.use(judgments_default);
-router13.use(tasks_default);
-router13.use(users_default);
-var routes_default = router13;
+var router14 = (0, import_express14.Router)();
+router14.use(health_default);
+router14.use(auth_default);
+router14.use(dashboard_default);
+router14.use(ai_default);
+router14.use(sessions_default);
+router14.use(settings_default);
+router14.use(reports_default);
+router14.use(cron_default);
+router14.use(poa_default);
+router14.use(judgments_default);
+router14.use(tasks_default);
+router14.use(users_default);
+router14.use(super_admin_default);
+var routes_default = router14;
 
 // src/app.ts
 init_logger();
@@ -847809,7 +848737,7 @@ init_env();
 var import_meta = {};
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path5.default.dirname(currentFilename);
-var app = (0, import_express14.default)();
+var app = (0, import_express15.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -847842,8 +848770,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express14.default.json());
-app.use(import_express14.default.urlencoded({ extended: true }));
+app.use(import_express15.default.json());
+app.use(import_express15.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -847863,7 +848791,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express14.default.static(distPath));
+  app.use(import_express15.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path5.default.join(distPath, "index.html"));

@@ -2,20 +2,109 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import request from "supertest";
 import app from "../app";
 import * as supabaseService from "../services/supabase.service";
-import * as poaService from "../services/poa.sheets.service";
-import * as taskService from "../services/task.sheets.service";
-import * as judgmentService from "../services/judgment.sheets.service";
+import * as googleSheetsService from "../services/googleSheets.service";
+import { invalidatePoaCache, POA_SHEET_COLUMNS } from "../services/poa.sheets.service";
+import { invalidateTaskCache, TASK_SHEET_COLUMNS } from "../services/task.sheets.service";
+import { invalidateJudgmentCache, JUDGMENT_SHEET_COLUMNS } from "../services/judgment.sheets.service";
+
+function createMockGoogleSheetsClient() {
+  const tabs: Record<string, { sheetId: number; data: string[][] }> = {
+    Attorney: {
+      sheetId: 101,
+      data: [
+        [...POA_SHEET_COLUMNS],
+        // row 2: legacy unmigrated record (no office)
+        ["موكل قديم", "1445/POA/LEGACY", "1445/01/01", "1446/01/01", "0", "ملاحظة", "2026-01-01T00:00:00Z", ""],
+      ],
+    },
+    Tasks: {
+      sheetId: 102,
+      data: [
+        [...TASK_SHEET_COLUMNS],
+        // row 2: legacy unmigrated record (no office)
+        ["مهمة قديمة", "محامي قديم", "عادية", "2026-01-01", "0", "مكتملة", "ملاحظة", "2026-01-01T00:00:00Z", ""],
+      ],
+    },
+    Judgment: {
+      sheetId: 103,
+      data: [
+        [...JUDGMENT_SHEET_COLUMNS],
+        // row 2: legacy unmigrated record (no office)
+        ["1445/قضية/01", "المحكمة", "مدعي", "مدعى عليه", "محامي", "1445/حكم/01", "1445/01/01", "ملخص قديم", "نهائي", "2026-01-01T00:00:00Z", ""],
+      ],
+    },
+  };
+
+  return {
+    spreadsheets: {
+      get: async () => ({
+        data: {
+          sheets: Object.entries(tabs).map(([title, val]) => ({
+            properties: { title, sheetId: val.sheetId },
+          })),
+        },
+      }),
+      batchUpdate: async ({ requestBody }: any) => {
+        const req = requestBody?.requests?.[0];
+        if (req?.deleteDimension) {
+          const { sheetId, startIndex } = req.deleteDimension.range;
+          const tab = Object.values(tabs).find((t) => t.sheetId === sheetId);
+          if (tab && startIndex < tab.data.length) {
+            tab.data.splice(startIndex, 1);
+          }
+        }
+        return { data: {} };
+      },
+      values: {
+        get: async ({ range }: any) => {
+          const tabName = range.split("!")[0].replace(/'/g, "");
+          const tab = tabs[tabName];
+          if (!tab) return { data: { values: [] } };
+          if (range.includes("A2:")) {
+            return { data: { values: tab.data.slice(1).map((r) => [...r]) } };
+          }
+          return { data: { values: tab.data.map((r) => [...r]) } };
+        },
+        append: async ({ range, requestBody }: any) => {
+          const tabName = range.split("!")[0].replace(/'/g, "");
+          const tab = tabs[tabName];
+          const newRow = requestBody?.values?.[0] ?? [];
+          tab.data.push([...newRow]);
+          const rowNum = tab.data.length;
+          return {
+            data: {
+              updates: {
+                updatedRange: `${tabName}!A${rowNum}:Z${rowNum}`,
+              },
+            },
+          };
+        },
+        update: async ({ range, requestBody }: any) => {
+          const tabName = range.split("!")[0].replace(/'/g, "");
+          const tab = tabs[tabName];
+          const match = range.match(/![A-Z]+(\d+):/);
+          if (match && tab) {
+            const rowIndex = Number(match[1]) - 1;
+            const updatedValues = requestBody?.values?.[0];
+            if (updatedValues && tab.data[rowIndex]) {
+              tab.data[rowIndex] = [...updatedValues];
+            }
+          }
+          return { data: {} };
+        },
+      },
+    },
+  };
+}
 
 describe("Cross-Office Isolation for POA, Tasks, and Judgments", { timeout: 30000 }, () => {
   let officeACookie: string;
   let officeBCookie: string;
   let userA: any;
   let userB: any;
-  let prevAllowed: string | undefined;
 
   beforeAll(async () => {
-    prevAllowed = process.env.GLOBAL_SHEET_ALLOWED_USER_IDS;
-    // Create two separate offices
+    // 1. Create two separate office admins
     const usernameA = `office_a_${Date.now()}`;
     const usernameB = `office_b_${Date.now()}`;
     const futureDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
@@ -23,19 +112,32 @@ describe("Cross-Office Isolation for POA, Tasks, and Judgments", { timeout: 3000
     userA = await supabaseService.createSupabaseUser({
       username: usernameA,
       password: "OfficePass123!",
-      role: "staff",
+      role: "admin",
+      status: "active",
       subscription_end_date: futureDate,
     });
 
     userB = await supabaseService.createSupabaseUser({
       username: usernameB,
       password: "OfficePass123!",
-      role: "staff",
+      role: "admin",
+      status: "active",
       subscription_end_date: futureDate,
     });
 
-    // In cross-office multi-tenancy tests, allow both offices to share the mock sheet backend
-    process.env.GLOBAL_SHEET_ALLOWED_USER_IDS = `${userA.id},${userB.id},${usernameA},${usernameB}`;
+    const mockSheetsClient = createMockGoogleSheetsClient();
+    vi.spyOn(googleSheetsService, "getGoogleContext").mockImplementation(async (userId, defaultSheetName) => {
+      return {
+        sheets: mockSheetsClient as any,
+        spreadsheetId: "mock-spreadsheet-id-12345",
+        sheetName: defaultSheetName || "Sessions",
+      };
+    });
+
+    // Invalidate caches before starting
+    invalidatePoaCache();
+    invalidateTaskCache();
+    invalidateJudgmentCache();
 
     // Login Office A
     const loginA = await request(app)
@@ -55,7 +157,7 @@ describe("Cross-Office Isolation for POA, Tasks, and Judgments", { timeout: 3000
   });
 
   afterAll(async () => {
-    process.env.GLOBAL_SHEET_ALLOWED_USER_IDS = prevAllowed;
+    vi.restoreAllMocks();
     if (userA?.id) await supabaseService.deleteSupabaseUser(userA.id).catch(() => {});
     if (userB?.id) await supabaseService.deleteSupabaseUser(userB.id).catch(() => {});
   });

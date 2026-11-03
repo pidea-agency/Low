@@ -7,10 +7,18 @@ import {
   clearSessionCookie,
   requireAuth,
   requireAdmin,
+  requireSuperAdmin,
+  requireAdminOrAbove,
+  blockSuperAdminFromOfficeData,
   setSessionCookie,
 } from "../middlewares/auth.middleware";
 import { loginRateLimiter, adminLoginRateLimiter } from "../middlewares/rate-limiter.middleware";
-import { verifySupabaseUser, ensureDefaultAdmin, listSupabaseUsers } from "../services/supabase.service";
+import {
+  verifySupabaseUser,
+  ensureDefaultAdmin,
+  listSupabaseUsers,
+  findUserByIdOrUsername,
+} from "../services/supabase.service";
 
 const router: IRouter = Router();
 
@@ -51,39 +59,79 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
       return;
     }
 
-    // Check if suspended
+    // 2. Role-based subscription & linkage validation
+    let subscriptionWarning: string | null = null;
+    let daysRemaining: number | null = null;
+
     if (verifiedUser.role === "staff") {
-      if (verifiedUser.status === "suspended") {
+      // Must be linked to an office admin
+      if (!verifiedUser.admin_id) {
         res.status(403).json({
-          error: "تم إيقاف اشتراك هذا الحساب مؤقتاً من قِبل إدارة المنظومة. يرجى التواصل مع المشرف العام لإعادة التفعيل.",
+          error: "حساب المحامي غير مرتبط بأي مكتب حتى الآن. يرجى التواصل مع الإدارة لربط الحساب بمكتبك.",
+          isUnlinked: true,
+        });
+        return;
+      }
+
+      // Check linked office admin's subscription
+      const officeAdmin = await findUserByIdOrUsername(verifiedUser.admin_id);
+      if (!officeAdmin || officeAdmin.role !== "admin") {
+        res.status(403).json({
+          error: "تعذر العثور على مكتب المحاماة المرتبط بهذا الحساب.",
+        });
+        return;
+      }
+
+      if (officeAdmin.status === "suspended") {
+        res.status(403).json({
+          error: "تم إيقاف اشتراك المكتب مؤقتاً. يرجى التواصل مع مدير المكتب.",
           isSuspended: true,
         });
         return;
       }
 
-      // Check if expired
+      if (!officeAdmin.subscription_end_date) {
+        res.status(403).json({
+          error: "اشتراك المكتب غير مفعل. يرجى التواصل مع مدير المكتب.",
+        });
+        return;
+      }
+
+      const expiryTime = new Date(officeAdmin.subscription_end_date).getTime();
+      if (expiryTime < Date.now()) {
+        res.status(403).json({
+          error: "عذراً، انتهت فترة اشتراك المكتب في المنظومة. يرجى التواصل مع مدير المكتب لتجديد الاشتراك.",
+          isExpired: true,
+        });
+        return;
+      }
+    } else if (verifiedUser.role === "admin") {
+      // Office Admin checks own subscription
+      if (verifiedUser.status === "suspended") {
+        res.status(403).json({
+          error: "تم إيقاف اشتراك هذا المكتب مؤقتاً من قِبل إدارة المنظومة. يرجى مراجعة الدعم الفني.",
+          isSuspended: true,
+        });
+        return;
+      }
+
       if (verifiedUser.subscription_end_date) {
         const expiryTime = new Date(verifiedUser.subscription_end_date).getTime();
         const now = Date.now();
         if (expiryTime < now) {
           res.status(403).json({
-            error: "عذراً، انتهت فترة اشتراكك في المنظومة. يرجى التواصل مع المشرف العام لتجديد الاشتراك.",
+            error: "عذراً، انتهت فترة اشتراك مكتبكم في المنظومة. يرجى التواصل مع إدارة المنظومة لتجديد الاشتراك.",
             isExpired: true,
             subscription_end_date: verifiedUser.subscription_end_date,
           });
           return;
         }
-      }
-    }
 
-    // Check 3-day reminder
-    let subscriptionWarning: string | null = null;
-    let daysRemaining: number | null = null;
-    if (verifiedUser.subscription_end_date) {
-      const diffMs = new Date(verifiedUser.subscription_end_date).getTime() - Date.now();
-      daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      if (daysRemaining <= 3 && daysRemaining >= 0) {
-        subscriptionWarning = `تنبيه: ينتهي اشتراكك خلال ${daysRemaining === 0 ? "اليوم" : `${daysRemaining} ${daysRemaining === 1 ? "يوم" : daysRemaining === 2 ? "يومين" : "أيام"}`}. يرجى التواصل مع الإدارة للتجديد.`;
+        const diffMs = expiryTime - now;
+        daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (daysRemaining <= 3 && daysRemaining >= 0) {
+          subscriptionWarning = `تنبيه: ينتهي اشتراك مكتبكم خلال ${daysRemaining === 0 ? "اليوم" : `${daysRemaining} ${daysRemaining === 1 ? "يوم" : daysRemaining === 2 ? "يومين" : "أيام"}`}. يرجى التواصل مع الإدارة للتجديد.`;
+        }
       }
     }
 
@@ -95,7 +143,7 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
     });
 
     const effectiveUserId = verifiedUser.id || verifiedUser.username;
-    const effectiveOfficeId = (verifiedUser as any)?.office_id || effectiveUserId;
+    const effectiveOfficeId = verifiedUser.admin_id || effectiveUserId;
 
     res.json({
       id: effectiveUserId,
@@ -103,9 +151,11 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
       officeId: effectiveOfficeId,
       username: verifiedUser.username,
       role: verifiedUser.role,
+      adminId: verifiedUser.admin_id || null,
+      officeName: verifiedUser.office_name || null,
       displayName: verifiedUser.display_name,
       status: verifiedUser.status || "active",
-      subscription_end_date: verifiedUser.subscription_end_date,
+      subscription_end_date: verifiedUser.role === "admin" ? verifiedUser.subscription_end_date : null,
       subscriptionWarning,
       daysRemaining,
     });
@@ -117,7 +167,7 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
 
 /**
  * Dedicated Admin Portal Login
- * Only users with role === 'admin' are permitted
+ * Allows users with role === 'admin' OR role === 'super_admin'
  */
 router.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (req, res) => {
   const parseResult = LoginBody.safeParse(req.body);
@@ -150,7 +200,7 @@ router.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (r
     return;
   }
 
-  if (adminUser.role !== "admin") {
+  if (adminUser.role !== "admin" && adminUser.role !== "super_admin") {
     res.status(403).json({
       error: "عذراً، هذا الحساب ليس لديه صلاحيات الإدارة للدخول لبوابة المشرف.",
     });
@@ -165,7 +215,7 @@ router.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (r
   });
 
   const effectiveUserId = adminUser.id || adminUser.username;
-  const effectiveOfficeId = (adminUser as any)?.office_id || effectiveUserId;
+  const effectiveOfficeId = adminUser.admin_id || effectiveUserId;
 
   res.json({
     id: effectiveUserId,
@@ -173,6 +223,7 @@ router.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (r
     officeId: effectiveOfficeId,
     username: adminUser.username,
     role: adminUser.role,
+    officeName: adminUser.office_name || null,
     displayName: adminUser.display_name,
   });
 });
@@ -189,12 +240,14 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
     let subscriptionWarning: string | null = null;
     let daysRemaining: number | null = null;
     let status: "active" | "suspended" = "active";
-    let plan_tier: "plus" | "pro" = "plus";
-    let billing_cycle: "monthly" | "annual" = "annual";
-    let ai_quota_limit: number = 50;
+    let plan_tier: "plus" | "pro" | undefined = undefined;
+    let billing_cycle: "monthly" | "annual" | undefined = undefined;
+    let ai_quota_limit: number | undefined = undefined;
     let ai_usage_count: number = 0;
     let isExpired = false;
     let isSuspended = false;
+    let officeName: string | null = null;
+    let adminId: string | null = null;
     let user: any = null;
 
     try {
@@ -203,28 +256,46 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
       if (user) {
         status = user.status || "active";
         isSuspended = status === "suspended";
-        plan_tier = user.plan_tier || (user.role === "admin" ? "pro" : "plus");
-        billing_cycle = user.billing_cycle || "annual";
-        ai_quota_limit = user.ai_quota_limit !== undefined
-          ? user.ai_quota_limit
-          : (user.role === "admin" ? -1 : (plan_tier === "pro" ? 300 : 50));
-        ai_usage_count = user.ai_usage_count || 0;
-        subscription_end_date = user.subscription_end_date || null;
+        adminId = user.admin_id || null;
+        officeName = user.office_name || null;
 
-        if (subscription_end_date) {
-          const diffMs = new Date(subscription_end_date).getTime() - Date.now();
-          daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-          if (daysRemaining < 0) {
-            isExpired = true;
-          } else if (daysRemaining <= 3) {
-            subscriptionWarning = `تنبيه: ينتهي اشتراكك خلال ${daysRemaining === 0 ? "اليوم" : `${daysRemaining} ${daysRemaining === 1 ? "يوم" : daysRemaining === 2 ? "يومين" : "أيام"}`}. يرجى التواصل مع الإدارة للتجديد.`;
+        if (user.role === "super_admin") {
+          plan_tier = "pro";
+          ai_quota_limit = -1;
+        } else if (user.role === "admin") {
+          plan_tier = user.plan_tier || "plus";
+          billing_cycle = user.billing_cycle || "annual";
+          ai_quota_limit = user.ai_quota_limit !== undefined ? user.ai_quota_limit : (plan_tier === "pro" ? 300 : 100);
+          ai_usage_count = user.ai_usage_count || 0;
+          subscription_end_date = user.subscription_end_date || null;
+
+          if (subscription_end_date) {
+            const diffMs = new Date(subscription_end_date).getTime() - Date.now();
+            daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            if (daysRemaining < 0) {
+              isExpired = true;
+            } else if (daysRemaining <= 3) {
+              subscriptionWarning = `تنبيه: ينتهي اشتراك مكتبكم خلال ${daysRemaining === 0 ? "اليوم" : `${daysRemaining} ${daysRemaining === 1 ? "يوم" : daysRemaining === 2 ? "يومين" : "أيام"}`}. يرجى التواصل مع الإدارة للتجديد.`;
+            }
+          }
+        } else if (user.role === "staff") {
+          // Resolve office admin to obtain office name and status
+          if (user.admin_id) {
+            const officeAdmin = users.find((u) => u.id === user.admin_id);
+            if (officeAdmin) {
+              officeName = officeAdmin.office_name || officeAdmin.display_name || null;
+              isSuspended = officeAdmin.status === "suspended";
+              if (officeAdmin.subscription_end_date) {
+                isExpired = new Date(officeAdmin.subscription_end_date).getTime() < Date.now();
+              }
+            }
           }
         }
       }
     } catch {}
 
     const effectiveUserId = authUser.userId || user?.id || authUser.username;
-    const effectiveOfficeId = (user as any)?.office_id || effectiveUserId;
+    const effectiveOfficeId = adminId || effectiveUserId;
 
     res.json({
       id: effectiveUserId,
@@ -232,6 +303,8 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
       officeId: effectiveOfficeId,
       username: authUser.username,
       role: authUser.role || "staff",
+      adminId,
+      officeName,
       displayName: authUser.displayName || authUser.username,
       status,
       isSuspended,
@@ -252,4 +325,11 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
 });
 
 export default router;
-export { attachAuthUser, requireAuth, requireAdmin };
+export {
+  attachAuthUser,
+  requireAuth,
+  requireAdmin,
+  requireSuperAdmin,
+  requireAdminOrAbove,
+  blockSuperAdminFromOfficeData,
+};

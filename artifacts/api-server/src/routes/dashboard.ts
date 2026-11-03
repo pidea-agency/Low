@@ -3,11 +3,11 @@ import { GetDashboardStatsResponse } from "@workspace/api-zod";
 import { getDashboardStats } from "../services/session.service";
 import { isGoogleSheetsConfigured } from "../config/env";
 import { logger } from "../lib/logger";
-import { attachAuthUser, requireAuth } from "../middlewares/auth.middleware";
+import { attachAuthUser, requireAuth, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/stats", attachAuthUser, requireAuth, async (req, res) => {
+router.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
   try {
     const userId = req.authUser?.userId;
     const stats = await getDashboardStats(userId);

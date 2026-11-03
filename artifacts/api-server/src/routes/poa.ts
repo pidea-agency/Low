@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
+import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import { GoogleBindingMissingError, GoogleSettingsStoreError, GoogleSheetsError } from "../services/googleSheets.service";
 import {
@@ -62,7 +62,8 @@ function handlePoaError(res: any, err: any, defaultMsg: string): void {
 }
 
 // Stop all POA Excel Sheet read/write operations if subscription is suspended or expired
-router.use("/poa", attachAuthUser, requireAuth, requireActiveSubscription);
+// Super Admins are blocked from office POA data
+router.use("/poa", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 
 interface PoaRecord {
   clientName: string;

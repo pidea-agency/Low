@@ -47,7 +47,11 @@ export default function AdminLoginPage() {
 
       // Invalidate and refetch auth state before navigating
       await queryClient.invalidateQueries();
-      navigate('/admin', { replace: true });
+      if (data.role === 'super_admin') {
+        navigate('/super-admin', { replace: true });
+      } else {
+        navigate('/users', { replace: true });
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'بيانات الدخول غير صحيحة أو لا تملك صلاحية المشرف.');
       toast({

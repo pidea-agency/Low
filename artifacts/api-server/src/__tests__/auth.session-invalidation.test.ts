@@ -16,6 +16,7 @@ describe("Session Invalidation & Current Account State Verification", () => {
       username,
       password: "ValidPass123!",
       role: "staff",
+      admin_id: "local-office-admin",
     });
 
     try {
@@ -92,7 +93,7 @@ describe("Session Invalidation & Current Account State Verification", () => {
         .set("Cookie", cookieHeader);
 
       expect(demotedAdminRes.status).toBe(403);
-      expect(demotedAdminRes.body.error).toContain("صلاحيات المشرف العام");
+      expect(demotedAdminRes.body.error).toMatch(/صلاحيات مدير المكتب|المشرف/);
     } finally {
       try {
         await supabaseService.deleteSupabaseUser(tempAdmin.id);
@@ -107,6 +108,7 @@ describe("Session Invalidation & Current Account State Verification", () => {
       username,
       password: "oldpassword123",
       role: "staff",
+      admin_id: "local-office-admin",
     });
 
     try {

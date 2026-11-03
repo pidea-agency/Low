@@ -98,8 +98,8 @@ describe("Google Sheets Integration & Error Classification", () => {
   describe("Route-level integration tests (supertest)", () => {
     // Helper to generate a valid signed auth cookie for testing
     const testAdminCookie = createSignedSessionCookie({
-      username: "123456",
-      userId: "local-admin",
+      username: "admin1",
+      userId: "local-office-admin",
     });
 
     it("GET /api/sessions returns 200 on success", async () => {

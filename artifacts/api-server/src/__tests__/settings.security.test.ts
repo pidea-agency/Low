@@ -25,10 +25,10 @@ describe("Server Settings API Authorization Enforcement", () => {
       lawyerCookie = Array.isArray(setCookie) ? setCookie.join("; ") : setCookie;
     }
 
-    // 2. Authenticate admin
+    // 2. Authenticate office admin
     const adminLogin = await request(app)
-      .post("/api/auth/admin-login")
-      .send({ username: "123456", password: "123456" });
+      .post("/api/auth/login")
+      .send({ username: "admin1", password: "admin123" });
     const setAdminCookie = adminLogin.headers["set-cookie"];
     adminCookie = Array.isArray(setAdminCookie) ? setAdminCookie.join("; ") : setAdminCookie;
   });
@@ -59,7 +59,7 @@ describe("Server Settings API Authorization Enforcement", () => {
         .set("Cookie", lawyerCookie);
 
       expect(res.status).toBe(403);
-      expect(res.body.error).toMatch(/صلاحيات المشرف العام/);
+      expect(res.body.error).toMatch(/صلاحيات مدير المكتب|المشرف/);
     });
 
     it("PUT /api/settings returns 403 for lawyer", async () => {
@@ -69,7 +69,7 @@ describe("Server Settings API Authorization Enforcement", () => {
         .send({ aiModel: "unauthorized-change" });
 
       expect(res.status).toBe(403);
-      expect(res.body.error).toMatch(/صلاحيات المشرف العام/);
+      expect(res.body.error).toMatch(/صلاحيات مدير المكتب|المشرف/);
     });
 
     it("POST /api/settings/test-whatsapp returns 403 for lawyer", async () => {
@@ -78,7 +78,7 @@ describe("Server Settings API Authorization Enforcement", () => {
         .set("Cookie", lawyerCookie);
 
       expect(res.status).toBe(403);
-      expect(res.body.error).toMatch(/صلاحيات المشرف العام/);
+      expect(res.body.error).toMatch(/صلاحيات مدير المكتب|المشرف/);
     });
   });
 

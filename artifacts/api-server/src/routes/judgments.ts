@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
+import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import { GoogleBindingMissingError, GoogleSettingsStoreError, GoogleSheetsError } from "../services/googleSheets.service";
 import {
@@ -62,7 +62,8 @@ function handleJudgmentError(res: any, err: any, defaultMsg: string): void {
 }
 
 // Stop all Judgment Excel Sheet read/write operations if subscription is suspended or expired
-router.use("/judgments", attachAuthUser, requireAuth, requireActiveSubscription);
+// Super Admins are blocked from office judgments data
+router.use("/judgments", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 
 export interface JudgmentRecord {
   id: number;

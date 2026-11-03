@@ -281,35 +281,12 @@ export async function getGoogleContext(
 ): Promise<GoogleContext> {
   const cleanUserId = userId?.trim();
 
-  // 1. Check if user is explicitly allowed to use the global sheet
-  const isAllowListed = cleanUserId
-    ? env.globalSheetAllowedUserIds.includes(cleanUserId)
-    : false;
-
-  if (isAllowListed) {
-    const globalSpreadsheetId = env.googleSpreadsheetId;
-    if (!globalSpreadsheetId) {
-      throw new GoogleSheetsConfigError(
-        "إعدادات Google Sheets العامة غير مكتملة في الخادم.",
-      );
-    }
-    logger.info(
-      { userId: cleanUserId, defaultSheetName },
-      "[GoogleSheets] Intentional global sheet usage: user is on GLOBAL_SHEET_ALLOWED_USER_IDS allow-list",
-    );
-    return {
-      sheets: getDefaultClient(),
-      spreadsheetId: globalSpreadsheetId,
-      sheetName: defaultSheetName || env.googleSheetName || "Sessions",
-    };
-  }
-
-  // 2. If not allow-listed and no userId provided, fail closed
+  // Fail closed if no userId provided
   if (!cleanUserId) {
     throw new GoogleBindingMissingError("معرف المستخدم/المكتب غير محدد للوصول إلى Google Sheets.");
   }
 
-  // 3. Look up user's own Google binding from the settings store
+  // Look up office Google binding from the settings store (resolves office admin for staff)
   let userCreds: import("./supabase.service").UserGoogleCredentials | null = null;
   try {
     userCreds = await getUserGoogleCredentials(cleanUserId);
@@ -320,7 +297,7 @@ export async function getGoogleContext(
     );
   }
 
-  // 4. Verify binding exists and is complete
+  // Verify binding exists and is complete
   if (!userCreds) {
     throw new GoogleBindingMissingError("ربط المكتب غير مكتمل. تواصل مع المشرف");
   }

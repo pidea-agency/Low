@@ -129,33 +129,27 @@ export async function analyzeCourtMessage(
   message: string,
   userId?: string,
 ): Promise<SessionExtraction & { ai_usage_count?: number; ai_quota_limit?: number; plan_tier?: string }> {
-  // ── 1. Check and enforce isolated user quota ─────────────────────────────
-  let userRecord: any = null;
-  let quotaLimit = 50; // default Plus plan quota
+  // ── 1. Check and enforce isolated office quota atomically ────────────────
+  let quotaLimit = 100;
   let currentUsage = 0;
   let userPlanTier = "plus";
 
   if (userId) {
     try {
-      const { loadLocalUsers } = require("./supabase.service");
-      const users = loadLocalUsers();
-      userRecord = users.find((u: any) => u.id === userId || u.username === userId);
-      if (userRecord) {
-        userPlanTier = userRecord.plan_tier || (userRecord.role === "admin" ? "pro" : "plus");
-        quotaLimit = userRecord.ai_quota_limit !== undefined
-          ? userRecord.ai_quota_limit
-          : (userPlanTier === "pro" ? 300 : 50);
-        currentUsage = userRecord.ai_usage_count || 0;
-
-        if (quotaLimit !== -1 && currentUsage >= quotaLimit) {
-          throw new AiExtractionError(
-            `تم استهلاك الحد المسموح به لتحليلات الذكاء الاصطناعي لباقة (${userPlanTier === "pro" ? "Pro" : "Plus"}) لهذا الشهر (${currentUsage}/${quotaLimit}). يرجى التواصل مع المشرف العام لتجديد الرصيد أو الترقية لباقة أعلى.`
-          );
-        }
+      const { checkAndIncrementOfficeAiUsage } = require("./supabase.service");
+      const quotaRes = await checkAndIncrementOfficeAiUsage(userId);
+      if (!quotaRes.allowed) {
+        throw new AiExtractionError(
+          quotaRes.error ||
+          `تم استهلاك الحد المسموح به لتحليلات الذكاء الاصطناعي لباقة المكتب لهذا الشهر. يرجى التواصل مع الإدارة لتجديد الرصيد أو الترقية.`
+        );
       }
+      quotaLimit = quotaRes.limit;
+      currentUsage = quotaRes.currentUsage;
+      userPlanTier = quotaRes.plan_tier;
     } catch (err: any) {
       if (err instanceof AiExtractionError) throw err;
-      logger.warn({ err }, "Could not check user AI quota, proceeding with analysis");
+      logger.warn({ err, userId }, "Could not check office AI quota, proceeding with analysis");
     }
   }
 
@@ -267,22 +261,7 @@ export async function analyzeCourtMessage(
     );
   }
 
-  // ── 4. Increment user usage and persist ──────────────────────────────────
-  if (userRecord && userId) {
-    try {
-      const { loadLocalUsers, saveLocalUsers } = require("./supabase.service");
-      const users = loadLocalUsers();
-      const u = users.find((x: any) => x.id === userRecord.id);
-      if (u) {
-        u.ai_usage_count = (u.ai_usage_count || 0) + 1;
-        currentUsage = u.ai_usage_count;
-        saveLocalUsers(users);
-        logger.info({ userId, usage: u.ai_usage_count, quota: quotaLimit }, "User AI quota incremented");
-      }
-    } catch (err) {
-      logger.warn({ err }, "Could not increment user AI quota");
-    }
-  }
+  // Quota was atomically incremented in step 1 upon verification
 
   return {
     ...result,

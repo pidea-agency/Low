@@ -26,6 +26,11 @@ export interface Session {
   sessionType: string | null;
   /** @nullable */
   sessionDateHijri: string | null;
+  /**
+     * Arabic day name (e.g. الخميس, الأحد)
+     * @nullable
+     */
+  sessionDay?: string | null;
   /** @nullable */
   sessionTime: string | null;
   /** @nullable */

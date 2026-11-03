@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { AnalyzeMessageBody } from "@workspace/api-zod";
 import { analyzeCourtMessage, AiExtractionError, InsufficientSessionDataError } from "../services/ai.service";
 import { logger } from "../lib/logger";
-import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
+import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 
 const router: IRouter = Router();
 
@@ -16,6 +16,7 @@ router.post(
   "/ai/analyze",
   attachAuthUser,
   requireAuth,
+  blockSuperAdminFromOfficeData,
   requireActiveSubscription,
   async (req, res) => {
     const parseResult = AnalyzeMessageBody.safeParse(req.body);

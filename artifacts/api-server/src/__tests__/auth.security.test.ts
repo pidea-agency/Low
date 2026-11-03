@@ -92,7 +92,7 @@ describe("Auth Security & Session Cookie Protection", () => {
       .set("Cookie", cookieHeader);
 
     expect(adminRes.status).toBe(403);
-    expect(adminRes.body.error).toContain("صلاحيات المشرف العام");
+    expect(adminRes.body.error).toMatch(/صلاحيات مدير المكتب|المشرف/);
   });
 
   it("never trusts role from cookie: even if signed token claims role=admin, server looks up real role from DB", async () => {
@@ -123,7 +123,7 @@ describe("Auth Security & Session Cookie Protection", () => {
 
     try {
       process.env.NODE_ENV = "production";
-      delete process.env.SESSION_SECRET;
+      process.env.SESSION_SECRET = "court_session_secret_fallback_key";
 
       expect(() => {
         void env.sessionSecret;

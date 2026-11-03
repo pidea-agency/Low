@@ -33,12 +33,13 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
   };
 
   beforeAll(async () => {
-    // 1. User with NO Google binding
+    // 1. Office Admin with NO Google binding
     const unameNoBinding = `nobind_${Date.now()}`;
     userNoBinding = await supabaseService.createSupabaseUser({
       username: unameNoBinding,
       password: "OfficePass123!",
-      role: "staff",
+      role: "admin",
+      status: "active",
       subscription_end_date: futureDate,
     });
     const loginNo = await request(app)
@@ -47,12 +48,13 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
     const cNo = loginNo.headers["set-cookie"];
     cookieNoBinding = Array.isArray(cNo) ? cNo.join("; ") : cNo;
 
-    // 2. User with PARTIAL binding (spreadsheetId only, no service account)
+    // 2. Office Admin with PARTIAL binding (spreadsheetId only, no service account)
     const unamePartial = `partial_${Date.now()}`;
     userPartialBinding = await supabaseService.createSupabaseUser({
       username: unamePartial,
       password: "OfficePass123!",
-      role: "staff",
+      role: "admin",
+      status: "active",
       subscription_end_date: futureDate,
       google_spreadsheet_id: "partial-spreadsheet-id-12345",
     });
@@ -62,12 +64,13 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
     const cPart = loginPart.headers["set-cookie"];
     cookiePartialBinding = Array.isArray(cPart) ? cPart.join("; ") : cPart;
 
-    // 3. User explicitly on GLOBAL allow-list
+    // 3. Office Admin explicitly on legacy GLOBAL allow-list (to prove fallback is removed)
     const unameAllowed = `allowed_${Date.now()}`;
     userAllowedGlobal = await supabaseService.createSupabaseUser({
       username: unameAllowed,
       password: "OfficePass123!",
-      role: "staff",
+      role: "admin",
+      status: "active",
       subscription_end_date: futureDate,
     });
     const loginAllowed = await request(app)
@@ -76,12 +79,13 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
     const cAllowed = loginAllowed.headers["set-cookie"];
     cookieAllowedGlobal = Array.isArray(cAllowed) ? cAllowed.join("; ") : cAllowed;
 
-    // 4. User with COMPLETE binding
+    // 4. Office Admin with COMPLETE binding
     const unameComplete = `complete_${Date.now()}`;
     userCompleteBinding = await supabaseService.createSupabaseUser({
       username: unameComplete,
       password: "OfficePass123!",
-      role: "staff",
+      role: "admin",
+      status: "active",
       subscription_end_date: futureDate,
       google_spreadsheet_id: "custom-user-spreadsheet-id-9999",
       google_service_account_json: JSON.stringify(validServiceAccount),
@@ -95,6 +99,7 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
   });
 
   afterAll(async () => {
+    vi.restoreAllMocks();
     if (userNoBinding?.id) await supabaseService.deleteSupabaseUser(userNoBinding.id).catch(() => {});
     if (userPartialBinding?.id) await supabaseService.deleteSupabaseUser(userPartialBinding.id).catch(() => {});
     if (userAllowedGlobal?.id) await supabaseService.deleteSupabaseUser(userAllowedGlobal.id).catch(() => {});
@@ -129,18 +134,25 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
       expect(ctx.sheets).toBeDefined();
     });
 
-    it("allows global sheet context ONLY for accounts on GLOBAL_SHEET_ALLOWED_USER_IDS allow-list", async () => {
-      // Temporarily mock allow-list to include userAllowedGlobal.id
-      vi.spyOn(env, "globalSheetAllowedUserIds", "get").mockReturnValue([userAllowedGlobal.id]);
+    it("staff user inherits Google binding of their office admin", async () => {
+      const staffUser = await supabaseService.createSupabaseUser({
+        username: `staff_inherit_${Date.now()}`,
+        password: "OfficePass123!",
+        role: "staff",
+        admin_id: userCompleteBinding.id,
+      });
 
-      const ctx = await googleSheetsService.getGoogleContext(userAllowedGlobal.id);
-      expect(ctx.spreadsheetId).toBe(env.googleSpreadsheetId);
+      const ctx = await googleSheetsService.getGoogleContext(staffUser.id);
+      expect(ctx.spreadsheetId).toBe("custom-user-spreadsheet-id-9999");
+      expect(ctx.sheets).toBeDefined();
+
+      await supabaseService.deleteSupabaseUser(staffUser.id).catch(() => {});
     });
 
-    it("rejects an account NOT on the allow-list even if global fallback exists", async () => {
-      vi.spyOn(env, "globalSheetAllowedUserIds", "get").mockReturnValue(["some-other-id"]);
+    it("rejects even if account is in legacy GLOBAL_SHEET_ALLOWED_USER_IDS allow-list (fallback removed)", async () => {
+      vi.spyOn(env, "globalSheetAllowedUserIds", "get").mockReturnValue([userAllowedGlobal.id]);
 
-      await expect(googleSheetsService.getGoogleContext(userNoBinding.id)).rejects.toThrow(
+      await expect(googleSheetsService.getGoogleContext(userAllowedGlobal.id)).rejects.toThrow(
         /GoogleBindingMissingError|ربط المكتب غير مكتمل/,
       );
     });
@@ -184,16 +196,15 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
       expect(res.body.error).toContain("ربط المكتب غير مكتمل. تواصل مع المشرف");
     });
 
-    it("allows allow-listed user to access /api/sessions using global sheet", async () => {
+    it("returns 409 even for allow-listed user because global fallback is removed", async () => {
       vi.spyOn(env, "globalSheetAllowedUserIds", "get").mockReturnValue([userAllowedGlobal.id]);
 
       const res = await request(app)
         .get("/api/sessions")
         .set("Cookie", cookieAllowedGlobal);
 
-      // Must never be 409 (GoogleBindingMissingError)
-      expect(res.status).not.toBe(409);
-      expect([200, 502]).toContain(res.status);
+      expect(res.status).toBe(409);
+      expect(res.body.error).toContain("ربط المكتب غير مكتمل");
     });
   });
 
@@ -215,4 +226,3 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
     });
   });
 });
-

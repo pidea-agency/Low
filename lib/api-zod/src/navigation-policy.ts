@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "staff";
+export type UserRole = "super_admin" | "admin" | "staff";
 
 export interface NavItemConfig {
   id: string;
@@ -79,21 +79,30 @@ export const APP_NAVIGATION_CONFIG: NavItemConfig[] = [
     category: "main",
   },
   {
-    id: "admin_portal",
-    name: "بوابة المشرف العام",
-    path: "/admin",
-    iconName: "Shield",
+    id: "office_members",
+    name: "أعضاء المكتب",
+    path: "/users",
+    iconName: "Users",
     roles: ["admin"],
-    keywords: "بوابة المشرف العام إدارة النظام users admin",
+    keywords: "أعضاء المكتب المحامين الفريق المساعدين users staff members",
     category: "admin",
   },
   {
     id: "settings",
-    name: "إعدادات النظام والربط",
+    name: "إعدادات وربط Google Sheet",
     path: "/settings",
     iconName: "Settings",
     roles: ["admin"],
-    keywords: "الإعدادات إعدادات النظام الربط مفاتيح الحساب settings",
+    keywords: "الإعدادات إعدادات الربط جوجل شيت معالج الربط settings google sheets",
+    category: "admin",
+  },
+  {
+    id: "super_admin_portal",
+    name: "إدارة المكاتب والاشتراكات",
+    path: "/super-admin",
+    iconName: "ShieldAlert",
+    roles: ["super_admin"],
+    keywords: "إدارة المكاتب والاشتراكات سوبر أدمن المشرف العام super admin subscriptions",
     category: "admin",
   },
 ];

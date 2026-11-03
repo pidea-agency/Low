@@ -7,5 +7,21 @@
  */
 
 export interface AuthUser {
+  id?: string;
   username: string;
+  userId?: string;
+  role?: string;
+  displayName?: string;
+  adminId?: string;
+  officeName?: string;
+  status?: string;
+  isSuspended?: boolean;
+  isExpired?: boolean;
+  subscription_end_date?: string;
+  plan_tier?: string;
+  billing_cycle?: string;
+  ai_quota_limit?: number;
+  ai_usage_count?: number;
+  daysRemaining?: number;
+  subscriptionWarning?: string;
 }

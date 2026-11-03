@@ -11,6 +11,7 @@ import poaRouter from "./poa";
 import judgmentsRouter from "./judgments";
 import tasksRouter from "./tasks";
 import usersRouter from "./users";
+import superAdminRouter from "./super-admin";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(poaRouter);
 router.use(judgmentsRouter);
 router.use(tasksRouter);
 router.use(usersRouter);
+router.use(superAdminRouter);
 
 export default router;

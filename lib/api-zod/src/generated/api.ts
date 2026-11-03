@@ -30,7 +30,23 @@ export const LoginBody = zod.object({
 })
 
 export const LoginResponse = zod.object({
-  "username": zod.string()
+  "id": zod.string().optional(),
+  "username": zod.string(),
+  "userId": zod.string().optional(),
+  "role": zod.string().optional(),
+  "displayName": zod.string().optional(),
+  "adminId": zod.string().optional(),
+  "officeName": zod.string().optional(),
+  "status": zod.string().optional(),
+  "isSuspended": zod.boolean().optional(),
+  "isExpired": zod.boolean().optional(),
+  "subscription_end_date": zod.string().optional(),
+  "plan_tier": zod.string().optional(),
+  "billing_cycle": zod.string().optional(),
+  "ai_quota_limit": zod.number().optional(),
+  "ai_usage_count": zod.number().optional(),
+  "daysRemaining": zod.number().optional(),
+  "subscriptionWarning": zod.string().optional()
 })
 
 
@@ -44,7 +60,23 @@ export const LogoutResponse = zod.void()
  * @summary Get the currently authenticated user
  */
 export const GetCurrentUserResponse = zod.object({
-  "username": zod.string()
+  "id": zod.string().optional(),
+  "username": zod.string(),
+  "userId": zod.string().optional(),
+  "role": zod.string().optional(),
+  "displayName": zod.string().optional(),
+  "adminId": zod.string().optional(),
+  "officeName": zod.string().optional(),
+  "status": zod.string().optional(),
+  "isSuspended": zod.boolean().optional(),
+  "isExpired": zod.boolean().optional(),
+  "subscription_end_date": zod.string().optional(),
+  "plan_tier": zod.string().optional(),
+  "billing_cycle": zod.string().optional(),
+  "ai_quota_limit": zod.number().optional(),
+  "ai_usage_count": zod.number().optional(),
+  "daysRemaining": zod.number().optional(),
+  "subscriptionWarning": zod.string().optional()
 })
 
 
@@ -56,13 +88,7 @@ export const GetDashboardStatsResponse = zod.object({
   "todayHearings": zod.number(),
   "upcomingHearings": zod.number(),
   "finishedHearings": zod.number(),
-  "totalPoas": zod.number(),
-  "favorableJudgments": zod.number().optional(),
-  "unfavorableJudgments": zod.number().optional(),
-  "totalTasks": zod.number().optional(),
-  "inProgressTasks": zod.number().optional(),
-  "completedTasks": zod.number().optional(),
-  "urgentTasks": zod.number().optional(),
+  "totalPoas": zod.number()
 })
 
 
@@ -107,6 +133,7 @@ export const ListSessionsResponseItem = zod.object({
   "caseSubject": zod.string().nullable(),
   "sessionType": zod.string().nullable(),
   "sessionDateHijri": zod.string().nullable(),
+  "sessionDay": zod.string().nullish().describe('Arabic day name (e.g. الخميس, الأحد)'),
   "sessionTime": zod.string().nullable(),
   "notes": zod.string().nullable(),
   "status": zod.enum(['Upcoming', 'Today', 'Finished', 'Cancelled']),
@@ -144,6 +171,7 @@ export const CreateSessionResponse = zod.object({
   "caseSubject": zod.string().nullable(),
   "sessionType": zod.string().nullable(),
   "sessionDateHijri": zod.string().nullable(),
+  "sessionDay": zod.string().nullish().describe('Arabic day name (e.g. الخميس, الأحد)'),
   "sessionTime": zod.string().nullable(),
   "notes": zod.string().nullable(),
   "status": zod.enum(['Upcoming', 'Today', 'Finished', 'Cancelled']),
@@ -171,6 +199,7 @@ export const GetSessionResponse = zod.object({
   "caseSubject": zod.string().nullable(),
   "sessionType": zod.string().nullable(),
   "sessionDateHijri": zod.string().nullable(),
+  "sessionDay": zod.string().nullish().describe('Arabic day name (e.g. الخميس, الأحد)'),
   "sessionTime": zod.string().nullable(),
   "notes": zod.string().nullable(),
   "status": zod.enum(['Upcoming', 'Today', 'Finished', 'Cancelled']),
@@ -212,6 +241,7 @@ export const UpdateSessionResponse = zod.object({
   "caseSubject": zod.string().nullable(),
   "sessionType": zod.string().nullable(),
   "sessionDateHijri": zod.string().nullable(),
+  "sessionDay": zod.string().nullish().describe('Arabic day name (e.g. الخميس, الأحد)'),
   "sessionTime": zod.string().nullable(),
   "notes": zod.string().nullable(),
   "status": zod.enum(['Upcoming', 'Today', 'Finished', 'Cancelled']),

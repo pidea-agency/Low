@@ -1,38 +1,38 @@
 import { Router, type IRouter } from "express";
 import { validatePassword } from "@workspace/api-zod";
-import { attachAuthUser, requireAuth, requireAdmin } from "../middlewares/auth.middleware";
+import { attachAuthUser, requireAdmin } from "../middlewares/auth.middleware";
 import {
-  listSupabaseUsers,
-  createSupabaseUser,
-  deleteSupabaseUser,
-  updateSupabaseUser,
-  toggleUserStatus,
-  resetUserAiUsage,
+  listOfficeMembers,
+  createOfficeMember,
+  updateOfficeMember,
+  deleteOfficeMember,
+  toggleOfficeMemberStatus,
 } from "../services/supabase.service";
 import { isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-// Require admin authentication on all user management routes
+// Strictly require Office Admin authentication on all office member management routes
 router.use("/users", attachAuthUser, requireAdmin);
 
 /**
  * GET /api/users
- * Returns list of users and supabase connection status
+ * Returns list of office members belonging exclusively to this Office Admin.
+ * Subscription and Google fields are completely omitted.
  */
-router.get("/users", async (_req, res) => {
+router.get("/users", async (req, res) => {
   try {
-    const isConfigured = isSupabaseConfigured();
-    const users = await listSupabaseUsers();
+    const adminId = req.authUser!.userId!;
+    const users = await listOfficeMembers(adminId);
     res.json({
-      isSupabaseConfigured: isConfigured,
+      isSupabaseConfigured: isSupabaseConfigured(),
       users,
     });
   } catch (err: any) {
-    logger.error({ err }, "Failed to fetch users");
+    logger.error({ err }, "Failed to fetch office members");
     res.status(500).json({
-      error: err.message || "فشل جلب المستخدمين.",
+      error: err.message || "فشل جلب أعضاء المكتب.",
       isSupabaseConfigured: isSupabaseConfigured(),
       users: [],
     });
@@ -41,27 +41,12 @@ router.get("/users", async (_req, res) => {
 
 /**
  * POST /api/users
- * Creates a new user (Admin only)
+ * Creates a new office member (staff) linked to this Office Admin.
  */
-router.post("/users", requireAdmin, async (req, res) => {
+router.post("/users", async (req, res) => {
   try {
-    const {
-      username,
-      email,
-      password,
-      role,
-      display_name,
-      status,
-      phone,
-      subscription_end_date,
-      subscription_notes,
-      plan_tier,
-      billing_cycle,
-      ai_quota_limit,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name,
-    } = req.body;
+    const adminId = req.authUser!.userId!;
+    const { username, email, password, display_name, status, phone } = req.body;
 
     if (!username || !password) {
       res.status(400).json({ error: "اسم المستخدم وكلمة المرور مطلوبان." });
@@ -74,55 +59,31 @@ router.post("/users", requireAdmin, async (req, res) => {
       return;
     }
 
-    const newUser = await createSupabaseUser({
+    const newMember = await createOfficeMember(adminId, {
       username,
       email,
       password,
-      role: role === "admin" ? "admin" : "staff",
       display_name,
       status: status || "active",
       phone: phone?.trim() || null,
-      subscription_end_date: subscription_end_date || null,
-      subscription_notes: subscription_notes || null,
-      plan_tier: plan_tier || (role === "admin" ? "pro" : "plus"),
-      billing_cycle: billing_cycle || "annual",
-      ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : undefined,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name,
     });
 
-    res.status(201).json(newUser);
+    res.status(201).json(newMember);
   } catch (err: any) {
-    logger.error({ err }, "Failed to create user");
-    res.status(400).json({ error: err.message || "فشل إنشاء المستخدم." });
+    logger.error({ err }, "Failed to create office member");
+    res.status(400).json({ error: err.message || "فشل إنشاء حساب عضو المكتب." });
   }
 });
 
 /**
  * PATCH /api/users/:id
- * Updates an existing user (Admin only)
+ * Updates an existing office member (must belong to this Office Admin).
  */
-router.patch("/users/:id", requireAdmin, async (req, res) => {
+router.patch("/users/:id", async (req, res) => {
   try {
+    const adminId = req.authUser!.userId!;
     const id = String(req.params.id);
-    const {
-      password,
-      role,
-      display_name,
-      email,
-      status,
-      phone,
-      subscription_end_date,
-      subscription_notes,
-      plan_tier,
-      billing_cycle,
-      ai_quota_limit,
-      ai_usage_count,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name,
-    } = req.body;
+    const { password, display_name, email, status, phone } = req.body;
 
     if (password !== undefined && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
@@ -132,79 +93,57 @@ router.patch("/users/:id", requireAdmin, async (req, res) => {
       }
     }
 
-    const updatedUser = await updateSupabaseUser(id, {
+    const updated = await updateOfficeMember(adminId, id, {
       password,
-      role,
       display_name,
       email,
       status,
       phone,
-      subscription_end_date,
-      subscription_notes,
-      plan_tier,
-      billing_cycle,
-      ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : undefined,
-      ai_usage_count: ai_usage_count !== undefined ? Number(ai_usage_count) : undefined,
-      google_service_account_json,
-      google_spreadsheet_id,
-      google_sheet_name,
     });
 
-    res.json(updatedUser);
-  } catch (err: any) {
-    logger.error({ err, id: req.params.id }, "Failed to update user");
-    res.status(400).json({ error: err.message || "فشل تعديل المستخدم." });
-  }
-});
-
-/**
- * POST /api/users/:id/reset-ai-usage
- * Resets user's AI quota usage counter to 0 (Admin only)
- */
-router.post("/users/:id/reset-ai-usage", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id);
-    const updated = await resetUserAiUsage(id);
     res.json(updated);
   } catch (err: any) {
-    logger.error({ err, id: req.params.id }, "Failed to reset AI usage");
-    res.status(400).json({ error: err.message || "فشل تصفير استهلاك الذكاء الاصطناعي." });
+    logger.error({ err, id: req.params.id }, "Failed to update office member");
+    res.status(400).json({ error: err.message || "فشل تعديل بيانات عضو المكتب." });
   }
 });
 
 /**
  * POST /api/users/:id/toggle-status
- * Suspends or reactivates a user's subscription (Admin only)
+ * Suspends or reactivates an office member.
  */
-router.post("/users/:id/toggle-status", requireAdmin, async (req, res) => {
+router.post("/users/:id/toggle-status", async (req, res) => {
   try {
+    const adminId = req.authUser!.userId!;
     const id = String(req.params.id);
     const { status } = req.body;
-    const updated = await toggleUserStatus(id, status);
+    const updated = await toggleOfficeMemberStatus(adminId, id, status);
     res.json(updated);
   } catch (err: any) {
-    logger.error({ err, id: req.params.id }, "Failed to toggle user status");
-    res.status(400).json({ error: err.message || "فشل تغيير حالة الاشتراك." });
+    logger.error({ err, id: req.params.id }, "Failed to toggle member status");
+    res.status(400).json({ error: err.message || "فشل تغيير حالة حساب العضو." });
   }
 });
 
 /**
  * DELETE /api/users/:id
- * Deletes a user (Admin only)
+ * Deletes an office member belonging to this office.
  */
-router.delete("/users/:id", requireAdmin, async (req, res) => {
+router.delete("/users/:id", async (req, res) => {
   try {
+    const adminId = req.authUser!.userId!;
     const id = String(req.params.id);
-    if (req.authUser?.userId === id) {
-      res.status(400).json({ error: "لا يمكنك حذف الحساب الذي قمت بتسجيل الدخول به حالياً." });
+
+    if (adminId === id) {
+      res.status(400).json({ error: "لا يمكن حذف حساب مدير المكتب من قائمة الأعضاء." });
       return;
     }
 
-    await deleteSupabaseUser(id);
+    await deleteOfficeMember(adminId, id);
     res.status(204).send();
   } catch (err: any) {
-    logger.error({ err, id: req.params.id }, "Failed to delete user");
-    res.status(400).json({ error: err.message || "فشل حذف المستخدم." });
+    logger.error({ err, id: req.params.id }, "Failed to delete office member");
+    res.status(400).json({ error: err.message || "فشل حذف عضو المكتب." });
   }
 });
 

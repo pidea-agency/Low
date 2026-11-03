@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { attachAuthUser, requireAuth, requireActiveSubscription } from "../middlewares/auth.middleware";
+import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import { GoogleBindingMissingError, GoogleSettingsStoreError, GoogleSheetsError } from "../services/googleSheets.service";
 import {
@@ -63,7 +63,8 @@ function handleTaskError(res: any, err: any, defaultMsg: string): void {
 }
 
 // Stop all Tasks Excel Sheet read/write operations if subscription is suspended or expired
-router.use("/tasks", attachAuthUser, requireAuth, requireActiveSubscription);
+// Super Admins are blocked from office tasks data
+router.use("/tasks", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 
 export interface TaskRecord {
   id: number;

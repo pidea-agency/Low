@@ -11,6 +11,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!isLoading && (error || !user)) {
       handleSessionTerminationCleanup();
       setLocation('/login');
+    } else if (!isLoading && user?.role === 'super_admin') {
+      setLocation('/super-admin');
     }
   }, [user, isLoading, error, setLocation]);
 
@@ -25,7 +27,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (error || !user) {
+  if (error || !user || user.role === 'super_admin') {
     return null;
   }
 

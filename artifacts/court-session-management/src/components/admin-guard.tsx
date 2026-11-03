@@ -1,13 +1,41 @@
 import React from 'react';
 import { RequireRole } from './require-role';
 
-interface AdminGuardProps {
+interface GuardProps {
   children: React.ReactNode;
 }
 
-export function AdminGuard({ children }: AdminGuardProps) {
+export function SuperAdminGuard({ children }: GuardProps) {
   return (
-    <RequireRole roles={['admin']} fallbackUrl="/admin/login">
+    <RequireRole
+      roles={['super_admin']}
+      fallbackUrl="/admin/login"
+      forbiddenMessage="هذا القسم مخصص لمشرفي المنصة فقط (Super Admin)."
+    >
+      {children}
+    </RequireRole>
+  );
+}
+
+export function AdminGuard({ children }: GuardProps) {
+  return (
+    <RequireRole
+      roles={['admin']}
+      fallbackUrl="/admin/login"
+      forbiddenMessage="هذا القسم مخصص لمدير المكتب (Admin)."
+    >
+      {children}
+    </RequireRole>
+  );
+}
+
+export function AdminOrSuperGuard({ children }: GuardProps) {
+  return (
+    <RequireRole
+      roles={['admin', 'super_admin']}
+      fallbackUrl="/admin/login"
+      forbiddenMessage="هذا القسم يتطلب صلاحيات إدارية."
+    >
       {children}
     </RequireRole>
   );

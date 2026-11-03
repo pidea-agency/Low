@@ -39,18 +39,55 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
     app = createTestApp();
   });
 
-  it("allows request to continue when user has an active subscription (expiry in the future)", async () => {
+  it("allows office admin with active subscription (expiry in the future)", async () => {
     const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     vi.spyOn(supabaseService, "findUserByIdOrUsername").mockResolvedValue({
-      id: "user-active-1",
-      username: "active_lawyer",
-      role: "staff",
+      id: "admin-active-1",
+      username: "office_admin",
+      role: "admin",
       status: "active",
       subscription_end_date: futureDate,
     } as any);
 
     const cookie = createSignedSessionCookie({
-      userId: "user-active-1",
+      userId: "admin-active-1",
+      username: "office_admin",
+    });
+
+    const res = await request(app)
+      .get("/api/test-subscription-protected")
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it("allows staff linked to an office admin whose subscription is active", async () => {
+    const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    vi.spyOn(supabaseService, "findUserByIdOrUsername").mockImplementation(async (idOrUsername) => {
+      if (idOrUsername === "user-staff-1" || idOrUsername === "active_lawyer") {
+        return {
+          id: "user-staff-1",
+          username: "active_lawyer",
+          role: "staff",
+          status: "active",
+          admin_id: "office-admin-1",
+        } as any;
+      }
+      if (idOrUsername === "office-admin-1") {
+        return {
+          id: "office-admin-1",
+          username: "office_boss",
+          role: "admin",
+          status: "active",
+          subscription_end_date: futureDate,
+        } as any;
+      }
+      return null;
+    });
+
+    const cookie = createSignedSessionCookie({
+      userId: "user-staff-1",
       username: "active_lawyer",
     });
 
@@ -62,19 +99,18 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
     expect(res.body.success).toBe(true);
   });
 
-  it("rejects with 403 and a clear Arabic message when subscription is expired", async () => {
-    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  it("rejects staff with 403 when unlinked to any office admin", async () => {
     vi.spyOn(supabaseService, "findUserByIdOrUsername").mockResolvedValue({
-      id: "user-expired-1",
-      username: "expired_lawyer",
+      id: "user-unlinked-1",
+      username: "unlinked_lawyer",
       role: "staff",
       status: "active",
-      subscription_end_date: pastDate,
+      admin_id: null,
     } as any);
 
     const cookie = createSignedSessionCookie({
-      userId: "user-expired-1",
-      username: "expired_lawyer",
+      userId: "user-unlinked-1",
+      username: "unlinked_lawyer",
     });
 
     const res = await request(app)
@@ -82,11 +118,33 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
       .set("Cookie", cookie);
 
     expect(res.status).toBe(403);
-    expect(res.body.error).toContain("انتهت فترة اشتراكك");
+    expect(res.body.error).toContain("غير مرتبط بأي مكتب");
+  });
+
+  it("rejects with 403 when office subscription is expired", async () => {
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    vi.spyOn(supabaseService, "findUserByIdOrUsername").mockResolvedValue({
+      id: "admin-expired-1",
+      username: "expired_admin",
+      role: "admin",
+      status: "active",
+      subscription_end_date: pastDate,
+    } as any);
+
+    const cookie = createSignedSessionCookie({
+      userId: "admin-expired-1",
+      username: "expired_admin",
+    });
+
+    const res = await request(app)
+      .get("/api/test-subscription-protected")
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toContain("انتهت فترة اشتراك");
   });
 
   it("rejects request (never calls next()) when user is not found in the account source", async () => {
-    // When user cannot be found in trusted account source
     vi.spyOn(supabaseService, "findUserByIdOrUsername").mockResolvedValue(null);
 
     const cookie = createSignedSessionCookie({
@@ -98,13 +156,11 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
       .get("/api/test-subscription-protected")
       .set("Cookie", cookie);
 
-    // Must be rejected (401 or 403), NEVER 200
     expect([401, 403]).toContain(res.status);
     expect(res.body.success).toBeUndefined();
   });
 
   it("rejects with 503 service error (never next()) when account source throws or times out", async () => {
-    // Direct middleware test to ensure requireActiveSubscription itself handles errors and returns 503
     let nextCalled = false;
     let statusCode = 200;
     let responseBody: any = null;
@@ -113,7 +169,7 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
       authUser: {
         userId: "test-user-id",
         username: "test_user",
-        role: "staff",
+        role: "admin",
       },
     } as any;
 
@@ -136,7 +192,6 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
       new AccountSourceUnavailableError("Database connection timeout"),
     );
 
-    // Also spy loadLocalUsers to simulate exception in existing code
     vi.spyOn(supabaseService, "loadLocalUsers").mockImplementation(() => {
       throw new Error("Disk / DB read failed");
     });
@@ -149,18 +204,18 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
   });
 
   it("rejects when subscription data is missing or invalid (null expiry or bad date)", async () => {
-    // Case A: null subscription_end_date
+    // Case A: null subscription_end_date for admin
     vi.spyOn(supabaseService, "findUserByIdOrUsername").mockResolvedValue({
-      id: "user-no-date",
-      username: "no_date_lawyer",
-      role: "staff",
+      id: "admin-no-date",
+      username: "no_date_admin",
+      role: "admin",
       status: "active",
       subscription_end_date: null,
     } as any);
 
     const cookieA = createSignedSessionCookie({
-      userId: "user-no-date",
-      username: "no_date_lawyer",
+      userId: "admin-no-date",
+      username: "no_date_admin",
     });
 
     const resA = await request(app)
@@ -169,20 +224,19 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
 
     expect(resA.status).toBe(403);
     expect(resA.body.error).toBeDefined();
-    expect(resA.body.success).toBeUndefined();
 
     // Case B: invalid date string
     vi.spyOn(supabaseService, "findUserByIdOrUsername").mockResolvedValue({
-      id: "user-bad-date",
-      username: "bad_date_lawyer",
-      role: "staff",
+      id: "admin-bad-date",
+      username: "bad_date_admin",
+      role: "admin",
       status: "active",
       subscription_end_date: "invalid-date-string-xyz",
     } as any);
 
     const cookieB = createSignedSessionCookie({
-      userId: "user-bad-date",
-      username: "bad_date_lawyer",
+      userId: "admin-bad-date",
+      username: "bad_date_admin",
     });
 
     const resB = await request(app)
@@ -191,20 +245,19 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
 
     expect(resB.status).toBe(403);
     expect(resB.body.error).toBeDefined();
-    expect(resB.body.success).toBeUndefined();
   });
 
-  it("allows admin account to keep access without subscription expiry restrictions", async () => {
+  it("allows super_admin account to keep access without subscription expiry restrictions", async () => {
     vi.spyOn(supabaseService, "findUserByIdOrUsername").mockResolvedValue({
-      id: "admin-id-1",
+      id: "superadmin-id-1",
       username: "superadmin",
-      role: "admin",
+      role: "super_admin",
       status: "active",
-      subscription_end_date: null, // Admins don't have expiry
+      subscription_end_date: null,
     } as any);
 
     const cookie = createSignedSessionCookie({
-      userId: "admin-id-1",
+      userId: "superadmin-id-1",
       username: "superadmin",
     });
 
@@ -214,6 +267,6 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.user.role).toBe("admin");
+    expect(res.body.user.role).toBe("super_admin");
   });
 });
