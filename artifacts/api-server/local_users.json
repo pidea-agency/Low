@@ -1,5 +1,28 @@
 [
   {
+    "id": "local-37de9a74-9723-4c93-8ada-501cab748f6e",
+    "username": "office_a_1793704968984",
+    "email": null,
+    "role": "admin",
+    "admin_id": null,
+    "office_name": "مكتب المحاماة الرئيسي",
+    "display_name": "office_a_1793704968984",
+    "status": "active",
+    "phone": null,
+    "subscription_end_date": "2027-11-03T11:22:48.984Z",
+    "subscription_notes": null,
+    "plan_tier": "plus",
+    "billing_cycle": "annual",
+    "ai_quota_limit": 100,
+    "ai_usage_count": 0,
+    "google_service_account_json": null,
+    "google_spreadsheet_id": null,
+    "google_sheet_name": null,
+    "has_google_service": false,
+    "password_hash": "$2a$10$qvKaBG8/iLdLyR5NinmDQOztWv.VHp8/HvjgUV8wfAQC9GQ2za6iS",
+    "created_at": "2026-11-03T11:22:49.330Z"
+  },
+  {
     "id": "local-0ad205fd-5274-4972-b044-45145809a138",
     "username": "office_a_1793703213195",
     "email": null,
