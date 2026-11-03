@@ -9,6 +9,12 @@
     "court-session-management": {
       "root": "artifacts/court-session-management",
       "framework": "vite",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ],
       "bindings": [
         {
           "type": "service",
@@ -21,6 +27,12 @@
     "mockup-sandbox": {
       "root": "artifacts/mockup-sandbox",
       "framework": "vite",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ],
       "bindings": [
         {
           "type": "service",
