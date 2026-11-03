@@ -3,8 +3,7 @@
   "services": {
     "api-server": {
       "root": "artifacts/api-server",
-      "framework": "express",
-      "entrypoint": "dist/index.mjs"
+      "framework": "express"
     },
     "court-session-management": {
       "root": "artifacts/court-session-management",
