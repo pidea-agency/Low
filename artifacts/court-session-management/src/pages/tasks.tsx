@@ -626,8 +626,8 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#B88A3B,#D4A855)' }}>
-            <CheckSquare className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3F4A2C, #52603B)' }}>
+            <CheckSquare className="w-5 h-5 text-[#C9A449]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">إدارة المهام</h1>
@@ -649,7 +649,7 @@ export default function TasksPage() {
           <Button
             onClick={() => { setEditingTask(null); setFormOpen(true); }}
             className="flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg,#B88A3B,#D4A855)', color: '#fff', border: 'none' }}
+            style={{ background: 'linear-gradient(135deg, #3F4A2C, #2A321D)', color: '#fff', border: 'none' }}
           >
             <Plus className="w-4 h-4" />إضافة مهمة
           </Button>
@@ -722,7 +722,7 @@ export default function TasksPage() {
             </Section>
           )}
           {upcomingTasks.length > 0 && (
-            <Section title="المهام القادمة" count={upcomingTasks.length} color="#B88A3B" icon={Calendar} defaultOpen>
+            <Section title="المهام القادمة" count={upcomingTasks.length} color="#C9A449" icon={Calendar} defaultOpen>
               {upcomingTasks.map(t => <TaskCard key={t.id} {...cp(t)} />)}
             </Section>
           )}

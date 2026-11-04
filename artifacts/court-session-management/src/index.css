@@ -52,6 +52,14 @@
   --color-sidebar-accent-border: var(--sidebar-accent-border);
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  --color-cream: #F6F1E3;
+  --color-olive: #3F4A2C;
+  --color-olive-dark: #333D24;
+  --color-olive-light: #52603B;
+  --color-gold: #C9A449;
+  --color-gold-hover: #B59138;
+  --color-soft-border: #E7E0CB;
+
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
@@ -62,87 +70,84 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE */
+/* LIGHT MODE: Cream (#F6F1E3) / Deep Olive (#3F4A2C) / Gold Accent (#C9A449) */
 :root {
-  --button-outline: rgba(0, 0, 0, 0.1);
-  --badge-outline: rgba(0, 0, 0, 0.05);
+  --button-outline: rgba(63, 74, 44, 0.15);
+  --badge-outline: rgba(63, 74, 44, 0.1);
 
   --opaque-button-border-intensity: -8;
 
-  --elevate-1: rgba(9, 58, 42, 0.04);
-  --elevate-2: rgba(9, 58, 42, 0.08);
+  --elevate-1: rgba(63, 74, 44, 0.04);
+  --elevate-2: rgba(63, 74, 44, 0.08);
 
-  /* Background: مظهر عصري ناصع ونظيف (#F8FAFC) */
-  --background: 210 20% 98%;
-  /* Foreground / Text: نص داكن عالي التباين وواضح (#0F172A) */
-  --foreground: 222 47% 11%;
+  /* Background: Cream background (~#F6F1E3) */
+  --background: 43 45% 93%;
+  /* Foreground / Text: Deep warm olive-charcoal (~#22261D) */
+  --foreground: 80 13% 13%;
 
-  --border: 214 32% 91%;
+  /* Soft border (~#E7E0CB) */
+  --border: 43 36% 85%;
 
+  /* Cards: White cards (~#FFFFFF) */
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --card-border: 214 32% 91%;
+  --card-foreground: 80 13% 13%;
+  --card-border: 43 36% 85%;
 
-  /* Sidebar: الأخضر الغامق (#093A2A) */
-  --sidebar: 160 73% 13%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 160 50% 20%;
-  --sidebar-primary: 38 51% 48%; /* الذهبي (#B88A3B) */
+  /* Sidebar: Deep Olive (~#3F4A2C) */
+  --sidebar: 82 25% 23%;
+  --sidebar-foreground: 43 45% 95%;
+  --sidebar-border: 82 22% 19%;
+  --sidebar-primary: 43 54% 54%; /* Gold Accent (~#C9A449) */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 160 55% 20%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-ring: 38 51% 48%;
+  --sidebar-accent: 82 22% 18%;
+  --sidebar-accent-foreground: 43 54% 65%;
+  --sidebar-ring: 43 54% 54%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 214 32% 91%;
+  --popover-foreground: 80 13% 13%;
+  --popover-border: 43 36% 85%;
 
-  /* Primary: الأخضر الغامق (#093A2A) */
-  --primary: 160 73% 13%;
-  --primary-foreground: 0 0% 100%;
+  /* Primary: Deep Olive (~#3F4A2C) */
+  --primary: 82 25% 23%;
+  --primary-foreground: 43 45% 95%;
 
-  /* Secondary & Muted: درجات رمادية نظيفة وعصرية */
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
+  /* Secondary: Soft warm beige (~#ECE6D6) */
+  --secondary: 43 28% 91%;
+  --secondary-foreground: 80 13% 13%;
 
-  --muted: 210 40% 96.5%;
-  --muted-foreground: 215 16% 47%;
+  /* Muted: Soft cream-beige (~#EFE9DA) */
+  --muted: 43 30% 90%;
+  --muted-foreground: 73 8% 41%;
 
-  /* Accent: الذهبي (#B88A3B) */
-  --accent: 38 51% 48%;
+  /* Accent: Gold Accent (~#C9A449) used sparingly */
+  --accent: 43 54% 54%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 214 32% 91%;
-  --ring: 160 73% 13%;
+  --input: 43 36% 85%;
+  --ring: 43 54% 54%;
   
-  --chart-1: 160 73% 13%;
-  --chart-2: 38 51% 48%;
-  --chart-3: 160 75% 35%;
-  --chart-4: 280 50% 45%;
+  --chart-1: 82 25% 23%;
+  --chart-2: 43 54% 54%;
+  --chart-3: 160 50% 35%;
+  --chart-4: 210 40% 45%;
   --chart-5: 0 75% 52%;
 
-  --app-font-sans: 'Cairo', system-ui, sans-serif;
+  --app-font-sans: 'IBM Plex Sans Arabic', 'Cairo', system-ui, -apple-system, sans-serif;
   --app-font-serif: Georgia, serif;
-  --app-font-mono: 'IBM Plex Mono', 'Courier New', monospace;
-  --radius: 0.5rem;
+  --app-font-mono: 'IBM Plex Sans', 'IBM Plex Mono', 'Courier New', monospace;
+  --radius: 0.75rem;
   
-  --shadow-2xs: 0px 1px 2px 0px rgba(9, 58, 42, 0.05);
-  --shadow-xs: 0px 1px 3px 0px rgba(9, 58, 42, 0.08);
-  --shadow-sm:
-    0px 2px 4px -1px rgba(9, 58, 42, 0.06),
-    0px 1px 2px -1px rgba(9, 58, 42, 0.1);
-  --shadow:
-    0px 4px 6px -1px rgba(9, 58, 42, 0.08),
-    0px 2px 4px -1px rgba(9, 58, 42, 0.05);
-  --shadow-md:
-    0px 6px 12px -2px rgba(9, 58, 42, 0.1),
-    0px 3px 6px -2px rgba(9, 58, 42, 0.06);
-  --shadow-lg:
-    0px 10px 15px -3px rgba(9, 58, 42, 0.08),
-    0px 4px 6px -2px rgba(9, 58, 42, 0.04);
+  --shadow-2xs: 0px 1px 2px 0px rgba(63, 74, 44, 0.04);
+  --shadow-xs: 0px 1px 3px 0px rgba(63, 74, 44, 0.06);
+  --shadow-sm: 0px 2px 4px 0px rgba(63, 74, 44, 0.05);
+  --shadow: 0px 3px 6px -1px rgba(63, 74, 44, 0.06);
+  --shadow-md: 0px 4px 8px -2px rgba(63, 74, 44, 0.06);
+  --shadow-lg: 0px 8px 16px -4px rgba(63, 74, 44, 0.08);
+  --shadow-xl: 0px 12px 24px -6px rgba(63, 74, 44, 0.1);
+  --shadow-2xl: 0px 20px 32px -8px rgba(63, 74, 44, 0.14);
   --shadow-xl:
     0px 20px 25px -5px rgba(9, 58, 42, 0.08),
     0px 10px 10px -5px rgba(9, 58, 42, 0.03);
@@ -203,70 +208,60 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 214 50% 8%;
-  --foreground: 0 0% 92%;
+  --background: 80 14% 10%;
+  --foreground: 43 25% 92%;
 
-  --border: 214 30% 16%;
+  --border: 80 14% 19%;
 
-  --card: 214 45% 11%;
-  --card-foreground: 0 0% 92%;
-  --card-border: 214 30% 18%;
+  --card: 80 13% 13%;
+  --card-foreground: 43 25% 92%;
+  --card-border: 80 14% 19%;
 
-  --sidebar: 214 60% 7%;
-  --sidebar-foreground: 0 0% 88%;
-  --sidebar-border: 214 40% 14%;
-  --sidebar-primary: 38 51% 52%;
+  --sidebar: 80 16% 8%;
+  --sidebar-foreground: 43 25% 90%;
+  --sidebar-border: 80 14% 15%;
+  --sidebar-primary: 43 54% 54%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 214 40% 15%;
-  --sidebar-accent-foreground: 0 0% 92%;
-  --sidebar-ring: 38 51% 52%;
+  --sidebar-accent: 80 14% 14%;
+  --sidebar-accent-foreground: 43 54% 65%;
+  --sidebar-ring: 43 54% 54%;
 
-  --popover: 214 45% 11%;
-  --popover-foreground: 0 0% 92%;
-  --popover-border: 214 30% 18%;
+  --popover: 80 13% 13%;
+  --popover-foreground: 43 25% 92%;
+  --popover-border: 80 14% 19%;
 
-  --primary: 214 65% 25%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 82 25% 30%;
+  --primary-foreground: 43 45% 96%;
 
-  --secondary: 214 30% 16%;
-  --secondary-foreground: 0 0% 88%;
+  --secondary: 80 14% 16%;
+  --secondary-foreground: 43 25% 90%;
 
-  --muted: 214 30% 15%;
-  --muted-foreground: 0 0% 65%;
+  --muted: 80 14% 15%;
+  --muted-foreground: 73 10% 62%;
 
-  --accent: 38 51% 52%;
+  --accent: 43 54% 54%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 75% 58%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 214 30% 20%;
-  --ring: 38 51% 52%;
+  --input: 80 14% 20%;
+  --ring: 43 54% 54%;
   
-  --chart-1: 214 65% 35%;
-  --chart-2: 38 51% 52%;
-  --chart-3: 160 75% 48%;
-  --chart-4: 280 65% 62%;
+  --chart-1: 82 25% 30%;
+  --chart-2: 43 54% 54%;
+  --chart-3: 160 65% 45%;
+  --chart-4: 210 50% 55%;
   --chart-5: 0 75% 58%;
 
-  --shadow-2xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.5);
-  --shadow-xs: 0px 1px 3px 0px rgba(0, 0, 0, 0.6);
-  --shadow-sm:
-    0px 2px 4px -1px rgba(0, 0, 0, 0.5),
-    0px 1px 2px -1px rgba(0, 0, 0, 0.6);
-  --shadow:
-    0px 4px 6px -1px rgba(0, 0, 0, 0.6),
-    0px 2px 4px -1px rgba(0, 0, 0, 0.5);
-  --shadow-md:
-    0px 6px 12px -2px rgba(0, 0, 0, 0.6),
-    0px 3px 6px -2px rgba(0, 0, 0, 0.5);
-  --shadow-lg:
-    0px 10px 15px -3px rgba(0, 0, 0, 0.6),
-    0px 4px 6px -2px rgba(0, 0, 0, 0.5);
-  --shadow-xl:
-    0px 20px 25px -5px rgba(0, 0, 0, 0.6),
-    0px 10px 10px -5px rgba(0, 0, 0, 0.5);
-  --shadow-2xl: 0px 25px 50px -12px rgba(0, 0, 0, 0.8);
+  --shadow-2xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.4);
+  --shadow-xs: 0px 1px 3px 0px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0px 2px 4px 0px rgba(0, 0, 0, 0.4);
+  --shadow: 0px 3px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0px 4px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0px 8px 16px -4px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0px 12px 24px -6px rgba(0, 0, 0, 0.6);
+  --shadow-2xl: 0px 20px 32px -8px rgba(0, 0, 0, 0.7);
 }
 
 @layer base {
@@ -280,26 +275,26 @@
 
   /* Dark mode specific improvements */
   .dark body {
-    background-color: hsl(214, 50%, 8%);
+    background-color: hsl(80, 14%, 10%);
   }
 
   /* Make inputs more visible in dark mode */
   .dark input,
   .dark textarea,
   .dark select {
-    background-color: hsl(214, 30%, 14%);
-    border-color: hsl(214, 30%, 22%);
-    color: hsl(0, 0%, 92%);
+    background-color: hsl(80, 13%, 15%);
+    border-color: hsl(80, 14%, 22%);
+    color: hsl(43, 25%, 92%);
   }
 
   .dark input::placeholder,
   .dark textarea::placeholder {
-    color: hsl(0, 0%, 55%);
+    color: hsl(73, 10%, 55%);
   }
 
   /* Better card borders in dark mode */
   .dark .rounded-xl.border {
-    border-color: hsl(214, 30%, 18%);
+    border-color: hsl(80, 14%, 19%);
   }
 }
 
@@ -387,9 +382,18 @@
     -webkit-backdrop-filter: blur(12px);
   }
 
+  /* Tabular figures for numbers */
+  .tabular-nums,
+  .font-mono,
+  [data-tabular-nums] {
+    font-family: 'IBM Plex Sans', 'IBM Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
   /* Gradient text */
   .gradient-text {
-    background: linear-gradient(135deg, #0F2747, #B88A3B);
+    background: linear-gradient(135deg, #3F4A2C, #C9A449);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -402,7 +406,7 @@
   }
 
   .shimmer {
-    background: linear-gradient(90deg, transparent, rgba(184, 138, 59, 0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(201, 164, 73, 0.12), transparent);
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }

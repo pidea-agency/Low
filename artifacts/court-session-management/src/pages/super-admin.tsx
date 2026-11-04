@@ -522,7 +522,7 @@ export default function SuperAdminPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50/70 dark:bg-background text-foreground p-4 sm:p-8 font-sans" dir="rtl">
+    <div className="min-h-screen bg-background text-foreground p-4 sm:p-8 font-sans" dir="rtl">
       {/* Top Banner Header */}
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border border-border p-5 rounded-2xl shadow-sm">

@@ -80,41 +80,41 @@ export interface EditableReportForm extends SessionReportInput {
 }
 
 // Exact hex colors matching legal brand identity:
-// Primary: #093A2A (Dark Green), Gold: #B88A3B, Body Text: #4B4B4B, Light Bg: #F5F5F5
+// Primary: #3F4A2C (Deep Olive), Gold: #C9A449, Body Text: #22261D, Light Bg: #F6F1E3
 const C = {
-  green: '#093A2A',
-  greenLight: '#0D4D38',
-  gold: '#B88A3B',
-  goldDark: '#9B722C',
+  green: '#3F4A2C',
+  greenLight: '#52603B',
+  gold: '#C9A449',
+  goldDark: '#B59138',
   white: '#ffffff',
-  slateLabelBg: '#F5F5F5',
-  bodyText: '#4B4B4B',
-  border: '#B88A3B',
-  lightBorder: '#E5E5E5',
-  dimText: '#666666',
+  slateLabelBg: '#F6F1E3',
+  bodyText: '#22261D',
+  border: '#C9A449',
+  lightBorder: '#E7E0CB',
+  dimText: '#6B6E60',
 };
 
 // Table cell styles with SOLID vivid colors for crisp rendering
 const th: React.CSSProperties = {
-  backgroundColor: '#093A2A',
+  backgroundColor: '#3F4A2C',
   color: '#ffffff',
   fontWeight: '700',
   textAlign: 'center',
   fontSize: '11.5px',
   padding: '10px 12px',
-  border: '1px solid #B88A3B',
+  border: '1px solid #C9A449',
   whiteSpace: 'nowrap',
   letterSpacing: 'normal',
 };
 
 const td: React.CSSProperties = {
   backgroundColor: '#ffffff',
-  color: '#4B4B4B',
+  color: '#22261D',
   textAlign: 'center',
   fontSize: '11.5px',
   fontWeight: '600',
   padding: '10px 12px',
-  border: '1px solid #B88A3B',
+  border: '1px solid #C9A449',
   letterSpacing: 'normal',
 };
 
@@ -486,7 +486,7 @@ export default function SessionReportPage() {
                 gap: '8px',
                 padding: '9px 16px',
                 borderRadius: '10px',
-                border: `1px solid #B88A3B`,
+                border: `1px solid #C9A449`,
                 backgroundColor: '#FBF7EE',
                 color: '#9B722C',
                 fontSize: '13px',
@@ -529,7 +529,7 @@ export default function SessionReportPage() {
             backgroundColor: '#ffffff',
             color: '#4B4B4B',
             fontFamily: 'Arial, "Segoe UI", sans-serif',
-            border: `1px solid #B88A3B`,
+            border: `1px solid #C9A449`,
             borderRadius: '14px',
             overflow: 'hidden',
             boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
@@ -538,7 +538,7 @@ export default function SessionReportPage() {
         >
 
           {/* ── Header Table (Bulletproof Layout for html2canvas) ── */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '3px solid #B88A3B', backgroundColor: '#ffffff' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '3px solid #C9A449', backgroundColor: '#ffffff' }}>
             <tbody>
               <tr>
                 <td style={{ padding: '12px 24px', verticalAlign: 'top', width: '45%' }}>
@@ -547,7 +547,7 @@ export default function SessionReportPage() {
                 <td style={{ padding: '0' }} />
                 <td style={{ verticalAlign: 'top', textAlign: 'left', width: '260px', padding: '0' }}>
                   <div style={{
-                    backgroundColor: '#093A2A',
+                    backgroundColor: '#3F4A2C',
                     color: '#ffffff',
                     padding: '24px 28px',
                     borderBottomLeftRadius: '22px',
@@ -571,7 +571,7 @@ export default function SessionReportPage() {
                       fontSize: '13px',
                       letterSpacing: '2.5px',
                       marginTop: '6px',
-                      color: '#B88A3B',
+                      color: '#C9A449',
                       fontWeight: '700',
                       textTransform: 'uppercase',
                       direction: 'ltr',
@@ -593,16 +593,16 @@ export default function SessionReportPage() {
               <div style={{
                 fontSize: '13px',
                 fontWeight: '700',
-                color: '#093A2A',
+                color: '#3F4A2C',
                 backgroundColor: '#F5F5F5',
                 padding: '6px 20px',
                 borderRadius: '999px',
-                border: '1px solid #B88A3B',
+                border: '1px solid #C9A449',
                 display: 'inline-block',
                 textAlign: 'center',
               }}>
                 {isExportingPdf ? (
-                  <span style={{ color: '#093A2A', fontWeight: '700', fontSize: '13px' }}>
+                  <span style={{ color: '#3F4A2C', fontWeight: '700', fontSize: '13px' }}>
                     تقرير رقم ( {form.reportNumber || String(id)} )
                   </span>
                 ) : (
@@ -619,7 +619,7 @@ export default function SessionReportPage() {
                         border: 'none',
                         outline: 'none',
                         fontSize: '13px',
-                        color: '#093A2A',
+                        color: '#3F4A2C',
                         fontWeight: '700',
                         textAlign: 'center',
                         padding: 0,
@@ -684,15 +684,15 @@ export default function SessionReportPage() {
                 <tr>
                   <td style={{
                     ...th, width: '200px',
-                    backgroundColor: '#093A2A',
+                    backgroundColor: '#3F4A2C',
                     color: '#ffffff',
-                    borderColor: '#B88A3B',
+                    borderColor: '#C9A449',
                   }}>
                     المحامي المسند إليه الجلسة
                   </td>
                   <td style={{
                     padding: '9px 12px',
-                    border: '1px solid #B88A3B',
+                    border: '1px solid #C9A449',
                     backgroundColor: '#ffffff',
                   }}>
                     {renderField('lawyerName', 'ادخل اسم المحامي هنا...', { width: '100%', fontSize: '12.5px', color: '#4B4B4B', border: 'none', outline: 'none', background: 'transparent', fontWeight: '600' }, 'focus:outline-none')}
@@ -703,14 +703,14 @@ export default function SessionReportPage() {
 
             {/* ── Summary Box ── */}
             <div style={{
-              border: '1.5px solid #B88A3B',
+              border: '1.5px solid #C9A449',
               borderRadius: '8px',
               overflow: 'hidden',
               marginBottom: '20px',
               backgroundColor: '#ffffff',
             }}>
               <div style={{
-                backgroundColor: '#093A2A',
+                backgroundColor: '#3F4A2C',
                 color: '#ffffff',
                 textAlign: 'center',
                 fontWeight: '700',
@@ -730,7 +730,7 @@ export default function SessionReportPage() {
                 })}
                 <div style={{
                   textAlign: 'left', fontSize: '11.5px', fontWeight: '700',
-                  color: '#093A2A', paddingLeft: '12px', marginTop: '10px',
+                  color: '#3F4A2C', paddingLeft: '12px', marginTop: '10px',
                   paddingTop: '8px', borderTop: '1px solid #E5E5E5',
                 }}>
                   تفضلوا بقبول وافر الاحترام والتقدير،،،
@@ -752,9 +752,9 @@ export default function SessionReportPage() {
                 <tr>
                   <td style={{
                     ...th, width: '22%',
-                    backgroundColor: '#093A2A',
+                    backgroundColor: '#3F4A2C',
                     color: '#ffffff',
-                    borderColor: '#B88A3B',
+                    borderColor: '#C9A449',
                   }} rowSpan={1}>موعد الجلسة القادمة</td>
                   <td style={th}>التاريخ</td>
                   <td style={td}>
@@ -775,9 +775,9 @@ export default function SessionReportPage() {
                 <tr>
                   <td style={{
                     ...th, width: '22%',
-                    backgroundColor: '#093A2A',
+                    backgroundColor: '#3F4A2C',
                     color: '#ffffff',
-                    borderColor: '#B88A3B',
+                    borderColor: '#C9A449',
                   }}>الإجراء المطلوب من قبلنا</td>
                   <td colSpan={6} style={{ ...td, textAlign: 'right', padding: '6px 10px' }}>
                     {renderTextarea('ourActionRequired', 2, 'ادخل الإجراءات المطلوبة من فريق المحاماة...', {
@@ -792,9 +792,9 @@ export default function SessionReportPage() {
                 <tr>
                   <td style={{
                     ...th, width: '22%',
-                    backgroundColor: '#093A2A',
+                    backgroundColor: '#3F4A2C',
                     color: '#ffffff',
-                    borderColor: '#B88A3B',
+                    borderColor: '#C9A449',
                   }}>الإجراء المطلوب من قبلكم</td>
                   <td colSpan={6} style={{ ...td, textAlign: 'right', padding: '6px 10px' }}>
                     {renderTextarea('clientActionRequired', 2, 'ادخل الإجراءات أو المستندات المطلوبة من العميل...', {
@@ -814,12 +814,12 @@ export default function SessionReportPage() {
           <div>
             <div style={{
               height: '4px',
-              backgroundColor: '#B88A3B',
+              backgroundColor: '#C9A449',
               width: '100%',
             }} />
             <table style={{
               width: '100%',
-              backgroundColor: '#093A2A',
+              backgroundColor: '#3F4A2C',
               borderCollapse: 'collapse',
             }}>
               <tbody>
@@ -833,7 +833,7 @@ export default function SessionReportPage() {
                       شريكك القانوني المعتمد
                     </div>
                     <div style={{
-                      fontSize: '9px', color: '#B88A3B', letterSpacing: '1px',
+                      fontSize: '9px', color: '#C9A449', letterSpacing: '1px',
                       marginTop: '3px', textTransform: 'uppercase', fontWeight: '700',
                     }}>Your Trusted Legal Partner</div>
                   </td>

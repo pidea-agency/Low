@@ -256,14 +256,14 @@ export default function SubscriptionPage() {
           <Card className="rounded-2xl border-border bg-card shadow-sm">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-bold text-muted-foreground">باقة الاشتراك والصلاحية</CardTitle>
-              <Sparkles className="w-4 h-4 text-amber-500" />
+              <Sparkles className="w-4 h-4 text-[#C9A449]" />
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-base font-black text-foreground">
                   {office.plan_tier === 'pro' ? 'باقة برو الاحترافية (Pro)' : 'باقة بلس المتقدمة (Plus)'}
                 </span>
-                <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[11px] font-bold">
+                <Badge className="bg-[#C9A449]/15 text-[#8F7026] dark:text-[#E2C372] border-[#C9A449]/30 text-[11px] font-bold">
                   {office.billing_cycle === 'monthly' ? 'فوترة شهرية' : 'فوترة سنوية'}
                 </Badge>
               </div>

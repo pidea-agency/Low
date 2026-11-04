@@ -201,16 +201,16 @@ export default function DashboardAdminPage() {
           </Link>
           <Link href="/subscription">
             <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs bg-card border border-border text-foreground hover:bg-accent cursor-pointer transition-all">
-              <CreditCard className="w-4 h-4 text-amber-500" />
+              <CreditCard className="w-4 h-4 text-[#C9A449]" />
               <span>الاشتراك والحصص</span>
             </div>
           </Link>
           <Link href="/chat">
             <div
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-white shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:brightness-105"
-              style={{ background: 'linear-gradient(135deg, #B88A3B 0%, #8E6825 100%)' }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-white shadow-xs cursor-pointer transition-all duration-200 hover:brightness-105"
+              style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #2A321D 100%)' }}
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 text-[#C9A449]" />
               <span>تحليل رسالة جديدة</span>
             </div>
           </Link>
@@ -350,9 +350,9 @@ export default function DashboardAdminPage() {
             <div className="flex items-center gap-2">
               <div
                 className="w-5 h-5 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #093A2A, #0D4E3A)' }}
+                style={{ background: 'linear-gradient(135deg, #3F4A2C, #52603B)' }}
               >
-                <Calendar className="w-3 h-3 text-amber-400" />
+                <Calendar className="w-3 h-3 text-[#C9A449]" />
               </div>
               <h2 className="text-sm font-bold text-foreground">جلسات المحكمة القادمة في المكتب</h2>
             </div>
@@ -394,7 +394,7 @@ export default function DashboardAdminPage() {
             <div className="flex items-center gap-2">
               <div
                 className="w-5 h-5 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #B88A3B, #D4A855)' }}
+                style={{ background: 'linear-gradient(135deg, #C9A449, #B59138)' }}
               >
                 <CheckSquare className="w-3 h-3 text-white" />
               </div>

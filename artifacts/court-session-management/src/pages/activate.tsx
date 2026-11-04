@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import {
   ShieldCheck,
+  Scale,
   Lock,
   Eye,
   EyeOff,
@@ -152,14 +153,14 @@ export default function ActivatePage() {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-background via-muted/20 to-muted/40 flex flex-col justify-center items-center p-4 sm:p-6"
+      className="min-h-screen bg-background text-foreground flex flex-col justify-center items-center p-4 sm:p-6"
       dir="rtl"
     >
       <div className="w-full max-w-md space-y-6">
         {/* Brand / Logo */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-            <ShieldCheck className="w-6 h-6" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary text-white shadow-xs">
+            <Scale className="w-6 h-6 text-[#C9A449]" />
           </div>
           <h2 className="text-lg font-bold text-foreground">منظومة إدارة الجلسات والمكاتب</h2>
           <p className="text-xs text-muted-foreground">تفعيل حساب المحامي وتعيين كلمة المرور</p>

@@ -84,7 +84,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <main className="flex-1 overflow-y-auto bg-slate-50/70 dark:bg-background">
+      <main className="flex-1 overflow-y-auto bg-background text-foreground">
         <ErrorBoundary>
           <Suspense fallback={<div className="flex h-full items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
             {children}

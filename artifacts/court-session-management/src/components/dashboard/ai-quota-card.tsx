@@ -37,14 +37,14 @@ export function AiQuotaCard({
         <div className="flex items-center gap-3.5">
           <div
             className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs"
-            style={{ background: 'linear-gradient(135deg, #093A2A 0%, #0D4E3A 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #353E24 100%)' }}
           >
-            <Scale className="w-5 h-5 text-amber-400" />
+            <Scale className="w-5 h-5 text-[#C9A449]" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-sm text-foreground truncate">{accountName}</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C9A449]/15 text-[#8F7026] dark:text-[#E2C372] border border-[#C9A449]/30">
                 {badgeLabel}
               </span>
             </div>
@@ -58,7 +58,7 @@ export function AiQuotaCard({
                 </>
               ) : (
                 <>
-                  <Database className="w-3 h-3 text-emerald-500 shrink-0" />
+                  <Database className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span className="text-muted-foreground">المزامنة مع Google Drive نشطة</span>
                 </>
               )}
@@ -70,7 +70,7 @@ export function AiQuotaCard({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <Zap className="w-3.5 h-3.5 text-[#C9A449]" />
               {quotaLabel}
             </span>
             <span className="font-mono font-bold text-foreground">
@@ -83,12 +83,12 @@ export function AiQuotaCard({
               style={{
                 width: `${percent}%`,
                 background: isUnlimited
-                  ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                  ? 'linear-gradient(90deg, #3F4A2C 0%, #52603B 100%)'
                   : percent >= 100
                   ? '#ef4444'
                   : percent >= 80
                   ? '#f59e0b'
-                  : '#B88A3B',
+                  : '#C9A449',
               }}
             />
           </div>

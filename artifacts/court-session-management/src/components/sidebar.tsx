@@ -54,8 +54,8 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       className="flex flex-col h-full sidebar-gradient"
       style={{
         background: theme === 'dark'
-          ? 'linear-gradient(160deg, #051F17 0%, #093A2A 55%, #03120E 100%)'
-          : 'linear-gradient(160deg, #093A2A 0%, #0D4E3A 55%, #06261C 100%)',
+          ? 'linear-gradient(165deg, #222819 0%, #1A1F13 60%, #14170E 100%)'
+          : 'linear-gradient(165deg, #3F4A2C 0%, #353E24 60%, #2A321D 100%)',
         borderInlineStart: theme === 'dark'
           ? '1px solid rgba(255,255,255,0.06)'
           : '1px solid rgba(255,255,255,0.08)',
@@ -71,7 +71,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
             style={{
-              background: '#B88A3B',
+              background: '#C9A449',
               boxShadow: '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
             }}
           >
@@ -81,7 +81,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             <h1 className="text-xs font-bold text-white leading-tight truncate">
               إدارة جلسات المحكمة
             </h1>
-            <p className="text-[10px] mt-0.5" style={{ color: '#B88A3B' }}>
+            <p className="text-[10px] mt-0.5" style={{ color: '#C9A449' }}>
               بوابة المحامي
             </p>
           </div>
@@ -116,7 +116,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                 style={
                   isActive
                     ? {
-                        background: '#B88A3B',
+                        background: '#C9A449',
                         color: '#ffffff',
                         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.25)',
                       }
@@ -195,7 +195,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                       className="h-full rounded-full transition-all duration-300"
                       style={{
                         width: `${Math.min(100, Math.round(((user.ai_usage_count || 0) / (user.ai_quota_limit || 100)) * 100))}%`,
-                        background: (user.ai_usage_count || 0) >= (user.ai_quota_limit || 100) ? '#ef4444' : '#B88A3B',
+                        background: (user.ai_usage_count || 0) >= (user.ai_quota_limit || 100) ? '#ef4444' : '#C9A449',
                       }}
                     />
                   </div>
@@ -204,9 +204,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                     onClick={() => onNavigate?.()}
                     className="block text-center text-[10px] font-bold py-1 px-2 rounded-lg transition-colors hover:brightness-110"
                     style={{
-                      background: 'rgba(184,138,59,0.2)',
-                      color: '#f59e0b',
-                      border: '1px solid rgba(184,138,59,0.3)',
+                      background: 'rgba(201, 164, 73, 0.2)',
+                      color: '#C9A449',
+                      border: '1px solid rgba(201, 164, 73, 0.35)',
                     }}
                   >
                     إدارة الحصص والاستهلاك ←
@@ -225,7 +225,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                       className="h-full rounded-full transition-all duration-300"
                       style={{
                         width: `${user.ai_quota_limit ? Math.min(100, Math.round(((user.ai_usage_count || 0) / user.ai_quota_limit) * 100)) : Math.min(100, Math.round(((user.ai_usage_count || 0) / 100) * 100))}%`,
-                        background: user.ai_quota_limit && (user.ai_usage_count || 0) >= user.ai_quota_limit ? '#ef4444' : '#B88A3B',
+                        background: user.ai_quota_limit && (user.ai_usage_count || 0) >= user.ai_quota_limit ? '#ef4444' : '#C9A449',
                       }}
                     />
                   </div>
