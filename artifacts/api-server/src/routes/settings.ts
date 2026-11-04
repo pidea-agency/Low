@@ -11,6 +11,7 @@ import {
   getUserGoogleCredentials,
 } from "../services/supabase.service";
 import { SHEET_COLUMNS } from "../services/googleSheets.service";
+import { isEncrypted, decryptSecret } from "../lib/encryption";
 
 const router: IRouter = Router();
 
@@ -108,7 +109,8 @@ export async function verifyGoogleSheetAccess(params: {
   // Parse and validate service account JSON structure
   let parsedJson: any;
   try {
-    parsedJson = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
+    const unencrypted = typeof rawJson === "string" && isEncrypted(rawJson) ? decryptSecret(rawJson) : rawJson;
+    parsedJson = typeof unencrypted === "string" ? JSON.parse(unencrypted) : unencrypted;
   } catch {
     throw new GoogleVerificationError("صيغة ملف JSON غير صالحة. تأكد من صحة محتوى الملف.", 400);
   }
@@ -270,11 +272,18 @@ router.post("/settings/google-test", async (req, res) => {
 router.post("/settings/google-bind", async (req, res) => {
   const adminId = req.authUser!.userId!;
   try {
-    const { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
+    let { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
 
     if (!service_account_json) {
-      res.status(400).json({ error: "ملف Service Account JSON مطلوب." });
-      return;
+      const existing = await getUserGoogleCredentials(adminId);
+      if (existing?.serviceAccountJson) {
+        service_account_json = typeof existing.serviceAccountJson === "string"
+          ? existing.serviceAccountJson
+          : JSON.stringify(existing.serviceAccountJson);
+      } else {
+        res.status(400).json({ error: "ملف Service Account JSON مطلوب." });
+        return;
+      }
     }
 
     if (!spreadsheet_url_or_id || !spreadsheet_url_or_id.trim()) {

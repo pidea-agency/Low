@@ -477,6 +477,36 @@ describe("Office Members Isolation and Google Sheets Binding Security", { timeou
       expect(staffCreds).not.toBeNull();
       expect(staffCreds?.spreadsheetId).toBe("valid-accessible-spreadsheet-id");
     });
+
+    it("can update sheet name or re-bind without re-sending JSON without throwing enc:v1 JSON syntax error", async () => {
+      const mockSpreadsheets = {
+        spreadsheets: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              properties: { title: "Office A Sheet Updated" },
+              sheets: [{ properties: { title: "CustomTab" } }],
+            },
+          }),
+          values: {
+            get: vi.fn().mockResolvedValue({ data: { values: [] } }),
+          },
+        },
+      };
+      vi.spyOn(google, "sheets").mockReturnValue(mockSpreadsheets as any);
+
+      // Re-bind without supplying service_account_json (should reuse decrypted existing credentials)
+      const res = await request(app)
+        .post("/api/settings/google-bind")
+        .set("Cookie", cookieAdminA)
+        .send({
+          spreadsheet_url_or_id: "valid-accessible-spreadsheet-id",
+          sheet_name: "CustomTab",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.sheet_name).toBe("CustomTab");
+    });
   });
 });
 

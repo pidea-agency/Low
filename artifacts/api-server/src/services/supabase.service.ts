@@ -904,7 +904,8 @@ function sanitizeGoogleServiceJson(raw?: any): string | null {
   if (!raw) return null;
   if (typeof raw === "string" && !raw.trim()) return null;
   try {
-    const parsed = typeof raw === "string" ? JSON.parse(raw.trim()) : raw;
+    const text = typeof raw === "string" && isEncrypted(raw) ? decryptSecret(raw) : raw;
+    const parsed = typeof text === "string" ? JSON.parse(text.trim()) : text;
     if (!parsed || typeof parsed !== "object") {
       throw new Error("Invalid JSON object");
     }
@@ -1450,9 +1451,13 @@ export async function createSupabaseUser(input: {
   // Encrypt google json if provided
   let encryptedGoogleJson: string | null = null;
   if (input.google_service_account_json && isOfficeAdmin) {
-    const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
-    if (sanitized) {
-      encryptedGoogleJson = encryptSecret(sanitized);
+    if (isEncrypted(input.google_service_account_json)) {
+      encryptedGoogleJson = input.google_service_account_json;
+    } else {
+      const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
+      if (sanitized) {
+        encryptedGoogleJson = encryptSecret(sanitized);
+      }
     }
   }
 
@@ -1824,6 +1829,8 @@ export async function updateSupabaseUser(
   if (input.google_service_account_json !== undefined) {
     if (!input.google_service_account_json) {
       updates.google_service_account_json = null;
+    } else if (isEncrypted(input.google_service_account_json)) {
+      updates.google_service_account_json = input.google_service_account_json;
     } else {
       const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
       updates.google_service_account_json = sanitized ? encryptSecret(sanitized) : null;

@@ -57655,7 +57655,8 @@ function sanitizeGoogleServiceJson(raw) {
   if (!raw) return null;
   if (typeof raw === "string" && !raw.trim()) return null;
   try {
-    const parsed = typeof raw === "string" ? JSON.parse(raw.trim()) : raw;
+    const text = typeof raw === "string" && isEncrypted(raw) ? decryptSecret(raw) : raw;
+    const parsed = typeof text === "string" ? JSON.parse(text.trim()) : text;
     if (!parsed || typeof parsed !== "object") {
       throw new Error("Invalid JSON object");
     }
@@ -58016,9 +58017,13 @@ async function createSupabaseUser(input) {
   const isOfficeAdmin = role === "admin";
   let encryptedGoogleJson = null;
   if (input.google_service_account_json && isOfficeAdmin) {
-    const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
-    if (sanitized) {
-      encryptedGoogleJson = encryptSecret(sanitized);
+    if (isEncrypted(input.google_service_account_json)) {
+      encryptedGoogleJson = input.google_service_account_json;
+    } else {
+      const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
+      if (sanitized) {
+        encryptedGoogleJson = encryptSecret(sanitized);
+      }
     }
   }
   const password_hash = await import_bcryptjs.default.hash(password, 10);
@@ -58324,6 +58329,8 @@ async function updateSupabaseUser(id, input) {
   if (input.google_service_account_json !== void 0) {
     if (!input.google_service_account_json) {
       updates.google_service_account_json = null;
+    } else if (isEncrypted(input.google_service_account_json)) {
+      updates.google_service_account_json = input.google_service_account_json;
     } else {
       const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
       updates.google_service_account_json = sanitized ? encryptSecret(sanitized) : null;
@@ -847083,6 +847090,7 @@ init_settings_store();
 init_logger();
 init_supabase_service();
 init_googleSheets_service();
+init_encryption();
 var router6 = (0, import_express6.Router)();
 var testAttemptsMap = /* @__PURE__ */ new Map();
 function checkTestRateLimit(key) {
@@ -847143,7 +847151,8 @@ async function verifyGoogleSheetAccess(params) {
   const targetSheetName = (sheetName || "Sessions").trim();
   let parsedJson;
   try {
-    parsedJson = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
+    const unencrypted = typeof rawJson === "string" && isEncrypted(rawJson) ? decryptSecret(rawJson) : rawJson;
+    parsedJson = typeof unencrypted === "string" ? JSON.parse(unencrypted) : unencrypted;
   } catch {
     throw new GoogleVerificationError("\u0635\u064A\u063A\u0629 \u0645\u0644\u0641 JSON \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u062D\u0629 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0644\u0641.", 400);
   }
@@ -847273,10 +847282,15 @@ router6.post("/settings/google-test", async (req, res) => {
 router6.post("/settings/google-bind", async (req, res) => {
   const adminId = req.authUser.userId;
   try {
-    const { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
+    let { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
     if (!service_account_json) {
-      res.status(400).json({ error: "\u0645\u0644\u0641 Service Account JSON \u0645\u0637\u0644\u0648\u0628." });
-      return;
+      const existing = await getUserGoogleCredentials(adminId);
+      if (existing?.serviceAccountJson) {
+        service_account_json = typeof existing.serviceAccountJson === "string" ? existing.serviceAccountJson : JSON.stringify(existing.serviceAccountJson);
+      } else {
+        res.status(400).json({ error: "\u0645\u0644\u0641 Service Account JSON \u0645\u0637\u0644\u0648\u0628." });
+        return;
+      }
     }
     if (!spreadsheet_url_or_id || !spreadsheet_url_or_id.trim()) {
       res.status(400).json({ error: "\u0631\u0627\u0628\u0637 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0623\u0648 \u0627\u0644\u0640 Spreadsheet ID \u0645\u0637\u0644\u0648\u0628." });
