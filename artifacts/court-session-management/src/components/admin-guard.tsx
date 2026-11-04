@@ -21,7 +21,7 @@ export function AdminGuard({ children }: GuardProps) {
   return (
     <RequireRole
       roles={['admin']}
-      fallbackUrl="/admin/login"
+      fallbackUrl="/login"
       forbiddenMessage="هذا القسم مخصص لمدير المكتب (Admin)."
     >
       {children}

@@ -61,12 +61,14 @@ describe("Session Invalidation & Current Account State Verification", () => {
       username,
       password: "ValidPass123!",
       role: "admin",
+      status: "active",
+      subscription_end_date: new Date(Date.now() + 86400000 * 30).toISOString(),
     });
 
     try {
-      // 2. Log in to get admin session
+      // 2. Log in via standard login route (/api/auth/login) to get admin session
       const loginRes = await request(app)
-        .post("/api/auth/admin-login")
+        .post("/api/auth/login")
         .send({
           username,
           password: "ValidPass123!",

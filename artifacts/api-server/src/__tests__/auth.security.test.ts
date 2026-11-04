@@ -137,4 +137,54 @@ describe("Auth Security & Session Cookie Protection", () => {
       }
     }
   });
+
+  describe("Role-Separated Login Portals", () => {
+    it("POST /api/auth/login allows office admin (admin1)", async () => {
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ username: "admin1", password: "admin123" });
+      expect(res.status).toBe(200);
+      expect(res.body.role).toBe("admin");
+    });
+
+    it("POST /api/auth/login allows staff (12345)", async () => {
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ username: "12345", password: "12345" });
+      expect(res.status).toBe(200);
+      expect(res.body.role).toBe("staff");
+    });
+
+    it("POST /api/auth/login rejects super_admin (123456) with 403 and directs to /admin/login", async () => {
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ username: "123456", password: "123456" });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain("/admin/login");
+    });
+
+    it("POST /api/auth/admin-login allows super_admin (123456)", async () => {
+      const res = await request(app)
+        .post("/api/auth/admin-login")
+        .send({ username: "123456", password: "123456" });
+      expect(res.status).toBe(200);
+      expect(res.body.role).toBe("super_admin");
+    });
+
+    it("POST /api/auth/admin-login rejects office admin (admin1) with 403", async () => {
+      const res = await request(app)
+        .post("/api/auth/admin-login")
+        .send({ username: "admin1", password: "admin123" });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain("Super Admin");
+    });
+
+    it("POST /api/auth/admin-login rejects staff (12345) with 403", async () => {
+      const res = await request(app)
+        .post("/api/auth/admin-login")
+        .send({ username: "12345", password: "12345" });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain("Super Admin");
+    });
+  });
 });

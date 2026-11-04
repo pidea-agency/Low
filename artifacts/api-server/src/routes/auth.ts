@@ -59,6 +59,15 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
       return;
     }
 
+    // Super Admin must log in via the dedicated Super Admin Portal (/admin/login)
+    if (verifiedUser.role === "super_admin") {
+      res.status(403).json({
+        error: "حساب المشرف العام مخصص للدخول عبر بوابة المشرف العام (/admin/login).",
+        isSuperAdmin: true,
+      });
+      return;
+    }
+
     // 2. Role-based subscription & linkage validation
     let subscriptionWarning: string | null = null;
     let daysRemaining: number | null = null;
@@ -200,9 +209,10 @@ router.post("/auth/admin-login", adminLoginRateLimiter, attachAuthUser, async (r
     return;
   }
 
-  if (adminUser.role !== "admin" && adminUser.role !== "super_admin") {
+  // Admin portal is restricted exclusively to Super Admin (Platform Admin)
+  if (adminUser.role !== "super_admin") {
     res.status(403).json({
-      error: "عذراً، هذا الحساب ليس لديه صلاحيات الإدارة للدخول لبوابة المشرف.",
+      error: "هذه البوابة مخصصة لمشرف المنصة العام فقط (Super Admin). مدراء المكاتب والمحامون يسجلون عبر بوابة الدخول العادية.",
     });
     return;
   }
