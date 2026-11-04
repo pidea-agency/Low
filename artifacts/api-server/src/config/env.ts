@@ -94,15 +94,7 @@ export const env = {
     return val ?? "court_session_secret_fallback_key";
   },
 
-  // --- Google Sheets (acts as the database in v1) ---
-  // Settings UI takes precedence over env vars.
-  get globalSheetAllowedUserIds(): string[] {
-    const raw = readEnv("GLOBAL_SHEET_ALLOWED_USER_IDS") || "";
-    return raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  },
+  // --- Google Sheets (Optional Export Store) ---
   get googleSpreadsheetId(): string {
     const stored = getSettings().googleSpreadsheetId;
     if (stored && stored.trim()) return stored.trim();
@@ -165,21 +157,20 @@ export const env = {
     return readEnv("AI_MODEL") ?? "qwen/qwen-2.5-7b-instruct";
   },
 
-  // --- Supabase Settings ---
+  // --- Supabase Settings (Environment Variables only - no UI override) ---
   get supabaseUrl(): string | undefined {
-    const stored = getSettings().supabaseUrl;
-    if (stored && stored.trim()) return stored.trim();
-    return readEnv("SUPABASE_URL");
+    return process.env.SUPABASE_URL?.trim() || undefined;
   },
   get supabaseKey(): string | undefined {
-    const stored = getSettings().supabaseKey;
-    if (stored && stored.trim()) return stored.trim();
-    return readEnv("SUPABASE_SERVICE_ROLE_KEY") ?? readEnv("SUPABASE_KEY") ?? readEnv("SUPABASE_ANON_KEY");
+    return (
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ??
+      process.env.SUPABASE_KEY?.trim() ??
+      process.env.SUPABASE_ANON_KEY?.trim() ??
+      undefined
+    );
   },
   get supabaseTableName(): string {
-    const stored = getSettings().supabaseTableName;
-    if (stored && stored.trim()) return stored.trim();
-    return readEnv("SUPABASE_TABLE_NAME") ?? "app_users";
+    return process.env.SUPABASE_TABLE_NAME?.trim() || "app_users";
   },
 
   // --- Scheduler ---
@@ -265,9 +256,8 @@ export function isAiConfigured(): boolean {
 
 /** Returns true only if Supabase URL and Key are configured, without throwing. */
 export function isSupabaseConfigured(): boolean {
-  const settings = getSettings();
-  const hasUrl = Boolean((settings.supabaseUrl && settings.supabaseUrl.trim()) || readEnv("SUPABASE_URL"));
-  const hasKey = Boolean((settings.supabaseKey && settings.supabaseKey.trim()) || readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
+  const hasUrl = Boolean(readEnv("SUPABASE_URL"));
+  const hasKey = Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
   return hasUrl && hasKey;
 }
 

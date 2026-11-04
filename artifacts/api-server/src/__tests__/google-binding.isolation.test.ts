@@ -3,22 +3,12 @@ import request from "supertest";
 import app from "../app";
 import * as supabaseService from "../services/supabase.service";
 import * as googleSheetsService from "../services/googleSheets.service";
-import * as sessionService from "../services/session.service";
-import * as poaService from "../services/poa.sheets.service";
-import * as taskService from "../services/task.sheets.service";
-import * as judgmentService from "../services/judgment.sheets.service";
-import { env } from "../config/env";
+import * as postgresService from "../services/postgres.service";
 
-describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeout: 30000 }, () => {
+describe("Optional Google Export Binding & Postgres Primary Storage Independence", { timeout: 30000 }, () => {
   const futureDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
   let userNoBinding: any;
   let cookieNoBinding: string;
-
-  let userPartialBinding: any;
-  let cookiePartialBinding: string;
-
-  let userAllowedGlobal: any;
-  let cookieAllowedGlobal: string;
 
   let userCompleteBinding: any;
   let cookieCompleteBinding: string;
@@ -33,6 +23,8 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
   };
 
   beforeAll(async () => {
+    postgresService.resetInMemoryStore();
+
     // 1. Office Admin with NO Google binding
     const unameNoBinding = `nobind_${Date.now()}`;
     userNoBinding = await supabaseService.createSupabaseUser({
@@ -48,38 +40,7 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
     const cNo = loginNo.headers["set-cookie"];
     cookieNoBinding = Array.isArray(cNo) ? cNo.join("; ") : cNo;
 
-    // 2. Office Admin with PARTIAL binding (spreadsheetId only, no service account)
-    const unamePartial = `partial_${Date.now()}`;
-    userPartialBinding = await supabaseService.createSupabaseUser({
-      username: unamePartial,
-      password: "OfficePass123!",
-      role: "admin",
-      status: "active",
-      subscription_end_date: futureDate,
-      google_spreadsheet_id: "partial-spreadsheet-id-12345",
-    });
-    const loginPart = await request(app)
-      .post("/api/auth/login")
-      .send({ username: unamePartial, password: "OfficePass123!" });
-    const cPart = loginPart.headers["set-cookie"];
-    cookiePartialBinding = Array.isArray(cPart) ? cPart.join("; ") : cPart;
-
-    // 3. Office Admin explicitly on legacy GLOBAL allow-list (to prove fallback is removed)
-    const unameAllowed = `allowed_${Date.now()}`;
-    userAllowedGlobal = await supabaseService.createSupabaseUser({
-      username: unameAllowed,
-      password: "OfficePass123!",
-      role: "admin",
-      status: "active",
-      subscription_end_date: futureDate,
-    });
-    const loginAllowed = await request(app)
-      .post("/api/auth/login")
-      .send({ username: unameAllowed, password: "OfficePass123!" });
-    const cAllowed = loginAllowed.headers["set-cookie"];
-    cookieAllowedGlobal = Array.isArray(cAllowed) ? cAllowed.join("; ") : cAllowed;
-
-    // 4. Office Admin with COMPLETE binding
+    // 2. Office Admin with COMPLETE Google binding
     const unameComplete = `complete_${Date.now()}`;
     userCompleteBinding = await supabaseService.createSupabaseUser({
       username: unameComplete,
@@ -88,141 +49,99 @@ describe("Office Google Binding Enforcement and Global Sheet Isolation", { timeo
       status: "active",
       subscription_end_date: futureDate,
       google_spreadsheet_id: "custom-user-spreadsheet-id-9999",
-      google_service_account_json: JSON.stringify(validServiceAccount),
       google_sheet_name: "Sessions",
     });
-    const loginComp = await request(app)
+    await supabaseService.saveOfficeGoogleBinding(userCompleteBinding.id, {
+      service_account_json: JSON.stringify(validServiceAccount),
+      spreadsheet_id: "custom-user-spreadsheet-id-9999",
+      sheet_name: "Sessions",
+    });
+    const loginComplete = await request(app)
       .post("/api/auth/login")
       .send({ username: unameComplete, password: "OfficePass123!" });
-    const cComp = loginComp.headers["set-cookie"];
-    cookieCompleteBinding = Array.isArray(cComp) ? cComp.join("; ") : cComp;
+    const cComplete = loginComplete.headers["set-cookie"];
+    cookieCompleteBinding = Array.isArray(cComplete) ? cComplete.join("; ") : cComplete;
   });
 
   afterAll(async () => {
     vi.restoreAllMocks();
     if (userNoBinding?.id) await supabaseService.deleteSupabaseUser(userNoBinding.id).catch(() => {});
-    if (userPartialBinding?.id) await supabaseService.deleteSupabaseUser(userPartialBinding.id).catch(() => {});
-    if (userAllowedGlobal?.id) await supabaseService.deleteSupabaseUser(userAllowedGlobal.id).catch(() => {});
     if (userCompleteBinding?.id) await supabaseService.deleteSupabaseUser(userCompleteBinding.id).catch(() => {});
   });
 
-  describe("getGoogleContext Unit Level Checks", () => {
-    it("throws GoogleBindingMissingError when user has NO binding, never returns global fallback", async () => {
-      // Must throw GoogleBindingMissingError and NOT return global context
-      await expect(googleSheetsService.getGoogleContext(userNoBinding.id)).rejects.toThrow(
-        /GoogleBindingMissingError|ربط المكتب غير مكتمل/,
-      );
-    });
+  describe("Postgres Independence (No Google Binding Required for Primary Storage)", () => {
+    it("allows user without Google binding to read and create sessions in Postgres (no 409)", async () => {
+      // Create session in Postgres
+      const createRes = await request(app)
+        .post("/api/sessions")
+        .set("Cookie", cookieNoBinding)
+        .send({
+          caseNumber: "1446/ق/PG-01",
+          court: "المحكمة التجارية",
+          sessionDateHijri: "20/02/1446",
+        });
 
-    it("throws GoogleBindingMissingError when user has PARTIAL binding (missing credentials)", async () => {
-      await expect(googleSheetsService.getGoogleContext(userPartialBinding.id)).rejects.toThrow(
-        /GoogleBindingMissingError|ربط المكتب غير مكتمل/,
-      );
-    });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.caseNumber).toBe("1446/ق/PG-01");
 
-    it("throws 503 error when settings store / database is unreachable during lookup", async () => {
-      vi.spyOn(supabaseService, "getUserGoogleCredentials").mockRejectedValueOnce(
-        new Error("Database connection timeout"),
-      );
-
-      await expect(googleSheetsService.getGoogleContext("any-user-id")).rejects.toThrow();
-    });
-
-    it("builds context from user's own settings when binding is complete", async () => {
-      const ctx = await googleSheetsService.getGoogleContext(userCompleteBinding.id);
-      expect(ctx.spreadsheetId).toBe("custom-user-spreadsheet-id-9999");
-      expect(ctx.sheets).toBeDefined();
-    });
-
-    it("staff user inherits Google binding of their office admin", async () => {
-      const staffUser = await supabaseService.createSupabaseUser({
-        username: `staff_inherit_${Date.now()}`,
-        password: "OfficePass123!",
-        role: "staff",
-        admin_id: userCompleteBinding.id,
-      });
-
-      const ctx = await googleSheetsService.getGoogleContext(staffUser.id);
-      expect(ctx.spreadsheetId).toBe("custom-user-spreadsheet-id-9999");
-      expect(ctx.sheets).toBeDefined();
-
-      await supabaseService.deleteSupabaseUser(staffUser.id).catch(() => {});
-    });
-
-    it("rejects even if account is in legacy GLOBAL_SHEET_ALLOWED_USER_IDS allow-list (fallback removed)", async () => {
-      vi.spyOn(env, "globalSheetAllowedUserIds", "get").mockReturnValue([userAllowedGlobal.id]);
-
-      await expect(googleSheetsService.getGoogleContext(userAllowedGlobal.id)).rejects.toThrow(
-        /GoogleBindingMissingError|ربط المكتب غير مكتمل/,
-      );
-    });
-  });
-
-  describe("Route-level enforcement (HTTP 409 and Arabic error message)", () => {
-    it("GET /api/sessions returns 409 with Arabic message for user without binding", async () => {
-      const res = await request(app)
+      // List sessions
+      const listRes = await request(app)
         .get("/api/sessions")
         .set("Cookie", cookieNoBinding);
 
-      expect(res.status).toBe(409);
-      expect(res.body.error).toContain("ربط المكتب غير مكتمل. تواصل مع المشرف");
-      expect(res.body.refId).toBeDefined();
+      expect(listRes.status).toBe(200);
+      expect(Array.isArray(listRes.body)).toBe(true);
+      expect(listRes.body.some((s: any) => s.caseNumber === "1446/ق/PG-01")).toBe(true);
     });
 
-    it("GET /api/poa returns 409 with Arabic message for user without binding", async () => {
-      const res = await request(app)
-        .get("/api/poa")
-        .set("Cookie", cookieNoBinding);
+    it("allows user without Google binding to read and create tasks in Postgres", async () => {
+      const createRes = await request(app)
+        .post("/api/tasks")
+        .set("Cookie", cookieNoBinding)
+        .send({
+          title: "مهمة قاعدة البيانات",
+          status: "قيد التنفيذ",
+        });
 
-      expect(res.status).toBe(409);
-      expect(res.body.error).toContain("ربط المكتب غير مكتمل. تواصل مع المشرف");
-    });
+      expect(createRes.status).toBe(201);
 
-    it("GET /api/tasks returns 409 with Arabic message for user without binding", async () => {
-      const res = await request(app)
+      const listRes = await request(app)
         .get("/api/tasks")
         .set("Cookie", cookieNoBinding);
 
-      expect(res.status).toBe(409);
-      expect(res.body.error).toContain("ربط المكتب غير مكتمل. تواصل مع المشرف");
+      expect(listRes.status).toBe(200);
+      expect(listRes.body.some((t: any) => t.title === "مهمة قاعدة البيانات")).toBe(true);
     });
 
-    it("GET /api/judgments returns 409 with Arabic message for user without binding", async () => {
-      const res = await request(app)
-        .get("/api/judgments")
+    it("allows user without Google binding to read and create POA in Postgres", async () => {
+      const createRes = await request(app)
+        .post("/api/poa")
+        .set("Cookie", cookieNoBinding)
+        .send({
+          clientName: "عميل مستقل",
+          poaNumber: "1446/POA/PG-99",
+        });
+
+      expect(createRes.status).toBe(201);
+
+      const listRes = await request(app)
+        .get("/api/poa")
         .set("Cookie", cookieNoBinding);
 
-      expect(res.status).toBe(409);
-      expect(res.body.error).toContain("ربط المكتب غير مكتمل. تواصل مع المشرف");
-    });
-
-    it("returns 409 even for allow-listed user because global fallback is removed", async () => {
-      vi.spyOn(env, "globalSheetAllowedUserIds", "get").mockReturnValue([userAllowedGlobal.id]);
-
-      const res = await request(app)
-        .get("/api/sessions")
-        .set("Cookie", cookieAllowedGlobal);
-
-      expect(res.status).toBe(409);
-      expect(res.body.error).toContain("ربط المكتب غير مكتمل");
+      expect(listRes.status).toBe(200);
+      expect(listRes.body.some((p: any) => p.poaNumber === "1446/POA/PG-99")).toBe(true);
     });
   });
 
-  describe("Callers do not swallow error into empty array []", () => {
-    it("listSessions rejects instead of returning [] when binding is missing", async () => {
-      await expect(sessionService.listSessions(undefined, userNoBinding.id)).rejects.toThrow();
-    });
+  describe("Optional Google Export Endpoint", () => {
+    it("handles export endpoint for user with complete binding", async () => {
+      const res = await request(app)
+        .post("/api/settings/google-export")
+        .set("Cookie", cookieCompleteBinding);
 
-    it("listPoaRows rejects instead of returning [] when binding is missing", async () => {
-      await expect(poaService.listPoaRows(userNoBinding.id)).rejects.toThrow();
-    });
-
-    it("listTaskRowsWithHeaders rejects instead of returning [] when binding is missing", async () => {
-      await expect(taskService.listTaskRowsWithHeaders(userNoBinding.id)).rejects.toThrow();
-    });
-
-    it("listJudgmentRowsWithHeaders rejects instead of returning [] when binding is missing", async () => {
-      await expect(judgmentService.listJudgmentRowsWithHeaders(userNoBinding.id)).rejects.toThrow();
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.sessionsCount).toBeDefined();
     });
   });
 });

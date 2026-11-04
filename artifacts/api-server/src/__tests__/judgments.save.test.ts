@@ -1,232 +1,115 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import app from "../app";
 import { createSignedSessionCookie } from "../middlewares/auth.middleware";
-import * as judgmentService from "../services/judgment.sheets.service";
-import * as googleSheetsService from "../services/googleSheets.service";
-import {
-  GoogleSheetsError,
-  GoogleSheetsPermissionError,
-  GoogleSheetsNotFoundError,
-  GoogleSheetsNetworkError,
-} from "../services/googleSheets.service";
+import * as postgresService from "../services/postgres.service";
 
 describe("Judgment Save Path & Error Handling (/api/judgments)", () => {
-  const testOfficeId = "local-lawyer-default";
+  const testOfficeId = "local-office-admin";
   const authCookie = createSignedSessionCookie({
     username: "12345",
-    userId: testOfficeId,
+    userId: "local-lawyer-default",
   });
-
-  let originalAllowList: string | undefined;
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    originalAllowList = process.env.GLOBAL_SHEET_ALLOWED_USER_IDS;
-    process.env.GLOBAL_SHEET_ALLOWED_USER_IDS = testOfficeId;
-  });
-
-  afterEach(() => {
-    process.env.GLOBAL_SHEET_ALLOWED_USER_IDS = originalAllowList;
+    postgresService.resetInMemoryStore();
   });
 
   describe("Validation & Required Fields", () => {
-    it("rejects creation when caseNumber is empty with 400 and clear Arabic message", async () => {
+    it("rejects judgment creation with missing caseNumber or judgmentNumber with 400", async () => {
       const res = await request(app)
         .post("/api/judgments")
         .set("Cookie", authCookie)
         .send({
-          caseNumber: "   ",
-          judgmentNumber: "443012948",
-          court: "المحكمة العامة",
+          caseNumber: "",
+          judgmentNumber: "",
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe("رقم القضية مطلوب.");
-    });
-
-    it("rejects creation when judgmentNumber is empty with 400 and clear Arabic message", async () => {
-      const res = await request(app)
-        .post("/api/judgments")
-        .set("Cookie", authCookie)
-        .send({
-          caseNumber: "44109283",
-          judgmentNumber: "   ",
-          court: "المحكمة العامة",
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe("رقم الصك مطلوب.");
+      expect(res.body.error).toBe("رقم القضية ورقم الصك مطلوبان.");
     });
   });
 
-  describe("Happy Path Save & Read-After-Write", () => {
-    it("creates judgment with exact UI payload, stamps office, verifies read-after-write, and returns 201", async () => {
-      const uiPayload = {
-        caseNumber: "44109283",
-        judgmentNumber: "443012948",
-        court: "المحكمة العامة بالرياض",
-        plaintiff: "شركة التقنية",
-        defendant: "مؤسسة التوريد",
+  describe("Happy Path Save & Office Isolation", () => {
+    it("creates judgment with valid payload, stamps office, and returns 201", async () => {
+      const payload = {
+        caseNumber: "1446/قضية/5501",
+        court: "المحكمة التجارية بالرياض",
+        plaintiff: "شركة التقنية المتقدمة",
+        defendant: "مؤسسة البناء الحديث",
         assignedLawyer: "المحامي خالد",
-        judgmentDate: "1447/08/10",
-        summary: "إلزام المدعى عليه بسداد المستحقات",
+        judgmentNumber: "451009988",
+        judgmentDate: "1446/02/15",
+        summary: "حكم لصالح المدعي بإلزام المدعى عليه بسداد المبلغ",
         isFavorable: "نهائي",
       };
 
-      const mockRowId = 15;
-      const mockHeaders = [
-        "رقم القضية",
-        "المحكمة المختصة",
-        "المدعي",
-        "المدعى عليه",
-        "المحامي المكلف",
-        "رقم الصك",
-        "تاريخ الحكم",
-        "ملخص الحكم",
-        "الحكم",
-        "تاريخ الإنشاء",
-        "معرف المكتب",
-      ];
-      const mockValues = [
-        uiPayload.caseNumber,
-        uiPayload.court,
-        uiPayload.plaintiff,
-        uiPayload.defendant,
-        uiPayload.assignedLawyer,
-        uiPayload.judgmentNumber,
-        uiPayload.judgmentDate,
-        uiPayload.summary,
-        uiPayload.isFavorable,
-        "2026-11-02T10:00:00.000Z",
-        testOfficeId,
-      ];
-
-      vi.spyOn(judgmentService, "ensureJudgmentSheetReady").mockResolvedValue(undefined);
-      const appendSpy = vi.spyOn(judgmentService, "appendJudgmentRow").mockResolvedValue(mockRowId);
-      const getSpy = vi.spyOn(judgmentService, "getJudgmentRowById").mockResolvedValue({
-        id: mockRowId,
-        values: mockValues,
-        headers: mockHeaders,
-      });
-
       const res = await request(app)
         .post("/api/judgments")
         .set("Cookie", authCookie)
-        .send(uiPayload);
+        .send(payload);
 
       expect(res.status).toBe(201);
-      expect(res.body.id).toBe(mockRowId);
-      expect(res.body.caseNumber).toBe(uiPayload.caseNumber);
-      expect(res.body.judgmentNumber).toBe(uiPayload.judgmentNumber);
-      expect(res.body.court).toBe(uiPayload.court);
-      expect(res.body.summary).toBe(uiPayload.summary);
+      expect(res.body.caseNumber).toBe(payload.caseNumber);
+      expect(res.body.judgmentNumber).toBe(payload.judgmentNumber);
       expect(res.body.officeId).toBe(testOfficeId);
 
-      // Verify appendJudgmentRow received the row stamped with officeId in column 10 (Col K)
-      expect(appendSpy).toHaveBeenCalledWith(
-        testOfficeId,
-        expect.arrayContaining([uiPayload.caseNumber, uiPayload.judgmentNumber, testOfficeId])
-      );
+      // Verify retrieval
+      const getRes = await request(app)
+        .get(`/api/judgments/${res.body.id}`)
+        .set("Cookie", authCookie);
 
-      // Verify read-after-write was called to confirm judgment exists before 201 response
-      expect(getSpy).toHaveBeenCalledWith(testOfficeId, mockRowId);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.caseNumber).toBe(payload.caseNumber);
     });
-  });
 
-  describe("Google Sheets Failure Classification & Error Handling", () => {
-    it("maps Google Permission Error to 503 with reference ID and user-facing Arabic message", async () => {
-      vi.spyOn(judgmentService, "ensureJudgmentSheetReady").mockResolvedValue(undefined);
-      vi.spyOn(judgmentService, "appendJudgmentRow").mockRejectedValue(
-        new GoogleSheetsPermissionError("The caller does not have permission")
-      );
-
-      const res = await request(app)
+    it("updates existing judgment and returns updated fields", async () => {
+      const createRes = await request(app)
         .post("/api/judgments")
         .set("Cookie", authCookie)
         .send({
-          caseNumber: "44109283",
-          judgmentNumber: "443012948",
-          court: "المحكمة العامة",
+          caseNumber: "1446/ق/1",
+          judgmentNumber: "111",
         });
 
-      expect(res.status).toBe(503);
-      expect(res.body).toHaveProperty("refId");
-      expect(res.body.refId).toMatch(/^REF-/);
-      expect(res.body.error).toContain("تعذر الوصول إلى جدول البيانات");
-      expect(res.body.error).toContain("رقم المرجع:");
-      expect(res.body.error).toContain(res.body.refId);
+      const judgmentId = createRes.body.id;
+
+      const updateRes = await request(app)
+        .put(`/api/judgments/${judgmentId}`)
+        .set("Cookie", authCookie)
+        .send({
+          court: "محكمة الاستئناف",
+          summary: "تم تأييد الحكم",
+        });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.court).toBe("محكمة الاستئناف");
+      expect(updateRes.body.summary).toBe("تم تأييد الحكم");
     });
 
-    it("maps Google Spreadsheet Not Found Error to 502 with reference ID", async () => {
-      vi.spyOn(judgmentService, "ensureJudgmentSheetReady").mockResolvedValue(undefined);
-      vi.spyOn(judgmentService, "appendJudgmentRow").mockRejectedValue(
-        new GoogleSheetsNotFoundError("Requested entity was not found")
-      );
-
-      const res = await request(app)
+    it("deletes existing judgment with 204", async () => {
+      const createRes = await request(app)
         .post("/api/judgments")
         .set("Cookie", authCookie)
         .send({
-          caseNumber: "44109283",
-          judgmentNumber: "443012948",
-          court: "المحكمة العامة",
+          caseNumber: "1446/ق/DELETE",
+          judgmentNumber: "999",
         });
 
-      expect(res.status).toBe(502);
-      expect(res.body).toHaveProperty("refId");
-      expect(res.body.refId).toMatch(/^REF-/);
-      expect(res.body.error).toContain("جدول البيانات غير موجود");
-      expect(res.body.error).toContain("رقم المرجع:");
-    });
+      const judgmentId = createRes.body.id;
 
-    it("maps Google Network/Timeout Error to 504 with reference ID", async () => {
-      vi.spyOn(judgmentService, "ensureJudgmentSheetReady").mockResolvedValue(undefined);
-      vi.spyOn(judgmentService, "appendJudgmentRow").mockRejectedValue(
-        new GoogleSheetsNetworkError("ETIMEDOUT network connection failed")
-      );
+      const deleteRes = await request(app)
+        .delete(`/api/judgments/${judgmentId}`)
+        .set("Cookie", authCookie);
 
-      const res = await request(app)
-        .post("/api/judgments")
-        .set("Cookie", authCookie)
-        .send({
-          caseNumber: "44109283",
-          judgmentNumber: "443012948",
-          court: "المحكمة العامة",
-        });
+      expect(deleteRes.status).toBe(204);
 
-      expect(res.status).toBe(504);
-      expect(res.body).toHaveProperty("refId");
-      expect(res.body.refId).toMatch(/^REF-/);
-      expect(res.body.error).toContain("تعذر الاتصال بخوادم Google");
-      expect(res.body.error).toContain("رقم المرجع:");
-    });
+      const getRes = await request(app)
+        .get(`/api/judgments/${judgmentId}`)
+        .set("Cookie", authCookie);
 
-    it("handles unexpected generic error by returning 500 with generated refId without leaking stack trace", async () => {
-      vi.spyOn(judgmentService, "ensureJudgmentSheetReady").mockResolvedValue(undefined);
-      vi.spyOn(judgmentService, "appendJudgmentRow").mockRejectedValue(
-        new Error("Low level crash on row calculation with secret key ABC123XYZ")
-      );
-
-      const res = await request(app)
-        .post("/api/judgments")
-        .set("Cookie", authCookie)
-        .send({
-          caseNumber: "44109283",
-          judgmentNumber: "443012948",
-          court: "المحكمة العامة",
-        });
-
-      expect(res.status).toBe(500);
-      expect(res.body).toHaveProperty("refId");
-      expect(res.body.refId).toMatch(/^REF-/);
-      expect(res.body.error).toContain("فشل حفظ الحكم.");
-      expect(res.body.error).toContain("رقم المرجع:");
-      expect(res.body.error).toContain(res.body.refId);
-      // No internal crash details or secret tokens leaked
-      expect(res.body.error).not.toContain("Low level crash");
-      expect(res.body.error).not.toContain("ABC123XYZ");
+      expect(getRes.status).toBe(404);
     });
   });
 });
-

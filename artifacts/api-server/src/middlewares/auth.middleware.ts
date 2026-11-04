@@ -11,6 +11,8 @@ import {
 export interface SessionCookiePayload {
   username: string;
   userId?: string;
+  officeId?: string;
+  adminId?: string;
   role?: "super_admin" | "admin" | "staff" | string;
   displayName?: string;
   issuedAt: number;
@@ -167,10 +169,19 @@ export async function attachAuthUser(
         const tokenVersion = token.sessionVersion ?? 1;
 
         if (tokenVersion === currentVersion) {
+          const derivedOfficeId =
+            trustedUser.role === "admin"
+              ? (trustedUser.office_id || trustedUser.id)
+              : trustedUser.role === "staff"
+              ? (trustedUser.office_id || trustedUser.admin_id || undefined)
+              : undefined;
+
           req.authUser = {
             userId: trustedUser.id,
             username: trustedUser.username,
             role: trustedUser.role, // Live role from server-side store
+            officeId: derivedOfficeId,
+            adminId: trustedUser.admin_id || undefined,
             displayName: trustedUser.display_name || trustedUser.username,
             issuedAt: token.issuedAt,
           };
@@ -268,6 +279,30 @@ export function blockSuperAdminFromOfficeData(
     res.status(403).json({
       error: "غير مصرح لمشرف المنصة بالوصول إلى بيانات وقضايا المكاتب الخاصة.",
     });
+    return;
+  }
+  next();
+}
+
+/**
+ * Ensures request has an authenticated office context (admin or staff)
+ * and that req.authUser.officeId is present and non-empty.
+ */
+export function requireOfficeContext(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!req.authUser) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  if (req.authUser.role === "super_admin") {
+    res.status(403).json({ error: "غير مصرح لمشرف المنصة بالوصول إلى بيانات وقضايا المكاتب الخاصة." });
+    return;
+  }
+  if (!req.authUser.officeId) {
+    res.status(403).json({ error: "حساب المستخدم غير مرتبط بأي مكتب محاماة معتمد." });
     return;
   }
   next();

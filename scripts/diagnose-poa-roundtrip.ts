@@ -16,8 +16,6 @@ async function main() {
   const targetUser = localUsers.find((u) => u.username === "12345") || localUsers[0];
   console.log(`Testing with user: ${targetUser.username} (${targetUser.id})`);
 
-  // Ensure user is allowed to use global sheet if fallback
-  process.env.GLOBAL_SHEET_ALLOWED_USER_IDS = `${targetUser.id},${targetUser.username}`;
 
   // Step 1: getGoogleContext
   console.log("\n[Step 1] Calling getGoogleContext(targetUser.id, 'Attorney')...");

@@ -78,6 +78,35 @@ export default function OfficeSettingsPage() {
   const [whatsappInstanceId, setWhatsappInstanceId] = useState('');
   const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportToSheets = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch('/api/settings/google-export', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast({
+          title: 'تم التصدير بنجاح ✓',
+          description: `تم تصدير ${data.sessionsCount ?? 0} جلسة، و ${data.tasksCount ?? 0} مهمة، و ${data.poaCount ?? 0} وكالة، و ${data.judgmentsCount ?? 0} حكماً إلى Google Sheets.`,
+        });
+      } else {
+        toast({
+          title: 'فشل التصدير',
+          description: data.error || 'تعذر تصدير البيانات إلى Google Sheets.',
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: 'خطأ',
+        description: 'تعذر الاتصال بالخادم.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const fetchBinding = async () => {
     setIsLoadingBinding(true);
@@ -357,14 +386,14 @@ export default function OfficeSettingsPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
-                إعدادات المكتب وربط Google Sheet
+                إعدادات المكتب وتصدير Google Sheet (اختياري)
               </h1>
               <Badge variant="outline" className="text-xs font-bold">
                 {currentUser?.officeName || 'إدارة المكتب'}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              ربط جدول Google Sheets الخاص بمكتبك وتكوين قنوات إرسال التنبيهات
+              قاعدة بيانات المكتب مؤمنة ومعزولة على Supabase Postgres. يمكنك ربط Google Sheets كنسخة احتياطية وتصدير البيانات بضغطة زر.
             </p>
           </div>
         </div>
@@ -408,17 +437,27 @@ export default function OfficeSettingsPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-base font-bold text-foreground">
-                        جدول Google Sheets مربوط بنجاح ومفعّل للمكتب
+                        جدول Google Sheets مربوط كوجهة تصدير للمكتب
                       </h2>
-                      <Badge className="bg-emerald-600 text-white text-[10px]">متصل ✓</Badge>
+                      <Badge className="bg-emerald-600 text-white text-[10px]">جاهز للتصدير ✓</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      جميع جلسات وأحكام ووكالات ومهام فريق مكتبك يتم حفظها وتعديلها مباشرة في هذا الجدول
+                      بياناتك القضائية محفوظة بأمان في قاعدة بيانات Supabase Postgres. يمكنك تصدير نسخة احتياطية إلى Google Sheets بنقرة واحدة.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    disabled={isExporting}
+                    onClick={handleExportToSheets}
+                    className="text-xs gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    {isExporting ? 'جارٍ التصدير...' : 'تصدير البيانات إلى الشيت الآن'}
+                  </Button>
+
                   <Button
                     variant="outline"
                     size="sm"

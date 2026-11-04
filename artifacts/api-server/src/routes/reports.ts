@@ -15,8 +15,8 @@ router.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const report = await getSessionReport(id, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const report = await getSessionReport(id, officeId);
     if (!report) {
       // Return 200 with null instead of 404 so the frontend can show an empty form
       res.status(200).json(null);
@@ -46,9 +46,9 @@ router.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
   }
   try {
     logger.info({ id, body: req.body }, "Saving session report...");
-    const userId = req.authUser?.userId;
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
     const reportText = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
-    const updated = await saveSessionReport(id, reportText, userId);
+    const updated = await saveSessionReport(id, reportText, officeId);
     if (!updated) {
       res.status(404).json({ error: "Session not found." });
       return;

@@ -300,10 +300,6 @@ function buildSettingsResponse(s: AppSettings) {
     whatsappToken: s.whatsappToken ? maskToken(s.whatsappToken) : "",
     whatsappTokenIsSet: Boolean(s.whatsappToken),
     whatsappInstanceId: s.whatsappInstanceId ?? "",
-    supabaseUrl: s.supabaseUrl ?? "",
-    supabaseKey: s.supabaseKey ? maskToken(s.supabaseKey) : "",
-    supabaseKeyIsSet: Boolean(s.supabaseKey),
-    supabaseTableName: s.supabaseTableName ?? "app_users",
   };
 }
 
@@ -320,6 +316,22 @@ router.put("/settings", (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to save settings");
     res.status(500).json({ error: "فشل حفظ الإعدادات." });
+  }
+});
+
+router.post("/settings/google-export", async (req, res) => {
+  try {
+    const adminId = req.authUser!.userId!;
+    const { exportOfficeDataToGoogleSheets } = await import("../services/postgres.service");
+    const result = await exportOfficeDataToGoogleSheets(adminId);
+    res.json({
+      success: true,
+      message: "تم تصدير البيانات إلى Google Sheets بنجاح.",
+      ...result,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Google export failed");
+    res.status(500).json({ error: err.message || "فشل تصدير البيانات إلى Google Sheets." });
   }
 });
 

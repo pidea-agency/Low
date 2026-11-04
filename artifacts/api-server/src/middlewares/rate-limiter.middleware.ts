@@ -62,67 +62,91 @@ export class SupabaseRateLimitStore implements RateLimitStore {
   async get(key: string): Promise<RateLimitRecord | null> {
     const client = getSupabaseClient();
     if (!client) {
-      throw new Error("Supabase client is not available");
+      return _defaultMemoryStore.get(key);
     }
 
-    const { data, error } = await client
-      .from("rate_limits")
-      .select("count, reset_time")
-      .eq("key", key)
-      .maybeSingle();
+    try {
+      const { data, error } = await client
+        .from("rate_limits")
+        .select("count, reset_time")
+        .eq("key", key)
+        .maybeSingle();
 
-    if (error) {
-      throw new Error(`Failed to query rate_limits from Supabase: ${error.message}`);
-    }
-    if (!data) return null;
+      if (error) {
+        // If table doesn't exist yet (PGRST116/PGRST204/42P01), fallback gracefully to memory
+        if (error.code === "42P01" || error.message?.includes("does not exist") || error.message?.includes("relation")) {
+          return _defaultMemoryStore.get(key);
+        }
+        logger.warn({ error: error.message }, "Supabase rate limit query failed, falling back to memory store");
+        return _defaultMemoryStore.get(key);
+      }
+      if (!data) return null;
 
-    const resetTime = Number(data.reset_time);
-    const count = Number(data.count);
-    if (Date.now() > resetTime) {
-      return null;
+      const resetTime = Number(data.reset_time);
+      const count = Number(data.count);
+      if (Date.now() > resetTime) {
+        return null;
+      }
+      return { count, resetTime };
+    } catch (err: any) {
+      logger.warn({ err: err?.message || err }, "Supabase rate limit get exception, falling back to memory store");
+      return _defaultMemoryStore.get(key);
     }
-    return { count, resetTime };
   }
 
   async increment(key: string, windowMs: number): Promise<RateLimitRecord> {
     const client = getSupabaseClient();
     if (!client) {
-      throw new Error("Supabase client is not available");
+      return _defaultMemoryStore.increment(key, windowMs);
     }
 
-    const now = Date.now();
-    const existing = await this.get(key);
+    try {
+      const now = Date.now();
+      const existing = await this.get(key);
 
-    if (!existing) {
-      const resetTime = now + windowMs;
-      const { error } = await client.from("rate_limits").upsert({
-        key,
-        count: 1,
-        reset_time: resetTime,
-        updated_at: new Date().toISOString(),
-      });
-      if (error) {
-        throw new Error(`Failed to upsert rate limit in Supabase: ${error.message}`);
-      }
-      return { count: 1, resetTime };
-    } else {
-      const nextCount = existing.count + 1;
-      const { error } = await client
-        .from("rate_limits")
-        .update({
-          count: nextCount,
+      if (!existing) {
+        const resetTime = now + windowMs;
+        const { error } = await client.from("rate_limits").upsert({
+          key,
+          count: 1,
+          reset_time: resetTime,
           updated_at: new Date().toISOString(),
-        })
-        .eq("key", key);
-      if (error) {
-        throw new Error(`Failed to update rate limit in Supabase: ${error.message}`);
+        });
+        if (error) {
+          if (error.code === "42P01" || error.message?.includes("does not exist") || error.message?.includes("relation")) {
+            return _defaultMemoryStore.increment(key, windowMs);
+          }
+          logger.warn({ error: error.message }, "Supabase rate limit upsert failed, falling back to memory store");
+          return _defaultMemoryStore.increment(key, windowMs);
+        }
+        return { count: 1, resetTime };
+      } else {
+        const nextCount = existing.count + 1;
+        const { error } = await client
+          .from("rate_limits")
+          .update({
+            count: nextCount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("key", key);
+        if (error) {
+          if (error.code === "42P01" || error.message?.includes("does not exist") || error.message?.includes("relation")) {
+            return _defaultMemoryStore.increment(key, windowMs);
+          }
+          logger.warn({ error: error.message }, "Supabase rate limit update failed, falling back to memory store");
+          return _defaultMemoryStore.increment(key, windowMs);
+        }
+        return { count: nextCount, resetTime: existing.resetTime };
       }
-      return { count: nextCount, resetTime: existing.resetTime };
+    } catch (err: any) {
+      logger.warn({ err: err?.message || err }, "Supabase rate limit increment exception, falling back to memory store");
+      return _defaultMemoryStore.increment(key, windowMs);
     }
   }
 
   async reset(key: string): Promise<void> {
     const client = getSupabaseClient();
+    _defaultMemoryStore.reset(key);
     if (!client) return;
     try {
       await client.from("rate_limits").delete().eq("key", key);
@@ -133,6 +157,7 @@ export class SupabaseRateLimitStore implements RateLimitStore {
 
   async clear(): Promise<void> {
     const client = getSupabaseClient();
+    _defaultMemoryStore.clear();
     if (!client) return;
     try {
       await client.from("rate_limits").delete().neq("key", "");

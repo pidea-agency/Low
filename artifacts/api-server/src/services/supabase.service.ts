@@ -14,6 +14,7 @@ export interface AppUser {
   email?: string | null;
   role: "super_admin" | "admin" | "staff";
   admin_id?: string | null;
+  office_id?: string | null;
   office_name?: string | null;
   display_name?: string | null;
   status?: "active" | "suspended";

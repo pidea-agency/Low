@@ -33276,10 +33276,7 @@ function getSettings() {
     aiBaseUrl: merged.aiBaseUrl || process.env.AI_BASE_URL || void 0,
     aiModel: merged.aiModel || process.env.AI_MODEL || void 0,
     googleSpreadsheetId: merged.googleSpreadsheetId || process.env.GOOGLE_SPREADSHEET_ID || void 0,
-    googleSheetName: merged.googleSheetName || process.env.GOOGLE_SHEET_NAME || void 0,
-    supabaseUrl: merged.supabaseUrl || process.env.SUPABASE_URL || void 0,
-    supabaseKey: merged.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || void 0,
-    supabaseTableName: merged.supabaseTableName || process.env.SUPABASE_TABLE_NAME || "app_users"
+    googleSheetName: merged.googleSheetName || process.env.GOOGLE_SHEET_NAME || void 0
   };
 }
 function saveSettings(patch) {
@@ -33301,9 +33298,6 @@ function saveSettings(patch) {
   if (patch.whatsappApiUrl === "") delete _cache.whatsappApiUrl;
   if (patch.whatsappToken === "") delete _cache.whatsappToken;
   if (patch.whatsappInstanceId === "") delete _cache.whatsappInstanceId;
-  if (patch.supabaseUrl === "") delete _cache.supabaseUrl;
-  if (patch.supabaseKey === "") delete _cache.supabaseKey;
-  if (patch.supabaseTableName === "") delete _cache.supabaseTableName;
   saveToDisk(_cache);
   return getSettings();
 }
@@ -33399,9 +33393,8 @@ function isAuthConfigured() {
   return true;
 }
 function isSupabaseConfigured() {
-  const settings = getSettings();
-  const hasUrl = Boolean(settings.supabaseUrl && settings.supabaseUrl.trim() || readEnv("SUPABASE_URL"));
-  const hasKey = Boolean(settings.supabaseKey && settings.supabaseKey.trim() || readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
+  const hasUrl = Boolean(readEnv("SUPABASE_URL"));
+  const hasKey = Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
   return hasUrl && hasKey;
 }
 var import_fs2, import_path2, import_url2, currentDirname2, MissingEnvVarError, env;
@@ -33435,12 +33428,7 @@ var init_env = __esm({
         }
         return val ?? "court_session_secret_fallback_key";
       },
-      // --- Google Sheets (acts as the database in v1) ---
-      // Settings UI takes precedence over env vars.
-      get globalSheetAllowedUserIds() {
-        const raw = readEnv("GLOBAL_SHEET_ALLOWED_USER_IDS") || "";
-        return raw.split(",").map((s2) => s2.trim()).filter(Boolean);
-      },
+      // --- Google Sheets (Optional Export Store) ---
       get googleSpreadsheetId() {
         const stored = getSettings().googleSpreadsheetId;
         if (stored && stored.trim()) return stored.trim();
@@ -33499,21 +33487,15 @@ var init_env = __esm({
         if (stored && stored.trim()) return stored.trim();
         return readEnv("AI_MODEL") ?? "qwen/qwen-2.5-7b-instruct";
       },
-      // --- Supabase Settings ---
+      // --- Supabase Settings (Environment Variables only - no UI override) ---
       get supabaseUrl() {
-        const stored = getSettings().supabaseUrl;
-        if (stored && stored.trim()) return stored.trim();
-        return readEnv("SUPABASE_URL");
+        return process.env.SUPABASE_URL?.trim() || void 0;
       },
       get supabaseKey() {
-        const stored = getSettings().supabaseKey;
-        if (stored && stored.trim()) return stored.trim();
-        return readEnv("SUPABASE_SERVICE_ROLE_KEY") ?? readEnv("SUPABASE_KEY") ?? readEnv("SUPABASE_ANON_KEY");
+        return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? process.env.SUPABASE_KEY?.trim() ?? process.env.SUPABASE_ANON_KEY?.trim() ?? void 0;
       },
       get supabaseTableName() {
-        const stored = getSettings().supabaseTableName;
-        if (stored && stored.trim()) return stored.trim();
-        return readEnv("SUPABASE_TABLE_NAME") ?? "app_users";
+        return process.env.SUPABASE_TABLE_NAME?.trim() || "app_users";
       },
       // --- Scheduler ---
       get reminderCronExpression() {
@@ -58444,6 +58426,6744 @@ var init_supabase_service = __esm({
     TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
     _localUsersCache = null;
     officeAiLocks = /* @__PURE__ */ new Map();
+  }
+});
+
+// ../../node_modules/.pnpm/moment@2.30.1/node_modules/moment/moment.js
+var require_moment = __commonJS({
+  "../../node_modules/.pnpm/moment@2.30.1/node_modules/moment/moment.js"(exports2, module2) {
+    (function(global2, factory) {
+      typeof exports2 === "object" && typeof module2 !== "undefined" ? module2.exports = factory() : typeof define === "function" && define.amd ? define(factory) : global2.moment = factory();
+    })(exports2, (function() {
+      "use strict";
+      var hookCallback;
+      function hooks() {
+        return hookCallback.apply(null, arguments);
+      }
+      function setHookCallback(callback) {
+        hookCallback = callback;
+      }
+      function isArray(input) {
+        return input instanceof Array || Object.prototype.toString.call(input) === "[object Array]";
+      }
+      function isObject(input) {
+        return input != null && Object.prototype.toString.call(input) === "[object Object]";
+      }
+      function hasOwnProp(a, b) {
+        return Object.prototype.hasOwnProperty.call(a, b);
+      }
+      function isObjectEmpty(obj) {
+        if (Object.getOwnPropertyNames) {
+          return Object.getOwnPropertyNames(obj).length === 0;
+        } else {
+          var k;
+          for (k in obj) {
+            if (hasOwnProp(obj, k)) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }
+      function isUndefined(input) {
+        return input === void 0;
+      }
+      function isNumber(input) {
+        return typeof input === "number" || Object.prototype.toString.call(input) === "[object Number]";
+      }
+      function isDate(input) {
+        return input instanceof Date || Object.prototype.toString.call(input) === "[object Date]";
+      }
+      function map(arr, fn) {
+        var res = [], i2, arrLen = arr.length;
+        for (i2 = 0; i2 < arrLen; ++i2) {
+          res.push(fn(arr[i2], i2));
+        }
+        return res;
+      }
+      function extend(a, b) {
+        for (var i2 in b) {
+          if (hasOwnProp(b, i2)) {
+            a[i2] = b[i2];
+          }
+        }
+        if (hasOwnProp(b, "toString")) {
+          a.toString = b.toString;
+        }
+        if (hasOwnProp(b, "valueOf")) {
+          a.valueOf = b.valueOf;
+        }
+        return a;
+      }
+      function createUTC(input, format3, locale2, strict) {
+        return createLocalOrUTC(input, format3, locale2, strict, true).utc();
+      }
+      function defaultParsingFlags() {
+        return {
+          empty: false,
+          unusedTokens: [],
+          unusedInput: [],
+          overflow: -2,
+          charsLeftOver: 0,
+          nullInput: false,
+          invalidEra: null,
+          invalidMonth: null,
+          invalidFormat: false,
+          userInvalidated: false,
+          iso: false,
+          parsedDateParts: [],
+          era: null,
+          meridiem: null,
+          rfc2822: false,
+          weekdayMismatch: false
+        };
+      }
+      function getParsingFlags(m2) {
+        if (m2._pf == null) {
+          m2._pf = defaultParsingFlags();
+        }
+        return m2._pf;
+      }
+      var some;
+      if (Array.prototype.some) {
+        some = Array.prototype.some;
+      } else {
+        some = function(fun) {
+          var t2 = Object(this), len = t2.length >>> 0, i2;
+          for (i2 = 0; i2 < len; i2++) {
+            if (i2 in t2 && fun.call(this, t2[i2], i2, t2)) {
+              return true;
+            }
+          }
+          return false;
+        };
+      }
+      function isValid2(m2) {
+        var flags = null, parsedParts = false, isNowValid = m2._d && !isNaN(m2._d.getTime());
+        if (isNowValid) {
+          flags = getParsingFlags(m2);
+          parsedParts = some.call(flags.parsedDateParts, function(i2) {
+            return i2 != null;
+          });
+          isNowValid = flags.overflow < 0 && !flags.empty && !flags.invalidEra && !flags.invalidMonth && !flags.invalidWeekday && !flags.weekdayMismatch && !flags.nullInput && !flags.invalidFormat && !flags.userInvalidated && (!flags.meridiem || flags.meridiem && parsedParts);
+          if (m2._strict) {
+            isNowValid = isNowValid && flags.charsLeftOver === 0 && flags.unusedTokens.length === 0 && flags.bigHour === void 0;
+          }
+        }
+        if (Object.isFrozen == null || !Object.isFrozen(m2)) {
+          m2._isValid = isNowValid;
+        } else {
+          return isNowValid;
+        }
+        return m2._isValid;
+      }
+      function createInvalid(flags) {
+        var m2 = createUTC(NaN);
+        if (flags != null) {
+          extend(getParsingFlags(m2), flags);
+        } else {
+          getParsingFlags(m2).userInvalidated = true;
+        }
+        return m2;
+      }
+      var momentProperties = hooks.momentProperties = [], updateInProgress = false;
+      function copyConfig(to2, from2) {
+        var i2, prop, val, momentPropertiesLen = momentProperties.length;
+        if (!isUndefined(from2._isAMomentObject)) {
+          to2._isAMomentObject = from2._isAMomentObject;
+        }
+        if (!isUndefined(from2._i)) {
+          to2._i = from2._i;
+        }
+        if (!isUndefined(from2._f)) {
+          to2._f = from2._f;
+        }
+        if (!isUndefined(from2._l)) {
+          to2._l = from2._l;
+        }
+        if (!isUndefined(from2._strict)) {
+          to2._strict = from2._strict;
+        }
+        if (!isUndefined(from2._tzm)) {
+          to2._tzm = from2._tzm;
+        }
+        if (!isUndefined(from2._isUTC)) {
+          to2._isUTC = from2._isUTC;
+        }
+        if (!isUndefined(from2._offset)) {
+          to2._offset = from2._offset;
+        }
+        if (!isUndefined(from2._pf)) {
+          to2._pf = getParsingFlags(from2);
+        }
+        if (!isUndefined(from2._locale)) {
+          to2._locale = from2._locale;
+        }
+        if (momentPropertiesLen > 0) {
+          for (i2 = 0; i2 < momentPropertiesLen; i2++) {
+            prop = momentProperties[i2];
+            val = from2[prop];
+            if (!isUndefined(val)) {
+              to2[prop] = val;
+            }
+          }
+        }
+        return to2;
+      }
+      function Moment(config) {
+        copyConfig(this, config);
+        this._d = new Date(config._d != null ? config._d.getTime() : NaN);
+        if (!this.isValid()) {
+          this._d = /* @__PURE__ */ new Date(NaN);
+        }
+        if (updateInProgress === false) {
+          updateInProgress = true;
+          hooks.updateOffset(this);
+          updateInProgress = false;
+        }
+      }
+      function isMoment(obj) {
+        return obj instanceof Moment || obj != null && obj._isAMomentObject != null;
+      }
+      function warn(msg) {
+        if (hooks.suppressDeprecationWarnings === false && typeof console !== "undefined" && console.warn) {
+          console.warn("Deprecation warning: " + msg);
+        }
+      }
+      function deprecate3(msg, fn) {
+        var firstTime = true;
+        return extend(function() {
+          if (hooks.deprecationHandler != null) {
+            hooks.deprecationHandler(null, msg);
+          }
+          if (firstTime) {
+            var args = [], arg, i2, key, argLen = arguments.length;
+            for (i2 = 0; i2 < argLen; i2++) {
+              arg = "";
+              if (typeof arguments[i2] === "object") {
+                arg += "\n[" + i2 + "] ";
+                for (key in arguments[0]) {
+                  if (hasOwnProp(arguments[0], key)) {
+                    arg += key + ": " + arguments[0][key] + ", ";
+                  }
+                }
+                arg = arg.slice(0, -2);
+              } else {
+                arg = arguments[i2];
+              }
+              args.push(arg);
+            }
+            warn(
+              msg + "\nArguments: " + Array.prototype.slice.call(args).join("") + "\n" + new Error().stack
+            );
+            firstTime = false;
+          }
+          return fn.apply(this, arguments);
+        }, fn);
+      }
+      var deprecations = {};
+      function deprecateSimple(name, msg) {
+        if (hooks.deprecationHandler != null) {
+          hooks.deprecationHandler(name, msg);
+        }
+        if (!deprecations[name]) {
+          warn(msg);
+          deprecations[name] = true;
+        }
+      }
+      hooks.suppressDeprecationWarnings = false;
+      hooks.deprecationHandler = null;
+      function isFunction(input) {
+        return typeof Function !== "undefined" && input instanceof Function || Object.prototype.toString.call(input) === "[object Function]";
+      }
+      function set(config) {
+        var prop, i2;
+        for (i2 in config) {
+          if (hasOwnProp(config, i2)) {
+            prop = config[i2];
+            if (isFunction(prop)) {
+              this[i2] = prop;
+            } else {
+              this["_" + i2] = prop;
+            }
+          }
+        }
+        this._config = config;
+        this._dayOfMonthOrdinalParseLenient = new RegExp(
+          (this._dayOfMonthOrdinalParse.source || this._ordinalParse.source) + "|" + /\d{1,2}/.source
+        );
+      }
+      function mergeConfigs(parentConfig, childConfig) {
+        var res = extend({}, parentConfig), prop;
+        for (prop in childConfig) {
+          if (hasOwnProp(childConfig, prop)) {
+            if (isObject(parentConfig[prop]) && isObject(childConfig[prop])) {
+              res[prop] = {};
+              extend(res[prop], parentConfig[prop]);
+              extend(res[prop], childConfig[prop]);
+            } else if (childConfig[prop] != null) {
+              res[prop] = childConfig[prop];
+            } else {
+              delete res[prop];
+            }
+          }
+        }
+        for (prop in parentConfig) {
+          if (hasOwnProp(parentConfig, prop) && !hasOwnProp(childConfig, prop) && isObject(parentConfig[prop])) {
+            res[prop] = extend({}, res[prop]);
+          }
+        }
+        return res;
+      }
+      function Locale(config) {
+        if (config != null) {
+          this.set(config);
+        }
+      }
+      var keys;
+      if (Object.keys) {
+        keys = Object.keys;
+      } else {
+        keys = function(obj) {
+          var i2, res = [];
+          for (i2 in obj) {
+            if (hasOwnProp(obj, i2)) {
+              res.push(i2);
+            }
+          }
+          return res;
+        };
+      }
+      var defaultCalendar = {
+        sameDay: "[Today at] LT",
+        nextDay: "[Tomorrow at] LT",
+        nextWeek: "dddd [at] LT",
+        lastDay: "[Yesterday at] LT",
+        lastWeek: "[Last] dddd [at] LT",
+        sameElse: "L"
+      };
+      function calendar(key, mom, now2) {
+        var output = this._calendar[key] || this._calendar["sameElse"];
+        return isFunction(output) ? output.call(mom, now2) : output;
+      }
+      function zeroFill(number, targetLength, forceSign) {
+        var absNumber = "" + Math.abs(number), zerosToFill = targetLength - absNumber.length, sign2 = number >= 0;
+        return (sign2 ? forceSign ? "+" : "" : "-") + Math.pow(10, Math.max(0, zerosToFill)).toString().substr(1) + absNumber;
+      }
+      var formattingTokens = /(\[[^\[]*\])|(\\)?([Hh]mm(ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|N{1,5}|YYYYYY|YYYYY|YYYY|YY|y{2,4}|yo?|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g, localFormattingTokens = /(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g, formatFunctions = {}, formatTokenFunctions = {};
+      function addFormatToken(token2, padded, ordinal2, callback) {
+        var func = callback;
+        if (typeof callback === "string") {
+          func = function() {
+            return this[callback]();
+          };
+        }
+        if (token2) {
+          formatTokenFunctions[token2] = func;
+        }
+        if (padded) {
+          formatTokenFunctions[padded[0]] = function() {
+            return zeroFill(func.apply(this, arguments), padded[1], padded[2]);
+          };
+        }
+        if (ordinal2) {
+          formatTokenFunctions[ordinal2] = function() {
+            return this.localeData().ordinal(
+              func.apply(this, arguments),
+              token2
+            );
+          };
+        }
+      }
+      function removeFormattingTokens(input) {
+        if (input.match(/\[[\s\S]/)) {
+          return input.replace(/^\[|\]$/g, "");
+        }
+        return input.replace(/\\/g, "");
+      }
+      function makeFormatFunction(format3) {
+        var array = format3.match(formattingTokens), i2, length;
+        for (i2 = 0, length = array.length; i2 < length; i2++) {
+          if (formatTokenFunctions[array[i2]]) {
+            array[i2] = formatTokenFunctions[array[i2]];
+          } else {
+            array[i2] = removeFormattingTokens(array[i2]);
+          }
+        }
+        return function(mom) {
+          var output = "", i3;
+          for (i3 = 0; i3 < length; i3++) {
+            output += isFunction(array[i3]) ? array[i3].call(mom, format3) : array[i3];
+          }
+          return output;
+        };
+      }
+      function formatMoment(m2, format3) {
+        if (!m2.isValid()) {
+          return m2.localeData().invalidDate();
+        }
+        format3 = expandFormat(format3, m2.localeData());
+        formatFunctions[format3] = formatFunctions[format3] || makeFormatFunction(format3);
+        return formatFunctions[format3](m2);
+      }
+      function expandFormat(format3, locale2) {
+        var i2 = 5;
+        function replaceLongDateFormatTokens(input) {
+          return locale2.longDateFormat(input) || input;
+        }
+        localFormattingTokens.lastIndex = 0;
+        while (i2 >= 0 && localFormattingTokens.test(format3)) {
+          format3 = format3.replace(
+            localFormattingTokens,
+            replaceLongDateFormatTokens
+          );
+          localFormattingTokens.lastIndex = 0;
+          i2 -= 1;
+        }
+        return format3;
+      }
+      var defaultLongDateFormat = {
+        LTS: "h:mm:ss A",
+        LT: "h:mm A",
+        L: "MM/DD/YYYY",
+        LL: "MMMM D, YYYY",
+        LLL: "MMMM D, YYYY h:mm A",
+        LLLL: "dddd, MMMM D, YYYY h:mm A"
+      };
+      function longDateFormat(key) {
+        var format3 = this._longDateFormat[key], formatUpper = this._longDateFormat[key.toUpperCase()];
+        if (format3 || !formatUpper) {
+          return format3;
+        }
+        this._longDateFormat[key] = formatUpper.match(formattingTokens).map(function(tok) {
+          if (tok === "MMMM" || tok === "MM" || tok === "DD" || tok === "dddd") {
+            return tok.slice(1);
+          }
+          return tok;
+        }).join("");
+        return this._longDateFormat[key];
+      }
+      var defaultInvalidDate = "Invalid date";
+      function invalidDate() {
+        return this._invalidDate;
+      }
+      var defaultOrdinal = "%d", defaultDayOfMonthOrdinalParse = /\d{1,2}/;
+      function ordinal(number) {
+        return this._ordinal.replace("%d", number);
+      }
+      var defaultRelativeTime = {
+        future: "in %s",
+        past: "%s ago",
+        s: "a few seconds",
+        ss: "%d seconds",
+        m: "a minute",
+        mm: "%d minutes",
+        h: "an hour",
+        hh: "%d hours",
+        d: "a day",
+        dd: "%d days",
+        w: "a week",
+        ww: "%d weeks",
+        M: "a month",
+        MM: "%d months",
+        y: "a year",
+        yy: "%d years"
+      };
+      function relativeTime(number, withoutSuffix, string, isFuture) {
+        var output = this._relativeTime[string];
+        return isFunction(output) ? output(number, withoutSuffix, string, isFuture) : output.replace(/%d/i, number);
+      }
+      function pastFuture(diff2, output) {
+        var format3 = this._relativeTime[diff2 > 0 ? "future" : "past"];
+        return isFunction(format3) ? format3(output) : format3.replace(/%s/i, output);
+      }
+      var aliases = {
+        D: "date",
+        dates: "date",
+        date: "date",
+        d: "day",
+        days: "day",
+        day: "day",
+        e: "weekday",
+        weekdays: "weekday",
+        weekday: "weekday",
+        E: "isoWeekday",
+        isoweekdays: "isoWeekday",
+        isoweekday: "isoWeekday",
+        DDD: "dayOfYear",
+        dayofyears: "dayOfYear",
+        dayofyear: "dayOfYear",
+        h: "hour",
+        hours: "hour",
+        hour: "hour",
+        ms: "millisecond",
+        milliseconds: "millisecond",
+        millisecond: "millisecond",
+        m: "minute",
+        minutes: "minute",
+        minute: "minute",
+        M: "month",
+        months: "month",
+        month: "month",
+        Q: "quarter",
+        quarters: "quarter",
+        quarter: "quarter",
+        s: "second",
+        seconds: "second",
+        second: "second",
+        gg: "weekYear",
+        weekyears: "weekYear",
+        weekyear: "weekYear",
+        GG: "isoWeekYear",
+        isoweekyears: "isoWeekYear",
+        isoweekyear: "isoWeekYear",
+        w: "week",
+        weeks: "week",
+        week: "week",
+        W: "isoWeek",
+        isoweeks: "isoWeek",
+        isoweek: "isoWeek",
+        y: "year",
+        years: "year",
+        year: "year"
+      };
+      function normalizeUnits(units) {
+        return typeof units === "string" ? aliases[units] || aliases[units.toLowerCase()] : void 0;
+      }
+      function normalizeObjectUnits(inputObject) {
+        var normalizedInput = {}, normalizedProp, prop;
+        for (prop in inputObject) {
+          if (hasOwnProp(inputObject, prop)) {
+            normalizedProp = normalizeUnits(prop);
+            if (normalizedProp) {
+              normalizedInput[normalizedProp] = inputObject[prop];
+            }
+          }
+        }
+        return normalizedInput;
+      }
+      var priorities = {
+        date: 9,
+        day: 11,
+        weekday: 11,
+        isoWeekday: 11,
+        dayOfYear: 4,
+        hour: 13,
+        millisecond: 16,
+        minute: 14,
+        month: 8,
+        quarter: 7,
+        second: 15,
+        weekYear: 1,
+        isoWeekYear: 1,
+        week: 5,
+        isoWeek: 5,
+        year: 1
+      };
+      function getPrioritizedUnits(unitsObj) {
+        var units = [], u;
+        for (u in unitsObj) {
+          if (hasOwnProp(unitsObj, u)) {
+            units.push({ unit: u, priority: priorities[u] });
+          }
+        }
+        units.sort(function(a, b) {
+          return a.priority - b.priority;
+        });
+        return units;
+      }
+      var match1 = /\d/, match2 = /\d\d/, match3 = /\d{3}/, match4 = /\d{4}/, match6 = /[+-]?\d{6}/, match1to2 = /\d\d?/, match3to4 = /\d\d\d\d?/, match5to6 = /\d\d\d\d\d\d?/, match1to3 = /\d{1,3}/, match1to4 = /\d{1,4}/, match1to6 = /[+-]?\d{1,6}/, matchUnsigned = /\d+/, matchSigned = /[+-]?\d+/, matchOffset = /Z|[+-]\d\d:?\d\d/gi, matchShortOffset = /Z|[+-]\d\d(?::?\d\d)?/gi, matchTimestamp = /[+-]?\d+(\.\d{1,3})?/, matchWord = /[0-9]{0,256}['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFF07\uFF10-\uFFEF]{1,256}|[\u0600-\u06FF\/]{1,256}(\s*?[\u0600-\u06FF]{1,256}){1,2}/i, match1to2NoLeadingZero = /^[1-9]\d?/, match1to2HasZero = /^([1-9]\d|\d)/, regexes;
+      regexes = {};
+      function addRegexToken(token2, regex, strictRegex) {
+        regexes[token2] = isFunction(regex) ? regex : function(isStrict, localeData2) {
+          return isStrict && strictRegex ? strictRegex : regex;
+        };
+      }
+      function getParseRegexForToken(token2, config) {
+        if (!hasOwnProp(regexes, token2)) {
+          return new RegExp(unescapeFormat(token2));
+        }
+        return regexes[token2](config._strict, config._locale);
+      }
+      function unescapeFormat(s2) {
+        return regexEscape(
+          s2.replace("\\", "").replace(
+            /\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g,
+            function(matched, p1, p2, p3, p4) {
+              return p1 || p2 || p3 || p4;
+            }
+          )
+        );
+      }
+      function regexEscape(s2) {
+        return s2.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      }
+      function absFloor(number) {
+        if (number < 0) {
+          return Math.ceil(number) || 0;
+        } else {
+          return Math.floor(number);
+        }
+      }
+      function toInt(argumentForCoercion) {
+        var coercedNumber = +argumentForCoercion, value = 0;
+        if (coercedNumber !== 0 && isFinite(coercedNumber)) {
+          value = absFloor(coercedNumber);
+        }
+        return value;
+      }
+      var tokens = {};
+      function addParseToken(token2, callback) {
+        var i2, func = callback, tokenLen;
+        if (typeof token2 === "string") {
+          token2 = [token2];
+        }
+        if (isNumber(callback)) {
+          func = function(input, array) {
+            array[callback] = toInt(input);
+          };
+        }
+        tokenLen = token2.length;
+        for (i2 = 0; i2 < tokenLen; i2++) {
+          tokens[token2[i2]] = func;
+        }
+      }
+      function addWeekParseToken(token2, callback) {
+        addParseToken(token2, function(input, array, config, token3) {
+          config._w = config._w || {};
+          callback(input, config._w, config, token3);
+        });
+      }
+      function addTimeToArrayFromToken(token2, input, config) {
+        if (input != null && hasOwnProp(tokens, token2)) {
+          tokens[token2](input, config._a, config, token2);
+        }
+      }
+      function isLeapYear(year) {
+        return year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
+      }
+      var YEAR = 0, MONTH = 1, DATE = 2, HOUR = 3, MINUTE = 4, SECOND = 5, MILLISECOND = 6, WEEK = 7, WEEKDAY = 8;
+      addFormatToken("Y", 0, 0, function() {
+        var y = this.year();
+        return y <= 9999 ? zeroFill(y, 4) : "+" + y;
+      });
+      addFormatToken(0, ["YY", 2], 0, function() {
+        return this.year() % 100;
+      });
+      addFormatToken(0, ["YYYY", 4], 0, "year");
+      addFormatToken(0, ["YYYYY", 5], 0, "year");
+      addFormatToken(0, ["YYYYYY", 6, true], 0, "year");
+      addRegexToken("Y", matchSigned);
+      addRegexToken("YY", match1to2, match2);
+      addRegexToken("YYYY", match1to4, match4);
+      addRegexToken("YYYYY", match1to6, match6);
+      addRegexToken("YYYYYY", match1to6, match6);
+      addParseToken(["YYYYY", "YYYYYY"], YEAR);
+      addParseToken("YYYY", function(input, array) {
+        array[YEAR] = input.length === 2 ? hooks.parseTwoDigitYear(input) : toInt(input);
+      });
+      addParseToken("YY", function(input, array) {
+        array[YEAR] = hooks.parseTwoDigitYear(input);
+      });
+      addParseToken("Y", function(input, array) {
+        array[YEAR] = parseInt(input, 10);
+      });
+      function daysInYear(year) {
+        return isLeapYear(year) ? 366 : 365;
+      }
+      hooks.parseTwoDigitYear = function(input) {
+        return toInt(input) + (toInt(input) > 68 ? 1900 : 2e3);
+      };
+      var getSetYear = makeGetSet("FullYear", true);
+      function getIsLeapYear() {
+        return isLeapYear(this.year());
+      }
+      function makeGetSet(unit, keepTime) {
+        return function(value) {
+          if (value != null) {
+            set$1(this, unit, value);
+            hooks.updateOffset(this, keepTime);
+            return this;
+          } else {
+            return get2(this, unit);
+          }
+        };
+      }
+      function get2(mom, unit) {
+        if (!mom.isValid()) {
+          return NaN;
+        }
+        var d = mom._d, isUTC = mom._isUTC;
+        switch (unit) {
+          case "Milliseconds":
+            return isUTC ? d.getUTCMilliseconds() : d.getMilliseconds();
+          case "Seconds":
+            return isUTC ? d.getUTCSeconds() : d.getSeconds();
+          case "Minutes":
+            return isUTC ? d.getUTCMinutes() : d.getMinutes();
+          case "Hours":
+            return isUTC ? d.getUTCHours() : d.getHours();
+          case "Date":
+            return isUTC ? d.getUTCDate() : d.getDate();
+          case "Day":
+            return isUTC ? d.getUTCDay() : d.getDay();
+          case "Month":
+            return isUTC ? d.getUTCMonth() : d.getMonth();
+          case "FullYear":
+            return isUTC ? d.getUTCFullYear() : d.getFullYear();
+          default:
+            return NaN;
+        }
+      }
+      function set$1(mom, unit, value) {
+        var d, isUTC, year, month, date;
+        if (!mom.isValid() || isNaN(value)) {
+          return;
+        }
+        d = mom._d;
+        isUTC = mom._isUTC;
+        switch (unit) {
+          case "Milliseconds":
+            return void (isUTC ? d.setUTCMilliseconds(value) : d.setMilliseconds(value));
+          case "Seconds":
+            return void (isUTC ? d.setUTCSeconds(value) : d.setSeconds(value));
+          case "Minutes":
+            return void (isUTC ? d.setUTCMinutes(value) : d.setMinutes(value));
+          case "Hours":
+            return void (isUTC ? d.setUTCHours(value) : d.setHours(value));
+          case "Date":
+            return void (isUTC ? d.setUTCDate(value) : d.setDate(value));
+          // case 'Day': // Not real
+          //    return void (isUTC ? d.setUTCDay(value) : d.setDay(value));
+          // case 'Month': // Not used because we need to pass two variables
+          //     return void (isUTC ? d.setUTCMonth(value) : d.setMonth(value));
+          case "FullYear":
+            break;
+          // See below ...
+          default:
+            return;
+        }
+        year = value;
+        month = mom.month();
+        date = mom.date();
+        date = date === 29 && month === 1 && !isLeapYear(year) ? 28 : date;
+        void (isUTC ? d.setUTCFullYear(year, month, date) : d.setFullYear(year, month, date));
+      }
+      function stringGet(units) {
+        units = normalizeUnits(units);
+        if (isFunction(this[units])) {
+          return this[units]();
+        }
+        return this;
+      }
+      function stringSet(units, value) {
+        if (typeof units === "object") {
+          units = normalizeObjectUnits(units);
+          var prioritized = getPrioritizedUnits(units), i2, prioritizedLen = prioritized.length;
+          for (i2 = 0; i2 < prioritizedLen; i2++) {
+            this[prioritized[i2].unit](units[prioritized[i2].unit]);
+          }
+        } else {
+          units = normalizeUnits(units);
+          if (isFunction(this[units])) {
+            return this[units](value);
+          }
+        }
+        return this;
+      }
+      function mod(n, x2) {
+        return (n % x2 + x2) % x2;
+      }
+      var indexOf;
+      if (Array.prototype.indexOf) {
+        indexOf = Array.prototype.indexOf;
+      } else {
+        indexOf = function(o) {
+          var i2;
+          for (i2 = 0; i2 < this.length; ++i2) {
+            if (this[i2] === o) {
+              return i2;
+            }
+          }
+          return -1;
+        };
+      }
+      function daysInMonth(year, month) {
+        if (isNaN(year) || isNaN(month)) {
+          return NaN;
+        }
+        var modMonth = mod(month, 12);
+        year += (month - modMonth) / 12;
+        return modMonth === 1 ? isLeapYear(year) ? 29 : 28 : 31 - modMonth % 7 % 2;
+      }
+      addFormatToken("M", ["MM", 2], "Mo", function() {
+        return this.month() + 1;
+      });
+      addFormatToken("MMM", 0, 0, function(format3) {
+        return this.localeData().monthsShort(this, format3);
+      });
+      addFormatToken("MMMM", 0, 0, function(format3) {
+        return this.localeData().months(this, format3);
+      });
+      addRegexToken("M", match1to2, match1to2NoLeadingZero);
+      addRegexToken("MM", match1to2, match2);
+      addRegexToken("MMM", function(isStrict, locale2) {
+        return locale2.monthsShortRegex(isStrict);
+      });
+      addRegexToken("MMMM", function(isStrict, locale2) {
+        return locale2.monthsRegex(isStrict);
+      });
+      addParseToken(["M", "MM"], function(input, array) {
+        array[MONTH] = toInt(input) - 1;
+      });
+      addParseToken(["MMM", "MMMM"], function(input, array, config, token2) {
+        var month = config._locale.monthsParse(input, token2, config._strict);
+        if (month != null) {
+          array[MONTH] = month;
+        } else {
+          getParsingFlags(config).invalidMonth = input;
+        }
+      });
+      var defaultLocaleMonths = "January_February_March_April_May_June_July_August_September_October_November_December".split(
+        "_"
+      ), defaultLocaleMonthsShort = "Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec".split("_"), MONTHS_IN_FORMAT = /D[oD]?(\[[^\[\]]*\]|\s)+MMMM?/, defaultMonthsShortRegex = matchWord, defaultMonthsRegex = matchWord;
+      function localeMonths(m2, format3) {
+        if (!m2) {
+          return isArray(this._months) ? this._months : this._months["standalone"];
+        }
+        return isArray(this._months) ? this._months[m2.month()] : this._months[(this._months.isFormat || MONTHS_IN_FORMAT).test(format3) ? "format" : "standalone"][m2.month()];
+      }
+      function localeMonthsShort(m2, format3) {
+        if (!m2) {
+          return isArray(this._monthsShort) ? this._monthsShort : this._monthsShort["standalone"];
+        }
+        return isArray(this._monthsShort) ? this._monthsShort[m2.month()] : this._monthsShort[MONTHS_IN_FORMAT.test(format3) ? "format" : "standalone"][m2.month()];
+      }
+      function handleStrictParse(monthName, format3, strict) {
+        var i2, ii, mom, llc = monthName.toLocaleLowerCase();
+        if (!this._monthsParse) {
+          this._monthsParse = [];
+          this._longMonthsParse = [];
+          this._shortMonthsParse = [];
+          for (i2 = 0; i2 < 12; ++i2) {
+            mom = createUTC([2e3, i2]);
+            this._shortMonthsParse[i2] = this.monthsShort(
+              mom,
+              ""
+            ).toLocaleLowerCase();
+            this._longMonthsParse[i2] = this.months(mom, "").toLocaleLowerCase();
+          }
+        }
+        if (strict) {
+          if (format3 === "MMM") {
+            ii = indexOf.call(this._shortMonthsParse, llc);
+            return ii !== -1 ? ii : null;
+          } else {
+            ii = indexOf.call(this._longMonthsParse, llc);
+            return ii !== -1 ? ii : null;
+          }
+        } else {
+          if (format3 === "MMM") {
+            ii = indexOf.call(this._shortMonthsParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._longMonthsParse, llc);
+            return ii !== -1 ? ii : null;
+          } else {
+            ii = indexOf.call(this._longMonthsParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._shortMonthsParse, llc);
+            return ii !== -1 ? ii : null;
+          }
+        }
+      }
+      function localeMonthsParse(monthName, format3, strict) {
+        var i2, mom, regex;
+        if (this._monthsParseExact) {
+          return handleStrictParse.call(this, monthName, format3, strict);
+        }
+        if (!this._monthsParse) {
+          this._monthsParse = [];
+          this._longMonthsParse = [];
+          this._shortMonthsParse = [];
+        }
+        for (i2 = 0; i2 < 12; i2++) {
+          mom = createUTC([2e3, i2]);
+          if (strict && !this._longMonthsParse[i2]) {
+            this._longMonthsParse[i2] = new RegExp(
+              "^" + this.months(mom, "").replace(".", "") + "$",
+              "i"
+            );
+            this._shortMonthsParse[i2] = new RegExp(
+              "^" + this.monthsShort(mom, "").replace(".", "") + "$",
+              "i"
+            );
+          }
+          if (!strict && !this._monthsParse[i2]) {
+            regex = "^" + this.months(mom, "") + "|^" + this.monthsShort(mom, "");
+            this._monthsParse[i2] = new RegExp(regex.replace(".", ""), "i");
+          }
+          if (strict && format3 === "MMMM" && this._longMonthsParse[i2].test(monthName)) {
+            return i2;
+          } else if (strict && format3 === "MMM" && this._shortMonthsParse[i2].test(monthName)) {
+            return i2;
+          } else if (!strict && this._monthsParse[i2].test(monthName)) {
+            return i2;
+          }
+        }
+      }
+      function setMonth(mom, value) {
+        if (!mom.isValid()) {
+          return mom;
+        }
+        if (typeof value === "string") {
+          if (/^\d+$/.test(value)) {
+            value = toInt(value);
+          } else {
+            value = mom.localeData().monthsParse(value);
+            if (!isNumber(value)) {
+              return mom;
+            }
+          }
+        }
+        var month = value, date = mom.date();
+        date = date < 29 ? date : Math.min(date, daysInMonth(mom.year(), month));
+        void (mom._isUTC ? mom._d.setUTCMonth(month, date) : mom._d.setMonth(month, date));
+        return mom;
+      }
+      function getSetMonth(value) {
+        if (value != null) {
+          setMonth(this, value);
+          hooks.updateOffset(this, true);
+          return this;
+        } else {
+          return get2(this, "Month");
+        }
+      }
+      function getDaysInMonth() {
+        return daysInMonth(this.year(), this.month());
+      }
+      function monthsShortRegex(isStrict) {
+        if (this._monthsParseExact) {
+          if (!hasOwnProp(this, "_monthsRegex")) {
+            computeMonthsParse.call(this);
+          }
+          if (isStrict) {
+            return this._monthsShortStrictRegex;
+          } else {
+            return this._monthsShortRegex;
+          }
+        } else {
+          if (!hasOwnProp(this, "_monthsShortRegex")) {
+            this._monthsShortRegex = defaultMonthsShortRegex;
+          }
+          return this._monthsShortStrictRegex && isStrict ? this._monthsShortStrictRegex : this._monthsShortRegex;
+        }
+      }
+      function monthsRegex(isStrict) {
+        if (this._monthsParseExact) {
+          if (!hasOwnProp(this, "_monthsRegex")) {
+            computeMonthsParse.call(this);
+          }
+          if (isStrict) {
+            return this._monthsStrictRegex;
+          } else {
+            return this._monthsRegex;
+          }
+        } else {
+          if (!hasOwnProp(this, "_monthsRegex")) {
+            this._monthsRegex = defaultMonthsRegex;
+          }
+          return this._monthsStrictRegex && isStrict ? this._monthsStrictRegex : this._monthsRegex;
+        }
+      }
+      function computeMonthsParse() {
+        function cmpLenRev(a, b) {
+          return b.length - a.length;
+        }
+        var shortPieces = [], longPieces = [], mixedPieces = [], i2, mom, shortP, longP;
+        for (i2 = 0; i2 < 12; i2++) {
+          mom = createUTC([2e3, i2]);
+          shortP = regexEscape(this.monthsShort(mom, ""));
+          longP = regexEscape(this.months(mom, ""));
+          shortPieces.push(shortP);
+          longPieces.push(longP);
+          mixedPieces.push(longP);
+          mixedPieces.push(shortP);
+        }
+        shortPieces.sort(cmpLenRev);
+        longPieces.sort(cmpLenRev);
+        mixedPieces.sort(cmpLenRev);
+        this._monthsRegex = new RegExp("^(" + mixedPieces.join("|") + ")", "i");
+        this._monthsShortRegex = this._monthsRegex;
+        this._monthsStrictRegex = new RegExp(
+          "^(" + longPieces.join("|") + ")",
+          "i"
+        );
+        this._monthsShortStrictRegex = new RegExp(
+          "^(" + shortPieces.join("|") + ")",
+          "i"
+        );
+      }
+      function createDate(y, m2, d, h2, M, s2, ms) {
+        var date;
+        if (y < 100 && y >= 0) {
+          date = new Date(y + 400, m2, d, h2, M, s2, ms);
+          if (isFinite(date.getFullYear())) {
+            date.setFullYear(y);
+          }
+        } else {
+          date = new Date(y, m2, d, h2, M, s2, ms);
+        }
+        return date;
+      }
+      function createUTCDate(y) {
+        var date, args;
+        if (y < 100 && y >= 0) {
+          args = Array.prototype.slice.call(arguments);
+          args[0] = y + 400;
+          date = new Date(Date.UTC.apply(null, args));
+          if (isFinite(date.getUTCFullYear())) {
+            date.setUTCFullYear(y);
+          }
+        } else {
+          date = new Date(Date.UTC.apply(null, arguments));
+        }
+        return date;
+      }
+      function firstWeekOffset(year, dow, doy) {
+        var fwd = 7 + dow - doy, fwdlw = (7 + createUTCDate(year, 0, fwd).getUTCDay() - dow) % 7;
+        return -fwdlw + fwd - 1;
+      }
+      function dayOfYearFromWeeks(year, week, weekday, dow, doy) {
+        var localWeekday = (7 + weekday - dow) % 7, weekOffset = firstWeekOffset(year, dow, doy), dayOfYear = 1 + 7 * (week - 1) + localWeekday + weekOffset, resYear, resDayOfYear;
+        if (dayOfYear <= 0) {
+          resYear = year - 1;
+          resDayOfYear = daysInYear(resYear) + dayOfYear;
+        } else if (dayOfYear > daysInYear(year)) {
+          resYear = year + 1;
+          resDayOfYear = dayOfYear - daysInYear(year);
+        } else {
+          resYear = year;
+          resDayOfYear = dayOfYear;
+        }
+        return {
+          year: resYear,
+          dayOfYear: resDayOfYear
+        };
+      }
+      function weekOfYear(mom, dow, doy) {
+        var weekOffset = firstWeekOffset(mom.year(), dow, doy), week = Math.floor((mom.dayOfYear() - weekOffset - 1) / 7) + 1, resWeek, resYear;
+        if (week < 1) {
+          resYear = mom.year() - 1;
+          resWeek = week + weeksInYear(resYear, dow, doy);
+        } else if (week > weeksInYear(mom.year(), dow, doy)) {
+          resWeek = week - weeksInYear(mom.year(), dow, doy);
+          resYear = mom.year() + 1;
+        } else {
+          resYear = mom.year();
+          resWeek = week;
+        }
+        return {
+          week: resWeek,
+          year: resYear
+        };
+      }
+      function weeksInYear(year, dow, doy) {
+        var weekOffset = firstWeekOffset(year, dow, doy), weekOffsetNext = firstWeekOffset(year + 1, dow, doy);
+        return (daysInYear(year) - weekOffset + weekOffsetNext) / 7;
+      }
+      addFormatToken("w", ["ww", 2], "wo", "week");
+      addFormatToken("W", ["WW", 2], "Wo", "isoWeek");
+      addRegexToken("w", match1to2, match1to2NoLeadingZero);
+      addRegexToken("ww", match1to2, match2);
+      addRegexToken("W", match1to2, match1to2NoLeadingZero);
+      addRegexToken("WW", match1to2, match2);
+      addWeekParseToken(
+        ["w", "ww", "W", "WW"],
+        function(input, week, config, token2) {
+          week[token2.substr(0, 1)] = toInt(input);
+        }
+      );
+      function localeWeek(mom) {
+        return weekOfYear(mom, this._week.dow, this._week.doy).week;
+      }
+      var defaultLocaleWeek = {
+        dow: 0,
+        // Sunday is the first day of the week.
+        doy: 6
+        // The week that contains Jan 6th is the first week of the year.
+      };
+      function localeFirstDayOfWeek() {
+        return this._week.dow;
+      }
+      function localeFirstDayOfYear() {
+        return this._week.doy;
+      }
+      function getSetWeek(input) {
+        var week = this.localeData().week(this);
+        return input == null ? week : this.add((input - week) * 7, "d");
+      }
+      function getSetISOWeek(input) {
+        var week = weekOfYear(this, 1, 4).week;
+        return input == null ? week : this.add((input - week) * 7, "d");
+      }
+      addFormatToken("d", 0, "do", "day");
+      addFormatToken("dd", 0, 0, function(format3) {
+        return this.localeData().weekdaysMin(this, format3);
+      });
+      addFormatToken("ddd", 0, 0, function(format3) {
+        return this.localeData().weekdaysShort(this, format3);
+      });
+      addFormatToken("dddd", 0, 0, function(format3) {
+        return this.localeData().weekdays(this, format3);
+      });
+      addFormatToken("e", 0, 0, "weekday");
+      addFormatToken("E", 0, 0, "isoWeekday");
+      addRegexToken("d", match1to2);
+      addRegexToken("e", match1to2);
+      addRegexToken("E", match1to2);
+      addRegexToken("dd", function(isStrict, locale2) {
+        return locale2.weekdaysMinRegex(isStrict);
+      });
+      addRegexToken("ddd", function(isStrict, locale2) {
+        return locale2.weekdaysShortRegex(isStrict);
+      });
+      addRegexToken("dddd", function(isStrict, locale2) {
+        return locale2.weekdaysRegex(isStrict);
+      });
+      addWeekParseToken(["dd", "ddd", "dddd"], function(input, week, config, token2) {
+        var weekday = config._locale.weekdaysParse(input, token2, config._strict);
+        if (weekday != null) {
+          week.d = weekday;
+        } else {
+          getParsingFlags(config).invalidWeekday = input;
+        }
+      });
+      addWeekParseToken(["d", "e", "E"], function(input, week, config, token2) {
+        week[token2] = toInt(input);
+      });
+      function parseWeekday(input, locale2) {
+        if (typeof input !== "string") {
+          return input;
+        }
+        if (!isNaN(input)) {
+          return parseInt(input, 10);
+        }
+        input = locale2.weekdaysParse(input);
+        if (typeof input === "number") {
+          return input;
+        }
+        return null;
+      }
+      function parseIsoWeekday(input, locale2) {
+        if (typeof input === "string") {
+          return locale2.weekdaysParse(input) % 7 || 7;
+        }
+        return isNaN(input) ? null : input;
+      }
+      function shiftWeekdays(ws, n) {
+        return ws.slice(n, 7).concat(ws.slice(0, n));
+      }
+      var defaultLocaleWeekdays = "Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"), defaultLocaleWeekdaysShort = "Sun_Mon_Tue_Wed_Thu_Fri_Sat".split("_"), defaultLocaleWeekdaysMin = "Su_Mo_Tu_We_Th_Fr_Sa".split("_"), defaultWeekdaysRegex = matchWord, defaultWeekdaysShortRegex = matchWord, defaultWeekdaysMinRegex = matchWord;
+      function localeWeekdays(m2, format3) {
+        var weekdays = isArray(this._weekdays) ? this._weekdays : this._weekdays[m2 && m2 !== true && this._weekdays.isFormat.test(format3) ? "format" : "standalone"];
+        return m2 === true ? shiftWeekdays(weekdays, this._week.dow) : m2 ? weekdays[m2.day()] : weekdays;
+      }
+      function localeWeekdaysShort(m2) {
+        return m2 === true ? shiftWeekdays(this._weekdaysShort, this._week.dow) : m2 ? this._weekdaysShort[m2.day()] : this._weekdaysShort;
+      }
+      function localeWeekdaysMin(m2) {
+        return m2 === true ? shiftWeekdays(this._weekdaysMin, this._week.dow) : m2 ? this._weekdaysMin[m2.day()] : this._weekdaysMin;
+      }
+      function handleStrictParse$1(weekdayName, format3, strict) {
+        var i2, ii, mom, llc = weekdayName.toLocaleLowerCase();
+        if (!this._weekdaysParse) {
+          this._weekdaysParse = [];
+          this._shortWeekdaysParse = [];
+          this._minWeekdaysParse = [];
+          for (i2 = 0; i2 < 7; ++i2) {
+            mom = createUTC([2e3, 1]).day(i2);
+            this._minWeekdaysParse[i2] = this.weekdaysMin(
+              mom,
+              ""
+            ).toLocaleLowerCase();
+            this._shortWeekdaysParse[i2] = this.weekdaysShort(
+              mom,
+              ""
+            ).toLocaleLowerCase();
+            this._weekdaysParse[i2] = this.weekdays(mom, "").toLocaleLowerCase();
+          }
+        }
+        if (strict) {
+          if (format3 === "dddd") {
+            ii = indexOf.call(this._weekdaysParse, llc);
+            return ii !== -1 ? ii : null;
+          } else if (format3 === "ddd") {
+            ii = indexOf.call(this._shortWeekdaysParse, llc);
+            return ii !== -1 ? ii : null;
+          } else {
+            ii = indexOf.call(this._minWeekdaysParse, llc);
+            return ii !== -1 ? ii : null;
+          }
+        } else {
+          if (format3 === "dddd") {
+            ii = indexOf.call(this._weekdaysParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._shortWeekdaysParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._minWeekdaysParse, llc);
+            return ii !== -1 ? ii : null;
+          } else if (format3 === "ddd") {
+            ii = indexOf.call(this._shortWeekdaysParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._weekdaysParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._minWeekdaysParse, llc);
+            return ii !== -1 ? ii : null;
+          } else {
+            ii = indexOf.call(this._minWeekdaysParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._weekdaysParse, llc);
+            if (ii !== -1) {
+              return ii;
+            }
+            ii = indexOf.call(this._shortWeekdaysParse, llc);
+            return ii !== -1 ? ii : null;
+          }
+        }
+      }
+      function localeWeekdaysParse(weekdayName, format3, strict) {
+        var i2, mom, regex;
+        if (this._weekdaysParseExact) {
+          return handleStrictParse$1.call(this, weekdayName, format3, strict);
+        }
+        if (!this._weekdaysParse) {
+          this._weekdaysParse = [];
+          this._minWeekdaysParse = [];
+          this._shortWeekdaysParse = [];
+          this._fullWeekdaysParse = [];
+        }
+        for (i2 = 0; i2 < 7; i2++) {
+          mom = createUTC([2e3, 1]).day(i2);
+          if (strict && !this._fullWeekdaysParse[i2]) {
+            this._fullWeekdaysParse[i2] = new RegExp(
+              "^" + this.weekdays(mom, "").replace(".", "\\.?") + "$",
+              "i"
+            );
+            this._shortWeekdaysParse[i2] = new RegExp(
+              "^" + this.weekdaysShort(mom, "").replace(".", "\\.?") + "$",
+              "i"
+            );
+            this._minWeekdaysParse[i2] = new RegExp(
+              "^" + this.weekdaysMin(mom, "").replace(".", "\\.?") + "$",
+              "i"
+            );
+          }
+          if (!this._weekdaysParse[i2]) {
+            regex = "^" + this.weekdays(mom, "") + "|^" + this.weekdaysShort(mom, "") + "|^" + this.weekdaysMin(mom, "");
+            this._weekdaysParse[i2] = new RegExp(regex.replace(".", ""), "i");
+          }
+          if (strict && format3 === "dddd" && this._fullWeekdaysParse[i2].test(weekdayName)) {
+            return i2;
+          } else if (strict && format3 === "ddd" && this._shortWeekdaysParse[i2].test(weekdayName)) {
+            return i2;
+          } else if (strict && format3 === "dd" && this._minWeekdaysParse[i2].test(weekdayName)) {
+            return i2;
+          } else if (!strict && this._weekdaysParse[i2].test(weekdayName)) {
+            return i2;
+          }
+        }
+      }
+      function getSetDayOfWeek(input) {
+        if (!this.isValid()) {
+          return input != null ? this : NaN;
+        }
+        var day = get2(this, "Day");
+        if (input != null) {
+          input = parseWeekday(input, this.localeData());
+          return this.add(input - day, "d");
+        } else {
+          return day;
+        }
+      }
+      function getSetLocaleDayOfWeek(input) {
+        if (!this.isValid()) {
+          return input != null ? this : NaN;
+        }
+        var weekday = (this.day() + 7 - this.localeData()._week.dow) % 7;
+        return input == null ? weekday : this.add(input - weekday, "d");
+      }
+      function getSetISODayOfWeek(input) {
+        if (!this.isValid()) {
+          return input != null ? this : NaN;
+        }
+        if (input != null) {
+          var weekday = parseIsoWeekday(input, this.localeData());
+          return this.day(this.day() % 7 ? weekday : weekday - 7);
+        } else {
+          return this.day() || 7;
+        }
+      }
+      function weekdaysRegex(isStrict) {
+        if (this._weekdaysParseExact) {
+          if (!hasOwnProp(this, "_weekdaysRegex")) {
+            computeWeekdaysParse.call(this);
+          }
+          if (isStrict) {
+            return this._weekdaysStrictRegex;
+          } else {
+            return this._weekdaysRegex;
+          }
+        } else {
+          if (!hasOwnProp(this, "_weekdaysRegex")) {
+            this._weekdaysRegex = defaultWeekdaysRegex;
+          }
+          return this._weekdaysStrictRegex && isStrict ? this._weekdaysStrictRegex : this._weekdaysRegex;
+        }
+      }
+      function weekdaysShortRegex(isStrict) {
+        if (this._weekdaysParseExact) {
+          if (!hasOwnProp(this, "_weekdaysRegex")) {
+            computeWeekdaysParse.call(this);
+          }
+          if (isStrict) {
+            return this._weekdaysShortStrictRegex;
+          } else {
+            return this._weekdaysShortRegex;
+          }
+        } else {
+          if (!hasOwnProp(this, "_weekdaysShortRegex")) {
+            this._weekdaysShortRegex = defaultWeekdaysShortRegex;
+          }
+          return this._weekdaysShortStrictRegex && isStrict ? this._weekdaysShortStrictRegex : this._weekdaysShortRegex;
+        }
+      }
+      function weekdaysMinRegex(isStrict) {
+        if (this._weekdaysParseExact) {
+          if (!hasOwnProp(this, "_weekdaysRegex")) {
+            computeWeekdaysParse.call(this);
+          }
+          if (isStrict) {
+            return this._weekdaysMinStrictRegex;
+          } else {
+            return this._weekdaysMinRegex;
+          }
+        } else {
+          if (!hasOwnProp(this, "_weekdaysMinRegex")) {
+            this._weekdaysMinRegex = defaultWeekdaysMinRegex;
+          }
+          return this._weekdaysMinStrictRegex && isStrict ? this._weekdaysMinStrictRegex : this._weekdaysMinRegex;
+        }
+      }
+      function computeWeekdaysParse() {
+        function cmpLenRev(a, b) {
+          return b.length - a.length;
+        }
+        var minPieces = [], shortPieces = [], longPieces = [], mixedPieces = [], i2, mom, minp, shortp, longp;
+        for (i2 = 0; i2 < 7; i2++) {
+          mom = createUTC([2e3, 1]).day(i2);
+          minp = regexEscape(this.weekdaysMin(mom, ""));
+          shortp = regexEscape(this.weekdaysShort(mom, ""));
+          longp = regexEscape(this.weekdays(mom, ""));
+          minPieces.push(minp);
+          shortPieces.push(shortp);
+          longPieces.push(longp);
+          mixedPieces.push(minp);
+          mixedPieces.push(shortp);
+          mixedPieces.push(longp);
+        }
+        minPieces.sort(cmpLenRev);
+        shortPieces.sort(cmpLenRev);
+        longPieces.sort(cmpLenRev);
+        mixedPieces.sort(cmpLenRev);
+        this._weekdaysRegex = new RegExp("^(" + mixedPieces.join("|") + ")", "i");
+        this._weekdaysShortRegex = this._weekdaysRegex;
+        this._weekdaysMinRegex = this._weekdaysRegex;
+        this._weekdaysStrictRegex = new RegExp(
+          "^(" + longPieces.join("|") + ")",
+          "i"
+        );
+        this._weekdaysShortStrictRegex = new RegExp(
+          "^(" + shortPieces.join("|") + ")",
+          "i"
+        );
+        this._weekdaysMinStrictRegex = new RegExp(
+          "^(" + minPieces.join("|") + ")",
+          "i"
+        );
+      }
+      function hFormat() {
+        return this.hours() % 12 || 12;
+      }
+      function kFormat() {
+        return this.hours() || 24;
+      }
+      addFormatToken("H", ["HH", 2], 0, "hour");
+      addFormatToken("h", ["hh", 2], 0, hFormat);
+      addFormatToken("k", ["kk", 2], 0, kFormat);
+      addFormatToken("hmm", 0, 0, function() {
+        return "" + hFormat.apply(this) + zeroFill(this.minutes(), 2);
+      });
+      addFormatToken("hmmss", 0, 0, function() {
+        return "" + hFormat.apply(this) + zeroFill(this.minutes(), 2) + zeroFill(this.seconds(), 2);
+      });
+      addFormatToken("Hmm", 0, 0, function() {
+        return "" + this.hours() + zeroFill(this.minutes(), 2);
+      });
+      addFormatToken("Hmmss", 0, 0, function() {
+        return "" + this.hours() + zeroFill(this.minutes(), 2) + zeroFill(this.seconds(), 2);
+      });
+      function meridiem(token2, lowercase) {
+        addFormatToken(token2, 0, 0, function() {
+          return this.localeData().meridiem(
+            this.hours(),
+            this.minutes(),
+            lowercase
+          );
+        });
+      }
+      meridiem("a", true);
+      meridiem("A", false);
+      function matchMeridiem(isStrict, locale2) {
+        return locale2._meridiemParse;
+      }
+      addRegexToken("a", matchMeridiem);
+      addRegexToken("A", matchMeridiem);
+      addRegexToken("H", match1to2, match1to2HasZero);
+      addRegexToken("h", match1to2, match1to2NoLeadingZero);
+      addRegexToken("k", match1to2, match1to2NoLeadingZero);
+      addRegexToken("HH", match1to2, match2);
+      addRegexToken("hh", match1to2, match2);
+      addRegexToken("kk", match1to2, match2);
+      addRegexToken("hmm", match3to4);
+      addRegexToken("hmmss", match5to6);
+      addRegexToken("Hmm", match3to4);
+      addRegexToken("Hmmss", match5to6);
+      addParseToken(["H", "HH"], HOUR);
+      addParseToken(["k", "kk"], function(input, array, config) {
+        var kInput = toInt(input);
+        array[HOUR] = kInput === 24 ? 0 : kInput;
+      });
+      addParseToken(["a", "A"], function(input, array, config) {
+        config._isPm = config._locale.isPM(input);
+        config._meridiem = input;
+      });
+      addParseToken(["h", "hh"], function(input, array, config) {
+        array[HOUR] = toInt(input);
+        getParsingFlags(config).bigHour = true;
+      });
+      addParseToken("hmm", function(input, array, config) {
+        var pos = input.length - 2;
+        array[HOUR] = toInt(input.substr(0, pos));
+        array[MINUTE] = toInt(input.substr(pos));
+        getParsingFlags(config).bigHour = true;
+      });
+      addParseToken("hmmss", function(input, array, config) {
+        var pos1 = input.length - 4, pos2 = input.length - 2;
+        array[HOUR] = toInt(input.substr(0, pos1));
+        array[MINUTE] = toInt(input.substr(pos1, 2));
+        array[SECOND] = toInt(input.substr(pos2));
+        getParsingFlags(config).bigHour = true;
+      });
+      addParseToken("Hmm", function(input, array, config) {
+        var pos = input.length - 2;
+        array[HOUR] = toInt(input.substr(0, pos));
+        array[MINUTE] = toInt(input.substr(pos));
+      });
+      addParseToken("Hmmss", function(input, array, config) {
+        var pos1 = input.length - 4, pos2 = input.length - 2;
+        array[HOUR] = toInt(input.substr(0, pos1));
+        array[MINUTE] = toInt(input.substr(pos1, 2));
+        array[SECOND] = toInt(input.substr(pos2));
+      });
+      function localeIsPM(input) {
+        return (input + "").toLowerCase().charAt(0) === "p";
+      }
+      var defaultLocaleMeridiemParse = /[ap]\.?m?\.?/i, getSetHour = makeGetSet("Hours", true);
+      function localeMeridiem(hours2, minutes2, isLower) {
+        if (hours2 > 11) {
+          return isLower ? "pm" : "PM";
+        } else {
+          return isLower ? "am" : "AM";
+        }
+      }
+      var baseConfig = {
+        calendar: defaultCalendar,
+        longDateFormat: defaultLongDateFormat,
+        invalidDate: defaultInvalidDate,
+        ordinal: defaultOrdinal,
+        dayOfMonthOrdinalParse: defaultDayOfMonthOrdinalParse,
+        relativeTime: defaultRelativeTime,
+        months: defaultLocaleMonths,
+        monthsShort: defaultLocaleMonthsShort,
+        week: defaultLocaleWeek,
+        weekdays: defaultLocaleWeekdays,
+        weekdaysMin: defaultLocaleWeekdaysMin,
+        weekdaysShort: defaultLocaleWeekdaysShort,
+        meridiemParse: defaultLocaleMeridiemParse
+      };
+      var locales = {}, localeFamilies = {}, globalLocale;
+      function commonPrefix(arr1, arr2) {
+        var i2, minl = Math.min(arr1.length, arr2.length);
+        for (i2 = 0; i2 < minl; i2 += 1) {
+          if (arr1[i2] !== arr2[i2]) {
+            return i2;
+          }
+        }
+        return minl;
+      }
+      function normalizeLocale(key) {
+        return key ? key.toLowerCase().replace("_", "-") : key;
+      }
+      function chooseLocale(names) {
+        var i2 = 0, j, next, locale2, split;
+        while (i2 < names.length) {
+          split = normalizeLocale(names[i2]).split("-");
+          j = split.length;
+          next = normalizeLocale(names[i2 + 1]);
+          next = next ? next.split("-") : null;
+          while (j > 0) {
+            locale2 = loadLocale(split.slice(0, j).join("-"));
+            if (locale2) {
+              return locale2;
+            }
+            if (next && next.length >= j && commonPrefix(split, next) >= j - 1) {
+              break;
+            }
+            j--;
+          }
+          i2++;
+        }
+        return globalLocale;
+      }
+      function isLocaleNameSane(name) {
+        return !!(name && name.match("^[^/\\\\]*$"));
+      }
+      function loadLocale(name) {
+        var oldLocale = null, aliasedRequire;
+        if (locales[name] === void 0 && typeof module2 !== "undefined" && module2 && module2.exports && isLocaleNameSane(name)) {
+          try {
+            oldLocale = globalLocale._abbr;
+            aliasedRequire = require;
+            aliasedRequire("./locale/" + name);
+            getSetGlobalLocale(oldLocale);
+          } catch (e2) {
+            locales[name] = null;
+          }
+        }
+        return locales[name];
+      }
+      function getSetGlobalLocale(key, values) {
+        var data;
+        if (key) {
+          if (isUndefined(values)) {
+            data = getLocale(key);
+          } else {
+            data = defineLocale(key, values);
+          }
+          if (data) {
+            globalLocale = data;
+          } else {
+            if (typeof console !== "undefined" && console.warn) {
+              console.warn(
+                "Locale " + key + " not found. Did you forget to load it?"
+              );
+            }
+          }
+        }
+        return globalLocale._abbr;
+      }
+      function defineLocale(name, config) {
+        if (config !== null) {
+          var locale2, parentConfig = baseConfig;
+          config.abbr = name;
+          if (locales[name] != null) {
+            deprecateSimple(
+              "defineLocaleOverride",
+              "use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info."
+            );
+            parentConfig = locales[name]._config;
+          } else if (config.parentLocale != null) {
+            if (locales[config.parentLocale] != null) {
+              parentConfig = locales[config.parentLocale]._config;
+            } else {
+              locale2 = loadLocale(config.parentLocale);
+              if (locale2 != null) {
+                parentConfig = locale2._config;
+              } else {
+                if (!localeFamilies[config.parentLocale]) {
+                  localeFamilies[config.parentLocale] = [];
+                }
+                localeFamilies[config.parentLocale].push({
+                  name,
+                  config
+                });
+                return null;
+              }
+            }
+          }
+          locales[name] = new Locale(mergeConfigs(parentConfig, config));
+          if (localeFamilies[name]) {
+            localeFamilies[name].forEach(function(x2) {
+              defineLocale(x2.name, x2.config);
+            });
+          }
+          getSetGlobalLocale(name);
+          return locales[name];
+        } else {
+          delete locales[name];
+          return null;
+        }
+      }
+      function updateLocale(name, config) {
+        if (config != null) {
+          var locale2, tmpLocale, parentConfig = baseConfig;
+          if (locales[name] != null && locales[name].parentLocale != null) {
+            locales[name].set(mergeConfigs(locales[name]._config, config));
+          } else {
+            tmpLocale = loadLocale(name);
+            if (tmpLocale != null) {
+              parentConfig = tmpLocale._config;
+            }
+            config = mergeConfigs(parentConfig, config);
+            if (tmpLocale == null) {
+              config.abbr = name;
+            }
+            locale2 = new Locale(config);
+            locale2.parentLocale = locales[name];
+            locales[name] = locale2;
+          }
+          getSetGlobalLocale(name);
+        } else {
+          if (locales[name] != null) {
+            if (locales[name].parentLocale != null) {
+              locales[name] = locales[name].parentLocale;
+              if (name === getSetGlobalLocale()) {
+                getSetGlobalLocale(name);
+              }
+            } else if (locales[name] != null) {
+              delete locales[name];
+            }
+          }
+        }
+        return locales[name];
+      }
+      function getLocale(key) {
+        var locale2;
+        if (key && key._locale && key._locale._abbr) {
+          key = key._locale._abbr;
+        }
+        if (!key) {
+          return globalLocale;
+        }
+        if (!isArray(key)) {
+          locale2 = loadLocale(key);
+          if (locale2) {
+            return locale2;
+          }
+          key = [key];
+        }
+        return chooseLocale(key);
+      }
+      function listLocales() {
+        return keys(locales);
+      }
+      function checkOverflow(m2) {
+        var overflow, a = m2._a;
+        if (a && getParsingFlags(m2).overflow === -2) {
+          overflow = a[MONTH] < 0 || a[MONTH] > 11 ? MONTH : a[DATE] < 1 || a[DATE] > daysInMonth(a[YEAR], a[MONTH]) ? DATE : a[HOUR] < 0 || a[HOUR] > 24 || a[HOUR] === 24 && (a[MINUTE] !== 0 || a[SECOND] !== 0 || a[MILLISECOND] !== 0) ? HOUR : a[MINUTE] < 0 || a[MINUTE] > 59 ? MINUTE : a[SECOND] < 0 || a[SECOND] > 59 ? SECOND : a[MILLISECOND] < 0 || a[MILLISECOND] > 999 ? MILLISECOND : -1;
+          if (getParsingFlags(m2)._overflowDayOfYear && (overflow < YEAR || overflow > DATE)) {
+            overflow = DATE;
+          }
+          if (getParsingFlags(m2)._overflowWeeks && overflow === -1) {
+            overflow = WEEK;
+          }
+          if (getParsingFlags(m2)._overflowWeekday && overflow === -1) {
+            overflow = WEEKDAY;
+          }
+          getParsingFlags(m2).overflow = overflow;
+        }
+        return m2;
+      }
+      var extendedIsoRegex = /^\s*((?:[+-]\d{6}|\d{4})-(?:\d\d-\d\d|W\d\d-\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?::\d\d(?::\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/, basicIsoRegex = /^\s*((?:[+-]\d{6}|\d{4})(?:\d\d\d\d|W\d\d\d|W\d\d|\d\d\d|\d\d|))(?:(T| )(\d\d(?:\d\d(?:\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/, tzRegex = /Z|[+-]\d\d(?::?\d\d)?/, isoDates = [
+        ["YYYYYY-MM-DD", /[+-]\d{6}-\d\d-\d\d/],
+        ["YYYY-MM-DD", /\d{4}-\d\d-\d\d/],
+        ["GGGG-[W]WW-E", /\d{4}-W\d\d-\d/],
+        ["GGGG-[W]WW", /\d{4}-W\d\d/, false],
+        ["YYYY-DDD", /\d{4}-\d{3}/],
+        ["YYYY-MM", /\d{4}-\d\d/, false],
+        ["YYYYYYMMDD", /[+-]\d{10}/],
+        ["YYYYMMDD", /\d{8}/],
+        ["GGGG[W]WWE", /\d{4}W\d{3}/],
+        ["GGGG[W]WW", /\d{4}W\d{2}/, false],
+        ["YYYYDDD", /\d{7}/],
+        ["YYYYMM", /\d{6}/, false],
+        ["YYYY", /\d{4}/, false]
+      ], isoTimes = [
+        ["HH:mm:ss.SSSS", /\d\d:\d\d:\d\d\.\d+/],
+        ["HH:mm:ss,SSSS", /\d\d:\d\d:\d\d,\d+/],
+        ["HH:mm:ss", /\d\d:\d\d:\d\d/],
+        ["HH:mm", /\d\d:\d\d/],
+        ["HHmmss.SSSS", /\d\d\d\d\d\d\.\d+/],
+        ["HHmmss,SSSS", /\d\d\d\d\d\d,\d+/],
+        ["HHmmss", /\d\d\d\d\d\d/],
+        ["HHmm", /\d\d\d\d/],
+        ["HH", /\d\d/]
+      ], aspNetJsonRegex = /^\/?Date\((-?\d+)/i, rfc2822 = /^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s)?(\d{1,2})\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\d{2,4})\s(\d\d):(\d\d)(?::(\d\d))?\s(?:(UT|GMT|[ECMP][SD]T)|([Zz])|([+-]\d{4}))$/, obsOffsets = {
+        UT: 0,
+        GMT: 0,
+        EDT: -4 * 60,
+        EST: -5 * 60,
+        CDT: -5 * 60,
+        CST: -6 * 60,
+        MDT: -6 * 60,
+        MST: -7 * 60,
+        PDT: -7 * 60,
+        PST: -8 * 60
+      };
+      function configFromISO(config) {
+        var i2, l, string = config._i, match = extendedIsoRegex.exec(string) || basicIsoRegex.exec(string), allowTime, dateFormat, timeFormat, tzFormat, isoDatesLen = isoDates.length, isoTimesLen = isoTimes.length;
+        if (match) {
+          getParsingFlags(config).iso = true;
+          for (i2 = 0, l = isoDatesLen; i2 < l; i2++) {
+            if (isoDates[i2][1].exec(match[1])) {
+              dateFormat = isoDates[i2][0];
+              allowTime = isoDates[i2][2] !== false;
+              break;
+            }
+          }
+          if (dateFormat == null) {
+            config._isValid = false;
+            return;
+          }
+          if (match[3]) {
+            for (i2 = 0, l = isoTimesLen; i2 < l; i2++) {
+              if (isoTimes[i2][1].exec(match[3])) {
+                timeFormat = (match[2] || " ") + isoTimes[i2][0];
+                break;
+              }
+            }
+            if (timeFormat == null) {
+              config._isValid = false;
+              return;
+            }
+          }
+          if (!allowTime && timeFormat != null) {
+            config._isValid = false;
+            return;
+          }
+          if (match[4]) {
+            if (tzRegex.exec(match[4])) {
+              tzFormat = "Z";
+            } else {
+              config._isValid = false;
+              return;
+            }
+          }
+          config._f = dateFormat + (timeFormat || "") + (tzFormat || "");
+          configFromStringAndFormat(config);
+        } else {
+          config._isValid = false;
+        }
+      }
+      function extractFromRFC2822Strings(yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr) {
+        var result = [
+          untruncateYear(yearStr),
+          defaultLocaleMonthsShort.indexOf(monthStr),
+          parseInt(dayStr, 10),
+          parseInt(hourStr, 10),
+          parseInt(minuteStr, 10)
+        ];
+        if (secondStr) {
+          result.push(parseInt(secondStr, 10));
+        }
+        return result;
+      }
+      function untruncateYear(yearStr) {
+        var year = parseInt(yearStr, 10);
+        if (year <= 49) {
+          return 2e3 + year;
+        } else if (year <= 999) {
+          return 1900 + year;
+        }
+        return year;
+      }
+      function preprocessRFC2822(s2) {
+        return s2.replace(/\([^()]*\)|[\n\t]/g, " ").replace(/(\s\s+)/g, " ").replace(/^\s\s*/, "").replace(/\s\s*$/, "");
+      }
+      function checkWeekday(weekdayStr, parsedInput, config) {
+        if (weekdayStr) {
+          var weekdayProvided = defaultLocaleWeekdaysShort.indexOf(weekdayStr), weekdayActual = new Date(
+            parsedInput[0],
+            parsedInput[1],
+            parsedInput[2]
+          ).getDay();
+          if (weekdayProvided !== weekdayActual) {
+            getParsingFlags(config).weekdayMismatch = true;
+            config._isValid = false;
+            return false;
+          }
+        }
+        return true;
+      }
+      function calculateOffset(obsOffset, militaryOffset, numOffset) {
+        if (obsOffset) {
+          return obsOffsets[obsOffset];
+        } else if (militaryOffset) {
+          return 0;
+        } else {
+          var hm = parseInt(numOffset, 10), m2 = hm % 100, h2 = (hm - m2) / 100;
+          return h2 * 60 + m2;
+        }
+      }
+      function configFromRFC2822(config) {
+        var match = rfc2822.exec(preprocessRFC2822(config._i)), parsedArray;
+        if (match) {
+          parsedArray = extractFromRFC2822Strings(
+            match[4],
+            match[3],
+            match[2],
+            match[5],
+            match[6],
+            match[7]
+          );
+          if (!checkWeekday(match[1], parsedArray, config)) {
+            return;
+          }
+          config._a = parsedArray;
+          config._tzm = calculateOffset(match[8], match[9], match[10]);
+          config._d = createUTCDate.apply(null, config._a);
+          config._d.setUTCMinutes(config._d.getUTCMinutes() - config._tzm);
+          getParsingFlags(config).rfc2822 = true;
+        } else {
+          config._isValid = false;
+        }
+      }
+      function configFromString(config) {
+        var matched = aspNetJsonRegex.exec(config._i);
+        if (matched !== null) {
+          config._d = /* @__PURE__ */ new Date(+matched[1]);
+          return;
+        }
+        configFromISO(config);
+        if (config._isValid === false) {
+          delete config._isValid;
+        } else {
+          return;
+        }
+        configFromRFC2822(config);
+        if (config._isValid === false) {
+          delete config._isValid;
+        } else {
+          return;
+        }
+        if (config._strict) {
+          config._isValid = false;
+        } else {
+          hooks.createFromInputFallback(config);
+        }
+      }
+      hooks.createFromInputFallback = deprecate3(
+        "value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.",
+        function(config) {
+          config._d = /* @__PURE__ */ new Date(config._i + (config._useUTC ? " UTC" : ""));
+        }
+      );
+      function defaults(a, b, c) {
+        if (a != null) {
+          return a;
+        }
+        if (b != null) {
+          return b;
+        }
+        return c;
+      }
+      function currentDateArray(config) {
+        var nowValue = new Date(hooks.now());
+        if (config._useUTC) {
+          return [
+            nowValue.getUTCFullYear(),
+            nowValue.getUTCMonth(),
+            nowValue.getUTCDate()
+          ];
+        }
+        return [nowValue.getFullYear(), nowValue.getMonth(), nowValue.getDate()];
+      }
+      function configFromArray(config) {
+        var i2, date, input = [], currentDate, expectedWeekday, yearToUse;
+        if (config._d) {
+          return;
+        }
+        currentDate = currentDateArray(config);
+        if (config._w && config._a[DATE] == null && config._a[MONTH] == null) {
+          dayOfYearFromWeekInfo(config);
+        }
+        if (config._dayOfYear != null) {
+          yearToUse = defaults(config._a[YEAR], currentDate[YEAR]);
+          if (config._dayOfYear > daysInYear(yearToUse) || config._dayOfYear === 0) {
+            getParsingFlags(config)._overflowDayOfYear = true;
+          }
+          date = createUTCDate(yearToUse, 0, config._dayOfYear);
+          config._a[MONTH] = date.getUTCMonth();
+          config._a[DATE] = date.getUTCDate();
+        }
+        for (i2 = 0; i2 < 3 && config._a[i2] == null; ++i2) {
+          config._a[i2] = input[i2] = currentDate[i2];
+        }
+        for (; i2 < 7; i2++) {
+          config._a[i2] = input[i2] = config._a[i2] == null ? i2 === 2 ? 1 : 0 : config._a[i2];
+        }
+        if (config._a[HOUR] === 24 && config._a[MINUTE] === 0 && config._a[SECOND] === 0 && config._a[MILLISECOND] === 0) {
+          config._nextDay = true;
+          config._a[HOUR] = 0;
+        }
+        config._d = (config._useUTC ? createUTCDate : createDate).apply(
+          null,
+          input
+        );
+        expectedWeekday = config._useUTC ? config._d.getUTCDay() : config._d.getDay();
+        if (config._tzm != null) {
+          config._d.setUTCMinutes(config._d.getUTCMinutes() - config._tzm);
+        }
+        if (config._nextDay) {
+          config._a[HOUR] = 24;
+        }
+        if (config._w && typeof config._w.d !== "undefined" && config._w.d !== expectedWeekday) {
+          getParsingFlags(config).weekdayMismatch = true;
+        }
+      }
+      function dayOfYearFromWeekInfo(config) {
+        var w, weekYear, week, weekday, dow, doy, temp, weekdayOverflow, curWeek;
+        w = config._w;
+        if (w.GG != null || w.W != null || w.E != null) {
+          dow = 1;
+          doy = 4;
+          weekYear = defaults(
+            w.GG,
+            config._a[YEAR],
+            weekOfYear(createLocal(), 1, 4).year
+          );
+          week = defaults(w.W, 1);
+          weekday = defaults(w.E, 1);
+          if (weekday < 1 || weekday > 7) {
+            weekdayOverflow = true;
+          }
+        } else {
+          dow = config._locale._week.dow;
+          doy = config._locale._week.doy;
+          curWeek = weekOfYear(createLocal(), dow, doy);
+          weekYear = defaults(w.gg, config._a[YEAR], curWeek.year);
+          week = defaults(w.w, curWeek.week);
+          if (w.d != null) {
+            weekday = w.d;
+            if (weekday < 0 || weekday > 6) {
+              weekdayOverflow = true;
+            }
+          } else if (w.e != null) {
+            weekday = w.e + dow;
+            if (w.e < 0 || w.e > 6) {
+              weekdayOverflow = true;
+            }
+          } else {
+            weekday = dow;
+          }
+        }
+        if (week < 1 || week > weeksInYear(weekYear, dow, doy)) {
+          getParsingFlags(config)._overflowWeeks = true;
+        } else if (weekdayOverflow != null) {
+          getParsingFlags(config)._overflowWeekday = true;
+        } else {
+          temp = dayOfYearFromWeeks(weekYear, week, weekday, dow, doy);
+          config._a[YEAR] = temp.year;
+          config._dayOfYear = temp.dayOfYear;
+        }
+      }
+      hooks.ISO_8601 = function() {
+      };
+      hooks.RFC_2822 = function() {
+      };
+      function configFromStringAndFormat(config) {
+        if (config._f === hooks.ISO_8601) {
+          configFromISO(config);
+          return;
+        }
+        if (config._f === hooks.RFC_2822) {
+          configFromRFC2822(config);
+          return;
+        }
+        config._a = [];
+        getParsingFlags(config).empty = true;
+        var string = "" + config._i, i2, parsedInput, tokens2, token2, skipped, stringLength = string.length, totalParsedInputLength = 0, era, tokenLen;
+        tokens2 = expandFormat(config._f, config._locale).match(formattingTokens) || [];
+        tokenLen = tokens2.length;
+        for (i2 = 0; i2 < tokenLen; i2++) {
+          token2 = tokens2[i2];
+          parsedInput = (string.match(getParseRegexForToken(token2, config)) || [])[0];
+          if (parsedInput) {
+            skipped = string.substr(0, string.indexOf(parsedInput));
+            if (skipped.length > 0) {
+              getParsingFlags(config).unusedInput.push(skipped);
+            }
+            string = string.slice(
+              string.indexOf(parsedInput) + parsedInput.length
+            );
+            totalParsedInputLength += parsedInput.length;
+          }
+          if (formatTokenFunctions[token2]) {
+            if (parsedInput) {
+              getParsingFlags(config).empty = false;
+            } else {
+              getParsingFlags(config).unusedTokens.push(token2);
+            }
+            addTimeToArrayFromToken(token2, parsedInput, config);
+          } else if (config._strict && !parsedInput) {
+            getParsingFlags(config).unusedTokens.push(token2);
+          }
+        }
+        getParsingFlags(config).charsLeftOver = stringLength - totalParsedInputLength;
+        if (string.length > 0) {
+          getParsingFlags(config).unusedInput.push(string);
+        }
+        if (config._a[HOUR] <= 12 && getParsingFlags(config).bigHour === true && config._a[HOUR] > 0) {
+          getParsingFlags(config).bigHour = void 0;
+        }
+        getParsingFlags(config).parsedDateParts = config._a.slice(0);
+        getParsingFlags(config).meridiem = config._meridiem;
+        config._a[HOUR] = meridiemFixWrap(
+          config._locale,
+          config._a[HOUR],
+          config._meridiem
+        );
+        era = getParsingFlags(config).era;
+        if (era !== null) {
+          config._a[YEAR] = config._locale.erasConvertYear(era, config._a[YEAR]);
+        }
+        configFromArray(config);
+        checkOverflow(config);
+      }
+      function meridiemFixWrap(locale2, hour, meridiem2) {
+        var isPm;
+        if (meridiem2 == null) {
+          return hour;
+        }
+        if (locale2.meridiemHour != null) {
+          return locale2.meridiemHour(hour, meridiem2);
+        } else if (locale2.isPM != null) {
+          isPm = locale2.isPM(meridiem2);
+          if (isPm && hour < 12) {
+            hour += 12;
+          }
+          if (!isPm && hour === 12) {
+            hour = 0;
+          }
+          return hour;
+        } else {
+          return hour;
+        }
+      }
+      function configFromStringAndArray(config) {
+        var tempConfig, bestMoment, scoreToBeat, i2, currentScore, validFormatFound, bestFormatIsValid = false, configfLen = config._f.length;
+        if (configfLen === 0) {
+          getParsingFlags(config).invalidFormat = true;
+          config._d = /* @__PURE__ */ new Date(NaN);
+          return;
+        }
+        for (i2 = 0; i2 < configfLen; i2++) {
+          currentScore = 0;
+          validFormatFound = false;
+          tempConfig = copyConfig({}, config);
+          if (config._useUTC != null) {
+            tempConfig._useUTC = config._useUTC;
+          }
+          tempConfig._f = config._f[i2];
+          configFromStringAndFormat(tempConfig);
+          if (isValid2(tempConfig)) {
+            validFormatFound = true;
+          }
+          currentScore += getParsingFlags(tempConfig).charsLeftOver;
+          currentScore += getParsingFlags(tempConfig).unusedTokens.length * 10;
+          getParsingFlags(tempConfig).score = currentScore;
+          if (!bestFormatIsValid) {
+            if (scoreToBeat == null || currentScore < scoreToBeat || validFormatFound) {
+              scoreToBeat = currentScore;
+              bestMoment = tempConfig;
+              if (validFormatFound) {
+                bestFormatIsValid = true;
+              }
+            }
+          } else {
+            if (currentScore < scoreToBeat) {
+              scoreToBeat = currentScore;
+              bestMoment = tempConfig;
+            }
+          }
+        }
+        extend(config, bestMoment || tempConfig);
+      }
+      function configFromObject(config) {
+        if (config._d) {
+          return;
+        }
+        var i2 = normalizeObjectUnits(config._i), dayOrDate = i2.day === void 0 ? i2.date : i2.day;
+        config._a = map(
+          [i2.year, i2.month, dayOrDate, i2.hour, i2.minute, i2.second, i2.millisecond],
+          function(obj) {
+            return obj && parseInt(obj, 10);
+          }
+        );
+        configFromArray(config);
+      }
+      function createFromConfig(config) {
+        var res = new Moment(checkOverflow(prepareConfig(config)));
+        if (res._nextDay) {
+          res.add(1, "d");
+          res._nextDay = void 0;
+        }
+        return res;
+      }
+      function prepareConfig(config) {
+        var input = config._i, format3 = config._f;
+        config._locale = config._locale || getLocale(config._l);
+        if (input === null || format3 === void 0 && input === "") {
+          return createInvalid({ nullInput: true });
+        }
+        if (typeof input === "string") {
+          config._i = input = config._locale.preparse(input);
+        }
+        if (isMoment(input)) {
+          return new Moment(checkOverflow(input));
+        } else if (isDate(input)) {
+          config._d = input;
+        } else if (isArray(format3)) {
+          configFromStringAndArray(config);
+        } else if (format3) {
+          configFromStringAndFormat(config);
+        } else {
+          configFromInput(config);
+        }
+        if (!isValid2(config)) {
+          config._d = null;
+        }
+        return config;
+      }
+      function configFromInput(config) {
+        var input = config._i;
+        if (isUndefined(input)) {
+          config._d = new Date(hooks.now());
+        } else if (isDate(input)) {
+          config._d = new Date(input.valueOf());
+        } else if (typeof input === "string") {
+          configFromString(config);
+        } else if (isArray(input)) {
+          config._a = map(input.slice(0), function(obj) {
+            return parseInt(obj, 10);
+          });
+          configFromArray(config);
+        } else if (isObject(input)) {
+          configFromObject(config);
+        } else if (isNumber(input)) {
+          config._d = new Date(input);
+        } else {
+          hooks.createFromInputFallback(config);
+        }
+      }
+      function createLocalOrUTC(input, format3, locale2, strict, isUTC) {
+        var c = {};
+        if (format3 === true || format3 === false) {
+          strict = format3;
+          format3 = void 0;
+        }
+        if (locale2 === true || locale2 === false) {
+          strict = locale2;
+          locale2 = void 0;
+        }
+        if (isObject(input) && isObjectEmpty(input) || isArray(input) && input.length === 0) {
+          input = void 0;
+        }
+        c._isAMomentObject = true;
+        c._useUTC = c._isUTC = isUTC;
+        c._l = locale2;
+        c._i = input;
+        c._f = format3;
+        c._strict = strict;
+        return createFromConfig(c);
+      }
+      function createLocal(input, format3, locale2, strict) {
+        return createLocalOrUTC(input, format3, locale2, strict, false);
+      }
+      var prototypeMin = deprecate3(
+        "moment().min is deprecated, use moment.max instead. http://momentjs.com/guides/#/warnings/min-max/",
+        function() {
+          var other = createLocal.apply(null, arguments);
+          if (this.isValid() && other.isValid()) {
+            return other < this ? this : other;
+          } else {
+            return createInvalid();
+          }
+        }
+      ), prototypeMax = deprecate3(
+        "moment().max is deprecated, use moment.min instead. http://momentjs.com/guides/#/warnings/min-max/",
+        function() {
+          var other = createLocal.apply(null, arguments);
+          if (this.isValid() && other.isValid()) {
+            return other > this ? this : other;
+          } else {
+            return createInvalid();
+          }
+        }
+      );
+      function pickBy(fn, moments) {
+        var res, i2;
+        if (moments.length === 1 && isArray(moments[0])) {
+          moments = moments[0];
+        }
+        if (!moments.length) {
+          return createLocal();
+        }
+        res = moments[0];
+        for (i2 = 1; i2 < moments.length; ++i2) {
+          if (!moments[i2].isValid() || moments[i2][fn](res)) {
+            res = moments[i2];
+          }
+        }
+        return res;
+      }
+      function min() {
+        var args = [].slice.call(arguments, 0);
+        return pickBy("isBefore", args);
+      }
+      function max() {
+        var args = [].slice.call(arguments, 0);
+        return pickBy("isAfter", args);
+      }
+      var now = function() {
+        return Date.now ? Date.now() : +/* @__PURE__ */ new Date();
+      };
+      var ordering = [
+        "year",
+        "quarter",
+        "month",
+        "week",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "millisecond"
+      ];
+      function isDurationValid(m2) {
+        var key, unitHasDecimal = false, i2, orderLen = ordering.length;
+        for (key in m2) {
+          if (hasOwnProp(m2, key) && !(indexOf.call(ordering, key) !== -1 && (m2[key] == null || !isNaN(m2[key])))) {
+            return false;
+          }
+        }
+        for (i2 = 0; i2 < orderLen; ++i2) {
+          if (m2[ordering[i2]]) {
+            if (unitHasDecimal) {
+              return false;
+            }
+            if (parseFloat(m2[ordering[i2]]) !== toInt(m2[ordering[i2]])) {
+              unitHasDecimal = true;
+            }
+          }
+        }
+        return true;
+      }
+      function isValid$1() {
+        return this._isValid;
+      }
+      function createInvalid$1() {
+        return createDuration(NaN);
+      }
+      function Duration(duration) {
+        var normalizedInput = normalizeObjectUnits(duration), years2 = normalizedInput.year || 0, quarters = normalizedInput.quarter || 0, months2 = normalizedInput.month || 0, weeks2 = normalizedInput.week || normalizedInput.isoWeek || 0, days2 = normalizedInput.day || 0, hours2 = normalizedInput.hour || 0, minutes2 = normalizedInput.minute || 0, seconds2 = normalizedInput.second || 0, milliseconds2 = normalizedInput.millisecond || 0;
+        this._isValid = isDurationValid(normalizedInput);
+        this._milliseconds = +milliseconds2 + seconds2 * 1e3 + // 1000
+        minutes2 * 6e4 + // 1000 * 60
+        hours2 * 1e3 * 60 * 60;
+        this._days = +days2 + weeks2 * 7;
+        this._months = +months2 + quarters * 3 + years2 * 12;
+        this._data = {};
+        this._locale = getLocale();
+        this._bubble();
+      }
+      function isDuration(obj) {
+        return obj instanceof Duration;
+      }
+      function absRound(number) {
+        if (number < 0) {
+          return Math.round(-1 * number) * -1;
+        } else {
+          return Math.round(number);
+        }
+      }
+      function compareArrays(array1, array2, dontConvert) {
+        var len = Math.min(array1.length, array2.length), lengthDiff = Math.abs(array1.length - array2.length), diffs = 0, i2;
+        for (i2 = 0; i2 < len; i2++) {
+          if (dontConvert && array1[i2] !== array2[i2] || !dontConvert && toInt(array1[i2]) !== toInt(array2[i2])) {
+            diffs++;
+          }
+        }
+        return diffs + lengthDiff;
+      }
+      function offset(token2, separator) {
+        addFormatToken(token2, 0, 0, function() {
+          var offset2 = this.utcOffset(), sign2 = "+";
+          if (offset2 < 0) {
+            offset2 = -offset2;
+            sign2 = "-";
+          }
+          return sign2 + zeroFill(~~(offset2 / 60), 2) + separator + zeroFill(~~offset2 % 60, 2);
+        });
+      }
+      offset("Z", ":");
+      offset("ZZ", "");
+      addRegexToken("Z", matchShortOffset);
+      addRegexToken("ZZ", matchShortOffset);
+      addParseToken(["Z", "ZZ"], function(input, array, config) {
+        config._useUTC = true;
+        config._tzm = offsetFromString(matchShortOffset, input);
+      });
+      var chunkOffset = /([\+\-]|\d\d)/gi;
+      function offsetFromString(matcher, string) {
+        var matches = (string || "").match(matcher), chunk, parts, minutes2;
+        if (matches === null) {
+          return null;
+        }
+        chunk = matches[matches.length - 1] || [];
+        parts = (chunk + "").match(chunkOffset) || ["-", 0, 0];
+        minutes2 = +(parts[1] * 60) + toInt(parts[2]);
+        return minutes2 === 0 ? 0 : parts[0] === "+" ? minutes2 : -minutes2;
+      }
+      function cloneWithOffset(input, model) {
+        var res, diff2;
+        if (model._isUTC) {
+          res = model.clone();
+          diff2 = (isMoment(input) || isDate(input) ? input.valueOf() : createLocal(input).valueOf()) - res.valueOf();
+          res._d.setTime(res._d.valueOf() + diff2);
+          hooks.updateOffset(res, false);
+          return res;
+        } else {
+          return createLocal(input).local();
+        }
+      }
+      function getDateOffset(m2) {
+        return -Math.round(m2._d.getTimezoneOffset());
+      }
+      hooks.updateOffset = function() {
+      };
+      function getSetOffset(input, keepLocalTime, keepMinutes) {
+        var offset2 = this._offset || 0, localAdjust;
+        if (!this.isValid()) {
+          return input != null ? this : NaN;
+        }
+        if (input != null) {
+          if (typeof input === "string") {
+            input = offsetFromString(matchShortOffset, input);
+            if (input === null) {
+              return this;
+            }
+          } else if (Math.abs(input) < 16 && !keepMinutes) {
+            input = input * 60;
+          }
+          if (!this._isUTC && keepLocalTime) {
+            localAdjust = getDateOffset(this);
+          }
+          this._offset = input;
+          this._isUTC = true;
+          if (localAdjust != null) {
+            this.add(localAdjust, "m");
+          }
+          if (offset2 !== input) {
+            if (!keepLocalTime || this._changeInProgress) {
+              addSubtract(
+                this,
+                createDuration(input - offset2, "m"),
+                1,
+                false
+              );
+            } else if (!this._changeInProgress) {
+              this._changeInProgress = true;
+              hooks.updateOffset(this, true);
+              this._changeInProgress = null;
+            }
+          }
+          return this;
+        } else {
+          return this._isUTC ? offset2 : getDateOffset(this);
+        }
+      }
+      function getSetZone(input, keepLocalTime) {
+        if (input != null) {
+          if (typeof input !== "string") {
+            input = -input;
+          }
+          this.utcOffset(input, keepLocalTime);
+          return this;
+        } else {
+          return -this.utcOffset();
+        }
+      }
+      function setOffsetToUTC(keepLocalTime) {
+        return this.utcOffset(0, keepLocalTime);
+      }
+      function setOffsetToLocal(keepLocalTime) {
+        if (this._isUTC) {
+          this.utcOffset(0, keepLocalTime);
+          this._isUTC = false;
+          if (keepLocalTime) {
+            this.subtract(getDateOffset(this), "m");
+          }
+        }
+        return this;
+      }
+      function setOffsetToParsedOffset() {
+        if (this._tzm != null) {
+          this.utcOffset(this._tzm, false, true);
+        } else if (typeof this._i === "string") {
+          var tZone = offsetFromString(matchOffset, this._i);
+          if (tZone != null) {
+            this.utcOffset(tZone);
+          } else {
+            this.utcOffset(0, true);
+          }
+        }
+        return this;
+      }
+      function hasAlignedHourOffset(input) {
+        if (!this.isValid()) {
+          return false;
+        }
+        input = input ? createLocal(input).utcOffset() : 0;
+        return (this.utcOffset() - input) % 60 === 0;
+      }
+      function isDaylightSavingTime() {
+        return this.utcOffset() > this.clone().month(0).utcOffset() || this.utcOffset() > this.clone().month(5).utcOffset();
+      }
+      function isDaylightSavingTimeShifted() {
+        if (!isUndefined(this._isDSTShifted)) {
+          return this._isDSTShifted;
+        }
+        var c = {}, other;
+        copyConfig(c, this);
+        c = prepareConfig(c);
+        if (c._a) {
+          other = c._isUTC ? createUTC(c._a) : createLocal(c._a);
+          this._isDSTShifted = this.isValid() && compareArrays(c._a, other.toArray()) > 0;
+        } else {
+          this._isDSTShifted = false;
+        }
+        return this._isDSTShifted;
+      }
+      function isLocal() {
+        return this.isValid() ? !this._isUTC : false;
+      }
+      function isUtcOffset() {
+        return this.isValid() ? this._isUTC : false;
+      }
+      function isUtc() {
+        return this.isValid() ? this._isUTC && this._offset === 0 : false;
+      }
+      var aspNetRegex = /^(-|\+)?(?:(\d*)[. ])?(\d+):(\d+)(?::(\d+)(\.\d*)?)?$/, isoRegex = /^(-|\+)?P(?:([-+]?[0-9,.]*)Y)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)W)?(?:([-+]?[0-9,.]*)D)?(?:T(?:([-+]?[0-9,.]*)H)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)S)?)?$/;
+      function createDuration(input, key) {
+        var duration = input, match = null, sign2, ret, diffRes;
+        if (isDuration(input)) {
+          duration = {
+            ms: input._milliseconds,
+            d: input._days,
+            M: input._months
+          };
+        } else if (isNumber(input) || !isNaN(+input)) {
+          duration = {};
+          if (key) {
+            duration[key] = +input;
+          } else {
+            duration.milliseconds = +input;
+          }
+        } else if (match = aspNetRegex.exec(input)) {
+          sign2 = match[1] === "-" ? -1 : 1;
+          duration = {
+            y: 0,
+            d: toInt(match[DATE]) * sign2,
+            h: toInt(match[HOUR]) * sign2,
+            m: toInt(match[MINUTE]) * sign2,
+            s: toInt(match[SECOND]) * sign2,
+            ms: toInt(absRound(match[MILLISECOND] * 1e3)) * sign2
+            // the millisecond decimal point is included in the match
+          };
+        } else if (match = isoRegex.exec(input)) {
+          sign2 = match[1] === "-" ? -1 : 1;
+          duration = {
+            y: parseIso(match[2], sign2),
+            M: parseIso(match[3], sign2),
+            w: parseIso(match[4], sign2),
+            d: parseIso(match[5], sign2),
+            h: parseIso(match[6], sign2),
+            m: parseIso(match[7], sign2),
+            s: parseIso(match[8], sign2)
+          };
+        } else if (duration == null) {
+          duration = {};
+        } else if (typeof duration === "object" && ("from" in duration || "to" in duration)) {
+          diffRes = momentsDifference(
+            createLocal(duration.from),
+            createLocal(duration.to)
+          );
+          duration = {};
+          duration.ms = diffRes.milliseconds;
+          duration.M = diffRes.months;
+        }
+        ret = new Duration(duration);
+        if (isDuration(input) && hasOwnProp(input, "_locale")) {
+          ret._locale = input._locale;
+        }
+        if (isDuration(input) && hasOwnProp(input, "_isValid")) {
+          ret._isValid = input._isValid;
+        }
+        return ret;
+      }
+      createDuration.fn = Duration.prototype;
+      createDuration.invalid = createInvalid$1;
+      function parseIso(inp, sign2) {
+        var res = inp && parseFloat(inp.replace(",", "."));
+        return (isNaN(res) ? 0 : res) * sign2;
+      }
+      function positiveMomentsDifference(base, other) {
+        var res = {};
+        res.months = other.month() - base.month() + (other.year() - base.year()) * 12;
+        if (base.clone().add(res.months, "M").isAfter(other)) {
+          --res.months;
+        }
+        res.milliseconds = +other - +base.clone().add(res.months, "M");
+        return res;
+      }
+      function momentsDifference(base, other) {
+        var res;
+        if (!(base.isValid() && other.isValid())) {
+          return { milliseconds: 0, months: 0 };
+        }
+        other = cloneWithOffset(other, base);
+        if (base.isBefore(other)) {
+          res = positiveMomentsDifference(base, other);
+        } else {
+          res = positiveMomentsDifference(other, base);
+          res.milliseconds = -res.milliseconds;
+          res.months = -res.months;
+        }
+        return res;
+      }
+      function createAdder(direction, name) {
+        return function(val, period) {
+          var dur, tmp;
+          if (period !== null && !isNaN(+period)) {
+            deprecateSimple(
+              name,
+              "moment()." + name + "(period, number) is deprecated. Please use moment()." + name + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
+            );
+            tmp = val;
+            val = period;
+            period = tmp;
+          }
+          dur = createDuration(val, period);
+          addSubtract(this, dur, direction);
+          return this;
+        };
+      }
+      function addSubtract(mom, duration, isAdding, updateOffset) {
+        var milliseconds2 = duration._milliseconds, days2 = absRound(duration._days), months2 = absRound(duration._months);
+        if (!mom.isValid()) {
+          return;
+        }
+        updateOffset = updateOffset == null ? true : updateOffset;
+        if (months2) {
+          setMonth(mom, get2(mom, "Month") + months2 * isAdding);
+        }
+        if (days2) {
+          set$1(mom, "Date", get2(mom, "Date") + days2 * isAdding);
+        }
+        if (milliseconds2) {
+          mom._d.setTime(mom._d.valueOf() + milliseconds2 * isAdding);
+        }
+        if (updateOffset) {
+          hooks.updateOffset(mom, days2 || months2);
+        }
+      }
+      var add = createAdder(1, "add"), subtract = createAdder(-1, "subtract");
+      function isString(input) {
+        return typeof input === "string" || input instanceof String;
+      }
+      function isMomentInput(input) {
+        return isMoment(input) || isDate(input) || isString(input) || isNumber(input) || isNumberOrStringArray(input) || isMomentInputObject(input) || input === null || input === void 0;
+      }
+      function isMomentInputObject(input) {
+        var objectTest = isObject(input) && !isObjectEmpty(input), propertyTest = false, properties = [
+          "years",
+          "year",
+          "y",
+          "months",
+          "month",
+          "M",
+          "days",
+          "day",
+          "d",
+          "dates",
+          "date",
+          "D",
+          "hours",
+          "hour",
+          "h",
+          "minutes",
+          "minute",
+          "m",
+          "seconds",
+          "second",
+          "s",
+          "milliseconds",
+          "millisecond",
+          "ms"
+        ], i2, property, propertyLen = properties.length;
+        for (i2 = 0; i2 < propertyLen; i2 += 1) {
+          property = properties[i2];
+          propertyTest = propertyTest || hasOwnProp(input, property);
+        }
+        return objectTest && propertyTest;
+      }
+      function isNumberOrStringArray(input) {
+        var arrayTest = isArray(input), dataTypeTest = false;
+        if (arrayTest) {
+          dataTypeTest = input.filter(function(item) {
+            return !isNumber(item) && isString(input);
+          }).length === 0;
+        }
+        return arrayTest && dataTypeTest;
+      }
+      function isCalendarSpec(input) {
+        var objectTest = isObject(input) && !isObjectEmpty(input), propertyTest = false, properties = [
+          "sameDay",
+          "nextDay",
+          "lastDay",
+          "nextWeek",
+          "lastWeek",
+          "sameElse"
+        ], i2, property;
+        for (i2 = 0; i2 < properties.length; i2 += 1) {
+          property = properties[i2];
+          propertyTest = propertyTest || hasOwnProp(input, property);
+        }
+        return objectTest && propertyTest;
+      }
+      function getCalendarFormat(myMoment, now2) {
+        var diff2 = myMoment.diff(now2, "days", true);
+        return diff2 < -6 ? "sameElse" : diff2 < -1 ? "lastWeek" : diff2 < 0 ? "lastDay" : diff2 < 1 ? "sameDay" : diff2 < 2 ? "nextDay" : diff2 < 7 ? "nextWeek" : "sameElse";
+      }
+      function calendar$1(time, formats) {
+        if (arguments.length === 1) {
+          if (!arguments[0]) {
+            time = void 0;
+            formats = void 0;
+          } else if (isMomentInput(arguments[0])) {
+            time = arguments[0];
+            formats = void 0;
+          } else if (isCalendarSpec(arguments[0])) {
+            formats = arguments[0];
+            time = void 0;
+          }
+        }
+        var now2 = time || createLocal(), sod = cloneWithOffset(now2, this).startOf("day"), format3 = hooks.calendarFormat(this, sod) || "sameElse", output = formats && (isFunction(formats[format3]) ? formats[format3].call(this, now2) : formats[format3]);
+        return this.format(
+          output || this.localeData().calendar(format3, this, createLocal(now2))
+        );
+      }
+      function clone2() {
+        return new Moment(this);
+      }
+      function isAfter(input, units) {
+        var localInput = isMoment(input) ? input : createLocal(input);
+        if (!(this.isValid() && localInput.isValid())) {
+          return false;
+        }
+        units = normalizeUnits(units) || "millisecond";
+        if (units === "millisecond") {
+          return this.valueOf() > localInput.valueOf();
+        } else {
+          return localInput.valueOf() < this.clone().startOf(units).valueOf();
+        }
+      }
+      function isBefore(input, units) {
+        var localInput = isMoment(input) ? input : createLocal(input);
+        if (!(this.isValid() && localInput.isValid())) {
+          return false;
+        }
+        units = normalizeUnits(units) || "millisecond";
+        if (units === "millisecond") {
+          return this.valueOf() < localInput.valueOf();
+        } else {
+          return this.clone().endOf(units).valueOf() < localInput.valueOf();
+        }
+      }
+      function isBetween(from2, to2, units, inclusivity) {
+        var localFrom = isMoment(from2) ? from2 : createLocal(from2), localTo = isMoment(to2) ? to2 : createLocal(to2);
+        if (!(this.isValid() && localFrom.isValid() && localTo.isValid())) {
+          return false;
+        }
+        inclusivity = inclusivity || "()";
+        return (inclusivity[0] === "(" ? this.isAfter(localFrom, units) : !this.isBefore(localFrom, units)) && (inclusivity[1] === ")" ? this.isBefore(localTo, units) : !this.isAfter(localTo, units));
+      }
+      function isSame(input, units) {
+        var localInput = isMoment(input) ? input : createLocal(input), inputMs;
+        if (!(this.isValid() && localInput.isValid())) {
+          return false;
+        }
+        units = normalizeUnits(units) || "millisecond";
+        if (units === "millisecond") {
+          return this.valueOf() === localInput.valueOf();
+        } else {
+          inputMs = localInput.valueOf();
+          return this.clone().startOf(units).valueOf() <= inputMs && inputMs <= this.clone().endOf(units).valueOf();
+        }
+      }
+      function isSameOrAfter(input, units) {
+        return this.isSame(input, units) || this.isAfter(input, units);
+      }
+      function isSameOrBefore(input, units) {
+        return this.isSame(input, units) || this.isBefore(input, units);
+      }
+      function diff(input, units, asFloat) {
+        var that, zoneDelta, output;
+        if (!this.isValid()) {
+          return NaN;
+        }
+        that = cloneWithOffset(input, this);
+        if (!that.isValid()) {
+          return NaN;
+        }
+        zoneDelta = (that.utcOffset() - this.utcOffset()) * 6e4;
+        units = normalizeUnits(units);
+        switch (units) {
+          case "year":
+            output = monthDiff(this, that) / 12;
+            break;
+          case "month":
+            output = monthDiff(this, that);
+            break;
+          case "quarter":
+            output = monthDiff(this, that) / 3;
+            break;
+          case "second":
+            output = (this - that) / 1e3;
+            break;
+          // 1000
+          case "minute":
+            output = (this - that) / 6e4;
+            break;
+          // 1000 * 60
+          case "hour":
+            output = (this - that) / 36e5;
+            break;
+          // 1000 * 60 * 60
+          case "day":
+            output = (this - that - zoneDelta) / 864e5;
+            break;
+          // 1000 * 60 * 60 * 24, negate dst
+          case "week":
+            output = (this - that - zoneDelta) / 6048e5;
+            break;
+          // 1000 * 60 * 60 * 24 * 7, negate dst
+          default:
+            output = this - that;
+        }
+        return asFloat ? output : absFloor(output);
+      }
+      function monthDiff(a, b) {
+        if (a.date() < b.date()) {
+          return -monthDiff(b, a);
+        }
+        var wholeMonthDiff = (b.year() - a.year()) * 12 + (b.month() - a.month()), anchor = a.clone().add(wholeMonthDiff, "months"), anchor2, adjust;
+        if (b - anchor < 0) {
+          anchor2 = a.clone().add(wholeMonthDiff - 1, "months");
+          adjust = (b - anchor) / (anchor - anchor2);
+        } else {
+          anchor2 = a.clone().add(wholeMonthDiff + 1, "months");
+          adjust = (b - anchor) / (anchor2 - anchor);
+        }
+        return -(wholeMonthDiff + adjust) || 0;
+      }
+      hooks.defaultFormat = "YYYY-MM-DDTHH:mm:ssZ";
+      hooks.defaultFormatUtc = "YYYY-MM-DDTHH:mm:ss[Z]";
+      function toString() {
+        return this.clone().locale("en").format("ddd MMM DD YYYY HH:mm:ss [GMT]ZZ");
+      }
+      function toISOString(keepOffset) {
+        if (!this.isValid()) {
+          return null;
+        }
+        var utc = keepOffset !== true, m2 = utc ? this.clone().utc() : this;
+        if (m2.year() < 0 || m2.year() > 9999) {
+          return formatMoment(
+            m2,
+            utc ? "YYYYYY-MM-DD[T]HH:mm:ss.SSS[Z]" : "YYYYYY-MM-DD[T]HH:mm:ss.SSSZ"
+          );
+        }
+        if (isFunction(Date.prototype.toISOString)) {
+          if (utc) {
+            return this.toDate().toISOString();
+          } else {
+            return new Date(this.valueOf() + this.utcOffset() * 60 * 1e3).toISOString().replace("Z", formatMoment(m2, "Z"));
+          }
+        }
+        return formatMoment(
+          m2,
+          utc ? "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]" : "YYYY-MM-DD[T]HH:mm:ss.SSSZ"
+        );
+      }
+      function inspect() {
+        if (!this.isValid()) {
+          return "moment.invalid(/* " + this._i + " */)";
+        }
+        var func = "moment", zone = "", prefix, year, datetime, suffix;
+        if (!this.isLocal()) {
+          func = this.utcOffset() === 0 ? "moment.utc" : "moment.parseZone";
+          zone = "Z";
+        }
+        prefix = "[" + func + '("]';
+        year = 0 <= this.year() && this.year() <= 9999 ? "YYYY" : "YYYYYY";
+        datetime = "-MM-DD[T]HH:mm:ss.SSS";
+        suffix = zone + '[")]';
+        return this.format(prefix + year + datetime + suffix);
+      }
+      function format2(inputString) {
+        if (!inputString) {
+          inputString = this.isUtc() ? hooks.defaultFormatUtc : hooks.defaultFormat;
+        }
+        var output = formatMoment(this, inputString);
+        return this.localeData().postformat(output);
+      }
+      function from(time, withoutSuffix) {
+        if (this.isValid() && (isMoment(time) && time.isValid() || createLocal(time).isValid())) {
+          return createDuration({ to: this, from: time }).locale(this.locale()).humanize(!withoutSuffix);
+        } else {
+          return this.localeData().invalidDate();
+        }
+      }
+      function fromNow(withoutSuffix) {
+        return this.from(createLocal(), withoutSuffix);
+      }
+      function to(time, withoutSuffix) {
+        if (this.isValid() && (isMoment(time) && time.isValid() || createLocal(time).isValid())) {
+          return createDuration({ from: this, to: time }).locale(this.locale()).humanize(!withoutSuffix);
+        } else {
+          return this.localeData().invalidDate();
+        }
+      }
+      function toNow(withoutSuffix) {
+        return this.to(createLocal(), withoutSuffix);
+      }
+      function locale(key) {
+        var newLocaleData;
+        if (key === void 0) {
+          return this._locale._abbr;
+        } else {
+          newLocaleData = getLocale(key);
+          if (newLocaleData != null) {
+            this._locale = newLocaleData;
+          }
+          return this;
+        }
+      }
+      var lang = deprecate3(
+        "moment().lang() is deprecated. Instead, use moment().localeData() to get the language configuration. Use moment().locale() to change languages.",
+        function(key) {
+          if (key === void 0) {
+            return this.localeData();
+          } else {
+            return this.locale(key);
+          }
+        }
+      );
+      function localeData() {
+        return this._locale;
+      }
+      var MS_PER_SECOND = 1e3, MS_PER_MINUTE = 60 * MS_PER_SECOND, MS_PER_HOUR2 = 60 * MS_PER_MINUTE, MS_PER_400_YEARS = (365 * 400 + 97) * 24 * MS_PER_HOUR2;
+      function mod$1(dividend, divisor) {
+        return (dividend % divisor + divisor) % divisor;
+      }
+      function localStartOfDate(y, m2, d) {
+        if (y < 100 && y >= 0) {
+          return new Date(y + 400, m2, d) - MS_PER_400_YEARS;
+        } else {
+          return new Date(y, m2, d).valueOf();
+        }
+      }
+      function utcStartOfDate(y, m2, d) {
+        if (y < 100 && y >= 0) {
+          return Date.UTC(y + 400, m2, d) - MS_PER_400_YEARS;
+        } else {
+          return Date.UTC(y, m2, d);
+        }
+      }
+      function startOf(units) {
+        var time, startOfDate;
+        units = normalizeUnits(units);
+        if (units === void 0 || units === "millisecond" || !this.isValid()) {
+          return this;
+        }
+        startOfDate = this._isUTC ? utcStartOfDate : localStartOfDate;
+        switch (units) {
+          case "year":
+            time = startOfDate(this.year(), 0, 1);
+            break;
+          case "quarter":
+            time = startOfDate(
+              this.year(),
+              this.month() - this.month() % 3,
+              1
+            );
+            break;
+          case "month":
+            time = startOfDate(this.year(), this.month(), 1);
+            break;
+          case "week":
+            time = startOfDate(
+              this.year(),
+              this.month(),
+              this.date() - this.weekday()
+            );
+            break;
+          case "isoWeek":
+            time = startOfDate(
+              this.year(),
+              this.month(),
+              this.date() - (this.isoWeekday() - 1)
+            );
+            break;
+          case "day":
+          case "date":
+            time = startOfDate(this.year(), this.month(), this.date());
+            break;
+          case "hour":
+            time = this._d.valueOf();
+            time -= mod$1(
+              time + (this._isUTC ? 0 : this.utcOffset() * MS_PER_MINUTE),
+              MS_PER_HOUR2
+            );
+            break;
+          case "minute":
+            time = this._d.valueOf();
+            time -= mod$1(time, MS_PER_MINUTE);
+            break;
+          case "second":
+            time = this._d.valueOf();
+            time -= mod$1(time, MS_PER_SECOND);
+            break;
+        }
+        this._d.setTime(time);
+        hooks.updateOffset(this, true);
+        return this;
+      }
+      function endOf(units) {
+        var time, startOfDate;
+        units = normalizeUnits(units);
+        if (units === void 0 || units === "millisecond" || !this.isValid()) {
+          return this;
+        }
+        startOfDate = this._isUTC ? utcStartOfDate : localStartOfDate;
+        switch (units) {
+          case "year":
+            time = startOfDate(this.year() + 1, 0, 1) - 1;
+            break;
+          case "quarter":
+            time = startOfDate(
+              this.year(),
+              this.month() - this.month() % 3 + 3,
+              1
+            ) - 1;
+            break;
+          case "month":
+            time = startOfDate(this.year(), this.month() + 1, 1) - 1;
+            break;
+          case "week":
+            time = startOfDate(
+              this.year(),
+              this.month(),
+              this.date() - this.weekday() + 7
+            ) - 1;
+            break;
+          case "isoWeek":
+            time = startOfDate(
+              this.year(),
+              this.month(),
+              this.date() - (this.isoWeekday() - 1) + 7
+            ) - 1;
+            break;
+          case "day":
+          case "date":
+            time = startOfDate(this.year(), this.month(), this.date() + 1) - 1;
+            break;
+          case "hour":
+            time = this._d.valueOf();
+            time += MS_PER_HOUR2 - mod$1(
+              time + (this._isUTC ? 0 : this.utcOffset() * MS_PER_MINUTE),
+              MS_PER_HOUR2
+            ) - 1;
+            break;
+          case "minute":
+            time = this._d.valueOf();
+            time += MS_PER_MINUTE - mod$1(time, MS_PER_MINUTE) - 1;
+            break;
+          case "second":
+            time = this._d.valueOf();
+            time += MS_PER_SECOND - mod$1(time, MS_PER_SECOND) - 1;
+            break;
+        }
+        this._d.setTime(time);
+        hooks.updateOffset(this, true);
+        return this;
+      }
+      function valueOf() {
+        return this._d.valueOf() - (this._offset || 0) * 6e4;
+      }
+      function unix() {
+        return Math.floor(this.valueOf() / 1e3);
+      }
+      function toDate() {
+        return new Date(this.valueOf());
+      }
+      function toArray2() {
+        var m2 = this;
+        return [
+          m2.year(),
+          m2.month(),
+          m2.date(),
+          m2.hour(),
+          m2.minute(),
+          m2.second(),
+          m2.millisecond()
+        ];
+      }
+      function toObject() {
+        var m2 = this;
+        return {
+          years: m2.year(),
+          months: m2.month(),
+          date: m2.date(),
+          hours: m2.hours(),
+          minutes: m2.minutes(),
+          seconds: m2.seconds(),
+          milliseconds: m2.milliseconds()
+        };
+      }
+      function toJSON2() {
+        return this.isValid() ? this.toISOString() : null;
+      }
+      function isValid$2() {
+        return isValid2(this);
+      }
+      function parsingFlags() {
+        return extend({}, getParsingFlags(this));
+      }
+      function invalidAt() {
+        return getParsingFlags(this).overflow;
+      }
+      function creationData() {
+        return {
+          input: this._i,
+          format: this._f,
+          locale: this._locale,
+          isUTC: this._isUTC,
+          strict: this._strict
+        };
+      }
+      addFormatToken("N", 0, 0, "eraAbbr");
+      addFormatToken("NN", 0, 0, "eraAbbr");
+      addFormatToken("NNN", 0, 0, "eraAbbr");
+      addFormatToken("NNNN", 0, 0, "eraName");
+      addFormatToken("NNNNN", 0, 0, "eraNarrow");
+      addFormatToken("y", ["y", 1], "yo", "eraYear");
+      addFormatToken("y", ["yy", 2], 0, "eraYear");
+      addFormatToken("y", ["yyy", 3], 0, "eraYear");
+      addFormatToken("y", ["yyyy", 4], 0, "eraYear");
+      addRegexToken("N", matchEraAbbr);
+      addRegexToken("NN", matchEraAbbr);
+      addRegexToken("NNN", matchEraAbbr);
+      addRegexToken("NNNN", matchEraName);
+      addRegexToken("NNNNN", matchEraNarrow);
+      addParseToken(
+        ["N", "NN", "NNN", "NNNN", "NNNNN"],
+        function(input, array, config, token2) {
+          var era = config._locale.erasParse(input, token2, config._strict);
+          if (era) {
+            getParsingFlags(config).era = era;
+          } else {
+            getParsingFlags(config).invalidEra = input;
+          }
+        }
+      );
+      addRegexToken("y", matchUnsigned);
+      addRegexToken("yy", matchUnsigned);
+      addRegexToken("yyy", matchUnsigned);
+      addRegexToken("yyyy", matchUnsigned);
+      addRegexToken("yo", matchEraYearOrdinal);
+      addParseToken(["y", "yy", "yyy", "yyyy"], YEAR);
+      addParseToken(["yo"], function(input, array, config, token2) {
+        var match;
+        if (config._locale._eraYearOrdinalRegex) {
+          match = input.match(config._locale._eraYearOrdinalRegex);
+        }
+        if (config._locale.eraYearOrdinalParse) {
+          array[YEAR] = config._locale.eraYearOrdinalParse(input, match);
+        } else {
+          array[YEAR] = parseInt(input, 10);
+        }
+      });
+      function localeEras(m2, format3) {
+        var i2, l, date, eras = this._eras || getLocale("en")._eras;
+        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
+          switch (typeof eras[i2].since) {
+            case "string":
+              date = hooks(eras[i2].since).startOf("day");
+              eras[i2].since = date.valueOf();
+              break;
+          }
+          switch (typeof eras[i2].until) {
+            case "undefined":
+              eras[i2].until = Infinity;
+              break;
+            case "string":
+              date = hooks(eras[i2].until).startOf("day").valueOf();
+              eras[i2].until = date.valueOf();
+              break;
+          }
+        }
+        return eras;
+      }
+      function localeErasParse(eraName, format3, strict) {
+        var i2, l, eras = this.eras(), name, abbr, narrow;
+        eraName = eraName.toUpperCase();
+        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
+          name = eras[i2].name.toUpperCase();
+          abbr = eras[i2].abbr.toUpperCase();
+          narrow = eras[i2].narrow.toUpperCase();
+          if (strict) {
+            switch (format3) {
+              case "N":
+              case "NN":
+              case "NNN":
+                if (abbr === eraName) {
+                  return eras[i2];
+                }
+                break;
+              case "NNNN":
+                if (name === eraName) {
+                  return eras[i2];
+                }
+                break;
+              case "NNNNN":
+                if (narrow === eraName) {
+                  return eras[i2];
+                }
+                break;
+            }
+          } else if ([name, abbr, narrow].indexOf(eraName) >= 0) {
+            return eras[i2];
+          }
+        }
+      }
+      function localeErasConvertYear(era, year) {
+        var dir = era.since <= era.until ? 1 : -1;
+        if (year === void 0) {
+          return hooks(era.since).year();
+        } else {
+          return hooks(era.since).year() + (year - era.offset) * dir;
+        }
+      }
+      function getEraName() {
+        var i2, l, val, eras = this.localeData().eras();
+        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
+          val = this.clone().startOf("day").valueOf();
+          if (eras[i2].since <= val && val <= eras[i2].until) {
+            return eras[i2].name;
+          }
+          if (eras[i2].until <= val && val <= eras[i2].since) {
+            return eras[i2].name;
+          }
+        }
+        return "";
+      }
+      function getEraNarrow() {
+        var i2, l, val, eras = this.localeData().eras();
+        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
+          val = this.clone().startOf("day").valueOf();
+          if (eras[i2].since <= val && val <= eras[i2].until) {
+            return eras[i2].narrow;
+          }
+          if (eras[i2].until <= val && val <= eras[i2].since) {
+            return eras[i2].narrow;
+          }
+        }
+        return "";
+      }
+      function getEraAbbr() {
+        var i2, l, val, eras = this.localeData().eras();
+        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
+          val = this.clone().startOf("day").valueOf();
+          if (eras[i2].since <= val && val <= eras[i2].until) {
+            return eras[i2].abbr;
+          }
+          if (eras[i2].until <= val && val <= eras[i2].since) {
+            return eras[i2].abbr;
+          }
+        }
+        return "";
+      }
+      function getEraYear() {
+        var i2, l, dir, val, eras = this.localeData().eras();
+        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
+          dir = eras[i2].since <= eras[i2].until ? 1 : -1;
+          val = this.clone().startOf("day").valueOf();
+          if (eras[i2].since <= val && val <= eras[i2].until || eras[i2].until <= val && val <= eras[i2].since) {
+            return (this.year() - hooks(eras[i2].since).year()) * dir + eras[i2].offset;
+          }
+        }
+        return this.year();
+      }
+      function erasNameRegex(isStrict) {
+        if (!hasOwnProp(this, "_erasNameRegex")) {
+          computeErasParse.call(this);
+        }
+        return isStrict ? this._erasNameRegex : this._erasRegex;
+      }
+      function erasAbbrRegex(isStrict) {
+        if (!hasOwnProp(this, "_erasAbbrRegex")) {
+          computeErasParse.call(this);
+        }
+        return isStrict ? this._erasAbbrRegex : this._erasRegex;
+      }
+      function erasNarrowRegex(isStrict) {
+        if (!hasOwnProp(this, "_erasNarrowRegex")) {
+          computeErasParse.call(this);
+        }
+        return isStrict ? this._erasNarrowRegex : this._erasRegex;
+      }
+      function matchEraAbbr(isStrict, locale2) {
+        return locale2.erasAbbrRegex(isStrict);
+      }
+      function matchEraName(isStrict, locale2) {
+        return locale2.erasNameRegex(isStrict);
+      }
+      function matchEraNarrow(isStrict, locale2) {
+        return locale2.erasNarrowRegex(isStrict);
+      }
+      function matchEraYearOrdinal(isStrict, locale2) {
+        return locale2._eraYearOrdinalRegex || matchUnsigned;
+      }
+      function computeErasParse() {
+        var abbrPieces = [], namePieces = [], narrowPieces = [], mixedPieces = [], i2, l, erasName, erasAbbr, erasNarrow, eras = this.eras();
+        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
+          erasName = regexEscape(eras[i2].name);
+          erasAbbr = regexEscape(eras[i2].abbr);
+          erasNarrow = regexEscape(eras[i2].narrow);
+          namePieces.push(erasName);
+          abbrPieces.push(erasAbbr);
+          narrowPieces.push(erasNarrow);
+          mixedPieces.push(erasName);
+          mixedPieces.push(erasAbbr);
+          mixedPieces.push(erasNarrow);
+        }
+        this._erasRegex = new RegExp("^(" + mixedPieces.join("|") + ")", "i");
+        this._erasNameRegex = new RegExp("^(" + namePieces.join("|") + ")", "i");
+        this._erasAbbrRegex = new RegExp("^(" + abbrPieces.join("|") + ")", "i");
+        this._erasNarrowRegex = new RegExp(
+          "^(" + narrowPieces.join("|") + ")",
+          "i"
+        );
+      }
+      addFormatToken(0, ["gg", 2], 0, function() {
+        return this.weekYear() % 100;
+      });
+      addFormatToken(0, ["GG", 2], 0, function() {
+        return this.isoWeekYear() % 100;
+      });
+      function addWeekYearFormatToken(token2, getter) {
+        addFormatToken(0, [token2, token2.length], 0, getter);
+      }
+      addWeekYearFormatToken("gggg", "weekYear");
+      addWeekYearFormatToken("ggggg", "weekYear");
+      addWeekYearFormatToken("GGGG", "isoWeekYear");
+      addWeekYearFormatToken("GGGGG", "isoWeekYear");
+      addRegexToken("G", matchSigned);
+      addRegexToken("g", matchSigned);
+      addRegexToken("GG", match1to2, match2);
+      addRegexToken("gg", match1to2, match2);
+      addRegexToken("GGGG", match1to4, match4);
+      addRegexToken("gggg", match1to4, match4);
+      addRegexToken("GGGGG", match1to6, match6);
+      addRegexToken("ggggg", match1to6, match6);
+      addWeekParseToken(
+        ["gggg", "ggggg", "GGGG", "GGGGG"],
+        function(input, week, config, token2) {
+          week[token2.substr(0, 2)] = toInt(input);
+        }
+      );
+      addWeekParseToken(["gg", "GG"], function(input, week, config, token2) {
+        week[token2] = hooks.parseTwoDigitYear(input);
+      });
+      function getSetWeekYear(input) {
+        return getSetWeekYearHelper.call(
+          this,
+          input,
+          this.week(),
+          this.weekday() + this.localeData()._week.dow,
+          this.localeData()._week.dow,
+          this.localeData()._week.doy
+        );
+      }
+      function getSetISOWeekYear(input) {
+        return getSetWeekYearHelper.call(
+          this,
+          input,
+          this.isoWeek(),
+          this.isoWeekday(),
+          1,
+          4
+        );
+      }
+      function getISOWeeksInYear() {
+        return weeksInYear(this.year(), 1, 4);
+      }
+      function getISOWeeksInISOWeekYear() {
+        return weeksInYear(this.isoWeekYear(), 1, 4);
+      }
+      function getWeeksInYear() {
+        var weekInfo = this.localeData()._week;
+        return weeksInYear(this.year(), weekInfo.dow, weekInfo.doy);
+      }
+      function getWeeksInWeekYear() {
+        var weekInfo = this.localeData()._week;
+        return weeksInYear(this.weekYear(), weekInfo.dow, weekInfo.doy);
+      }
+      function getSetWeekYearHelper(input, week, weekday, dow, doy) {
+        var weeksTarget;
+        if (input == null) {
+          return weekOfYear(this, dow, doy).year;
+        } else {
+          weeksTarget = weeksInYear(input, dow, doy);
+          if (week > weeksTarget) {
+            week = weeksTarget;
+          }
+          return setWeekAll.call(this, input, week, weekday, dow, doy);
+        }
+      }
+      function setWeekAll(weekYear, week, weekday, dow, doy) {
+        var dayOfYearData = dayOfYearFromWeeks(weekYear, week, weekday, dow, doy), date = createUTCDate(dayOfYearData.year, 0, dayOfYearData.dayOfYear);
+        this.year(date.getUTCFullYear());
+        this.month(date.getUTCMonth());
+        this.date(date.getUTCDate());
+        return this;
+      }
+      addFormatToken("Q", 0, "Qo", "quarter");
+      addRegexToken("Q", match1);
+      addParseToken("Q", function(input, array) {
+        array[MONTH] = (toInt(input) - 1) * 3;
+      });
+      function getSetQuarter(input) {
+        return input == null ? Math.ceil((this.month() + 1) / 3) : this.month((input - 1) * 3 + this.month() % 3);
+      }
+      addFormatToken("D", ["DD", 2], "Do", "date");
+      addRegexToken("D", match1to2, match1to2NoLeadingZero);
+      addRegexToken("DD", match1to2, match2);
+      addRegexToken("Do", function(isStrict, locale2) {
+        return isStrict ? locale2._dayOfMonthOrdinalParse || locale2._ordinalParse : locale2._dayOfMonthOrdinalParseLenient;
+      });
+      addParseToken(["D", "DD"], DATE);
+      addParseToken("Do", function(input, array) {
+        array[DATE] = toInt(input.match(match1to2)[0]);
+      });
+      var getSetDayOfMonth = makeGetSet("Date", true);
+      addFormatToken("DDD", ["DDDD", 3], "DDDo", "dayOfYear");
+      addRegexToken("DDD", match1to3);
+      addRegexToken("DDDD", match3);
+      addParseToken(["DDD", "DDDD"], function(input, array, config) {
+        config._dayOfYear = toInt(input);
+      });
+      function getSetDayOfYear(input) {
+        var dayOfYear = Math.round(
+          (this.clone().startOf("day") - this.clone().startOf("year")) / 864e5
+        ) + 1;
+        return input == null ? dayOfYear : this.add(input - dayOfYear, "d");
+      }
+      addFormatToken("m", ["mm", 2], 0, "minute");
+      addRegexToken("m", match1to2, match1to2HasZero);
+      addRegexToken("mm", match1to2, match2);
+      addParseToken(["m", "mm"], MINUTE);
+      var getSetMinute = makeGetSet("Minutes", false);
+      addFormatToken("s", ["ss", 2], 0, "second");
+      addRegexToken("s", match1to2, match1to2HasZero);
+      addRegexToken("ss", match1to2, match2);
+      addParseToken(["s", "ss"], SECOND);
+      var getSetSecond = makeGetSet("Seconds", false);
+      addFormatToken("S", 0, 0, function() {
+        return ~~(this.millisecond() / 100);
+      });
+      addFormatToken(0, ["SS", 2], 0, function() {
+        return ~~(this.millisecond() / 10);
+      });
+      addFormatToken(0, ["SSS", 3], 0, "millisecond");
+      addFormatToken(0, ["SSSS", 4], 0, function() {
+        return this.millisecond() * 10;
+      });
+      addFormatToken(0, ["SSSSS", 5], 0, function() {
+        return this.millisecond() * 100;
+      });
+      addFormatToken(0, ["SSSSSS", 6], 0, function() {
+        return this.millisecond() * 1e3;
+      });
+      addFormatToken(0, ["SSSSSSS", 7], 0, function() {
+        return this.millisecond() * 1e4;
+      });
+      addFormatToken(0, ["SSSSSSSS", 8], 0, function() {
+        return this.millisecond() * 1e5;
+      });
+      addFormatToken(0, ["SSSSSSSSS", 9], 0, function() {
+        return this.millisecond() * 1e6;
+      });
+      addRegexToken("S", match1to3, match1);
+      addRegexToken("SS", match1to3, match2);
+      addRegexToken("SSS", match1to3, match3);
+      var token, getSetMillisecond;
+      for (token = "SSSS"; token.length <= 9; token += "S") {
+        addRegexToken(token, matchUnsigned);
+      }
+      function parseMs(input, array) {
+        array[MILLISECOND] = toInt(("0." + input) * 1e3);
+      }
+      for (token = "S"; token.length <= 9; token += "S") {
+        addParseToken(token, parseMs);
+      }
+      getSetMillisecond = makeGetSet("Milliseconds", false);
+      addFormatToken("z", 0, 0, "zoneAbbr");
+      addFormatToken("zz", 0, 0, "zoneName");
+      function getZoneAbbr() {
+        return this._isUTC ? "UTC" : "";
+      }
+      function getZoneName() {
+        return this._isUTC ? "Coordinated Universal Time" : "";
+      }
+      var proto = Moment.prototype;
+      proto.add = add;
+      proto.calendar = calendar$1;
+      proto.clone = clone2;
+      proto.diff = diff;
+      proto.endOf = endOf;
+      proto.format = format2;
+      proto.from = from;
+      proto.fromNow = fromNow;
+      proto.to = to;
+      proto.toNow = toNow;
+      proto.get = stringGet;
+      proto.invalidAt = invalidAt;
+      proto.isAfter = isAfter;
+      proto.isBefore = isBefore;
+      proto.isBetween = isBetween;
+      proto.isSame = isSame;
+      proto.isSameOrAfter = isSameOrAfter;
+      proto.isSameOrBefore = isSameOrBefore;
+      proto.isValid = isValid$2;
+      proto.lang = lang;
+      proto.locale = locale;
+      proto.localeData = localeData;
+      proto.max = prototypeMax;
+      proto.min = prototypeMin;
+      proto.parsingFlags = parsingFlags;
+      proto.set = stringSet;
+      proto.startOf = startOf;
+      proto.subtract = subtract;
+      proto.toArray = toArray2;
+      proto.toObject = toObject;
+      proto.toDate = toDate;
+      proto.toISOString = toISOString;
+      proto.inspect = inspect;
+      if (typeof Symbol !== "undefined" && Symbol.for != null) {
+        proto[/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")] = function() {
+          return "Moment<" + this.format() + ">";
+        };
+      }
+      proto.toJSON = toJSON2;
+      proto.toString = toString;
+      proto.unix = unix;
+      proto.valueOf = valueOf;
+      proto.creationData = creationData;
+      proto.eraName = getEraName;
+      proto.eraNarrow = getEraNarrow;
+      proto.eraAbbr = getEraAbbr;
+      proto.eraYear = getEraYear;
+      proto.year = getSetYear;
+      proto.isLeapYear = getIsLeapYear;
+      proto.weekYear = getSetWeekYear;
+      proto.isoWeekYear = getSetISOWeekYear;
+      proto.quarter = proto.quarters = getSetQuarter;
+      proto.month = getSetMonth;
+      proto.daysInMonth = getDaysInMonth;
+      proto.week = proto.weeks = getSetWeek;
+      proto.isoWeek = proto.isoWeeks = getSetISOWeek;
+      proto.weeksInYear = getWeeksInYear;
+      proto.weeksInWeekYear = getWeeksInWeekYear;
+      proto.isoWeeksInYear = getISOWeeksInYear;
+      proto.isoWeeksInISOWeekYear = getISOWeeksInISOWeekYear;
+      proto.date = getSetDayOfMonth;
+      proto.day = proto.days = getSetDayOfWeek;
+      proto.weekday = getSetLocaleDayOfWeek;
+      proto.isoWeekday = getSetISODayOfWeek;
+      proto.dayOfYear = getSetDayOfYear;
+      proto.hour = proto.hours = getSetHour;
+      proto.minute = proto.minutes = getSetMinute;
+      proto.second = proto.seconds = getSetSecond;
+      proto.millisecond = proto.milliseconds = getSetMillisecond;
+      proto.utcOffset = getSetOffset;
+      proto.utc = setOffsetToUTC;
+      proto.local = setOffsetToLocal;
+      proto.parseZone = setOffsetToParsedOffset;
+      proto.hasAlignedHourOffset = hasAlignedHourOffset;
+      proto.isDST = isDaylightSavingTime;
+      proto.isLocal = isLocal;
+      proto.isUtcOffset = isUtcOffset;
+      proto.isUtc = isUtc;
+      proto.isUTC = isUtc;
+      proto.zoneAbbr = getZoneAbbr;
+      proto.zoneName = getZoneName;
+      proto.dates = deprecate3(
+        "dates accessor is deprecated. Use date instead.",
+        getSetDayOfMonth
+      );
+      proto.months = deprecate3(
+        "months accessor is deprecated. Use month instead",
+        getSetMonth
+      );
+      proto.years = deprecate3(
+        "years accessor is deprecated. Use year instead",
+        getSetYear
+      );
+      proto.zone = deprecate3(
+        "moment().zone is deprecated, use moment().utcOffset instead. http://momentjs.com/guides/#/warnings/zone/",
+        getSetZone
+      );
+      proto.isDSTShifted = deprecate3(
+        "isDSTShifted is deprecated. See http://momentjs.com/guides/#/warnings/dst-shifted/ for more information",
+        isDaylightSavingTimeShifted
+      );
+      function createUnix(input) {
+        return createLocal(input * 1e3);
+      }
+      function createInZone() {
+        return createLocal.apply(null, arguments).parseZone();
+      }
+      function preParsePostFormat(string) {
+        return string;
+      }
+      var proto$1 = Locale.prototype;
+      proto$1.calendar = calendar;
+      proto$1.longDateFormat = longDateFormat;
+      proto$1.invalidDate = invalidDate;
+      proto$1.ordinal = ordinal;
+      proto$1.preparse = preParsePostFormat;
+      proto$1.postformat = preParsePostFormat;
+      proto$1.relativeTime = relativeTime;
+      proto$1.pastFuture = pastFuture;
+      proto$1.set = set;
+      proto$1.eras = localeEras;
+      proto$1.erasParse = localeErasParse;
+      proto$1.erasConvertYear = localeErasConvertYear;
+      proto$1.erasAbbrRegex = erasAbbrRegex;
+      proto$1.erasNameRegex = erasNameRegex;
+      proto$1.erasNarrowRegex = erasNarrowRegex;
+      proto$1.months = localeMonths;
+      proto$1.monthsShort = localeMonthsShort;
+      proto$1.monthsParse = localeMonthsParse;
+      proto$1.monthsRegex = monthsRegex;
+      proto$1.monthsShortRegex = monthsShortRegex;
+      proto$1.week = localeWeek;
+      proto$1.firstDayOfYear = localeFirstDayOfYear;
+      proto$1.firstDayOfWeek = localeFirstDayOfWeek;
+      proto$1.weekdays = localeWeekdays;
+      proto$1.weekdaysMin = localeWeekdaysMin;
+      proto$1.weekdaysShort = localeWeekdaysShort;
+      proto$1.weekdaysParse = localeWeekdaysParse;
+      proto$1.weekdaysRegex = weekdaysRegex;
+      proto$1.weekdaysShortRegex = weekdaysShortRegex;
+      proto$1.weekdaysMinRegex = weekdaysMinRegex;
+      proto$1.isPM = localeIsPM;
+      proto$1.meridiem = localeMeridiem;
+      function get$1(format3, index, field, setter) {
+        var locale2 = getLocale(), utc = createUTC().set(setter, index);
+        return locale2[field](utc, format3);
+      }
+      function listMonthsImpl(format3, index, field) {
+        if (isNumber(format3)) {
+          index = format3;
+          format3 = void 0;
+        }
+        format3 = format3 || "";
+        if (index != null) {
+          return get$1(format3, index, field, "month");
+        }
+        var i2, out = [];
+        for (i2 = 0; i2 < 12; i2++) {
+          out[i2] = get$1(format3, i2, field, "month");
+        }
+        return out;
+      }
+      function listWeekdaysImpl(localeSorted, format3, index, field) {
+        if (typeof localeSorted === "boolean") {
+          if (isNumber(format3)) {
+            index = format3;
+            format3 = void 0;
+          }
+          format3 = format3 || "";
+        } else {
+          format3 = localeSorted;
+          index = format3;
+          localeSorted = false;
+          if (isNumber(format3)) {
+            index = format3;
+            format3 = void 0;
+          }
+          format3 = format3 || "";
+        }
+        var locale2 = getLocale(), shift = localeSorted ? locale2._week.dow : 0, i2, out = [];
+        if (index != null) {
+          return get$1(format3, (index + shift) % 7, field, "day");
+        }
+        for (i2 = 0; i2 < 7; i2++) {
+          out[i2] = get$1(format3, (i2 + shift) % 7, field, "day");
+        }
+        return out;
+      }
+      function listMonths(format3, index) {
+        return listMonthsImpl(format3, index, "months");
+      }
+      function listMonthsShort(format3, index) {
+        return listMonthsImpl(format3, index, "monthsShort");
+      }
+      function listWeekdays(localeSorted, format3, index) {
+        return listWeekdaysImpl(localeSorted, format3, index, "weekdays");
+      }
+      function listWeekdaysShort(localeSorted, format3, index) {
+        return listWeekdaysImpl(localeSorted, format3, index, "weekdaysShort");
+      }
+      function listWeekdaysMin(localeSorted, format3, index) {
+        return listWeekdaysImpl(localeSorted, format3, index, "weekdaysMin");
+      }
+      getSetGlobalLocale("en", {
+        eras: [
+          {
+            since: "0001-01-01",
+            until: Infinity,
+            offset: 1,
+            name: "Anno Domini",
+            narrow: "AD",
+            abbr: "AD"
+          },
+          {
+            since: "0000-12-31",
+            until: -Infinity,
+            offset: 1,
+            name: "Before Christ",
+            narrow: "BC",
+            abbr: "BC"
+          }
+        ],
+        dayOfMonthOrdinalParse: /\d{1,2}(th|st|nd|rd)/,
+        ordinal: function(number) {
+          var b = number % 10, output = toInt(number % 100 / 10) === 1 ? "th" : b === 1 ? "st" : b === 2 ? "nd" : b === 3 ? "rd" : "th";
+          return number + output;
+        }
+      });
+      hooks.lang = deprecate3(
+        "moment.lang is deprecated. Use moment.locale instead.",
+        getSetGlobalLocale
+      );
+      hooks.langData = deprecate3(
+        "moment.langData is deprecated. Use moment.localeData instead.",
+        getLocale
+      );
+      var mathAbs = Math.abs;
+      function abs() {
+        var data = this._data;
+        this._milliseconds = mathAbs(this._milliseconds);
+        this._days = mathAbs(this._days);
+        this._months = mathAbs(this._months);
+        data.milliseconds = mathAbs(data.milliseconds);
+        data.seconds = mathAbs(data.seconds);
+        data.minutes = mathAbs(data.minutes);
+        data.hours = mathAbs(data.hours);
+        data.months = mathAbs(data.months);
+        data.years = mathAbs(data.years);
+        return this;
+      }
+      function addSubtract$1(duration, input, value, direction) {
+        var other = createDuration(input, value);
+        duration._milliseconds += direction * other._milliseconds;
+        duration._days += direction * other._days;
+        duration._months += direction * other._months;
+        return duration._bubble();
+      }
+      function add$1(input, value) {
+        return addSubtract$1(this, input, value, 1);
+      }
+      function subtract$1(input, value) {
+        return addSubtract$1(this, input, value, -1);
+      }
+      function absCeil(number) {
+        if (number < 0) {
+          return Math.floor(number);
+        } else {
+          return Math.ceil(number);
+        }
+      }
+      function bubble() {
+        var milliseconds2 = this._milliseconds, days2 = this._days, months2 = this._months, data = this._data, seconds2, minutes2, hours2, years2, monthsFromDays;
+        if (!(milliseconds2 >= 0 && days2 >= 0 && months2 >= 0 || milliseconds2 <= 0 && days2 <= 0 && months2 <= 0)) {
+          milliseconds2 += absCeil(monthsToDays(months2) + days2) * 864e5;
+          days2 = 0;
+          months2 = 0;
+        }
+        data.milliseconds = milliseconds2 % 1e3;
+        seconds2 = absFloor(milliseconds2 / 1e3);
+        data.seconds = seconds2 % 60;
+        minutes2 = absFloor(seconds2 / 60);
+        data.minutes = minutes2 % 60;
+        hours2 = absFloor(minutes2 / 60);
+        data.hours = hours2 % 24;
+        days2 += absFloor(hours2 / 24);
+        monthsFromDays = absFloor(daysToMonths(days2));
+        months2 += monthsFromDays;
+        days2 -= absCeil(monthsToDays(monthsFromDays));
+        years2 = absFloor(months2 / 12);
+        months2 %= 12;
+        data.days = days2;
+        data.months = months2;
+        data.years = years2;
+        return this;
+      }
+      function daysToMonths(days2) {
+        return days2 * 4800 / 146097;
+      }
+      function monthsToDays(months2) {
+        return months2 * 146097 / 4800;
+      }
+      function as(units) {
+        if (!this.isValid()) {
+          return NaN;
+        }
+        var days2, months2, milliseconds2 = this._milliseconds;
+        units = normalizeUnits(units);
+        if (units === "month" || units === "quarter" || units === "year") {
+          days2 = this._days + milliseconds2 / 864e5;
+          months2 = this._months + daysToMonths(days2);
+          switch (units) {
+            case "month":
+              return months2;
+            case "quarter":
+              return months2 / 3;
+            case "year":
+              return months2 / 12;
+          }
+        } else {
+          days2 = this._days + Math.round(monthsToDays(this._months));
+          switch (units) {
+            case "week":
+              return days2 / 7 + milliseconds2 / 6048e5;
+            case "day":
+              return days2 + milliseconds2 / 864e5;
+            case "hour":
+              return days2 * 24 + milliseconds2 / 36e5;
+            case "minute":
+              return days2 * 1440 + milliseconds2 / 6e4;
+            case "second":
+              return days2 * 86400 + milliseconds2 / 1e3;
+            // Math.floor prevents floating point math errors here
+            case "millisecond":
+              return Math.floor(days2 * 864e5) + milliseconds2;
+            default:
+              throw new Error("Unknown unit " + units);
+          }
+        }
+      }
+      function makeAs(alias) {
+        return function() {
+          return this.as(alias);
+        };
+      }
+      var asMilliseconds = makeAs("ms"), asSeconds = makeAs("s"), asMinutes = makeAs("m"), asHours = makeAs("h"), asDays = makeAs("d"), asWeeks = makeAs("w"), asMonths = makeAs("M"), asQuarters = makeAs("Q"), asYears = makeAs("y"), valueOf$1 = asMilliseconds;
+      function clone$1() {
+        return createDuration(this);
+      }
+      function get$2(units) {
+        units = normalizeUnits(units);
+        return this.isValid() ? this[units + "s"]() : NaN;
+      }
+      function makeGetter(name) {
+        return function() {
+          return this.isValid() ? this._data[name] : NaN;
+        };
+      }
+      var milliseconds = makeGetter("milliseconds"), seconds = makeGetter("seconds"), minutes = makeGetter("minutes"), hours = makeGetter("hours"), days = makeGetter("days"), months = makeGetter("months"), years = makeGetter("years");
+      function weeks() {
+        return absFloor(this.days() / 7);
+      }
+      var round = Math.round, thresholds = {
+        ss: 44,
+        // a few seconds to seconds
+        s: 45,
+        // seconds to minute
+        m: 45,
+        // minutes to hour
+        h: 22,
+        // hours to day
+        d: 26,
+        // days to month/week
+        w: null,
+        // weeks to month
+        M: 11
+        // months to year
+      };
+      function substituteTimeAgo(string, number, withoutSuffix, isFuture, locale2) {
+        return locale2.relativeTime(number || 1, !!withoutSuffix, string, isFuture);
+      }
+      function relativeTime$1(posNegDuration, withoutSuffix, thresholds2, locale2) {
+        var duration = createDuration(posNegDuration).abs(), seconds2 = round(duration.as("s")), minutes2 = round(duration.as("m")), hours2 = round(duration.as("h")), days2 = round(duration.as("d")), months2 = round(duration.as("M")), weeks2 = round(duration.as("w")), years2 = round(duration.as("y")), a = seconds2 <= thresholds2.ss && ["s", seconds2] || seconds2 < thresholds2.s && ["ss", seconds2] || minutes2 <= 1 && ["m"] || minutes2 < thresholds2.m && ["mm", minutes2] || hours2 <= 1 && ["h"] || hours2 < thresholds2.h && ["hh", hours2] || days2 <= 1 && ["d"] || days2 < thresholds2.d && ["dd", days2];
+        if (thresholds2.w != null) {
+          a = a || weeks2 <= 1 && ["w"] || weeks2 < thresholds2.w && ["ww", weeks2];
+        }
+        a = a || months2 <= 1 && ["M"] || months2 < thresholds2.M && ["MM", months2] || years2 <= 1 && ["y"] || ["yy", years2];
+        a[2] = withoutSuffix;
+        a[3] = +posNegDuration > 0;
+        a[4] = locale2;
+        return substituteTimeAgo.apply(null, a);
+      }
+      function getSetRelativeTimeRounding(roundingFunction) {
+        if (roundingFunction === void 0) {
+          return round;
+        }
+        if (typeof roundingFunction === "function") {
+          round = roundingFunction;
+          return true;
+        }
+        return false;
+      }
+      function getSetRelativeTimeThreshold(threshold, limit) {
+        if (thresholds[threshold] === void 0) {
+          return false;
+        }
+        if (limit === void 0) {
+          return thresholds[threshold];
+        }
+        thresholds[threshold] = limit;
+        if (threshold === "s") {
+          thresholds.ss = limit - 1;
+        }
+        return true;
+      }
+      function humanize(argWithSuffix, argThresholds) {
+        if (!this.isValid()) {
+          return this.localeData().invalidDate();
+        }
+        var withSuffix = false, th = thresholds, locale2, output;
+        if (typeof argWithSuffix === "object") {
+          argThresholds = argWithSuffix;
+          argWithSuffix = false;
+        }
+        if (typeof argWithSuffix === "boolean") {
+          withSuffix = argWithSuffix;
+        }
+        if (typeof argThresholds === "object") {
+          th = Object.assign({}, thresholds, argThresholds);
+          if (argThresholds.s != null && argThresholds.ss == null) {
+            th.ss = argThresholds.s - 1;
+          }
+        }
+        locale2 = this.localeData();
+        output = relativeTime$1(this, !withSuffix, th, locale2);
+        if (withSuffix) {
+          output = locale2.pastFuture(+this, output);
+        }
+        return locale2.postformat(output);
+      }
+      var abs$1 = Math.abs;
+      function sign(x2) {
+        return (x2 > 0) - (x2 < 0) || +x2;
+      }
+      function toISOString$1() {
+        if (!this.isValid()) {
+          return this.localeData().invalidDate();
+        }
+        var seconds2 = abs$1(this._milliseconds) / 1e3, days2 = abs$1(this._days), months2 = abs$1(this._months), minutes2, hours2, years2, s2, total = this.asSeconds(), totalSign, ymSign, daysSign, hmsSign;
+        if (!total) {
+          return "P0D";
+        }
+        minutes2 = absFloor(seconds2 / 60);
+        hours2 = absFloor(minutes2 / 60);
+        seconds2 %= 60;
+        minutes2 %= 60;
+        years2 = absFloor(months2 / 12);
+        months2 %= 12;
+        s2 = seconds2 ? seconds2.toFixed(3).replace(/\.?0+$/, "") : "";
+        totalSign = total < 0 ? "-" : "";
+        ymSign = sign(this._months) !== sign(total) ? "-" : "";
+        daysSign = sign(this._days) !== sign(total) ? "-" : "";
+        hmsSign = sign(this._milliseconds) !== sign(total) ? "-" : "";
+        return totalSign + "P" + (years2 ? ymSign + years2 + "Y" : "") + (months2 ? ymSign + months2 + "M" : "") + (days2 ? daysSign + days2 + "D" : "") + (hours2 || minutes2 || seconds2 ? "T" : "") + (hours2 ? hmsSign + hours2 + "H" : "") + (minutes2 ? hmsSign + minutes2 + "M" : "") + (seconds2 ? hmsSign + s2 + "S" : "");
+      }
+      var proto$2 = Duration.prototype;
+      proto$2.isValid = isValid$1;
+      proto$2.abs = abs;
+      proto$2.add = add$1;
+      proto$2.subtract = subtract$1;
+      proto$2.as = as;
+      proto$2.asMilliseconds = asMilliseconds;
+      proto$2.asSeconds = asSeconds;
+      proto$2.asMinutes = asMinutes;
+      proto$2.asHours = asHours;
+      proto$2.asDays = asDays;
+      proto$2.asWeeks = asWeeks;
+      proto$2.asMonths = asMonths;
+      proto$2.asQuarters = asQuarters;
+      proto$2.asYears = asYears;
+      proto$2.valueOf = valueOf$1;
+      proto$2._bubble = bubble;
+      proto$2.clone = clone$1;
+      proto$2.get = get$2;
+      proto$2.milliseconds = milliseconds;
+      proto$2.seconds = seconds;
+      proto$2.minutes = minutes;
+      proto$2.hours = hours;
+      proto$2.days = days;
+      proto$2.weeks = weeks;
+      proto$2.months = months;
+      proto$2.years = years;
+      proto$2.humanize = humanize;
+      proto$2.toISOString = toISOString$1;
+      proto$2.toString = toISOString$1;
+      proto$2.toJSON = toISOString$1;
+      proto$2.locale = locale;
+      proto$2.localeData = localeData;
+      proto$2.toIsoString = deprecate3(
+        "toIsoString() is deprecated. Please use toISOString() instead (notice the capitals)",
+        toISOString$1
+      );
+      proto$2.lang = lang;
+      addFormatToken("X", 0, 0, "unix");
+      addFormatToken("x", 0, 0, "valueOf");
+      addRegexToken("x", matchSigned);
+      addRegexToken("X", matchTimestamp);
+      addParseToken("X", function(input, array, config) {
+        config._d = new Date(parseFloat(input) * 1e3);
+      });
+      addParseToken("x", function(input, array, config) {
+        config._d = new Date(toInt(input));
+      });
+      hooks.version = "2.30.1";
+      setHookCallback(createLocal);
+      hooks.fn = proto;
+      hooks.min = min;
+      hooks.max = max;
+      hooks.now = now;
+      hooks.utc = createUTC;
+      hooks.unix = createUnix;
+      hooks.months = listMonths;
+      hooks.isDate = isDate;
+      hooks.locale = getSetGlobalLocale;
+      hooks.invalid = createInvalid;
+      hooks.duration = createDuration;
+      hooks.isMoment = isMoment;
+      hooks.weekdays = listWeekdays;
+      hooks.parseZone = createInZone;
+      hooks.localeData = getLocale;
+      hooks.isDuration = isDuration;
+      hooks.monthsShort = listMonthsShort;
+      hooks.weekdaysMin = listWeekdaysMin;
+      hooks.defineLocale = defineLocale;
+      hooks.updateLocale = updateLocale;
+      hooks.locales = listLocales;
+      hooks.weekdaysShort = listWeekdaysShort;
+      hooks.normalizeUnits = normalizeUnits;
+      hooks.relativeTimeRounding = getSetRelativeTimeRounding;
+      hooks.relativeTimeThreshold = getSetRelativeTimeThreshold;
+      hooks.calendarFormat = getCalendarFormat;
+      hooks.prototype = proto;
+      hooks.HTML5_FMT = {
+        DATETIME_LOCAL: "YYYY-MM-DDTHH:mm",
+        // <input type="datetime-local" />
+        DATETIME_LOCAL_SECONDS: "YYYY-MM-DDTHH:mm:ss",
+        // <input type="datetime-local" step="1" />
+        DATETIME_LOCAL_MS: "YYYY-MM-DDTHH:mm:ss.SSS",
+        // <input type="datetime-local" step="0.001" />
+        DATE: "YYYY-MM-DD",
+        // <input type="date" />
+        TIME: "HH:mm",
+        // <input type="time" />
+        TIME_SECONDS: "HH:mm:ss",
+        // <input type="time" step="1" />
+        TIME_MS: "HH:mm:ss.SSS",
+        // <input type="time" step="0.001" />
+        WEEK: "GGGG-[W]WW",
+        // <input type="week" />
+        MONTH: "YYYY-MM"
+        // <input type="month" />
+      };
+      return hooks;
+    }));
+  }
+});
+
+// ../../node_modules/.pnpm/moment-hijri@3.0.0/node_modules/moment-hijri/moment-hijri.js
+var require_moment_hijri = __commonJS({
+  "../../node_modules/.pnpm/moment-hijri@3.0.0/node_modules/moment-hijri/moment-hijri.js"(exports2, module2) {
+    "use strict";
+    (function(root, factory) {
+      if (typeof define === "function" && define.amd) {
+        define(["moment"], function(moment3) {
+          root.moment = factory(moment3);
+          return root.moment;
+        });
+      } else if (typeof exports2 === "object") {
+        module2.exports = factory(require_moment());
+      } else {
+        root.moment = factory(root.moment);
+      }
+    })(exports2, function(moment3) {
+      if (moment3 == null) {
+        throw new Error("Cannot find moment");
+      }
+      var ummalqura = {
+        ummalquraData: (function() {
+          let ummalquraDatByMonth = [
+            /* 1356= */
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1357= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1358= */
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            /* 1359= */
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1360= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1361= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1362= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1363= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1364= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            28,
+            30,
+            30,
+            30,
+            29,
+            /* 1365= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1366= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1367= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1368= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1369= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1370= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1371= */
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            /* 1372= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1373= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1374= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            30,
+            /* 1375= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            /* 1376= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1377= */
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            /* 1378= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1379= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1380= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1381= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1382= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1383= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1384= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1385= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            /* 1386= */
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1387= */
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1388= */
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1389= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1390= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            /* 1391= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1392= */
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1393= */
+            30,
+            29,
+            30,
+            29,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1394= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            /* 1395= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1396= */
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1397= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1398= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1399= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1400= */
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1401= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1402= */
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1403= */
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1404= */
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1405= */
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1406= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1407= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1408= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1409= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1410= */
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1411= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            /* 1412= */
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            /* 1413= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            /* 1414= */
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            /* 1415= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1416= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1417= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            /* 1418= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1419= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1420= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            30,
+            29,
+            30,
+            /* 1421= */
+            29,
+            29,
+            30,
+            29,
+            29,
+            29,
+            30,
+            30,
+            30,
+            30,
+            29,
+            30,
+            /* 1422= */
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            /* 1423= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1424= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1425= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            /* 1426= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1427= */
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1428= */
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            30,
+            /* 1429= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            /* 1430= */
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1431= */
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1432= */
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            /* 1433= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1434= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            /* 1435= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1436= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1437= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1438= */
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1439= */
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1440= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            /* 1441= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            /* 1442= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            /* 1443= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1444= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1445= */
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1446= */
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            /* 1447= */
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1448= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1449= */
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1450= */
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1451= */
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1452= */
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1453= */
+            29,
+            30,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1454= */
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1455= */
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            /* 1456= */
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            /* 1457= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            /* 1458= */
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1459= */
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            /* 1460= */
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            /* 1461= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1462= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1463= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1464= */
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            /* 1465= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            30,
+            /* 1466= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1467= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1468= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1469= */
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            /* 1470= */
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            /* 1471= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1472= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1473= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1474= */
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1475= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1476= */
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            /* 1477= */
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            29,
+            /* 1478= */
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1479= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1480= */
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1481= */
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1482= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1483= */
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            /* 1484= */
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1485= */
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30,
+            /* 1486= */
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1487= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1488= */
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1489= */
+            29,
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            /* 1490= */
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            /* 1491= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            /* 1492= */
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1493= */
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            30,
+            29,
+            30,
+            /* 1494= */
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1495= */
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1496= */
+            30,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            /* 1497= */
+            29,
+            30,
+            30,
+            29,
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            29,
+            /* 1498= */
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            /* 1499= */
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            29,
+            30,
+            30,
+            29,
+            /* 1500= */
+            30,
+            30,
+            29,
+            29,
+            30,
+            29,
+            29,
+            30,
+            29,
+            30,
+            30,
+            30
+          ];
+          let sum = 28607;
+          const dat = [sum];
+          ummalquraDatByMonth.forEach((value) => {
+            sum += value;
+            dat.push(sum);
+          });
+          return dat;
+        })()
+      };
+      var formattingTokens = /(\[[^\[]*\])|(\\)?i(Mo|MM?M?M?|Do|DDDo|DD?D?D?|w[o|w]?|YYYYY|YYYY|YY|gg(ggg?)?)|(\\)?(Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|YYYYY|YYYY|YY|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|mm?|ss?|SS?S?|X|zz?|ZZ?|.)/g, localFormattingTokens = /(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g, parseTokenOneOrTwoDigits = /\d\d?/, parseTokenOneToThreeDigits = /\d{1,3}/, parseTokenThreeDigits = /\d{3}/, parseTokenFourDigits = /\d{1,4}/, parseTokenSixDigits = /[+\-]?\d{1,6}/, parseTokenWord = /[0-9]*['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+(\.?)|[\u0600-\u06FF\/]+(\s*?[\u0600-\u06FF]+){1,2}/i, parseTokenTimezone = /Z|[\+\-]\d\d:?\d\d/i, parseTokenT = /T/i, parseTokenTimestampMs = /[\+\-]?\d+(\.\d{1,3})?/, unitAliases = {
+        hd: "idate",
+        hm: "imonth",
+        hy: "iyear"
+      }, formatFunctions = {}, ordinalizeTokens = "DDD w M D".split(" "), paddedTokens = "M D w".split(" "), formatTokenFunctions = {
+        iM: function() {
+          return this.iMonth() + 1;
+        },
+        iMMM: function(format2) {
+          return this.localeData().iMonthsShort(this, format2);
+        },
+        iMMMM: function(format2) {
+          return this.localeData().iMonths(this, format2);
+        },
+        iD: function() {
+          return this.iDate();
+        },
+        iDDD: function() {
+          return this.iDayOfYear();
+        },
+        iw: function() {
+          return this.iWeek();
+        },
+        iYY: function() {
+          return leftZeroFill(this.iYear() % 100, 2);
+        },
+        iYYYY: function() {
+          return leftZeroFill(this.iYear(), 4);
+        },
+        iYYYYY: function() {
+          return leftZeroFill(this.iYear(), 5);
+        },
+        igg: function() {
+          return leftZeroFill(this.iWeekYear() % 100, 2);
+        },
+        igggg: function() {
+          return this.iWeekYear();
+        },
+        iggggg: function() {
+          return leftZeroFill(this.iWeekYear(), 5);
+        }
+      }, i2;
+      function padToken(func, count) {
+        return function(a) {
+          return leftZeroFill(func.call(this, a), count);
+        };
+      }
+      function ordinalizeToken(func, period) {
+        return function(a) {
+          return this.localeData().ordinal(func.call(this, a), period);
+        };
+      }
+      while (ordinalizeTokens.length) {
+        i2 = ordinalizeTokens.pop();
+        formatTokenFunctions["i" + i2 + "o"] = ordinalizeToken(formatTokenFunctions["i" + i2], i2);
+      }
+      while (paddedTokens.length) {
+        i2 = paddedTokens.pop();
+        formatTokenFunctions["i" + i2 + i2] = padToken(formatTokenFunctions["i" + i2], 2);
+      }
+      formatTokenFunctions.iDDDD = padToken(formatTokenFunctions.iDDD, 3);
+      function extend(a, b) {
+        var key;
+        for (key in b)
+          if (b.hasOwnProperty(key))
+            a[key] = b[key];
+        return a;
+      }
+      function leftZeroFill(number, targetLength) {
+        var output = number + "";
+        while (output.length < targetLength)
+          output = "0" + output;
+        return output;
+      }
+      function isArray(input) {
+        return Object.prototype.toString.call(input) === "[object Array]";
+      }
+      function normalizeUnits(units) {
+        return units ? unitAliases[units] || units.toLowerCase().replace(/(.)s$/, "$1") : units;
+      }
+      function setDate(moment4, year, month, date) {
+        var utc = moment4._isUTC ? "UTC" : "";
+        moment4._d["set" + utc + "FullYear"](year);
+        moment4._d["set" + utc + "Month"](month);
+        moment4._d["set" + utc + "Date"](date);
+      }
+      function objectCreate(parent) {
+        function F2() {
+        }
+        F2.prototype = parent;
+        return new F2();
+      }
+      function getPrototypeOf(object) {
+        if (Object.getPrototypeOf)
+          return Object.getPrototypeOf(object);
+        else if ("".__proto__)
+          return object.__proto__;
+        else
+          return object.constructor.prototype;
+      }
+      extend(getPrototypeOf(moment3.localeData()), {
+        _iMonths: [
+          "Muharram",
+          "Safar",
+          "Rabi' al-Awwal",
+          "Rabi' al-Thani",
+          "Jumada al-Ula",
+          "Jumada al-Alkhirah",
+          "Rajab",
+          "Sha\u2019ban",
+          "Ramadhan",
+          "Shawwal",
+          "Thul-Qi\u2019dah",
+          "Thul-Hijjah"
+        ],
+        iMonths: function(m2) {
+          return this._iMonths[m2.iMonth()];
+        },
+        _iMonthsShort: [
+          "Muh",
+          "Saf",
+          "Rab-I",
+          "Rab-II",
+          "Jum-I",
+          "Jum-II",
+          "Raj",
+          "Sha",
+          "Ram",
+          "Shw",
+          "Dhu-Q",
+          "Dhu-H"
+        ],
+        iMonthsShort: function(m2) {
+          return this._iMonthsShort[m2.iMonth()];
+        },
+        iMonthsParse: function(monthName) {
+          var i3, mom, regex;
+          if (!this._iMonthsParse)
+            this._iMonthsParse = [];
+          for (i3 = 0; i3 < 12; i3 += 1) {
+            if (!this._iMonthsParse[i3]) {
+              mom = hMoment([2e3, (2 + i3) % 12, 25]);
+              regex = "^" + this.iMonths(mom, "") + "$|^" + this.iMonthsShort(mom, "") + "$";
+              this._iMonthsParse[i3] = new RegExp(regex.replace(".", ""), "i");
+            }
+            if (this._iMonthsParse[i3].test(monthName))
+              return i3;
+          }
+        }
+      });
+      var iMonthNames = {
+        iMonths: "\u0645\u062D\u0631\u0645_\u0635\u0641\u0631_\u0631\u0628\u064A\u0639 \u0627\u0644\u0623\u0648\u0644_\u0631\u0628\u064A\u0639 \u0627\u0644\u062B\u0627\u0646\u064A_\u062C\u0645\u0627\u062F\u0649 \u0627\u0644\u0623\u0648\u0644\u0649_\u062C\u0645\u0627\u062F\u0649 \u0627\u0644\u0622\u062E\u0631\u0629_\u0631\u062C\u0628_\u0634\u0639\u0628\u0627\u0646_\u0631\u0645\u0636\u0627\u0646_\u0634\u0648\u0627\u0644_\u0630\u0648 \u0627\u0644\u0642\u0639\u062F\u0629_\u0630\u0648 \u0627\u0644\u062D\u062C\u0629".split("_"),
+        iMonthsShort: "\u0645\u062D\u0631\u0645_\u0635\u0641\u0631_\u0631\u0628\u064A\u0639 \u0661_\u0631\u0628\u064A\u0639 \u0662_\u062C\u0645\u0627\u062F\u0649 \u0661_\u062C\u0645\u0627\u062F\u0649 \u0662_\u0631\u062C\u0628_\u0634\u0639\u0628\u0627\u0646_\u0631\u0645\u0636\u0627\u0646_\u0634\u0648\u0627\u0644_\u0630\u0648 \u0627\u0644\u0642\u0639\u062F\u0629_\u0630\u0648 \u0627\u0644\u062D\u062C\u0629".split("_")
+      };
+      if (typeof moment3.updateLocale === "function") {
+        moment3.updateLocale("ar-sa", iMonthNames);
+      } else {
+        var oldLocale = moment3.locale();
+        moment3.defineLocale("ar-sa", iMonthNames);
+        moment3.locale(oldLocale);
+      }
+      function makeFormatFunction(format2) {
+        var array = format2.match(formattingTokens), length = array.length, i3;
+        for (i3 = 0; i3 < length; i3 += 1)
+          if (formatTokenFunctions[array[i3]])
+            array[i3] = formatTokenFunctions[array[i3]];
+        return function(mom) {
+          var output = "";
+          for (i3 = 0; i3 < length; i3 += 1)
+            output += array[i3] instanceof Function ? "[" + array[i3].call(mom, format2) + "]" : array[i3];
+          return output;
+        };
+      }
+      function getParseRegexForToken(token, config) {
+        switch (token) {
+          case "iDDDD":
+            return parseTokenThreeDigits;
+          case "iYYYY":
+            return parseTokenFourDigits;
+          case "iYYYYY":
+            return parseTokenSixDigits;
+          case "iDDD":
+            return parseTokenOneToThreeDigits;
+          case "iMMM":
+          case "iMMMM":
+            return parseTokenWord;
+          case "iMM":
+          case "iDD":
+          case "iYY":
+          case "iM":
+          case "iD":
+            return parseTokenOneOrTwoDigits;
+          case "DDDD":
+            return parseTokenThreeDigits;
+          case "YYYY":
+            return parseTokenFourDigits;
+          case "YYYYY":
+            return parseTokenSixDigits;
+          case "S":
+          case "SS":
+          case "SSS":
+          case "DDD":
+            return parseTokenOneToThreeDigits;
+          case "MMM":
+          case "MMMM":
+          case "dd":
+          case "ddd":
+          case "dddd":
+            return parseTokenWord;
+          case "a":
+          case "A":
+            return moment3.localeData(config._l)._meridiemParse;
+          case "X":
+            return parseTokenTimestampMs;
+          case "Z":
+          case "ZZ":
+            return parseTokenTimezone;
+          case "T":
+            return parseTokenT;
+          case "MM":
+          case "DD":
+          case "YY":
+          case "HH":
+          case "hh":
+          case "mm":
+          case "ss":
+          case "M":
+          case "D":
+          case "d":
+          case "H":
+          case "h":
+          case "m":
+          case "s":
+            return parseTokenOneOrTwoDigits;
+          default:
+            return new RegExp(token.replace("\\", ""));
+        }
+      }
+      function addTimeToArrayFromToken(token, input, config) {
+        var a, datePartArray = config._a;
+        switch (token) {
+          case "iM":
+          case "iMM":
+            datePartArray[1] = input == null ? 0 : ~~input - 1;
+            break;
+          case "iMMM":
+          case "iMMMM":
+            a = moment3.localeData(config._l).iMonthsParse(input);
+            if (a != null)
+              datePartArray[1] = a;
+            else
+              config._isValid = false;
+            break;
+          case "iD":
+          case "iDD":
+          case "iDDD":
+          case "iDDDD":
+            if (input != null)
+              datePartArray[2] = ~~input;
+            break;
+          case "iYY":
+            datePartArray[0] = ~~input + (~~input > 47 ? 1300 : 1400);
+            break;
+          case "iYYYY":
+          case "iYYYYY":
+            datePartArray[0] = ~~input;
+        }
+        if (input == null)
+          config._isValid = false;
+      }
+      function dateFromArray(config) {
+        var g, h2, hy = config._a[0], hm = config._a[1], hd = config._a[2];
+        if (hy == null && hm == null && hd == null)
+          return [0, 0, 1];
+        hy = hy || 0;
+        hm = hm || 0;
+        hd = hd || 1;
+        if (hd < 1 || hd > hMoment.iDaysInMonth(hy, hm))
+          config._isValid = false;
+        g = toGregorian(hy, hm, hd);
+        h2 = toHijri(g.gy, g.gm, g.gd);
+        config._hDiff = 0;
+        if (~~h2.hy !== hy)
+          config._hDiff += 1;
+        if (~~h2.hm !== hm)
+          config._hDiff += 1;
+        if (~~h2.hd !== hd)
+          config._hDiff += 1;
+        return [g.gy, g.gm, g.gd];
+      }
+      function makeDateFromStringAndFormat(config) {
+        var tokens = config._f.match(formattingTokens), string = config._i, len = tokens.length, i3, token, parsedInput;
+        config._a = [];
+        for (i3 = 0; i3 < len; i3 += 1) {
+          token = tokens[i3];
+          parsedInput = (getParseRegexForToken(token, config).exec(string) || [])[0];
+          if (parsedInput)
+            string = string.slice(string.indexOf(parsedInput) + parsedInput.length);
+          if (formatTokenFunctions[token])
+            addTimeToArrayFromToken(token, parsedInput, config);
+        }
+        if (string)
+          config._il = string;
+        return dateFromArray(config);
+      }
+      function makeDateFromStringAndArray(config, utc) {
+        var len = config._f.length, i3, format2, tempMoment, bestMoment, currentScore, scoreToBeat;
+        if (len === 0) {
+          return makeMoment(/* @__PURE__ */ new Date(NaN));
+        }
+        for (i3 = 0; i3 < len; i3 += 1) {
+          format2 = config._f[i3];
+          currentScore = 0;
+          tempMoment = makeMoment(config._i, format2, config._l, utc);
+          if (!tempMoment.isValid()) continue;
+          currentScore += tempMoment._hDiff;
+          if (tempMoment._il)
+            currentScore += tempMoment._il.length;
+          if (scoreToBeat == null || currentScore < scoreToBeat) {
+            scoreToBeat = currentScore;
+            bestMoment = tempMoment;
+          }
+        }
+        return bestMoment;
+      }
+      function removeParsedTokens(config) {
+        var string = config._i, input = "", format2 = "", array = config._f.match(formattingTokens), len = array.length, i3, match, parsed;
+        for (i3 = 0; i3 < len; i3 += 1) {
+          match = array[i3];
+          parsed = (getParseRegexForToken(match, config).exec(string) || [])[0];
+          if (parsed)
+            string = string.slice(string.indexOf(parsed) + parsed.length);
+          if (!(formatTokenFunctions[match] instanceof Function)) {
+            format2 += match;
+            if (parsed)
+              input += parsed;
+          }
+        }
+        config._i = input;
+        config._f = format2;
+      }
+      function iWeekOfYear(mom, firstDayOfWeek, firstDayOfWeekOfYear) {
+        var end = firstDayOfWeekOfYear - firstDayOfWeek, daysToDayOfWeek = firstDayOfWeekOfYear - mom.day(), adjustedMoment;
+        if (daysToDayOfWeek > end) {
+          daysToDayOfWeek -= 7;
+        }
+        if (daysToDayOfWeek < end - 7) {
+          daysToDayOfWeek += 7;
+        }
+        adjustedMoment = hMoment(mom).add(daysToDayOfWeek, "d");
+        return {
+          week: Math.ceil(adjustedMoment.iDayOfYear() / 7),
+          year: adjustedMoment.iYear()
+        };
+      }
+      function makeMoment(input, format2, lang, utc) {
+        var config = {
+          _i: input,
+          _f: format2,
+          _l: lang
+        }, date, m2, hm;
+        if (format2) {
+          if (isArray(format2)) {
+            return makeDateFromStringAndArray(config, utc);
+          } else {
+            date = makeDateFromStringAndFormat(config);
+            removeParsedTokens(config);
+            format2 = "YYYY-MM-DD-" + config._f;
+            input = leftZeroFill(date[0], 4) + "-" + leftZeroFill(date[1] + 1, 2) + "-" + leftZeroFill(date[2], 2) + "-" + config._i;
+          }
+        }
+        if (utc)
+          m2 = moment3.utc(input, format2, lang);
+        else
+          m2 = moment3(input, format2, lang);
+        if (config._isValid === false)
+          m2._isValid = false;
+        m2._hDiff = config._hDiff || 0;
+        hm = objectCreate(hMoment.fn);
+        extend(hm, m2);
+        return hm;
+      }
+      function hMoment(input, format2, lang) {
+        return makeMoment(input, format2, lang, false);
+      }
+      extend(hMoment, moment3);
+      hMoment.fn = objectCreate(moment3.fn);
+      hMoment.utc = function(input, format2, lang) {
+        return makeMoment(input, format2, lang, true);
+      };
+      hMoment.fn.format = function(format2) {
+        var i3, replace2, me = this;
+        if (format2) {
+          i3 = 5;
+          replace2 = function(input) {
+            return me.localeData().longDateFormat(input) || input;
+          };
+          while (i3 > 0 && localFormattingTokens.test(format2)) {
+            i3 -= 1;
+            format2 = format2.replace(localFormattingTokens, replace2);
+          }
+          if (!formatFunctions[format2]) {
+            formatFunctions[format2] = makeFormatFunction(format2);
+          }
+          format2 = formatFunctions[format2](this);
+        }
+        return moment3.fn.format.call(this, format2);
+      };
+      hMoment.fn.iYear = function(input) {
+        var lastDay, h2, g;
+        if (typeof input === "number") {
+          h2 = toHijri(this.year(), this.month(), this.date());
+          lastDay = Math.min(h2.hd, hMoment.iDaysInMonth(input, h2.hm));
+          g = toGregorian(input, h2.hm, lastDay);
+          setDate(this, g.gy, g.gm, g.gd);
+          if (this.month() !== g.gm || this.date() !== g.gd || this.year() !== g.gy) {
+            setDate(this, g.gy, g.gm, g.gd);
+          }
+          moment3.updateOffset(this);
+          return this;
+        } else {
+          return toHijri(this.year(), this.month(), this.date()).hy;
+        }
+      };
+      hMoment.fn.iMonth = function(input) {
+        var lastDay, h2, g;
+        if (input != null) {
+          if (typeof input === "string") {
+            input = this.localeData().iMonthsParse(input);
+            if (input >= 0) {
+              input -= 1;
+            } else {
+              return this;
+            }
+          }
+          h2 = toHijri(this.year(), this.month(), this.date());
+          lastDay = Math.min(h2.hd, hMoment.iDaysInMonth(h2.hy, input));
+          this.iYear(h2.hy + div(input, 12));
+          input = mod(input, 12);
+          if (input < 0) {
+            input += 12;
+            this.iYear(this.iYear() - 1);
+          }
+          g = toGregorian(this.iYear(), input, lastDay);
+          setDate(this, g.gy, g.gm, g.gd);
+          if (this.month() !== g.gm || this.date() !== g.gd || this.year() !== g.gy) {
+            setDate(this, g.gy, g.gm, g.gd);
+          }
+          moment3.updateOffset(this);
+          return this;
+        } else {
+          return toHijri(this.year(), this.month(), this.date()).hm;
+        }
+      };
+      hMoment.fn.iDate = function(input) {
+        var h2, g;
+        if (typeof input === "number") {
+          h2 = toHijri(this.year(), this.month(), this.date());
+          g = toGregorian(h2.hy, h2.hm, input);
+          setDate(this, g.gy, g.gm, g.gd);
+          if (this.month() !== g.gm || this.date() !== g.gd || this.year() !== g.gy) {
+            setDate(this, g.gy, g.gm, g.gd);
+          }
+          moment3.updateOffset(this);
+          return this;
+        } else {
+          return toHijri(this.year(), this.month(), this.date()).hd;
+        }
+      };
+      hMoment.fn.iDayOfYear = function(input) {
+        var dayOfYear = Math.round((hMoment(this).startOf("day") - hMoment(this).startOf("iYear")) / 864e5) + 1;
+        return input == null ? dayOfYear : this.add(input - dayOfYear, "d");
+      };
+      hMoment.fn.iDaysInMonth = function() {
+        return parseInt(hMoment(this).endOf("iMonth").format("iDD"));
+      };
+      hMoment.fn.iWeek = function(input) {
+        var week = iWeekOfYear(this, this.localeData()._week.dow, this.localeData()._week.doy).week;
+        return input == null ? week : this.add((input - week) * 7, "d");
+      };
+      hMoment.fn.iWeekYear = function(input) {
+        var year = iWeekOfYear(this, this.localeData()._week.dow, this.localeData()._week.doy).year;
+        return input == null ? year : this.add(input - year, "y");
+      };
+      hMoment.fn.add = function(val, units) {
+        var temp;
+        if (units !== null && !isNaN(+units)) {
+          temp = val;
+          val = units;
+          units = temp;
+        }
+        units = normalizeUnits(units);
+        if (units === "iyear") {
+          this.iYear(this.iYear() + val);
+        } else if (units === "imonth") {
+          this.iMonth(this.iMonth() + val);
+        } else if (units === "idate") {
+          this.iDate(this.iDate() + val);
+        } else {
+          moment3.fn.add.call(this, val, units);
+        }
+        return this;
+      };
+      hMoment.fn.subtract = function(val, units) {
+        var temp;
+        if (units !== null && !isNaN(+units)) {
+          temp = val;
+          val = units;
+          units = temp;
+        }
+        units = normalizeUnits(units);
+        if (units === "iyear") {
+          this.iYear(this.iYear() - val);
+        } else if (units === "imonth") {
+          this.iMonth(this.iMonth() - val);
+        } else if (units === "idate") {
+          this.iDate(this.iDate() - val);
+        } else {
+          moment3.fn.subtract.call(this, val, units);
+        }
+        return this;
+      };
+      hMoment.fn.startOf = function(units) {
+        units = normalizeUnits(units);
+        if (units === "iyear" || units === "imonth") {
+          if (units === "iyear") {
+            this.iMonth(0);
+          }
+          this.iDate(1);
+          this.hours(0);
+          this.minutes(0);
+          this.seconds(0);
+          this.milliseconds(0);
+          return this;
+        } else {
+          return moment3.fn.startOf.call(this, units);
+        }
+      };
+      hMoment.fn.endOf = function(units) {
+        units = normalizeUnits(units);
+        if (units === void 0 || units === "milisecond") {
+          return this;
+        }
+        return this.startOf(units).add(1, units === "isoweek" ? "week" : units).subtract(1, "milliseconds");
+      };
+      hMoment.fn.clone = function() {
+        return hMoment(this);
+      };
+      hMoment.fn.iYears = hMoment.fn.iYear;
+      hMoment.fn.iMonths = hMoment.fn.iMonth;
+      hMoment.fn.iDates = hMoment.fn.iDate;
+      hMoment.fn.iWeeks = hMoment.fn.iWeek;
+      hMoment.iDaysInMonth = function(year, month) {
+        var i3 = getNewMoonMJDNIndex(year, month + 1), daysInMonth = ummalqura.ummalquraData[i3] - ummalqura.ummalquraData[i3 - 1];
+        return daysInMonth;
+      };
+      function toHijri(gy, gm, gd) {
+        var h2 = d2h(g2d(gy, gm + 1, gd));
+        h2.hm -= 1;
+        return h2;
+      }
+      function toGregorian(hy, hm, hd) {
+        var g = d2g(h2d(hy, hm + 1, hd));
+        g.gm -= 1;
+        return g;
+      }
+      hMoment.iConvert = {
+        toHijri,
+        toGregorian
+      };
+      return hMoment;
+      function div(a, b) {
+        return ~~(a / b);
+      }
+      function mod(a, b) {
+        return a - ~~(a / b) * b;
+      }
+      function h2d(hy, hm, hd) {
+        var i3 = getNewMoonMJDNIndex(hy, hm), mjdn = hd + ummalqura.ummalquraData[i3 - 1] - 1, jdn = mjdn + 24e5;
+        return jdn;
+      }
+      function d2h(jdn) {
+        var mjdn = jdn - 24e5, i3 = getNewMoonMJDNIndexByJDN(mjdn), totalMonths = i3 + 16260, cYears = Math.floor((totalMonths - 1) / 12), hy = cYears + 1, hm = totalMonths - 12 * cYears, hd = mjdn - ummalqura.ummalquraData[i3 - 1] + 1;
+        return {
+          hy,
+          hm,
+          hd
+        };
+      }
+      function g2d(gy, gm, gd) {
+        var d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408;
+        d = d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752;
+        return d;
+      }
+      function d2g(jdn) {
+        var j, i3, gd, gm, gy;
+        j = 4 * jdn + 139361631;
+        j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+        i3 = div(mod(j, 1461), 4) * 5 + 308;
+        gd = div(mod(i3, 153), 5) + 1;
+        gm = mod(div(i3, 153), 12) + 1;
+        gy = div(j, 1461) - 100100 + div(8 - gm, 6);
+        return {
+          gy,
+          gm,
+          gd
+        };
+      }
+      function getNewMoonMJDNIndex(hy, hm) {
+        var cYears = hy - 1, totalMonths = cYears * 12 + 1 + (hm - 1), i3 = totalMonths - 16260;
+        return i3;
+      }
+      function getNewMoonMJDNIndexByJDN(mjdn) {
+        for (var i3 = 0; i3 < ummalqura.ummalquraData.length; i3 = i3 + 1) {
+          if (ummalqura.ummalquraData[i3] > mjdn)
+            return i3;
+        }
+      }
+    });
+  }
+});
+
+// src/utils/hijri.ts
+function normalizeDigits(input) {
+  return input.replace(/[٠-٩]/g, (d) => String(ARABIC_INDIC_DIGITS.indexOf(d)));
+}
+function parseHijriDateString(input) {
+  if (!input || typeof input !== "string") {
+    return null;
+  }
+  const normalized = normalizeDigits(input.trim());
+  if (!normalized) {
+    return null;
+  }
+  const formats = [
+    "iDD/iMM/iYYYY",
+    "iD/iM/iYYYY",
+    "iDD-iMM-iYYYY",
+    "iD-iM-iYYYY",
+    "iYYYY/iMM/iDD",
+    "iYYYY-iMM-iDD"
+  ];
+  for (const fmt of formats) {
+    try {
+      const m2 = (0, import_moment_hijri.default)(normalized, fmt, true);
+      if (m2 && typeof m2.isValid === "function" && m2.isValid()) {
+        const year = m2.iYear();
+        const month = m2.iMonth() + 1;
+        const day = m2.iDate();
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day) && year > 1300 && year < 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 30) {
+          return { year, month, day };
+        }
+      }
+    } catch {
+    }
+  }
+  for (const fmt of formats) {
+    try {
+      const m2 = (0, import_moment_hijri.default)(normalized, fmt);
+      if (m2 && typeof m2.isValid === "function" && m2.isValid()) {
+        const year = m2.iYear();
+        const month = m2.iMonth() + 1;
+        const day = m2.iDate();
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day) && year > 1300 && year < 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 30) {
+          return { year, month, day };
+        }
+      }
+    } catch {
+    }
+  }
+  return null;
+}
+function parseArabicTime(input) {
+  if (!input || typeof input !== "string") {
+    return null;
+  }
+  const normalized = normalizeDigits(input.trim());
+  if (!normalized) {
+    return null;
+  }
+  const isArabicPm = /م(?!ص)/.test(normalized) || /مساء/.test(normalized);
+  const isArabicAm = /ص/.test(normalized) || /صباح/.test(normalized);
+  const isPm = /pm/i.test(normalized) || isArabicPm;
+  const isAm = /am/i.test(normalized) || isArabicAm;
+  let hours = null;
+  let minutes = 0;
+  const matchColonOrDot = normalized.match(/(\d{1,2})[:\.](\d{2})/);
+  if (matchColonOrDot) {
+    hours = Number(matchColonOrDot[1]);
+    minutes = Number(matchColonOrDot[2]);
+  } else {
+    const matchHourOnly = normalized.match(/(\d{1,2})/);
+    if (matchHourOnly) {
+      hours = Number(matchHourOnly[1]);
+      minutes = 0;
+    }
+  }
+  if (hours === null || isNaN(hours) || isNaN(minutes) || hours > 23 || minutes > 59) {
+    return null;
+  }
+  if (isPm && !isAm) {
+    if (hours < 12) {
+      hours += 12;
+    }
+  } else if (isAm) {
+    if (hours === 12) {
+      hours = 0;
+    }
+  } else {
+    if (hours >= 1 && hours <= 6) {
+      hours += 12;
+    }
+  }
+  return { hours, minutes };
+}
+function hijriToGregorian(hijri) {
+  try {
+    const dateString = `${hijri.year}/${String(hijri.month).padStart(2, "0")}/${String(hijri.day).padStart(2, "0")}`;
+    const m2 = (0, import_moment_hijri.default)(dateString, "iYYYY/iMM/iDD");
+    if (!m2 || typeof m2.isValid !== "function" || !m2.isValid()) {
+      return null;
+    }
+    const year = m2.year();
+    const month = m2.month() + 1;
+    const day = m2.date();
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+      return null;
+    }
+    return { year, month, day };
+  } catch {
+    return null;
+  }
+}
+function parseGregorianDateString(input) {
+  if (!input || typeof input !== "string") {
+    return null;
+  }
+  const normalized = normalizeDigits(input.trim());
+  if (!normalized) {
+    return null;
+  }
+  const ymdMatch = normalized.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (ymdMatch) {
+    const year = Number(ymdMatch[1]);
+    const month = Number(ymdMatch[2]);
+    const day = Number(ymdMatch[3]);
+    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return { year, month, day };
+    }
+  }
+  const dmyMatch = normalized.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1]);
+    const month = Number(dmyMatch[2]);
+    const year = Number(dmyMatch[3]);
+    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return { year, month, day };
+    }
+  }
+  return null;
+}
+function computeHearingDateTime(sessionDateHijri, sessionTime) {
+  if (!sessionDateHijri) {
+    return null;
+  }
+  try {
+    const offsetHours = env.courtTimezoneOffsetHours;
+    let timeHours = 23;
+    let timeMinutes = 59;
+    if (sessionTime) {
+      const time = parseArabicTime(sessionTime);
+      if (time) {
+        timeHours = time.hours;
+        timeMinutes = time.minutes;
+      }
+    }
+    const greg = parseGregorianDateString(sessionDateHijri);
+    if (greg) {
+      const hearingDate2 = new Date(
+        Date.UTC(
+          greg.year,
+          greg.month - 1,
+          greg.day,
+          timeHours - offsetHours,
+          timeMinutes
+        )
+      );
+      return isNaN(hearingDate2.getTime()) ? null : hearingDate2;
+    }
+    const hijriDate = parseHijriDateString(sessionDateHijri);
+    if (!hijriDate) {
+      return null;
+    }
+    const gregorian = hijriToGregorian(hijriDate);
+    if (!gregorian) {
+      return null;
+    }
+    const hearingDate = new Date(
+      Date.UTC(
+        gregorian.year,
+        gregorian.month - 1,
+        gregorian.day,
+        timeHours - offsetHours,
+        timeMinutes
+      )
+    );
+    return isNaN(hearingDate.getTime()) ? null : hearingDate;
+  } catch {
+    return null;
+  }
+}
+var import_moment_hijri, ARABIC_INDIC_DIGITS;
+var init_hijri = __esm({
+  "src/utils/hijri.ts"() {
+    "use strict";
+    import_moment_hijri = __toESM(require_moment_hijri(), 1);
+    init_env();
+    ARABIC_INDIC_DIGITS = "\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669";
   }
 });
 
@@ -821421,6542 +828141,1339 @@ var require_src11 = __commonJS({
   }
 });
 
-// ../../node_modules/.pnpm/moment@2.30.1/node_modules/moment/moment.js
-var require_moment = __commonJS({
-  "../../node_modules/.pnpm/moment@2.30.1/node_modules/moment/moment.js"(exports2, module2) {
-    (function(global2, factory) {
-      typeof exports2 === "object" && typeof module2 !== "undefined" ? module2.exports = factory() : typeof define === "function" && define.amd ? define(factory) : global2.moment = factory();
-    })(exports2, (function() {
-      "use strict";
-      var hookCallback;
-      function hooks() {
-        return hookCallback.apply(null, arguments);
-      }
-      function setHookCallback(callback) {
-        hookCallback = callback;
-      }
-      function isArray(input) {
-        return input instanceof Array || Object.prototype.toString.call(input) === "[object Array]";
-      }
-      function isObject(input) {
-        return input != null && Object.prototype.toString.call(input) === "[object Object]";
-      }
-      function hasOwnProp(a, b) {
-        return Object.prototype.hasOwnProperty.call(a, b);
-      }
-      function isObjectEmpty(obj) {
-        if (Object.getOwnPropertyNames) {
-          return Object.getOwnPropertyNames(obj).length === 0;
-        } else {
-          var k;
-          for (k in obj) {
-            if (hasOwnProp(obj, k)) {
-              return false;
-            }
-          }
-          return true;
-        }
-      }
-      function isUndefined(input) {
-        return input === void 0;
-      }
-      function isNumber(input) {
-        return typeof input === "number" || Object.prototype.toString.call(input) === "[object Number]";
-      }
-      function isDate(input) {
-        return input instanceof Date || Object.prototype.toString.call(input) === "[object Date]";
-      }
-      function map(arr, fn) {
-        var res = [], i2, arrLen = arr.length;
-        for (i2 = 0; i2 < arrLen; ++i2) {
-          res.push(fn(arr[i2], i2));
-        }
-        return res;
-      }
-      function extend(a, b) {
-        for (var i2 in b) {
-          if (hasOwnProp(b, i2)) {
-            a[i2] = b[i2];
-          }
-        }
-        if (hasOwnProp(b, "toString")) {
-          a.toString = b.toString;
-        }
-        if (hasOwnProp(b, "valueOf")) {
-          a.valueOf = b.valueOf;
-        }
-        return a;
-      }
-      function createUTC(input, format3, locale2, strict) {
-        return createLocalOrUTC(input, format3, locale2, strict, true).utc();
-      }
-      function defaultParsingFlags() {
-        return {
-          empty: false,
-          unusedTokens: [],
-          unusedInput: [],
-          overflow: -2,
-          charsLeftOver: 0,
-          nullInput: false,
-          invalidEra: null,
-          invalidMonth: null,
-          invalidFormat: false,
-          userInvalidated: false,
-          iso: false,
-          parsedDateParts: [],
-          era: null,
-          meridiem: null,
-          rfc2822: false,
-          weekdayMismatch: false
-        };
-      }
-      function getParsingFlags(m2) {
-        if (m2._pf == null) {
-          m2._pf = defaultParsingFlags();
-        }
-        return m2._pf;
-      }
-      var some;
-      if (Array.prototype.some) {
-        some = Array.prototype.some;
-      } else {
-        some = function(fun) {
-          var t2 = Object(this), len = t2.length >>> 0, i2;
-          for (i2 = 0; i2 < len; i2++) {
-            if (i2 in t2 && fun.call(this, t2[i2], i2, t2)) {
-              return true;
-            }
-          }
-          return false;
-        };
-      }
-      function isValid2(m2) {
-        var flags = null, parsedParts = false, isNowValid = m2._d && !isNaN(m2._d.getTime());
-        if (isNowValid) {
-          flags = getParsingFlags(m2);
-          parsedParts = some.call(flags.parsedDateParts, function(i2) {
-            return i2 != null;
-          });
-          isNowValid = flags.overflow < 0 && !flags.empty && !flags.invalidEra && !flags.invalidMonth && !flags.invalidWeekday && !flags.weekdayMismatch && !flags.nullInput && !flags.invalidFormat && !flags.userInvalidated && (!flags.meridiem || flags.meridiem && parsedParts);
-          if (m2._strict) {
-            isNowValid = isNowValid && flags.charsLeftOver === 0 && flags.unusedTokens.length === 0 && flags.bigHour === void 0;
-          }
-        }
-        if (Object.isFrozen == null || !Object.isFrozen(m2)) {
-          m2._isValid = isNowValid;
-        } else {
-          return isNowValid;
-        }
-        return m2._isValid;
-      }
-      function createInvalid(flags) {
-        var m2 = createUTC(NaN);
-        if (flags != null) {
-          extend(getParsingFlags(m2), flags);
-        } else {
-          getParsingFlags(m2).userInvalidated = true;
-        }
-        return m2;
-      }
-      var momentProperties = hooks.momentProperties = [], updateInProgress = false;
-      function copyConfig(to2, from2) {
-        var i2, prop, val, momentPropertiesLen = momentProperties.length;
-        if (!isUndefined(from2._isAMomentObject)) {
-          to2._isAMomentObject = from2._isAMomentObject;
-        }
-        if (!isUndefined(from2._i)) {
-          to2._i = from2._i;
-        }
-        if (!isUndefined(from2._f)) {
-          to2._f = from2._f;
-        }
-        if (!isUndefined(from2._l)) {
-          to2._l = from2._l;
-        }
-        if (!isUndefined(from2._strict)) {
-          to2._strict = from2._strict;
-        }
-        if (!isUndefined(from2._tzm)) {
-          to2._tzm = from2._tzm;
-        }
-        if (!isUndefined(from2._isUTC)) {
-          to2._isUTC = from2._isUTC;
-        }
-        if (!isUndefined(from2._offset)) {
-          to2._offset = from2._offset;
-        }
-        if (!isUndefined(from2._pf)) {
-          to2._pf = getParsingFlags(from2);
-        }
-        if (!isUndefined(from2._locale)) {
-          to2._locale = from2._locale;
-        }
-        if (momentPropertiesLen > 0) {
-          for (i2 = 0; i2 < momentPropertiesLen; i2++) {
-            prop = momentProperties[i2];
-            val = from2[prop];
-            if (!isUndefined(val)) {
-              to2[prop] = val;
-            }
-          }
-        }
-        return to2;
-      }
-      function Moment(config) {
-        copyConfig(this, config);
-        this._d = new Date(config._d != null ? config._d.getTime() : NaN);
-        if (!this.isValid()) {
-          this._d = /* @__PURE__ */ new Date(NaN);
-        }
-        if (updateInProgress === false) {
-          updateInProgress = true;
-          hooks.updateOffset(this);
-          updateInProgress = false;
-        }
-      }
-      function isMoment(obj) {
-        return obj instanceof Moment || obj != null && obj._isAMomentObject != null;
-      }
-      function warn(msg) {
-        if (hooks.suppressDeprecationWarnings === false && typeof console !== "undefined" && console.warn) {
-          console.warn("Deprecation warning: " + msg);
-        }
-      }
-      function deprecate3(msg, fn) {
-        var firstTime = true;
-        return extend(function() {
-          if (hooks.deprecationHandler != null) {
-            hooks.deprecationHandler(null, msg);
-          }
-          if (firstTime) {
-            var args = [], arg, i2, key, argLen = arguments.length;
-            for (i2 = 0; i2 < argLen; i2++) {
-              arg = "";
-              if (typeof arguments[i2] === "object") {
-                arg += "\n[" + i2 + "] ";
-                for (key in arguments[0]) {
-                  if (hasOwnProp(arguments[0], key)) {
-                    arg += key + ": " + arguments[0][key] + ", ";
-                  }
-                }
-                arg = arg.slice(0, -2);
-              } else {
-                arg = arguments[i2];
-              }
-              args.push(arg);
-            }
-            warn(
-              msg + "\nArguments: " + Array.prototype.slice.call(args).join("") + "\n" + new Error().stack
-            );
-            firstTime = false;
-          }
-          return fn.apply(this, arguments);
-        }, fn);
-      }
-      var deprecations = {};
-      function deprecateSimple(name, msg) {
-        if (hooks.deprecationHandler != null) {
-          hooks.deprecationHandler(name, msg);
-        }
-        if (!deprecations[name]) {
-          warn(msg);
-          deprecations[name] = true;
-        }
-      }
-      hooks.suppressDeprecationWarnings = false;
-      hooks.deprecationHandler = null;
-      function isFunction(input) {
-        return typeof Function !== "undefined" && input instanceof Function || Object.prototype.toString.call(input) === "[object Function]";
-      }
-      function set(config) {
-        var prop, i2;
-        for (i2 in config) {
-          if (hasOwnProp(config, i2)) {
-            prop = config[i2];
-            if (isFunction(prop)) {
-              this[i2] = prop;
-            } else {
-              this["_" + i2] = prop;
-            }
-          }
-        }
-        this._config = config;
-        this._dayOfMonthOrdinalParseLenient = new RegExp(
-          (this._dayOfMonthOrdinalParse.source || this._ordinalParse.source) + "|" + /\d{1,2}/.source
-        );
-      }
-      function mergeConfigs(parentConfig, childConfig) {
-        var res = extend({}, parentConfig), prop;
-        for (prop in childConfig) {
-          if (hasOwnProp(childConfig, prop)) {
-            if (isObject(parentConfig[prop]) && isObject(childConfig[prop])) {
-              res[prop] = {};
-              extend(res[prop], parentConfig[prop]);
-              extend(res[prop], childConfig[prop]);
-            } else if (childConfig[prop] != null) {
-              res[prop] = childConfig[prop];
-            } else {
-              delete res[prop];
-            }
-          }
-        }
-        for (prop in parentConfig) {
-          if (hasOwnProp(parentConfig, prop) && !hasOwnProp(childConfig, prop) && isObject(parentConfig[prop])) {
-            res[prop] = extend({}, res[prop]);
-          }
-        }
-        return res;
-      }
-      function Locale(config) {
-        if (config != null) {
-          this.set(config);
-        }
-      }
-      var keys;
-      if (Object.keys) {
-        keys = Object.keys;
-      } else {
-        keys = function(obj) {
-          var i2, res = [];
-          for (i2 in obj) {
-            if (hasOwnProp(obj, i2)) {
-              res.push(i2);
-            }
-          }
-          return res;
-        };
-      }
-      var defaultCalendar = {
-        sameDay: "[Today at] LT",
-        nextDay: "[Tomorrow at] LT",
-        nextWeek: "dddd [at] LT",
-        lastDay: "[Yesterday at] LT",
-        lastWeek: "[Last] dddd [at] LT",
-        sameElse: "L"
-      };
-      function calendar(key, mom, now2) {
-        var output = this._calendar[key] || this._calendar["sameElse"];
-        return isFunction(output) ? output.call(mom, now2) : output;
-      }
-      function zeroFill(number, targetLength, forceSign) {
-        var absNumber = "" + Math.abs(number), zerosToFill = targetLength - absNumber.length, sign2 = number >= 0;
-        return (sign2 ? forceSign ? "+" : "" : "-") + Math.pow(10, Math.max(0, zerosToFill)).toString().substr(1) + absNumber;
-      }
-      var formattingTokens = /(\[[^\[]*\])|(\\)?([Hh]mm(ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|N{1,5}|YYYYYY|YYYYY|YYYY|YY|y{2,4}|yo?|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g, localFormattingTokens = /(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g, formatFunctions = {}, formatTokenFunctions = {};
-      function addFormatToken(token2, padded, ordinal2, callback) {
-        var func = callback;
-        if (typeof callback === "string") {
-          func = function() {
-            return this[callback]();
-          };
-        }
-        if (token2) {
-          formatTokenFunctions[token2] = func;
-        }
-        if (padded) {
-          formatTokenFunctions[padded[0]] = function() {
-            return zeroFill(func.apply(this, arguments), padded[1], padded[2]);
-          };
-        }
-        if (ordinal2) {
-          formatTokenFunctions[ordinal2] = function() {
-            return this.localeData().ordinal(
-              func.apply(this, arguments),
-              token2
-            );
-          };
-        }
-      }
-      function removeFormattingTokens(input) {
-        if (input.match(/\[[\s\S]/)) {
-          return input.replace(/^\[|\]$/g, "");
-        }
-        return input.replace(/\\/g, "");
-      }
-      function makeFormatFunction(format3) {
-        var array = format3.match(formattingTokens), i2, length;
-        for (i2 = 0, length = array.length; i2 < length; i2++) {
-          if (formatTokenFunctions[array[i2]]) {
-            array[i2] = formatTokenFunctions[array[i2]];
-          } else {
-            array[i2] = removeFormattingTokens(array[i2]);
-          }
-        }
-        return function(mom) {
-          var output = "", i3;
-          for (i3 = 0; i3 < length; i3++) {
-            output += isFunction(array[i3]) ? array[i3].call(mom, format3) : array[i3];
-          }
-          return output;
-        };
-      }
-      function formatMoment(m2, format3) {
-        if (!m2.isValid()) {
-          return m2.localeData().invalidDate();
-        }
-        format3 = expandFormat(format3, m2.localeData());
-        formatFunctions[format3] = formatFunctions[format3] || makeFormatFunction(format3);
-        return formatFunctions[format3](m2);
-      }
-      function expandFormat(format3, locale2) {
-        var i2 = 5;
-        function replaceLongDateFormatTokens(input) {
-          return locale2.longDateFormat(input) || input;
-        }
-        localFormattingTokens.lastIndex = 0;
-        while (i2 >= 0 && localFormattingTokens.test(format3)) {
-          format3 = format3.replace(
-            localFormattingTokens,
-            replaceLongDateFormatTokens
-          );
-          localFormattingTokens.lastIndex = 0;
-          i2 -= 1;
-        }
-        return format3;
-      }
-      var defaultLongDateFormat = {
-        LTS: "h:mm:ss A",
-        LT: "h:mm A",
-        L: "MM/DD/YYYY",
-        LL: "MMMM D, YYYY",
-        LLL: "MMMM D, YYYY h:mm A",
-        LLLL: "dddd, MMMM D, YYYY h:mm A"
-      };
-      function longDateFormat(key) {
-        var format3 = this._longDateFormat[key], formatUpper = this._longDateFormat[key.toUpperCase()];
-        if (format3 || !formatUpper) {
-          return format3;
-        }
-        this._longDateFormat[key] = formatUpper.match(formattingTokens).map(function(tok) {
-          if (tok === "MMMM" || tok === "MM" || tok === "DD" || tok === "dddd") {
-            return tok.slice(1);
-          }
-          return tok;
-        }).join("");
-        return this._longDateFormat[key];
-      }
-      var defaultInvalidDate = "Invalid date";
-      function invalidDate() {
-        return this._invalidDate;
-      }
-      var defaultOrdinal = "%d", defaultDayOfMonthOrdinalParse = /\d{1,2}/;
-      function ordinal(number) {
-        return this._ordinal.replace("%d", number);
-      }
-      var defaultRelativeTime = {
-        future: "in %s",
-        past: "%s ago",
-        s: "a few seconds",
-        ss: "%d seconds",
-        m: "a minute",
-        mm: "%d minutes",
-        h: "an hour",
-        hh: "%d hours",
-        d: "a day",
-        dd: "%d days",
-        w: "a week",
-        ww: "%d weeks",
-        M: "a month",
-        MM: "%d months",
-        y: "a year",
-        yy: "%d years"
-      };
-      function relativeTime(number, withoutSuffix, string, isFuture) {
-        var output = this._relativeTime[string];
-        return isFunction(output) ? output(number, withoutSuffix, string, isFuture) : output.replace(/%d/i, number);
-      }
-      function pastFuture(diff2, output) {
-        var format3 = this._relativeTime[diff2 > 0 ? "future" : "past"];
-        return isFunction(format3) ? format3(output) : format3.replace(/%s/i, output);
-      }
-      var aliases = {
-        D: "date",
-        dates: "date",
-        date: "date",
-        d: "day",
-        days: "day",
-        day: "day",
-        e: "weekday",
-        weekdays: "weekday",
-        weekday: "weekday",
-        E: "isoWeekday",
-        isoweekdays: "isoWeekday",
-        isoweekday: "isoWeekday",
-        DDD: "dayOfYear",
-        dayofyears: "dayOfYear",
-        dayofyear: "dayOfYear",
-        h: "hour",
-        hours: "hour",
-        hour: "hour",
-        ms: "millisecond",
-        milliseconds: "millisecond",
-        millisecond: "millisecond",
-        m: "minute",
-        minutes: "minute",
-        minute: "minute",
-        M: "month",
-        months: "month",
-        month: "month",
-        Q: "quarter",
-        quarters: "quarter",
-        quarter: "quarter",
-        s: "second",
-        seconds: "second",
-        second: "second",
-        gg: "weekYear",
-        weekyears: "weekYear",
-        weekyear: "weekYear",
-        GG: "isoWeekYear",
-        isoweekyears: "isoWeekYear",
-        isoweekyear: "isoWeekYear",
-        w: "week",
-        weeks: "week",
-        week: "week",
-        W: "isoWeek",
-        isoweeks: "isoWeek",
-        isoweek: "isoWeek",
-        y: "year",
-        years: "year",
-        year: "year"
-      };
-      function normalizeUnits(units) {
-        return typeof units === "string" ? aliases[units] || aliases[units.toLowerCase()] : void 0;
-      }
-      function normalizeObjectUnits(inputObject) {
-        var normalizedInput = {}, normalizedProp, prop;
-        for (prop in inputObject) {
-          if (hasOwnProp(inputObject, prop)) {
-            normalizedProp = normalizeUnits(prop);
-            if (normalizedProp) {
-              normalizedInput[normalizedProp] = inputObject[prop];
-            }
-          }
-        }
-        return normalizedInput;
-      }
-      var priorities = {
-        date: 9,
-        day: 11,
-        weekday: 11,
-        isoWeekday: 11,
-        dayOfYear: 4,
-        hour: 13,
-        millisecond: 16,
-        minute: 14,
-        month: 8,
-        quarter: 7,
-        second: 15,
-        weekYear: 1,
-        isoWeekYear: 1,
-        week: 5,
-        isoWeek: 5,
-        year: 1
-      };
-      function getPrioritizedUnits(unitsObj) {
-        var units = [], u;
-        for (u in unitsObj) {
-          if (hasOwnProp(unitsObj, u)) {
-            units.push({ unit: u, priority: priorities[u] });
-          }
-        }
-        units.sort(function(a, b) {
-          return a.priority - b.priority;
-        });
-        return units;
-      }
-      var match1 = /\d/, match2 = /\d\d/, match3 = /\d{3}/, match4 = /\d{4}/, match6 = /[+-]?\d{6}/, match1to2 = /\d\d?/, match3to4 = /\d\d\d\d?/, match5to6 = /\d\d\d\d\d\d?/, match1to3 = /\d{1,3}/, match1to4 = /\d{1,4}/, match1to6 = /[+-]?\d{1,6}/, matchUnsigned = /\d+/, matchSigned = /[+-]?\d+/, matchOffset = /Z|[+-]\d\d:?\d\d/gi, matchShortOffset = /Z|[+-]\d\d(?::?\d\d)?/gi, matchTimestamp = /[+-]?\d+(\.\d{1,3})?/, matchWord = /[0-9]{0,256}['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFF07\uFF10-\uFFEF]{1,256}|[\u0600-\u06FF\/]{1,256}(\s*?[\u0600-\u06FF]{1,256}){1,2}/i, match1to2NoLeadingZero = /^[1-9]\d?/, match1to2HasZero = /^([1-9]\d|\d)/, regexes;
-      regexes = {};
-      function addRegexToken(token2, regex, strictRegex) {
-        regexes[token2] = isFunction(regex) ? regex : function(isStrict, localeData2) {
-          return isStrict && strictRegex ? strictRegex : regex;
-        };
-      }
-      function getParseRegexForToken(token2, config) {
-        if (!hasOwnProp(regexes, token2)) {
-          return new RegExp(unescapeFormat(token2));
-        }
-        return regexes[token2](config._strict, config._locale);
-      }
-      function unescapeFormat(s2) {
-        return regexEscape(
-          s2.replace("\\", "").replace(
-            /\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g,
-            function(matched, p1, p2, p3, p4) {
-              return p1 || p2 || p3 || p4;
-            }
-          )
-        );
-      }
-      function regexEscape(s2) {
-        return s2.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-      }
-      function absFloor(number) {
-        if (number < 0) {
-          return Math.ceil(number) || 0;
-        } else {
-          return Math.floor(number);
-        }
-      }
-      function toInt(argumentForCoercion) {
-        var coercedNumber = +argumentForCoercion, value = 0;
-        if (coercedNumber !== 0 && isFinite(coercedNumber)) {
-          value = absFloor(coercedNumber);
-        }
-        return value;
-      }
-      var tokens = {};
-      function addParseToken(token2, callback) {
-        var i2, func = callback, tokenLen;
-        if (typeof token2 === "string") {
-          token2 = [token2];
-        }
-        if (isNumber(callback)) {
-          func = function(input, array) {
-            array[callback] = toInt(input);
-          };
-        }
-        tokenLen = token2.length;
-        for (i2 = 0; i2 < tokenLen; i2++) {
-          tokens[token2[i2]] = func;
-        }
-      }
-      function addWeekParseToken(token2, callback) {
-        addParseToken(token2, function(input, array, config, token3) {
-          config._w = config._w || {};
-          callback(input, config._w, config, token3);
-        });
-      }
-      function addTimeToArrayFromToken(token2, input, config) {
-        if (input != null && hasOwnProp(tokens, token2)) {
-          tokens[token2](input, config._a, config, token2);
-        }
-      }
-      function isLeapYear(year) {
-        return year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
-      }
-      var YEAR = 0, MONTH = 1, DATE = 2, HOUR = 3, MINUTE = 4, SECOND = 5, MILLISECOND = 6, WEEK = 7, WEEKDAY = 8;
-      addFormatToken("Y", 0, 0, function() {
-        var y = this.year();
-        return y <= 9999 ? zeroFill(y, 4) : "+" + y;
+// src/services/googleSheets.service.ts
+var googleSheets_service_exports = {};
+__export(googleSheets_service_exports, {
+  GoogleBindingMissingError: () => GoogleBindingMissingError,
+  GoogleSettingsStoreError: () => GoogleSettingsStoreError,
+  GoogleSheetsAuthError: () => GoogleSheetsAuthError,
+  GoogleSheetsConfigError: () => GoogleSheetsConfigError,
+  GoogleSheetsError: () => GoogleSheetsError,
+  GoogleSheetsNetworkError: () => GoogleSheetsNetworkError,
+  GoogleSheetsNotFoundError: () => GoogleSheetsNotFoundError,
+  GoogleSheetsPermissionError: () => GoogleSheetsPermissionError,
+  GoogleSheetsRangeError: () => GoogleSheetsRangeError,
+  SHEET_COLUMNS: () => SHEET_COLUMNS,
+  appendRow: () => appendRow,
+  classifyGoogleError: () => classifyGoogleError,
+  deleteRow: () => deleteRow,
+  ensureSheetReady: () => ensureSheetReady,
+  getGoogleContext: () => getGoogleContext,
+  listRows: () => listRows,
+  maskIdentifier: () => maskIdentifier,
+  updateRow: () => updateRow,
+  updateRowCells: () => updateRowCells
+});
+function maskIdentifier(val) {
+  if (!val) return "(none)";
+  if (val.length <= 4) return "****";
+  return `****${val.slice(-4)}`;
+}
+function classifyGoogleError(err, operation, meta) {
+  if (err instanceof GoogleSheetsError) {
+    return err;
+  }
+  const rawMsg = String(err?.message || err || "");
+  const status = Number(err?.status || err?.code || err?.response?.status || 0);
+  const errorCode = String(err?.code || err?.errno || err?.cause?.code || "");
+  const maskedId = meta?.spreadsheetId ? maskIdentifier(meta.spreadsheetId) : void 0;
+  let classified;
+  if (status === 401 || rawMsg.includes("invalid_grant") || rawMsg.includes("Unauthorized") || rawMsg.includes("unauthorized_client") || rawMsg.includes("Authentication with Google failed")) {
+    classified = new GoogleSheetsAuthError(`Google Auth Failure in ${operation}: ${rawMsg}`);
+  } else if (status === 403 || rawMsg.includes("The caller does not have permission") || rawMsg.includes("PERMISSION_DENIED") || rawMsg.includes("does not have permission")) {
+    classified = new GoogleSheetsPermissionError(`Google Permission Denied in ${operation}: ${rawMsg}`);
+  } else if (status === 404 || rawMsg.includes("Requested entity was not found") || rawMsg.includes("NOT_FOUND") || rawMsg.includes("Spreadsheet not found")) {
+    classified = new GoogleSheetsNotFoundError(`Google Spreadsheet Not Found in ${operation}: ${rawMsg}`);
+  } else if (status === 400 || rawMsg.includes("Unable to parse range") || rawMsg.includes("badRequest") || rawMsg.includes("Sheet tab")) {
+    classified = new GoogleSheetsRangeError(`Google Sheets Range Error in ${operation}: ${rawMsg}`);
+  } else if (errorCode.includes("ETIMEDOUT") || errorCode.includes("ECONNRESET") || errorCode.includes("ECONNREFUSED") || errorCode.includes("ENOTFOUND") || rawMsg.includes("ETIMEDOUT") || rawMsg.includes("ECONNRESET") || rawMsg.includes("ECONNREFUSED") || rawMsg.includes("ENOTFOUND") || rawMsg.includes("network timeout") || rawMsg.includes("timed out") || rawMsg.includes("Client network socket disconnected") || status === 504) {
+    classified = new GoogleSheetsNetworkError(`Google Network Timeout in ${operation}: ${rawMsg}`);
+  } else {
+    classified = new GoogleSheetsError(
+      `Google API Error in ${operation}: ${rawMsg}`,
+      502,
+      "\u062A\u0639\u0630\u0631 \u0645\u0639\u0627\u0644\u062C\u0629 \u0637\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0627\u062A \u0645\u0639 \u062E\u0627\u062F\u0645 Google."
+    );
+  }
+  logger.error(
+    {
+      operation,
+      refId: classified.refId,
+      status: classified.statusCode,
+      googleStatus: status,
+      errorName: classified.name,
+      maskedSpreadsheetId: maskedId,
+      sheetName: meta?.sheetName,
+      userId: meta?.userId,
+      googleMessage: rawMsg.slice(0, 300)
+    },
+    `[GoogleSheets Diagnostic] ${operation} failed with ${classified.name} (refId: ${classified.refId})`
+  );
+  return classified;
+}
+async function getGoogleContext(userId, defaultSheetName = "Sessions") {
+  const cleanUserId = userId?.trim();
+  if (!cleanUserId) {
+    throw new GoogleBindingMissingError("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645/\u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 Google Sheets.");
+  }
+  let userCreds = null;
+  try {
+    userCreds = await getUserGoogleCredentials(cleanUserId);
+  } catch (err) {
+    logger.error({ err, userId: cleanUserId }, "Failed to load user Google settings from store");
+    throw new GoogleSettingsStoreError(
+      `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645 ${cleanUserId}: ${err?.message || err}`
+    );
+  }
+  if (!userCreds) {
+    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
+  }
+  const spreadsheetId = userCreds.spreadsheetId?.trim();
+  if (!spreadsheetId) {
+    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
+  }
+  const credentials = userCreds.serviceAccountJson;
+  if (!credentials || typeof credentials !== "object" || !credentials.client_email?.trim() || !credentials.private_key?.trim()) {
+    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
+  }
+  let client = userClientsMap.get(cleanUserId);
+  if (!client) {
+    try {
+      const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+      const auth = new import_googleapis.google.auth.JWT({
+        email: credentials.client_email,
+        key: privateKey,
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"]
       });
-      addFormatToken(0, ["YY", 2], 0, function() {
-        return this.year() % 100;
-      });
-      addFormatToken(0, ["YYYY", 4], 0, "year");
-      addFormatToken(0, ["YYYYY", 5], 0, "year");
-      addFormatToken(0, ["YYYYYY", 6, true], 0, "year");
-      addRegexToken("Y", matchSigned);
-      addRegexToken("YY", match1to2, match2);
-      addRegexToken("YYYY", match1to4, match4);
-      addRegexToken("YYYYY", match1to6, match6);
-      addRegexToken("YYYYYY", match1to6, match6);
-      addParseToken(["YYYYY", "YYYYYY"], YEAR);
-      addParseToken("YYYY", function(input, array) {
-        array[YEAR] = input.length === 2 ? hooks.parseTwoDigitYear(input) : toInt(input);
-      });
-      addParseToken("YY", function(input, array) {
-        array[YEAR] = hooks.parseTwoDigitYear(input);
-      });
-      addParseToken("Y", function(input, array) {
-        array[YEAR] = parseInt(input, 10);
-      });
-      function daysInYear(year) {
-        return isLeapYear(year) ? 366 : 365;
-      }
-      hooks.parseTwoDigitYear = function(input) {
-        return toInt(input) + (toInt(input) > 68 ? 1900 : 2e3);
-      };
-      var getSetYear = makeGetSet("FullYear", true);
-      function getIsLeapYear() {
-        return isLeapYear(this.year());
-      }
-      function makeGetSet(unit, keepTime) {
-        return function(value) {
-          if (value != null) {
-            set$1(this, unit, value);
-            hooks.updateOffset(this, keepTime);
-            return this;
-          } else {
-            return get2(this, unit);
-          }
-        };
-      }
-      function get2(mom, unit) {
-        if (!mom.isValid()) {
-          return NaN;
-        }
-        var d = mom._d, isUTC = mom._isUTC;
-        switch (unit) {
-          case "Milliseconds":
-            return isUTC ? d.getUTCMilliseconds() : d.getMilliseconds();
-          case "Seconds":
-            return isUTC ? d.getUTCSeconds() : d.getSeconds();
-          case "Minutes":
-            return isUTC ? d.getUTCMinutes() : d.getMinutes();
-          case "Hours":
-            return isUTC ? d.getUTCHours() : d.getHours();
-          case "Date":
-            return isUTC ? d.getUTCDate() : d.getDate();
-          case "Day":
-            return isUTC ? d.getUTCDay() : d.getDay();
-          case "Month":
-            return isUTC ? d.getUTCMonth() : d.getMonth();
-          case "FullYear":
-            return isUTC ? d.getUTCFullYear() : d.getFullYear();
-          default:
-            return NaN;
-        }
-      }
-      function set$1(mom, unit, value) {
-        var d, isUTC, year, month, date;
-        if (!mom.isValid() || isNaN(value)) {
-          return;
-        }
-        d = mom._d;
-        isUTC = mom._isUTC;
-        switch (unit) {
-          case "Milliseconds":
-            return void (isUTC ? d.setUTCMilliseconds(value) : d.setMilliseconds(value));
-          case "Seconds":
-            return void (isUTC ? d.setUTCSeconds(value) : d.setSeconds(value));
-          case "Minutes":
-            return void (isUTC ? d.setUTCMinutes(value) : d.setMinutes(value));
-          case "Hours":
-            return void (isUTC ? d.setUTCHours(value) : d.setHours(value));
-          case "Date":
-            return void (isUTC ? d.setUTCDate(value) : d.setDate(value));
-          // case 'Day': // Not real
-          //    return void (isUTC ? d.setUTCDay(value) : d.setDay(value));
-          // case 'Month': // Not used because we need to pass two variables
-          //     return void (isUTC ? d.setUTCMonth(value) : d.setMonth(value));
-          case "FullYear":
-            break;
-          // See below ...
-          default:
-            return;
-        }
-        year = value;
-        month = mom.month();
-        date = mom.date();
-        date = date === 29 && month === 1 && !isLeapYear(year) ? 28 : date;
-        void (isUTC ? d.setUTCFullYear(year, month, date) : d.setFullYear(year, month, date));
-      }
-      function stringGet(units) {
-        units = normalizeUnits(units);
-        if (isFunction(this[units])) {
-          return this[units]();
-        }
-        return this;
-      }
-      function stringSet(units, value) {
-        if (typeof units === "object") {
-          units = normalizeObjectUnits(units);
-          var prioritized = getPrioritizedUnits(units), i2, prioritizedLen = prioritized.length;
-          for (i2 = 0; i2 < prioritizedLen; i2++) {
-            this[prioritized[i2].unit](units[prioritized[i2].unit]);
-          }
-        } else {
-          units = normalizeUnits(units);
-          if (isFunction(this[units])) {
-            return this[units](value);
-          }
-        }
-        return this;
-      }
-      function mod(n, x2) {
-        return (n % x2 + x2) % x2;
-      }
-      var indexOf;
-      if (Array.prototype.indexOf) {
-        indexOf = Array.prototype.indexOf;
-      } else {
-        indexOf = function(o) {
-          var i2;
-          for (i2 = 0; i2 < this.length; ++i2) {
-            if (this[i2] === o) {
-              return i2;
-            }
-          }
-          return -1;
-        };
-      }
-      function daysInMonth(year, month) {
-        if (isNaN(year) || isNaN(month)) {
-          return NaN;
-        }
-        var modMonth = mod(month, 12);
-        year += (month - modMonth) / 12;
-        return modMonth === 1 ? isLeapYear(year) ? 29 : 28 : 31 - modMonth % 7 % 2;
-      }
-      addFormatToken("M", ["MM", 2], "Mo", function() {
-        return this.month() + 1;
-      });
-      addFormatToken("MMM", 0, 0, function(format3) {
-        return this.localeData().monthsShort(this, format3);
-      });
-      addFormatToken("MMMM", 0, 0, function(format3) {
-        return this.localeData().months(this, format3);
-      });
-      addRegexToken("M", match1to2, match1to2NoLeadingZero);
-      addRegexToken("MM", match1to2, match2);
-      addRegexToken("MMM", function(isStrict, locale2) {
-        return locale2.monthsShortRegex(isStrict);
-      });
-      addRegexToken("MMMM", function(isStrict, locale2) {
-        return locale2.monthsRegex(isStrict);
-      });
-      addParseToken(["M", "MM"], function(input, array) {
-        array[MONTH] = toInt(input) - 1;
-      });
-      addParseToken(["MMM", "MMMM"], function(input, array, config, token2) {
-        var month = config._locale.monthsParse(input, token2, config._strict);
-        if (month != null) {
-          array[MONTH] = month;
-        } else {
-          getParsingFlags(config).invalidMonth = input;
-        }
-      });
-      var defaultLocaleMonths = "January_February_March_April_May_June_July_August_September_October_November_December".split(
-        "_"
-      ), defaultLocaleMonthsShort = "Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec".split("_"), MONTHS_IN_FORMAT = /D[oD]?(\[[^\[\]]*\]|\s)+MMMM?/, defaultMonthsShortRegex = matchWord, defaultMonthsRegex = matchWord;
-      function localeMonths(m2, format3) {
-        if (!m2) {
-          return isArray(this._months) ? this._months : this._months["standalone"];
-        }
-        return isArray(this._months) ? this._months[m2.month()] : this._months[(this._months.isFormat || MONTHS_IN_FORMAT).test(format3) ? "format" : "standalone"][m2.month()];
-      }
-      function localeMonthsShort(m2, format3) {
-        if (!m2) {
-          return isArray(this._monthsShort) ? this._monthsShort : this._monthsShort["standalone"];
-        }
-        return isArray(this._monthsShort) ? this._monthsShort[m2.month()] : this._monthsShort[MONTHS_IN_FORMAT.test(format3) ? "format" : "standalone"][m2.month()];
-      }
-      function handleStrictParse(monthName, format3, strict) {
-        var i2, ii, mom, llc = monthName.toLocaleLowerCase();
-        if (!this._monthsParse) {
-          this._monthsParse = [];
-          this._longMonthsParse = [];
-          this._shortMonthsParse = [];
-          for (i2 = 0; i2 < 12; ++i2) {
-            mom = createUTC([2e3, i2]);
-            this._shortMonthsParse[i2] = this.monthsShort(
-              mom,
-              ""
-            ).toLocaleLowerCase();
-            this._longMonthsParse[i2] = this.months(mom, "").toLocaleLowerCase();
-          }
-        }
-        if (strict) {
-          if (format3 === "MMM") {
-            ii = indexOf.call(this._shortMonthsParse, llc);
-            return ii !== -1 ? ii : null;
-          } else {
-            ii = indexOf.call(this._longMonthsParse, llc);
-            return ii !== -1 ? ii : null;
-          }
-        } else {
-          if (format3 === "MMM") {
-            ii = indexOf.call(this._shortMonthsParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._longMonthsParse, llc);
-            return ii !== -1 ? ii : null;
-          } else {
-            ii = indexOf.call(this._longMonthsParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._shortMonthsParse, llc);
-            return ii !== -1 ? ii : null;
-          }
-        }
-      }
-      function localeMonthsParse(monthName, format3, strict) {
-        var i2, mom, regex;
-        if (this._monthsParseExact) {
-          return handleStrictParse.call(this, monthName, format3, strict);
-        }
-        if (!this._monthsParse) {
-          this._monthsParse = [];
-          this._longMonthsParse = [];
-          this._shortMonthsParse = [];
-        }
-        for (i2 = 0; i2 < 12; i2++) {
-          mom = createUTC([2e3, i2]);
-          if (strict && !this._longMonthsParse[i2]) {
-            this._longMonthsParse[i2] = new RegExp(
-              "^" + this.months(mom, "").replace(".", "") + "$",
-              "i"
-            );
-            this._shortMonthsParse[i2] = new RegExp(
-              "^" + this.monthsShort(mom, "").replace(".", "") + "$",
-              "i"
-            );
-          }
-          if (!strict && !this._monthsParse[i2]) {
-            regex = "^" + this.months(mom, "") + "|^" + this.monthsShort(mom, "");
-            this._monthsParse[i2] = new RegExp(regex.replace(".", ""), "i");
-          }
-          if (strict && format3 === "MMMM" && this._longMonthsParse[i2].test(monthName)) {
-            return i2;
-          } else if (strict && format3 === "MMM" && this._shortMonthsParse[i2].test(monthName)) {
-            return i2;
-          } else if (!strict && this._monthsParse[i2].test(monthName)) {
-            return i2;
-          }
-        }
-      }
-      function setMonth(mom, value) {
-        if (!mom.isValid()) {
-          return mom;
-        }
-        if (typeof value === "string") {
-          if (/^\d+$/.test(value)) {
-            value = toInt(value);
-          } else {
-            value = mom.localeData().monthsParse(value);
-            if (!isNumber(value)) {
-              return mom;
-            }
-          }
-        }
-        var month = value, date = mom.date();
-        date = date < 29 ? date : Math.min(date, daysInMonth(mom.year(), month));
-        void (mom._isUTC ? mom._d.setUTCMonth(month, date) : mom._d.setMonth(month, date));
-        return mom;
-      }
-      function getSetMonth(value) {
-        if (value != null) {
-          setMonth(this, value);
-          hooks.updateOffset(this, true);
-          return this;
-        } else {
-          return get2(this, "Month");
-        }
-      }
-      function getDaysInMonth() {
-        return daysInMonth(this.year(), this.month());
-      }
-      function monthsShortRegex(isStrict) {
-        if (this._monthsParseExact) {
-          if (!hasOwnProp(this, "_monthsRegex")) {
-            computeMonthsParse.call(this);
-          }
-          if (isStrict) {
-            return this._monthsShortStrictRegex;
-          } else {
-            return this._monthsShortRegex;
-          }
-        } else {
-          if (!hasOwnProp(this, "_monthsShortRegex")) {
-            this._monthsShortRegex = defaultMonthsShortRegex;
-          }
-          return this._monthsShortStrictRegex && isStrict ? this._monthsShortStrictRegex : this._monthsShortRegex;
-        }
-      }
-      function monthsRegex(isStrict) {
-        if (this._monthsParseExact) {
-          if (!hasOwnProp(this, "_monthsRegex")) {
-            computeMonthsParse.call(this);
-          }
-          if (isStrict) {
-            return this._monthsStrictRegex;
-          } else {
-            return this._monthsRegex;
-          }
-        } else {
-          if (!hasOwnProp(this, "_monthsRegex")) {
-            this._monthsRegex = defaultMonthsRegex;
-          }
-          return this._monthsStrictRegex && isStrict ? this._monthsStrictRegex : this._monthsRegex;
-        }
-      }
-      function computeMonthsParse() {
-        function cmpLenRev(a, b) {
-          return b.length - a.length;
-        }
-        var shortPieces = [], longPieces = [], mixedPieces = [], i2, mom, shortP, longP;
-        for (i2 = 0; i2 < 12; i2++) {
-          mom = createUTC([2e3, i2]);
-          shortP = regexEscape(this.monthsShort(mom, ""));
-          longP = regexEscape(this.months(mom, ""));
-          shortPieces.push(shortP);
-          longPieces.push(longP);
-          mixedPieces.push(longP);
-          mixedPieces.push(shortP);
-        }
-        shortPieces.sort(cmpLenRev);
-        longPieces.sort(cmpLenRev);
-        mixedPieces.sort(cmpLenRev);
-        this._monthsRegex = new RegExp("^(" + mixedPieces.join("|") + ")", "i");
-        this._monthsShortRegex = this._monthsRegex;
-        this._monthsStrictRegex = new RegExp(
-          "^(" + longPieces.join("|") + ")",
-          "i"
-        );
-        this._monthsShortStrictRegex = new RegExp(
-          "^(" + shortPieces.join("|") + ")",
-          "i"
-        );
-      }
-      function createDate(y, m2, d, h2, M, s2, ms) {
-        var date;
-        if (y < 100 && y >= 0) {
-          date = new Date(y + 400, m2, d, h2, M, s2, ms);
-          if (isFinite(date.getFullYear())) {
-            date.setFullYear(y);
-          }
-        } else {
-          date = new Date(y, m2, d, h2, M, s2, ms);
-        }
-        return date;
-      }
-      function createUTCDate(y) {
-        var date, args;
-        if (y < 100 && y >= 0) {
-          args = Array.prototype.slice.call(arguments);
-          args[0] = y + 400;
-          date = new Date(Date.UTC.apply(null, args));
-          if (isFinite(date.getUTCFullYear())) {
-            date.setUTCFullYear(y);
-          }
-        } else {
-          date = new Date(Date.UTC.apply(null, arguments));
-        }
-        return date;
-      }
-      function firstWeekOffset(year, dow, doy) {
-        var fwd = 7 + dow - doy, fwdlw = (7 + createUTCDate(year, 0, fwd).getUTCDay() - dow) % 7;
-        return -fwdlw + fwd - 1;
-      }
-      function dayOfYearFromWeeks(year, week, weekday, dow, doy) {
-        var localWeekday = (7 + weekday - dow) % 7, weekOffset = firstWeekOffset(year, dow, doy), dayOfYear = 1 + 7 * (week - 1) + localWeekday + weekOffset, resYear, resDayOfYear;
-        if (dayOfYear <= 0) {
-          resYear = year - 1;
-          resDayOfYear = daysInYear(resYear) + dayOfYear;
-        } else if (dayOfYear > daysInYear(year)) {
-          resYear = year + 1;
-          resDayOfYear = dayOfYear - daysInYear(year);
-        } else {
-          resYear = year;
-          resDayOfYear = dayOfYear;
-        }
-        return {
-          year: resYear,
-          dayOfYear: resDayOfYear
-        };
-      }
-      function weekOfYear(mom, dow, doy) {
-        var weekOffset = firstWeekOffset(mom.year(), dow, doy), week = Math.floor((mom.dayOfYear() - weekOffset - 1) / 7) + 1, resWeek, resYear;
-        if (week < 1) {
-          resYear = mom.year() - 1;
-          resWeek = week + weeksInYear(resYear, dow, doy);
-        } else if (week > weeksInYear(mom.year(), dow, doy)) {
-          resWeek = week - weeksInYear(mom.year(), dow, doy);
-          resYear = mom.year() + 1;
-        } else {
-          resYear = mom.year();
-          resWeek = week;
-        }
-        return {
-          week: resWeek,
-          year: resYear
-        };
-      }
-      function weeksInYear(year, dow, doy) {
-        var weekOffset = firstWeekOffset(year, dow, doy), weekOffsetNext = firstWeekOffset(year + 1, dow, doy);
-        return (daysInYear(year) - weekOffset + weekOffsetNext) / 7;
-      }
-      addFormatToken("w", ["ww", 2], "wo", "week");
-      addFormatToken("W", ["WW", 2], "Wo", "isoWeek");
-      addRegexToken("w", match1to2, match1to2NoLeadingZero);
-      addRegexToken("ww", match1to2, match2);
-      addRegexToken("W", match1to2, match1to2NoLeadingZero);
-      addRegexToken("WW", match1to2, match2);
-      addWeekParseToken(
-        ["w", "ww", "W", "WW"],
-        function(input, week, config, token2) {
-          week[token2.substr(0, 1)] = toInt(input);
-        }
+      client = import_googleapis.google.sheets({ version: "v4", auth });
+      userClientsMap.set(cleanUserId, client);
+    } catch (err) {
+      throw classifyGoogleError(err, "getGoogleContext.createClient", { userId: cleanUserId });
+    }
+  }
+  const sheetName = userCreds.sheetName?.trim() || defaultSheetName;
+  return { sheets: client, spreadsheetId, sheetName };
+}
+async function getSheetId(ctx) {
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
+    });
+    const sheet = spreadsheet.data.sheets?.find(
+      (s2) => s2.properties?.title === ctx.sheetName
+    );
+    if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
+      throw new GoogleSheetsRangeError(
+        `Sheet tab "${ctx.sheetName}" was not found in the configured spreadsheet.`
       );
-      function localeWeek(mom) {
-        return weekOfYear(mom, this._week.dow, this._week.doy).week;
-      }
-      var defaultLocaleWeek = {
-        dow: 0,
-        // Sunday is the first day of the week.
-        doy: 6
-        // The week that contains Jan 6th is the first week of the year.
-      };
-      function localeFirstDayOfWeek() {
-        return this._week.dow;
-      }
-      function localeFirstDayOfYear() {
-        return this._week.doy;
-      }
-      function getSetWeek(input) {
-        var week = this.localeData().week(this);
-        return input == null ? week : this.add((input - week) * 7, "d");
-      }
-      function getSetISOWeek(input) {
-        var week = weekOfYear(this, 1, 4).week;
-        return input == null ? week : this.add((input - week) * 7, "d");
-      }
-      addFormatToken("d", 0, "do", "day");
-      addFormatToken("dd", 0, 0, function(format3) {
-        return this.localeData().weekdaysMin(this, format3);
-      });
-      addFormatToken("ddd", 0, 0, function(format3) {
-        return this.localeData().weekdaysShort(this, format3);
-      });
-      addFormatToken("dddd", 0, 0, function(format3) {
-        return this.localeData().weekdays(this, format3);
-      });
-      addFormatToken("e", 0, 0, "weekday");
-      addFormatToken("E", 0, 0, "isoWeekday");
-      addRegexToken("d", match1to2);
-      addRegexToken("e", match1to2);
-      addRegexToken("E", match1to2);
-      addRegexToken("dd", function(isStrict, locale2) {
-        return locale2.weekdaysMinRegex(isStrict);
-      });
-      addRegexToken("ddd", function(isStrict, locale2) {
-        return locale2.weekdaysShortRegex(isStrict);
-      });
-      addRegexToken("dddd", function(isStrict, locale2) {
-        return locale2.weekdaysRegex(isStrict);
-      });
-      addWeekParseToken(["dd", "ddd", "dddd"], function(input, week, config, token2) {
-        var weekday = config._locale.weekdaysParse(input, token2, config._strict);
-        if (weekday != null) {
-          week.d = weekday;
-        } else {
-          getParsingFlags(config).invalidWeekday = input;
+    }
+    return sheet.properties.sheetId;
+  } catch (err) {
+    throw classifyGoogleError(err, "getSheetId", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName });
+  }
+}
+async function ensureSheetReady(userId) {
+  let ctx;
+  try {
+    ctx = await getGoogleContext(userId);
+  } catch (err) {
+    throw classifyGoogleError(err, "ensureSheetReady.getContext", { userId });
+  }
+  try {
+    const spreadsheet = await ctx.sheets.spreadsheets.get({
+      spreadsheetId: ctx.spreadsheetId
+    });
+    const existing = spreadsheet.data.sheets?.find(
+      (s2) => s2.properties?.title === ctx.sheetName
+    );
+    if (!existing) {
+      await ctx.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: ctx.spreadsheetId,
+        requestBody: {
+          requests: [{ addSheet: { properties: { title: ctx.sheetName } } }]
         }
       });
-      addWeekParseToken(["d", "e", "E"], function(input, week, config, token2) {
-        week[token2] = toInt(input);
-      });
-      function parseWeekday(input, locale2) {
-        if (typeof input !== "string") {
-          return input;
-        }
-        if (!isNaN(input)) {
-          return parseInt(input, 10);
-        }
-        input = locale2.weekdaysParse(input);
-        if (typeof input === "number") {
-          return input;
-        }
-        return null;
-      }
-      function parseIsoWeekday(input, locale2) {
-        if (typeof input === "string") {
-          return locale2.weekdaysParse(input) % 7 || 7;
-        }
-        return isNaN(input) ? null : input;
-      }
-      function shiftWeekdays(ws, n) {
-        return ws.slice(n, 7).concat(ws.slice(0, n));
-      }
-      var defaultLocaleWeekdays = "Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"), defaultLocaleWeekdaysShort = "Sun_Mon_Tue_Wed_Thu_Fri_Sat".split("_"), defaultLocaleWeekdaysMin = "Su_Mo_Tu_We_Th_Fr_Sa".split("_"), defaultWeekdaysRegex = matchWord, defaultWeekdaysShortRegex = matchWord, defaultWeekdaysMinRegex = matchWord;
-      function localeWeekdays(m2, format3) {
-        var weekdays = isArray(this._weekdays) ? this._weekdays : this._weekdays[m2 && m2 !== true && this._weekdays.isFormat.test(format3) ? "format" : "standalone"];
-        return m2 === true ? shiftWeekdays(weekdays, this._week.dow) : m2 ? weekdays[m2.day()] : weekdays;
-      }
-      function localeWeekdaysShort(m2) {
-        return m2 === true ? shiftWeekdays(this._weekdaysShort, this._week.dow) : m2 ? this._weekdaysShort[m2.day()] : this._weekdaysShort;
-      }
-      function localeWeekdaysMin(m2) {
-        return m2 === true ? shiftWeekdays(this._weekdaysMin, this._week.dow) : m2 ? this._weekdaysMin[m2.day()] : this._weekdaysMin;
-      }
-      function handleStrictParse$1(weekdayName, format3, strict) {
-        var i2, ii, mom, llc = weekdayName.toLocaleLowerCase();
-        if (!this._weekdaysParse) {
-          this._weekdaysParse = [];
-          this._shortWeekdaysParse = [];
-          this._minWeekdaysParse = [];
-          for (i2 = 0; i2 < 7; ++i2) {
-            mom = createUTC([2e3, 1]).day(i2);
-            this._minWeekdaysParse[i2] = this.weekdaysMin(
-              mom,
-              ""
-            ).toLocaleLowerCase();
-            this._shortWeekdaysParse[i2] = this.weekdaysShort(
-              mom,
-              ""
-            ).toLocaleLowerCase();
-            this._weekdaysParse[i2] = this.weekdays(mom, "").toLocaleLowerCase();
-          }
-        }
-        if (strict) {
-          if (format3 === "dddd") {
-            ii = indexOf.call(this._weekdaysParse, llc);
-            return ii !== -1 ? ii : null;
-          } else if (format3 === "ddd") {
-            ii = indexOf.call(this._shortWeekdaysParse, llc);
-            return ii !== -1 ? ii : null;
-          } else {
-            ii = indexOf.call(this._minWeekdaysParse, llc);
-            return ii !== -1 ? ii : null;
-          }
-        } else {
-          if (format3 === "dddd") {
-            ii = indexOf.call(this._weekdaysParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._shortWeekdaysParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._minWeekdaysParse, llc);
-            return ii !== -1 ? ii : null;
-          } else if (format3 === "ddd") {
-            ii = indexOf.call(this._shortWeekdaysParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._weekdaysParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._minWeekdaysParse, llc);
-            return ii !== -1 ? ii : null;
-          } else {
-            ii = indexOf.call(this._minWeekdaysParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._weekdaysParse, llc);
-            if (ii !== -1) {
-              return ii;
-            }
-            ii = indexOf.call(this._shortWeekdaysParse, llc);
-            return ii !== -1 ? ii : null;
-          }
-        }
-      }
-      function localeWeekdaysParse(weekdayName, format3, strict) {
-        var i2, mom, regex;
-        if (this._weekdaysParseExact) {
-          return handleStrictParse$1.call(this, weekdayName, format3, strict);
-        }
-        if (!this._weekdaysParse) {
-          this._weekdaysParse = [];
-          this._minWeekdaysParse = [];
-          this._shortWeekdaysParse = [];
-          this._fullWeekdaysParse = [];
-        }
-        for (i2 = 0; i2 < 7; i2++) {
-          mom = createUTC([2e3, 1]).day(i2);
-          if (strict && !this._fullWeekdaysParse[i2]) {
-            this._fullWeekdaysParse[i2] = new RegExp(
-              "^" + this.weekdays(mom, "").replace(".", "\\.?") + "$",
-              "i"
-            );
-            this._shortWeekdaysParse[i2] = new RegExp(
-              "^" + this.weekdaysShort(mom, "").replace(".", "\\.?") + "$",
-              "i"
-            );
-            this._minWeekdaysParse[i2] = new RegExp(
-              "^" + this.weekdaysMin(mom, "").replace(".", "\\.?") + "$",
-              "i"
-            );
-          }
-          if (!this._weekdaysParse[i2]) {
-            regex = "^" + this.weekdays(mom, "") + "|^" + this.weekdaysShort(mom, "") + "|^" + this.weekdaysMin(mom, "");
-            this._weekdaysParse[i2] = new RegExp(regex.replace(".", ""), "i");
-          }
-          if (strict && format3 === "dddd" && this._fullWeekdaysParse[i2].test(weekdayName)) {
-            return i2;
-          } else if (strict && format3 === "ddd" && this._shortWeekdaysParse[i2].test(weekdayName)) {
-            return i2;
-          } else if (strict && format3 === "dd" && this._minWeekdaysParse[i2].test(weekdayName)) {
-            return i2;
-          } else if (!strict && this._weekdaysParse[i2].test(weekdayName)) {
-            return i2;
-          }
-        }
-      }
-      function getSetDayOfWeek(input) {
-        if (!this.isValid()) {
-          return input != null ? this : NaN;
-        }
-        var day = get2(this, "Day");
-        if (input != null) {
-          input = parseWeekday(input, this.localeData());
-          return this.add(input - day, "d");
-        } else {
-          return day;
-        }
-      }
-      function getSetLocaleDayOfWeek(input) {
-        if (!this.isValid()) {
-          return input != null ? this : NaN;
-        }
-        var weekday = (this.day() + 7 - this.localeData()._week.dow) % 7;
-        return input == null ? weekday : this.add(input - weekday, "d");
-      }
-      function getSetISODayOfWeek(input) {
-        if (!this.isValid()) {
-          return input != null ? this : NaN;
-        }
-        if (input != null) {
-          var weekday = parseIsoWeekday(input, this.localeData());
-          return this.day(this.day() % 7 ? weekday : weekday - 7);
-        } else {
-          return this.day() || 7;
-        }
-      }
-      function weekdaysRegex(isStrict) {
-        if (this._weekdaysParseExact) {
-          if (!hasOwnProp(this, "_weekdaysRegex")) {
-            computeWeekdaysParse.call(this);
-          }
-          if (isStrict) {
-            return this._weekdaysStrictRegex;
-          } else {
-            return this._weekdaysRegex;
-          }
-        } else {
-          if (!hasOwnProp(this, "_weekdaysRegex")) {
-            this._weekdaysRegex = defaultWeekdaysRegex;
-          }
-          return this._weekdaysStrictRegex && isStrict ? this._weekdaysStrictRegex : this._weekdaysRegex;
-        }
-      }
-      function weekdaysShortRegex(isStrict) {
-        if (this._weekdaysParseExact) {
-          if (!hasOwnProp(this, "_weekdaysRegex")) {
-            computeWeekdaysParse.call(this);
-          }
-          if (isStrict) {
-            return this._weekdaysShortStrictRegex;
-          } else {
-            return this._weekdaysShortRegex;
-          }
-        } else {
-          if (!hasOwnProp(this, "_weekdaysShortRegex")) {
-            this._weekdaysShortRegex = defaultWeekdaysShortRegex;
-          }
-          return this._weekdaysShortStrictRegex && isStrict ? this._weekdaysShortStrictRegex : this._weekdaysShortRegex;
-        }
-      }
-      function weekdaysMinRegex(isStrict) {
-        if (this._weekdaysParseExact) {
-          if (!hasOwnProp(this, "_weekdaysRegex")) {
-            computeWeekdaysParse.call(this);
-          }
-          if (isStrict) {
-            return this._weekdaysMinStrictRegex;
-          } else {
-            return this._weekdaysMinRegex;
-          }
-        } else {
-          if (!hasOwnProp(this, "_weekdaysMinRegex")) {
-            this._weekdaysMinRegex = defaultWeekdaysMinRegex;
-          }
-          return this._weekdaysMinStrictRegex && isStrict ? this._weekdaysMinStrictRegex : this._weekdaysMinRegex;
-        }
-      }
-      function computeWeekdaysParse() {
-        function cmpLenRev(a, b) {
-          return b.length - a.length;
-        }
-        var minPieces = [], shortPieces = [], longPieces = [], mixedPieces = [], i2, mom, minp, shortp, longp;
-        for (i2 = 0; i2 < 7; i2++) {
-          mom = createUTC([2e3, 1]).day(i2);
-          minp = regexEscape(this.weekdaysMin(mom, ""));
-          shortp = regexEscape(this.weekdaysShort(mom, ""));
-          longp = regexEscape(this.weekdays(mom, ""));
-          minPieces.push(minp);
-          shortPieces.push(shortp);
-          longPieces.push(longp);
-          mixedPieces.push(minp);
-          mixedPieces.push(shortp);
-          mixedPieces.push(longp);
-        }
-        minPieces.sort(cmpLenRev);
-        shortPieces.sort(cmpLenRev);
-        longPieces.sort(cmpLenRev);
-        mixedPieces.sort(cmpLenRev);
-        this._weekdaysRegex = new RegExp("^(" + mixedPieces.join("|") + ")", "i");
-        this._weekdaysShortRegex = this._weekdaysRegex;
-        this._weekdaysMinRegex = this._weekdaysRegex;
-        this._weekdaysStrictRegex = new RegExp(
-          "^(" + longPieces.join("|") + ")",
-          "i"
-        );
-        this._weekdaysShortStrictRegex = new RegExp(
-          "^(" + shortPieces.join("|") + ")",
-          "i"
-        );
-        this._weekdaysMinStrictRegex = new RegExp(
-          "^(" + minPieces.join("|") + ")",
-          "i"
-        );
-      }
-      function hFormat() {
-        return this.hours() % 12 || 12;
-      }
-      function kFormat() {
-        return this.hours() || 24;
-      }
-      addFormatToken("H", ["HH", 2], 0, "hour");
-      addFormatToken("h", ["hh", 2], 0, hFormat);
-      addFormatToken("k", ["kk", 2], 0, kFormat);
-      addFormatToken("hmm", 0, 0, function() {
-        return "" + hFormat.apply(this) + zeroFill(this.minutes(), 2);
-      });
-      addFormatToken("hmmss", 0, 0, function() {
-        return "" + hFormat.apply(this) + zeroFill(this.minutes(), 2) + zeroFill(this.seconds(), 2);
-      });
-      addFormatToken("Hmm", 0, 0, function() {
-        return "" + this.hours() + zeroFill(this.minutes(), 2);
-      });
-      addFormatToken("Hmmss", 0, 0, function() {
-        return "" + this.hours() + zeroFill(this.minutes(), 2) + zeroFill(this.seconds(), 2);
-      });
-      function meridiem(token2, lowercase) {
-        addFormatToken(token2, 0, 0, function() {
-          return this.localeData().meridiem(
-            this.hours(),
-            this.minutes(),
-            lowercase
-          );
-        });
-      }
-      meridiem("a", true);
-      meridiem("A", false);
-      function matchMeridiem(isStrict, locale2) {
-        return locale2._meridiemParse;
-      }
-      addRegexToken("a", matchMeridiem);
-      addRegexToken("A", matchMeridiem);
-      addRegexToken("H", match1to2, match1to2HasZero);
-      addRegexToken("h", match1to2, match1to2NoLeadingZero);
-      addRegexToken("k", match1to2, match1to2NoLeadingZero);
-      addRegexToken("HH", match1to2, match2);
-      addRegexToken("hh", match1to2, match2);
-      addRegexToken("kk", match1to2, match2);
-      addRegexToken("hmm", match3to4);
-      addRegexToken("hmmss", match5to6);
-      addRegexToken("Hmm", match3to4);
-      addRegexToken("Hmmss", match5to6);
-      addParseToken(["H", "HH"], HOUR);
-      addParseToken(["k", "kk"], function(input, array, config) {
-        var kInput = toInt(input);
-        array[HOUR] = kInput === 24 ? 0 : kInput;
-      });
-      addParseToken(["a", "A"], function(input, array, config) {
-        config._isPm = config._locale.isPM(input);
-        config._meridiem = input;
-      });
-      addParseToken(["h", "hh"], function(input, array, config) {
-        array[HOUR] = toInt(input);
-        getParsingFlags(config).bigHour = true;
-      });
-      addParseToken("hmm", function(input, array, config) {
-        var pos = input.length - 2;
-        array[HOUR] = toInt(input.substr(0, pos));
-        array[MINUTE] = toInt(input.substr(pos));
-        getParsingFlags(config).bigHour = true;
-      });
-      addParseToken("hmmss", function(input, array, config) {
-        var pos1 = input.length - 4, pos2 = input.length - 2;
-        array[HOUR] = toInt(input.substr(0, pos1));
-        array[MINUTE] = toInt(input.substr(pos1, 2));
-        array[SECOND] = toInt(input.substr(pos2));
-        getParsingFlags(config).bigHour = true;
-      });
-      addParseToken("Hmm", function(input, array, config) {
-        var pos = input.length - 2;
-        array[HOUR] = toInt(input.substr(0, pos));
-        array[MINUTE] = toInt(input.substr(pos));
-      });
-      addParseToken("Hmmss", function(input, array, config) {
-        var pos1 = input.length - 4, pos2 = input.length - 2;
-        array[HOUR] = toInt(input.substr(0, pos1));
-        array[MINUTE] = toInt(input.substr(pos1, 2));
-        array[SECOND] = toInt(input.substr(pos2));
-      });
-      function localeIsPM(input) {
-        return (input + "").toLowerCase().charAt(0) === "p";
-      }
-      var defaultLocaleMeridiemParse = /[ap]\.?m?\.?/i, getSetHour = makeGetSet("Hours", true);
-      function localeMeridiem(hours2, minutes2, isLower) {
-        if (hours2 > 11) {
-          return isLower ? "pm" : "PM";
-        } else {
-          return isLower ? "am" : "AM";
-        }
-      }
-      var baseConfig = {
-        calendar: defaultCalendar,
-        longDateFormat: defaultLongDateFormat,
-        invalidDate: defaultInvalidDate,
-        ordinal: defaultOrdinal,
-        dayOfMonthOrdinalParse: defaultDayOfMonthOrdinalParse,
-        relativeTime: defaultRelativeTime,
-        months: defaultLocaleMonths,
-        monthsShort: defaultLocaleMonthsShort,
-        week: defaultLocaleWeek,
-        weekdays: defaultLocaleWeekdays,
-        weekdaysMin: defaultLocaleWeekdaysMin,
-        weekdaysShort: defaultLocaleWeekdaysShort,
-        meridiemParse: defaultLocaleMeridiemParse
-      };
-      var locales = {}, localeFamilies = {}, globalLocale;
-      function commonPrefix(arr1, arr2) {
-        var i2, minl = Math.min(arr1.length, arr2.length);
-        for (i2 = 0; i2 < minl; i2 += 1) {
-          if (arr1[i2] !== arr2[i2]) {
-            return i2;
-          }
-        }
-        return minl;
-      }
-      function normalizeLocale(key) {
-        return key ? key.toLowerCase().replace("_", "-") : key;
-      }
-      function chooseLocale(names) {
-        var i2 = 0, j, next, locale2, split;
-        while (i2 < names.length) {
-          split = normalizeLocale(names[i2]).split("-");
-          j = split.length;
-          next = normalizeLocale(names[i2 + 1]);
-          next = next ? next.split("-") : null;
-          while (j > 0) {
-            locale2 = loadLocale(split.slice(0, j).join("-"));
-            if (locale2) {
-              return locale2;
-            }
-            if (next && next.length >= j && commonPrefix(split, next) >= j - 1) {
-              break;
-            }
-            j--;
-          }
-          i2++;
-        }
-        return globalLocale;
-      }
-      function isLocaleNameSane(name) {
-        return !!(name && name.match("^[^/\\\\]*$"));
-      }
-      function loadLocale(name) {
-        var oldLocale = null, aliasedRequire;
-        if (locales[name] === void 0 && typeof module2 !== "undefined" && module2 && module2.exports && isLocaleNameSane(name)) {
-          try {
-            oldLocale = globalLocale._abbr;
-            aliasedRequire = require;
-            aliasedRequire("./locale/" + name);
-            getSetGlobalLocale(oldLocale);
-          } catch (e2) {
-            locales[name] = null;
-          }
-        }
-        return locales[name];
-      }
-      function getSetGlobalLocale(key, values) {
-        var data;
-        if (key) {
-          if (isUndefined(values)) {
-            data = getLocale(key);
-          } else {
-            data = defineLocale(key, values);
-          }
-          if (data) {
-            globalLocale = data;
-          } else {
-            if (typeof console !== "undefined" && console.warn) {
-              console.warn(
-                "Locale " + key + " not found. Did you forget to load it?"
-              );
-            }
-          }
-        }
-        return globalLocale._abbr;
-      }
-      function defineLocale(name, config) {
-        if (config !== null) {
-          var locale2, parentConfig = baseConfig;
-          config.abbr = name;
-          if (locales[name] != null) {
-            deprecateSimple(
-              "defineLocaleOverride",
-              "use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info."
-            );
-            parentConfig = locales[name]._config;
-          } else if (config.parentLocale != null) {
-            if (locales[config.parentLocale] != null) {
-              parentConfig = locales[config.parentLocale]._config;
-            } else {
-              locale2 = loadLocale(config.parentLocale);
-              if (locale2 != null) {
-                parentConfig = locale2._config;
-              } else {
-                if (!localeFamilies[config.parentLocale]) {
-                  localeFamilies[config.parentLocale] = [];
-                }
-                localeFamilies[config.parentLocale].push({
-                  name,
-                  config
-                });
-                return null;
-              }
-            }
-          }
-          locales[name] = new Locale(mergeConfigs(parentConfig, config));
-          if (localeFamilies[name]) {
-            localeFamilies[name].forEach(function(x2) {
-              defineLocale(x2.name, x2.config);
-            });
-          }
-          getSetGlobalLocale(name);
-          return locales[name];
-        } else {
-          delete locales[name];
-          return null;
-        }
-      }
-      function updateLocale(name, config) {
-        if (config != null) {
-          var locale2, tmpLocale, parentConfig = baseConfig;
-          if (locales[name] != null && locales[name].parentLocale != null) {
-            locales[name].set(mergeConfigs(locales[name]._config, config));
-          } else {
-            tmpLocale = loadLocale(name);
-            if (tmpLocale != null) {
-              parentConfig = tmpLocale._config;
-            }
-            config = mergeConfigs(parentConfig, config);
-            if (tmpLocale == null) {
-              config.abbr = name;
-            }
-            locale2 = new Locale(config);
-            locale2.parentLocale = locales[name];
-            locales[name] = locale2;
-          }
-          getSetGlobalLocale(name);
-        } else {
-          if (locales[name] != null) {
-            if (locales[name].parentLocale != null) {
-              locales[name] = locales[name].parentLocale;
-              if (name === getSetGlobalLocale()) {
-                getSetGlobalLocale(name);
-              }
-            } else if (locales[name] != null) {
-              delete locales[name];
-            }
-          }
-        }
-        return locales[name];
-      }
-      function getLocale(key) {
-        var locale2;
-        if (key && key._locale && key._locale._abbr) {
-          key = key._locale._abbr;
-        }
-        if (!key) {
-          return globalLocale;
-        }
-        if (!isArray(key)) {
-          locale2 = loadLocale(key);
-          if (locale2) {
-            return locale2;
-          }
-          key = [key];
-        }
-        return chooseLocale(key);
-      }
-      function listLocales() {
-        return keys(locales);
-      }
-      function checkOverflow(m2) {
-        var overflow, a = m2._a;
-        if (a && getParsingFlags(m2).overflow === -2) {
-          overflow = a[MONTH] < 0 || a[MONTH] > 11 ? MONTH : a[DATE] < 1 || a[DATE] > daysInMonth(a[YEAR], a[MONTH]) ? DATE : a[HOUR] < 0 || a[HOUR] > 24 || a[HOUR] === 24 && (a[MINUTE] !== 0 || a[SECOND] !== 0 || a[MILLISECOND] !== 0) ? HOUR : a[MINUTE] < 0 || a[MINUTE] > 59 ? MINUTE : a[SECOND] < 0 || a[SECOND] > 59 ? SECOND : a[MILLISECOND] < 0 || a[MILLISECOND] > 999 ? MILLISECOND : -1;
-          if (getParsingFlags(m2)._overflowDayOfYear && (overflow < YEAR || overflow > DATE)) {
-            overflow = DATE;
-          }
-          if (getParsingFlags(m2)._overflowWeeks && overflow === -1) {
-            overflow = WEEK;
-          }
-          if (getParsingFlags(m2)._overflowWeekday && overflow === -1) {
-            overflow = WEEKDAY;
-          }
-          getParsingFlags(m2).overflow = overflow;
-        }
-        return m2;
-      }
-      var extendedIsoRegex = /^\s*((?:[+-]\d{6}|\d{4})-(?:\d\d-\d\d|W\d\d-\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?::\d\d(?::\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/, basicIsoRegex = /^\s*((?:[+-]\d{6}|\d{4})(?:\d\d\d\d|W\d\d\d|W\d\d|\d\d\d|\d\d|))(?:(T| )(\d\d(?:\d\d(?:\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/, tzRegex = /Z|[+-]\d\d(?::?\d\d)?/, isoDates = [
-        ["YYYYYY-MM-DD", /[+-]\d{6}-\d\d-\d\d/],
-        ["YYYY-MM-DD", /\d{4}-\d\d-\d\d/],
-        ["GGGG-[W]WW-E", /\d{4}-W\d\d-\d/],
-        ["GGGG-[W]WW", /\d{4}-W\d\d/, false],
-        ["YYYY-DDD", /\d{4}-\d{3}/],
-        ["YYYY-MM", /\d{4}-\d\d/, false],
-        ["YYYYYYMMDD", /[+-]\d{10}/],
-        ["YYYYMMDD", /\d{8}/],
-        ["GGGG[W]WWE", /\d{4}W\d{3}/],
-        ["GGGG[W]WW", /\d{4}W\d{2}/, false],
-        ["YYYYDDD", /\d{7}/],
-        ["YYYYMM", /\d{6}/, false],
-        ["YYYY", /\d{4}/, false]
-      ], isoTimes = [
-        ["HH:mm:ss.SSSS", /\d\d:\d\d:\d\d\.\d+/],
-        ["HH:mm:ss,SSSS", /\d\d:\d\d:\d\d,\d+/],
-        ["HH:mm:ss", /\d\d:\d\d:\d\d/],
-        ["HH:mm", /\d\d:\d\d/],
-        ["HHmmss.SSSS", /\d\d\d\d\d\d\.\d+/],
-        ["HHmmss,SSSS", /\d\d\d\d\d\d,\d+/],
-        ["HHmmss", /\d\d\d\d\d\d/],
-        ["HHmm", /\d\d\d\d/],
-        ["HH", /\d\d/]
-      ], aspNetJsonRegex = /^\/?Date\((-?\d+)/i, rfc2822 = /^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s)?(\d{1,2})\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\d{2,4})\s(\d\d):(\d\d)(?::(\d\d))?\s(?:(UT|GMT|[ECMP][SD]T)|([Zz])|([+-]\d{4}))$/, obsOffsets = {
-        UT: 0,
-        GMT: 0,
-        EDT: -4 * 60,
-        EST: -5 * 60,
-        CDT: -5 * 60,
-        CST: -6 * 60,
-        MDT: -6 * 60,
-        MST: -7 * 60,
-        PDT: -7 * 60,
-        PST: -8 * 60
-      };
-      function configFromISO(config) {
-        var i2, l, string = config._i, match = extendedIsoRegex.exec(string) || basicIsoRegex.exec(string), allowTime, dateFormat, timeFormat, tzFormat, isoDatesLen = isoDates.length, isoTimesLen = isoTimes.length;
-        if (match) {
-          getParsingFlags(config).iso = true;
-          for (i2 = 0, l = isoDatesLen; i2 < l; i2++) {
-            if (isoDates[i2][1].exec(match[1])) {
-              dateFormat = isoDates[i2][0];
-              allowTime = isoDates[i2][2] !== false;
-              break;
-            }
-          }
-          if (dateFormat == null) {
-            config._isValid = false;
-            return;
-          }
-          if (match[3]) {
-            for (i2 = 0, l = isoTimesLen; i2 < l; i2++) {
-              if (isoTimes[i2][1].exec(match[3])) {
-                timeFormat = (match[2] || " ") + isoTimes[i2][0];
-                break;
-              }
-            }
-            if (timeFormat == null) {
-              config._isValid = false;
-              return;
-            }
-          }
-          if (!allowTime && timeFormat != null) {
-            config._isValid = false;
-            return;
-          }
-          if (match[4]) {
-            if (tzRegex.exec(match[4])) {
-              tzFormat = "Z";
-            } else {
-              config._isValid = false;
-              return;
-            }
-          }
-          config._f = dateFormat + (timeFormat || "") + (tzFormat || "");
-          configFromStringAndFormat(config);
-        } else {
-          config._isValid = false;
-        }
-      }
-      function extractFromRFC2822Strings(yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr) {
-        var result = [
-          untruncateYear(yearStr),
-          defaultLocaleMonthsShort.indexOf(monthStr),
-          parseInt(dayStr, 10),
-          parseInt(hourStr, 10),
-          parseInt(minuteStr, 10)
-        ];
-        if (secondStr) {
-          result.push(parseInt(secondStr, 10));
-        }
-        return result;
-      }
-      function untruncateYear(yearStr) {
-        var year = parseInt(yearStr, 10);
-        if (year <= 49) {
-          return 2e3 + year;
-        } else if (year <= 999) {
-          return 1900 + year;
-        }
-        return year;
-      }
-      function preprocessRFC2822(s2) {
-        return s2.replace(/\([^()]*\)|[\n\t]/g, " ").replace(/(\s\s+)/g, " ").replace(/^\s\s*/, "").replace(/\s\s*$/, "");
-      }
-      function checkWeekday(weekdayStr, parsedInput, config) {
-        if (weekdayStr) {
-          var weekdayProvided = defaultLocaleWeekdaysShort.indexOf(weekdayStr), weekdayActual = new Date(
-            parsedInput[0],
-            parsedInput[1],
-            parsedInput[2]
-          ).getDay();
-          if (weekdayProvided !== weekdayActual) {
-            getParsingFlags(config).weekdayMismatch = true;
-            config._isValid = false;
-            return false;
-          }
-        }
-        return true;
-      }
-      function calculateOffset(obsOffset, militaryOffset, numOffset) {
-        if (obsOffset) {
-          return obsOffsets[obsOffset];
-        } else if (militaryOffset) {
-          return 0;
-        } else {
-          var hm = parseInt(numOffset, 10), m2 = hm % 100, h2 = (hm - m2) / 100;
-          return h2 * 60 + m2;
-        }
-      }
-      function configFromRFC2822(config) {
-        var match = rfc2822.exec(preprocessRFC2822(config._i)), parsedArray;
-        if (match) {
-          parsedArray = extractFromRFC2822Strings(
-            match[4],
-            match[3],
-            match[2],
-            match[5],
-            match[6],
-            match[7]
-          );
-          if (!checkWeekday(match[1], parsedArray, config)) {
-            return;
-          }
-          config._a = parsedArray;
-          config._tzm = calculateOffset(match[8], match[9], match[10]);
-          config._d = createUTCDate.apply(null, config._a);
-          config._d.setUTCMinutes(config._d.getUTCMinutes() - config._tzm);
-          getParsingFlags(config).rfc2822 = true;
-        } else {
-          config._isValid = false;
-        }
-      }
-      function configFromString(config) {
-        var matched = aspNetJsonRegex.exec(config._i);
-        if (matched !== null) {
-          config._d = /* @__PURE__ */ new Date(+matched[1]);
-          return;
-        }
-        configFromISO(config);
-        if (config._isValid === false) {
-          delete config._isValid;
-        } else {
-          return;
-        }
-        configFromRFC2822(config);
-        if (config._isValid === false) {
-          delete config._isValid;
-        } else {
-          return;
-        }
-        if (config._strict) {
-          config._isValid = false;
-        } else {
-          hooks.createFromInputFallback(config);
-        }
-      }
-      hooks.createFromInputFallback = deprecate3(
-        "value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.",
-        function(config) {
-          config._d = /* @__PURE__ */ new Date(config._i + (config._useUTC ? " UTC" : ""));
-        }
-      );
-      function defaults(a, b, c) {
-        if (a != null) {
-          return a;
-        }
-        if (b != null) {
-          return b;
-        }
-        return c;
-      }
-      function currentDateArray(config) {
-        var nowValue = new Date(hooks.now());
-        if (config._useUTC) {
-          return [
-            nowValue.getUTCFullYear(),
-            nowValue.getUTCMonth(),
-            nowValue.getUTCDate()
-          ];
-        }
-        return [nowValue.getFullYear(), nowValue.getMonth(), nowValue.getDate()];
-      }
-      function configFromArray(config) {
-        var i2, date, input = [], currentDate, expectedWeekday, yearToUse;
-        if (config._d) {
-          return;
-        }
-        currentDate = currentDateArray(config);
-        if (config._w && config._a[DATE] == null && config._a[MONTH] == null) {
-          dayOfYearFromWeekInfo(config);
-        }
-        if (config._dayOfYear != null) {
-          yearToUse = defaults(config._a[YEAR], currentDate[YEAR]);
-          if (config._dayOfYear > daysInYear(yearToUse) || config._dayOfYear === 0) {
-            getParsingFlags(config)._overflowDayOfYear = true;
-          }
-          date = createUTCDate(yearToUse, 0, config._dayOfYear);
-          config._a[MONTH] = date.getUTCMonth();
-          config._a[DATE] = date.getUTCDate();
-        }
-        for (i2 = 0; i2 < 3 && config._a[i2] == null; ++i2) {
-          config._a[i2] = input[i2] = currentDate[i2];
-        }
-        for (; i2 < 7; i2++) {
-          config._a[i2] = input[i2] = config._a[i2] == null ? i2 === 2 ? 1 : 0 : config._a[i2];
-        }
-        if (config._a[HOUR] === 24 && config._a[MINUTE] === 0 && config._a[SECOND] === 0 && config._a[MILLISECOND] === 0) {
-          config._nextDay = true;
-          config._a[HOUR] = 0;
-        }
-        config._d = (config._useUTC ? createUTCDate : createDate).apply(
-          null,
-          input
-        );
-        expectedWeekday = config._useUTC ? config._d.getUTCDay() : config._d.getDay();
-        if (config._tzm != null) {
-          config._d.setUTCMinutes(config._d.getUTCMinutes() - config._tzm);
-        }
-        if (config._nextDay) {
-          config._a[HOUR] = 24;
-        }
-        if (config._w && typeof config._w.d !== "undefined" && config._w.d !== expectedWeekday) {
-          getParsingFlags(config).weekdayMismatch = true;
-        }
-      }
-      function dayOfYearFromWeekInfo(config) {
-        var w, weekYear, week, weekday, dow, doy, temp, weekdayOverflow, curWeek;
-        w = config._w;
-        if (w.GG != null || w.W != null || w.E != null) {
-          dow = 1;
-          doy = 4;
-          weekYear = defaults(
-            w.GG,
-            config._a[YEAR],
-            weekOfYear(createLocal(), 1, 4).year
-          );
-          week = defaults(w.W, 1);
-          weekday = defaults(w.E, 1);
-          if (weekday < 1 || weekday > 7) {
-            weekdayOverflow = true;
-          }
-        } else {
-          dow = config._locale._week.dow;
-          doy = config._locale._week.doy;
-          curWeek = weekOfYear(createLocal(), dow, doy);
-          weekYear = defaults(w.gg, config._a[YEAR], curWeek.year);
-          week = defaults(w.w, curWeek.week);
-          if (w.d != null) {
-            weekday = w.d;
-            if (weekday < 0 || weekday > 6) {
-              weekdayOverflow = true;
-            }
-          } else if (w.e != null) {
-            weekday = w.e + dow;
-            if (w.e < 0 || w.e > 6) {
-              weekdayOverflow = true;
-            }
-          } else {
-            weekday = dow;
-          }
-        }
-        if (week < 1 || week > weeksInYear(weekYear, dow, doy)) {
-          getParsingFlags(config)._overflowWeeks = true;
-        } else if (weekdayOverflow != null) {
-          getParsingFlags(config)._overflowWeekday = true;
-        } else {
-          temp = dayOfYearFromWeeks(weekYear, week, weekday, dow, doy);
-          config._a[YEAR] = temp.year;
-          config._dayOfYear = temp.dayOfYear;
-        }
-      }
-      hooks.ISO_8601 = function() {
-      };
-      hooks.RFC_2822 = function() {
-      };
-      function configFromStringAndFormat(config) {
-        if (config._f === hooks.ISO_8601) {
-          configFromISO(config);
-          return;
-        }
-        if (config._f === hooks.RFC_2822) {
-          configFromRFC2822(config);
-          return;
-        }
-        config._a = [];
-        getParsingFlags(config).empty = true;
-        var string = "" + config._i, i2, parsedInput, tokens2, token2, skipped, stringLength = string.length, totalParsedInputLength = 0, era, tokenLen;
-        tokens2 = expandFormat(config._f, config._locale).match(formattingTokens) || [];
-        tokenLen = tokens2.length;
-        for (i2 = 0; i2 < tokenLen; i2++) {
-          token2 = tokens2[i2];
-          parsedInput = (string.match(getParseRegexForToken(token2, config)) || [])[0];
-          if (parsedInput) {
-            skipped = string.substr(0, string.indexOf(parsedInput));
-            if (skipped.length > 0) {
-              getParsingFlags(config).unusedInput.push(skipped);
-            }
-            string = string.slice(
-              string.indexOf(parsedInput) + parsedInput.length
-            );
-            totalParsedInputLength += parsedInput.length;
-          }
-          if (formatTokenFunctions[token2]) {
-            if (parsedInput) {
-              getParsingFlags(config).empty = false;
-            } else {
-              getParsingFlags(config).unusedTokens.push(token2);
-            }
-            addTimeToArrayFromToken(token2, parsedInput, config);
-          } else if (config._strict && !parsedInput) {
-            getParsingFlags(config).unusedTokens.push(token2);
-          }
-        }
-        getParsingFlags(config).charsLeftOver = stringLength - totalParsedInputLength;
-        if (string.length > 0) {
-          getParsingFlags(config).unusedInput.push(string);
-        }
-        if (config._a[HOUR] <= 12 && getParsingFlags(config).bigHour === true && config._a[HOUR] > 0) {
-          getParsingFlags(config).bigHour = void 0;
-        }
-        getParsingFlags(config).parsedDateParts = config._a.slice(0);
-        getParsingFlags(config).meridiem = config._meridiem;
-        config._a[HOUR] = meridiemFixWrap(
-          config._locale,
-          config._a[HOUR],
-          config._meridiem
-        );
-        era = getParsingFlags(config).era;
-        if (era !== null) {
-          config._a[YEAR] = config._locale.erasConvertYear(era, config._a[YEAR]);
-        }
-        configFromArray(config);
-        checkOverflow(config);
-      }
-      function meridiemFixWrap(locale2, hour, meridiem2) {
-        var isPm;
-        if (meridiem2 == null) {
-          return hour;
-        }
-        if (locale2.meridiemHour != null) {
-          return locale2.meridiemHour(hour, meridiem2);
-        } else if (locale2.isPM != null) {
-          isPm = locale2.isPM(meridiem2);
-          if (isPm && hour < 12) {
-            hour += 12;
-          }
-          if (!isPm && hour === 12) {
-            hour = 0;
-          }
-          return hour;
-        } else {
-          return hour;
-        }
-      }
-      function configFromStringAndArray(config) {
-        var tempConfig, bestMoment, scoreToBeat, i2, currentScore, validFormatFound, bestFormatIsValid = false, configfLen = config._f.length;
-        if (configfLen === 0) {
-          getParsingFlags(config).invalidFormat = true;
-          config._d = /* @__PURE__ */ new Date(NaN);
-          return;
-        }
-        for (i2 = 0; i2 < configfLen; i2++) {
-          currentScore = 0;
-          validFormatFound = false;
-          tempConfig = copyConfig({}, config);
-          if (config._useUTC != null) {
-            tempConfig._useUTC = config._useUTC;
-          }
-          tempConfig._f = config._f[i2];
-          configFromStringAndFormat(tempConfig);
-          if (isValid2(tempConfig)) {
-            validFormatFound = true;
-          }
-          currentScore += getParsingFlags(tempConfig).charsLeftOver;
-          currentScore += getParsingFlags(tempConfig).unusedTokens.length * 10;
-          getParsingFlags(tempConfig).score = currentScore;
-          if (!bestFormatIsValid) {
-            if (scoreToBeat == null || currentScore < scoreToBeat || validFormatFound) {
-              scoreToBeat = currentScore;
-              bestMoment = tempConfig;
-              if (validFormatFound) {
-                bestFormatIsValid = true;
-              }
-            }
-          } else {
-            if (currentScore < scoreToBeat) {
-              scoreToBeat = currentScore;
-              bestMoment = tempConfig;
-            }
-          }
-        }
-        extend(config, bestMoment || tempConfig);
-      }
-      function configFromObject(config) {
-        if (config._d) {
-          return;
-        }
-        var i2 = normalizeObjectUnits(config._i), dayOrDate = i2.day === void 0 ? i2.date : i2.day;
-        config._a = map(
-          [i2.year, i2.month, dayOrDate, i2.hour, i2.minute, i2.second, i2.millisecond],
-          function(obj) {
-            return obj && parseInt(obj, 10);
-          }
-        );
-        configFromArray(config);
-      }
-      function createFromConfig(config) {
-        var res = new Moment(checkOverflow(prepareConfig(config)));
-        if (res._nextDay) {
-          res.add(1, "d");
-          res._nextDay = void 0;
-        }
-        return res;
-      }
-      function prepareConfig(config) {
-        var input = config._i, format3 = config._f;
-        config._locale = config._locale || getLocale(config._l);
-        if (input === null || format3 === void 0 && input === "") {
-          return createInvalid({ nullInput: true });
-        }
-        if (typeof input === "string") {
-          config._i = input = config._locale.preparse(input);
-        }
-        if (isMoment(input)) {
-          return new Moment(checkOverflow(input));
-        } else if (isDate(input)) {
-          config._d = input;
-        } else if (isArray(format3)) {
-          configFromStringAndArray(config);
-        } else if (format3) {
-          configFromStringAndFormat(config);
-        } else {
-          configFromInput(config);
-        }
-        if (!isValid2(config)) {
-          config._d = null;
-        }
-        return config;
-      }
-      function configFromInput(config) {
-        var input = config._i;
-        if (isUndefined(input)) {
-          config._d = new Date(hooks.now());
-        } else if (isDate(input)) {
-          config._d = new Date(input.valueOf());
-        } else if (typeof input === "string") {
-          configFromString(config);
-        } else if (isArray(input)) {
-          config._a = map(input.slice(0), function(obj) {
-            return parseInt(obj, 10);
-          });
-          configFromArray(config);
-        } else if (isObject(input)) {
-          configFromObject(config);
-        } else if (isNumber(input)) {
-          config._d = new Date(input);
-        } else {
-          hooks.createFromInputFallback(config);
-        }
-      }
-      function createLocalOrUTC(input, format3, locale2, strict, isUTC) {
-        var c = {};
-        if (format3 === true || format3 === false) {
-          strict = format3;
-          format3 = void 0;
-        }
-        if (locale2 === true || locale2 === false) {
-          strict = locale2;
-          locale2 = void 0;
-        }
-        if (isObject(input) && isObjectEmpty(input) || isArray(input) && input.length === 0) {
-          input = void 0;
-        }
-        c._isAMomentObject = true;
-        c._useUTC = c._isUTC = isUTC;
-        c._l = locale2;
-        c._i = input;
-        c._f = format3;
-        c._strict = strict;
-        return createFromConfig(c);
-      }
-      function createLocal(input, format3, locale2, strict) {
-        return createLocalOrUTC(input, format3, locale2, strict, false);
-      }
-      var prototypeMin = deprecate3(
-        "moment().min is deprecated, use moment.max instead. http://momentjs.com/guides/#/warnings/min-max/",
-        function() {
-          var other = createLocal.apply(null, arguments);
-          if (this.isValid() && other.isValid()) {
-            return other < this ? this : other;
-          } else {
-            return createInvalid();
-          }
-        }
-      ), prototypeMax = deprecate3(
-        "moment().max is deprecated, use moment.min instead. http://momentjs.com/guides/#/warnings/min-max/",
-        function() {
-          var other = createLocal.apply(null, arguments);
-          if (this.isValid() && other.isValid()) {
-            return other > this ? this : other;
-          } else {
-            return createInvalid();
-          }
-        }
-      );
-      function pickBy(fn, moments) {
-        var res, i2;
-        if (moments.length === 1 && isArray(moments[0])) {
-          moments = moments[0];
-        }
-        if (!moments.length) {
-          return createLocal();
-        }
-        res = moments[0];
-        for (i2 = 1; i2 < moments.length; ++i2) {
-          if (!moments[i2].isValid() || moments[i2][fn](res)) {
-            res = moments[i2];
-          }
-        }
-        return res;
-      }
-      function min() {
-        var args = [].slice.call(arguments, 0);
-        return pickBy("isBefore", args);
-      }
-      function max() {
-        var args = [].slice.call(arguments, 0);
-        return pickBy("isAfter", args);
-      }
-      var now = function() {
-        return Date.now ? Date.now() : +/* @__PURE__ */ new Date();
-      };
-      var ordering = [
-        "year",
-        "quarter",
-        "month",
-        "week",
-        "day",
-        "hour",
-        "minute",
-        "second",
-        "millisecond"
-      ];
-      function isDurationValid(m2) {
-        var key, unitHasDecimal = false, i2, orderLen = ordering.length;
-        for (key in m2) {
-          if (hasOwnProp(m2, key) && !(indexOf.call(ordering, key) !== -1 && (m2[key] == null || !isNaN(m2[key])))) {
-            return false;
-          }
-        }
-        for (i2 = 0; i2 < orderLen; ++i2) {
-          if (m2[ordering[i2]]) {
-            if (unitHasDecimal) {
-              return false;
-            }
-            if (parseFloat(m2[ordering[i2]]) !== toInt(m2[ordering[i2]])) {
-              unitHasDecimal = true;
-            }
-          }
-        }
-        return true;
-      }
-      function isValid$1() {
-        return this._isValid;
-      }
-      function createInvalid$1() {
-        return createDuration(NaN);
-      }
-      function Duration(duration) {
-        var normalizedInput = normalizeObjectUnits(duration), years2 = normalizedInput.year || 0, quarters = normalizedInput.quarter || 0, months2 = normalizedInput.month || 0, weeks2 = normalizedInput.week || normalizedInput.isoWeek || 0, days2 = normalizedInput.day || 0, hours2 = normalizedInput.hour || 0, minutes2 = normalizedInput.minute || 0, seconds2 = normalizedInput.second || 0, milliseconds2 = normalizedInput.millisecond || 0;
-        this._isValid = isDurationValid(normalizedInput);
-        this._milliseconds = +milliseconds2 + seconds2 * 1e3 + // 1000
-        minutes2 * 6e4 + // 1000 * 60
-        hours2 * 1e3 * 60 * 60;
-        this._days = +days2 + weeks2 * 7;
-        this._months = +months2 + quarters * 3 + years2 * 12;
-        this._data = {};
-        this._locale = getLocale();
-        this._bubble();
-      }
-      function isDuration(obj) {
-        return obj instanceof Duration;
-      }
-      function absRound(number) {
-        if (number < 0) {
-          return Math.round(-1 * number) * -1;
-        } else {
-          return Math.round(number);
-        }
-      }
-      function compareArrays(array1, array2, dontConvert) {
-        var len = Math.min(array1.length, array2.length), lengthDiff = Math.abs(array1.length - array2.length), diffs = 0, i2;
-        for (i2 = 0; i2 < len; i2++) {
-          if (dontConvert && array1[i2] !== array2[i2] || !dontConvert && toInt(array1[i2]) !== toInt(array2[i2])) {
-            diffs++;
-          }
-        }
-        return diffs + lengthDiff;
-      }
-      function offset(token2, separator) {
-        addFormatToken(token2, 0, 0, function() {
-          var offset2 = this.utcOffset(), sign2 = "+";
-          if (offset2 < 0) {
-            offset2 = -offset2;
-            sign2 = "-";
-          }
-          return sign2 + zeroFill(~~(offset2 / 60), 2) + separator + zeroFill(~~offset2 % 60, 2);
-        });
-      }
-      offset("Z", ":");
-      offset("ZZ", "");
-      addRegexToken("Z", matchShortOffset);
-      addRegexToken("ZZ", matchShortOffset);
-      addParseToken(["Z", "ZZ"], function(input, array, config) {
-        config._useUTC = true;
-        config._tzm = offsetFromString(matchShortOffset, input);
-      });
-      var chunkOffset = /([\+\-]|\d\d)/gi;
-      function offsetFromString(matcher, string) {
-        var matches = (string || "").match(matcher), chunk, parts, minutes2;
-        if (matches === null) {
-          return null;
-        }
-        chunk = matches[matches.length - 1] || [];
-        parts = (chunk + "").match(chunkOffset) || ["-", 0, 0];
-        minutes2 = +(parts[1] * 60) + toInt(parts[2]);
-        return minutes2 === 0 ? 0 : parts[0] === "+" ? minutes2 : -minutes2;
-      }
-      function cloneWithOffset(input, model) {
-        var res, diff2;
-        if (model._isUTC) {
-          res = model.clone();
-          diff2 = (isMoment(input) || isDate(input) ? input.valueOf() : createLocal(input).valueOf()) - res.valueOf();
-          res._d.setTime(res._d.valueOf() + diff2);
-          hooks.updateOffset(res, false);
-          return res;
-        } else {
-          return createLocal(input).local();
-        }
-      }
-      function getDateOffset(m2) {
-        return -Math.round(m2._d.getTimezoneOffset());
-      }
-      hooks.updateOffset = function() {
-      };
-      function getSetOffset(input, keepLocalTime, keepMinutes) {
-        var offset2 = this._offset || 0, localAdjust;
-        if (!this.isValid()) {
-          return input != null ? this : NaN;
-        }
-        if (input != null) {
-          if (typeof input === "string") {
-            input = offsetFromString(matchShortOffset, input);
-            if (input === null) {
-              return this;
-            }
-          } else if (Math.abs(input) < 16 && !keepMinutes) {
-            input = input * 60;
-          }
-          if (!this._isUTC && keepLocalTime) {
-            localAdjust = getDateOffset(this);
-          }
-          this._offset = input;
-          this._isUTC = true;
-          if (localAdjust != null) {
-            this.add(localAdjust, "m");
-          }
-          if (offset2 !== input) {
-            if (!keepLocalTime || this._changeInProgress) {
-              addSubtract(
-                this,
-                createDuration(input - offset2, "m"),
-                1,
-                false
-              );
-            } else if (!this._changeInProgress) {
-              this._changeInProgress = true;
-              hooks.updateOffset(this, true);
-              this._changeInProgress = null;
-            }
-          }
-          return this;
-        } else {
-          return this._isUTC ? offset2 : getDateOffset(this);
-        }
-      }
-      function getSetZone(input, keepLocalTime) {
-        if (input != null) {
-          if (typeof input !== "string") {
-            input = -input;
-          }
-          this.utcOffset(input, keepLocalTime);
-          return this;
-        } else {
-          return -this.utcOffset();
-        }
-      }
-      function setOffsetToUTC(keepLocalTime) {
-        return this.utcOffset(0, keepLocalTime);
-      }
-      function setOffsetToLocal(keepLocalTime) {
-        if (this._isUTC) {
-          this.utcOffset(0, keepLocalTime);
-          this._isUTC = false;
-          if (keepLocalTime) {
-            this.subtract(getDateOffset(this), "m");
-          }
-        }
-        return this;
-      }
-      function setOffsetToParsedOffset() {
-        if (this._tzm != null) {
-          this.utcOffset(this._tzm, false, true);
-        } else if (typeof this._i === "string") {
-          var tZone = offsetFromString(matchOffset, this._i);
-          if (tZone != null) {
-            this.utcOffset(tZone);
-          } else {
-            this.utcOffset(0, true);
-          }
-        }
-        return this;
-      }
-      function hasAlignedHourOffset(input) {
-        if (!this.isValid()) {
-          return false;
-        }
-        input = input ? createLocal(input).utcOffset() : 0;
-        return (this.utcOffset() - input) % 60 === 0;
-      }
-      function isDaylightSavingTime() {
-        return this.utcOffset() > this.clone().month(0).utcOffset() || this.utcOffset() > this.clone().month(5).utcOffset();
-      }
-      function isDaylightSavingTimeShifted() {
-        if (!isUndefined(this._isDSTShifted)) {
-          return this._isDSTShifted;
-        }
-        var c = {}, other;
-        copyConfig(c, this);
-        c = prepareConfig(c);
-        if (c._a) {
-          other = c._isUTC ? createUTC(c._a) : createLocal(c._a);
-          this._isDSTShifted = this.isValid() && compareArrays(c._a, other.toArray()) > 0;
-        } else {
-          this._isDSTShifted = false;
-        }
-        return this._isDSTShifted;
-      }
-      function isLocal() {
-        return this.isValid() ? !this._isUTC : false;
-      }
-      function isUtcOffset() {
-        return this.isValid() ? this._isUTC : false;
-      }
-      function isUtc() {
-        return this.isValid() ? this._isUTC && this._offset === 0 : false;
-      }
-      var aspNetRegex = /^(-|\+)?(?:(\d*)[. ])?(\d+):(\d+)(?::(\d+)(\.\d*)?)?$/, isoRegex = /^(-|\+)?P(?:([-+]?[0-9,.]*)Y)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)W)?(?:([-+]?[0-9,.]*)D)?(?:T(?:([-+]?[0-9,.]*)H)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)S)?)?$/;
-      function createDuration(input, key) {
-        var duration = input, match = null, sign2, ret, diffRes;
-        if (isDuration(input)) {
-          duration = {
-            ms: input._milliseconds,
-            d: input._days,
-            M: input._months
-          };
-        } else if (isNumber(input) || !isNaN(+input)) {
-          duration = {};
-          if (key) {
-            duration[key] = +input;
-          } else {
-            duration.milliseconds = +input;
-          }
-        } else if (match = aspNetRegex.exec(input)) {
-          sign2 = match[1] === "-" ? -1 : 1;
-          duration = {
-            y: 0,
-            d: toInt(match[DATE]) * sign2,
-            h: toInt(match[HOUR]) * sign2,
-            m: toInt(match[MINUTE]) * sign2,
-            s: toInt(match[SECOND]) * sign2,
-            ms: toInt(absRound(match[MILLISECOND] * 1e3)) * sign2
-            // the millisecond decimal point is included in the match
-          };
-        } else if (match = isoRegex.exec(input)) {
-          sign2 = match[1] === "-" ? -1 : 1;
-          duration = {
-            y: parseIso(match[2], sign2),
-            M: parseIso(match[3], sign2),
-            w: parseIso(match[4], sign2),
-            d: parseIso(match[5], sign2),
-            h: parseIso(match[6], sign2),
-            m: parseIso(match[7], sign2),
-            s: parseIso(match[8], sign2)
-          };
-        } else if (duration == null) {
-          duration = {};
-        } else if (typeof duration === "object" && ("from" in duration || "to" in duration)) {
-          diffRes = momentsDifference(
-            createLocal(duration.from),
-            createLocal(duration.to)
-          );
-          duration = {};
-          duration.ms = diffRes.milliseconds;
-          duration.M = diffRes.months;
-        }
-        ret = new Duration(duration);
-        if (isDuration(input) && hasOwnProp(input, "_locale")) {
-          ret._locale = input._locale;
-        }
-        if (isDuration(input) && hasOwnProp(input, "_isValid")) {
-          ret._isValid = input._isValid;
-        }
-        return ret;
-      }
-      createDuration.fn = Duration.prototype;
-      createDuration.invalid = createInvalid$1;
-      function parseIso(inp, sign2) {
-        var res = inp && parseFloat(inp.replace(",", "."));
-        return (isNaN(res) ? 0 : res) * sign2;
-      }
-      function positiveMomentsDifference(base, other) {
-        var res = {};
-        res.months = other.month() - base.month() + (other.year() - base.year()) * 12;
-        if (base.clone().add(res.months, "M").isAfter(other)) {
-          --res.months;
-        }
-        res.milliseconds = +other - +base.clone().add(res.months, "M");
-        return res;
-      }
-      function momentsDifference(base, other) {
-        var res;
-        if (!(base.isValid() && other.isValid())) {
-          return { milliseconds: 0, months: 0 };
-        }
-        other = cloneWithOffset(other, base);
-        if (base.isBefore(other)) {
-          res = positiveMomentsDifference(base, other);
-        } else {
-          res = positiveMomentsDifference(other, base);
-          res.milliseconds = -res.milliseconds;
-          res.months = -res.months;
-        }
-        return res;
-      }
-      function createAdder(direction, name) {
-        return function(val, period) {
-          var dur, tmp;
-          if (period !== null && !isNaN(+period)) {
-            deprecateSimple(
-              name,
-              "moment()." + name + "(period, number) is deprecated. Please use moment()." + name + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
-            );
-            tmp = val;
-            val = period;
-            period = tmp;
-          }
-          dur = createDuration(val, period);
-          addSubtract(this, dur, direction);
-          return this;
-        };
-      }
-      function addSubtract(mom, duration, isAdding, updateOffset) {
-        var milliseconds2 = duration._milliseconds, days2 = absRound(duration._days), months2 = absRound(duration._months);
-        if (!mom.isValid()) {
-          return;
-        }
-        updateOffset = updateOffset == null ? true : updateOffset;
-        if (months2) {
-          setMonth(mom, get2(mom, "Month") + months2 * isAdding);
-        }
-        if (days2) {
-          set$1(mom, "Date", get2(mom, "Date") + days2 * isAdding);
-        }
-        if (milliseconds2) {
-          mom._d.setTime(mom._d.valueOf() + milliseconds2 * isAdding);
-        }
-        if (updateOffset) {
-          hooks.updateOffset(mom, days2 || months2);
-        }
-      }
-      var add = createAdder(1, "add"), subtract = createAdder(-1, "subtract");
-      function isString(input) {
-        return typeof input === "string" || input instanceof String;
-      }
-      function isMomentInput(input) {
-        return isMoment(input) || isDate(input) || isString(input) || isNumber(input) || isNumberOrStringArray(input) || isMomentInputObject(input) || input === null || input === void 0;
-      }
-      function isMomentInputObject(input) {
-        var objectTest = isObject(input) && !isObjectEmpty(input), propertyTest = false, properties = [
-          "years",
-          "year",
-          "y",
-          "months",
-          "month",
-          "M",
-          "days",
-          "day",
-          "d",
-          "dates",
-          "date",
-          "D",
-          "hours",
-          "hour",
-          "h",
-          "minutes",
-          "minute",
-          "m",
-          "seconds",
-          "second",
-          "s",
-          "milliseconds",
-          "millisecond",
-          "ms"
-        ], i2, property, propertyLen = properties.length;
-        for (i2 = 0; i2 < propertyLen; i2 += 1) {
-          property = properties[i2];
-          propertyTest = propertyTest || hasOwnProp(input, property);
-        }
-        return objectTest && propertyTest;
-      }
-      function isNumberOrStringArray(input) {
-        var arrayTest = isArray(input), dataTypeTest = false;
-        if (arrayTest) {
-          dataTypeTest = input.filter(function(item) {
-            return !isNumber(item) && isString(input);
-          }).length === 0;
-        }
-        return arrayTest && dataTypeTest;
-      }
-      function isCalendarSpec(input) {
-        var objectTest = isObject(input) && !isObjectEmpty(input), propertyTest = false, properties = [
-          "sameDay",
-          "nextDay",
-          "lastDay",
-          "nextWeek",
-          "lastWeek",
-          "sameElse"
-        ], i2, property;
-        for (i2 = 0; i2 < properties.length; i2 += 1) {
-          property = properties[i2];
-          propertyTest = propertyTest || hasOwnProp(input, property);
-        }
-        return objectTest && propertyTest;
-      }
-      function getCalendarFormat(myMoment, now2) {
-        var diff2 = myMoment.diff(now2, "days", true);
-        return diff2 < -6 ? "sameElse" : diff2 < -1 ? "lastWeek" : diff2 < 0 ? "lastDay" : diff2 < 1 ? "sameDay" : diff2 < 2 ? "nextDay" : diff2 < 7 ? "nextWeek" : "sameElse";
-      }
-      function calendar$1(time, formats) {
-        if (arguments.length === 1) {
-          if (!arguments[0]) {
-            time = void 0;
-            formats = void 0;
-          } else if (isMomentInput(arguments[0])) {
-            time = arguments[0];
-            formats = void 0;
-          } else if (isCalendarSpec(arguments[0])) {
-            formats = arguments[0];
-            time = void 0;
-          }
-        }
-        var now2 = time || createLocal(), sod = cloneWithOffset(now2, this).startOf("day"), format3 = hooks.calendarFormat(this, sod) || "sameElse", output = formats && (isFunction(formats[format3]) ? formats[format3].call(this, now2) : formats[format3]);
-        return this.format(
-          output || this.localeData().calendar(format3, this, createLocal(now2))
-        );
-      }
-      function clone2() {
-        return new Moment(this);
-      }
-      function isAfter(input, units) {
-        var localInput = isMoment(input) ? input : createLocal(input);
-        if (!(this.isValid() && localInput.isValid())) {
-          return false;
-        }
-        units = normalizeUnits(units) || "millisecond";
-        if (units === "millisecond") {
-          return this.valueOf() > localInput.valueOf();
-        } else {
-          return localInput.valueOf() < this.clone().startOf(units).valueOf();
-        }
-      }
-      function isBefore(input, units) {
-        var localInput = isMoment(input) ? input : createLocal(input);
-        if (!(this.isValid() && localInput.isValid())) {
-          return false;
-        }
-        units = normalizeUnits(units) || "millisecond";
-        if (units === "millisecond") {
-          return this.valueOf() < localInput.valueOf();
-        } else {
-          return this.clone().endOf(units).valueOf() < localInput.valueOf();
-        }
-      }
-      function isBetween(from2, to2, units, inclusivity) {
-        var localFrom = isMoment(from2) ? from2 : createLocal(from2), localTo = isMoment(to2) ? to2 : createLocal(to2);
-        if (!(this.isValid() && localFrom.isValid() && localTo.isValid())) {
-          return false;
-        }
-        inclusivity = inclusivity || "()";
-        return (inclusivity[0] === "(" ? this.isAfter(localFrom, units) : !this.isBefore(localFrom, units)) && (inclusivity[1] === ")" ? this.isBefore(localTo, units) : !this.isAfter(localTo, units));
-      }
-      function isSame(input, units) {
-        var localInput = isMoment(input) ? input : createLocal(input), inputMs;
-        if (!(this.isValid() && localInput.isValid())) {
-          return false;
-        }
-        units = normalizeUnits(units) || "millisecond";
-        if (units === "millisecond") {
-          return this.valueOf() === localInput.valueOf();
-        } else {
-          inputMs = localInput.valueOf();
-          return this.clone().startOf(units).valueOf() <= inputMs && inputMs <= this.clone().endOf(units).valueOf();
-        }
-      }
-      function isSameOrAfter(input, units) {
-        return this.isSame(input, units) || this.isAfter(input, units);
-      }
-      function isSameOrBefore(input, units) {
-        return this.isSame(input, units) || this.isBefore(input, units);
-      }
-      function diff(input, units, asFloat) {
-        var that, zoneDelta, output;
-        if (!this.isValid()) {
-          return NaN;
-        }
-        that = cloneWithOffset(input, this);
-        if (!that.isValid()) {
-          return NaN;
-        }
-        zoneDelta = (that.utcOffset() - this.utcOffset()) * 6e4;
-        units = normalizeUnits(units);
-        switch (units) {
-          case "year":
-            output = monthDiff(this, that) / 12;
-            break;
-          case "month":
-            output = monthDiff(this, that);
-            break;
-          case "quarter":
-            output = monthDiff(this, that) / 3;
-            break;
-          case "second":
-            output = (this - that) / 1e3;
-            break;
-          // 1000
-          case "minute":
-            output = (this - that) / 6e4;
-            break;
-          // 1000 * 60
-          case "hour":
-            output = (this - that) / 36e5;
-            break;
-          // 1000 * 60 * 60
-          case "day":
-            output = (this - that - zoneDelta) / 864e5;
-            break;
-          // 1000 * 60 * 60 * 24, negate dst
-          case "week":
-            output = (this - that - zoneDelta) / 6048e5;
-            break;
-          // 1000 * 60 * 60 * 24 * 7, negate dst
-          default:
-            output = this - that;
-        }
-        return asFloat ? output : absFloor(output);
-      }
-      function monthDiff(a, b) {
-        if (a.date() < b.date()) {
-          return -monthDiff(b, a);
-        }
-        var wholeMonthDiff = (b.year() - a.year()) * 12 + (b.month() - a.month()), anchor = a.clone().add(wholeMonthDiff, "months"), anchor2, adjust;
-        if (b - anchor < 0) {
-          anchor2 = a.clone().add(wholeMonthDiff - 1, "months");
-          adjust = (b - anchor) / (anchor - anchor2);
-        } else {
-          anchor2 = a.clone().add(wholeMonthDiff + 1, "months");
-          adjust = (b - anchor) / (anchor2 - anchor);
-        }
-        return -(wholeMonthDiff + adjust) || 0;
-      }
-      hooks.defaultFormat = "YYYY-MM-DDTHH:mm:ssZ";
-      hooks.defaultFormatUtc = "YYYY-MM-DDTHH:mm:ss[Z]";
-      function toString() {
-        return this.clone().locale("en").format("ddd MMM DD YYYY HH:mm:ss [GMT]ZZ");
-      }
-      function toISOString(keepOffset) {
-        if (!this.isValid()) {
-          return null;
-        }
-        var utc = keepOffset !== true, m2 = utc ? this.clone().utc() : this;
-        if (m2.year() < 0 || m2.year() > 9999) {
-          return formatMoment(
-            m2,
-            utc ? "YYYYYY-MM-DD[T]HH:mm:ss.SSS[Z]" : "YYYYYY-MM-DD[T]HH:mm:ss.SSSZ"
-          );
-        }
-        if (isFunction(Date.prototype.toISOString)) {
-          if (utc) {
-            return this.toDate().toISOString();
-          } else {
-            return new Date(this.valueOf() + this.utcOffset() * 60 * 1e3).toISOString().replace("Z", formatMoment(m2, "Z"));
-          }
-        }
-        return formatMoment(
-          m2,
-          utc ? "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]" : "YYYY-MM-DD[T]HH:mm:ss.SSSZ"
-        );
-      }
-      function inspect() {
-        if (!this.isValid()) {
-          return "moment.invalid(/* " + this._i + " */)";
-        }
-        var func = "moment", zone = "", prefix, year, datetime, suffix;
-        if (!this.isLocal()) {
-          func = this.utcOffset() === 0 ? "moment.utc" : "moment.parseZone";
-          zone = "Z";
-        }
-        prefix = "[" + func + '("]';
-        year = 0 <= this.year() && this.year() <= 9999 ? "YYYY" : "YYYYYY";
-        datetime = "-MM-DD[T]HH:mm:ss.SSS";
-        suffix = zone + '[")]';
-        return this.format(prefix + year + datetime + suffix);
-      }
-      function format2(inputString) {
-        if (!inputString) {
-          inputString = this.isUtc() ? hooks.defaultFormatUtc : hooks.defaultFormat;
-        }
-        var output = formatMoment(this, inputString);
-        return this.localeData().postformat(output);
-      }
-      function from(time, withoutSuffix) {
-        if (this.isValid() && (isMoment(time) && time.isValid() || createLocal(time).isValid())) {
-          return createDuration({ to: this, from: time }).locale(this.locale()).humanize(!withoutSuffix);
-        } else {
-          return this.localeData().invalidDate();
-        }
-      }
-      function fromNow(withoutSuffix) {
-        return this.from(createLocal(), withoutSuffix);
-      }
-      function to(time, withoutSuffix) {
-        if (this.isValid() && (isMoment(time) && time.isValid() || createLocal(time).isValid())) {
-          return createDuration({ from: this, to: time }).locale(this.locale()).humanize(!withoutSuffix);
-        } else {
-          return this.localeData().invalidDate();
-        }
-      }
-      function toNow(withoutSuffix) {
-        return this.to(createLocal(), withoutSuffix);
-      }
-      function locale(key) {
-        var newLocaleData;
-        if (key === void 0) {
-          return this._locale._abbr;
-        } else {
-          newLocaleData = getLocale(key);
-          if (newLocaleData != null) {
-            this._locale = newLocaleData;
-          }
-          return this;
-        }
-      }
-      var lang = deprecate3(
-        "moment().lang() is deprecated. Instead, use moment().localeData() to get the language configuration. Use moment().locale() to change languages.",
-        function(key) {
-          if (key === void 0) {
-            return this.localeData();
-          } else {
-            return this.locale(key);
-          }
-        }
-      );
-      function localeData() {
-        return this._locale;
-      }
-      var MS_PER_SECOND = 1e3, MS_PER_MINUTE = 60 * MS_PER_SECOND, MS_PER_HOUR2 = 60 * MS_PER_MINUTE, MS_PER_400_YEARS = (365 * 400 + 97) * 24 * MS_PER_HOUR2;
-      function mod$1(dividend, divisor) {
-        return (dividend % divisor + divisor) % divisor;
-      }
-      function localStartOfDate(y, m2, d) {
-        if (y < 100 && y >= 0) {
-          return new Date(y + 400, m2, d) - MS_PER_400_YEARS;
-        } else {
-          return new Date(y, m2, d).valueOf();
-        }
-      }
-      function utcStartOfDate(y, m2, d) {
-        if (y < 100 && y >= 0) {
-          return Date.UTC(y + 400, m2, d) - MS_PER_400_YEARS;
-        } else {
-          return Date.UTC(y, m2, d);
-        }
-      }
-      function startOf(units) {
-        var time, startOfDate;
-        units = normalizeUnits(units);
-        if (units === void 0 || units === "millisecond" || !this.isValid()) {
-          return this;
-        }
-        startOfDate = this._isUTC ? utcStartOfDate : localStartOfDate;
-        switch (units) {
-          case "year":
-            time = startOfDate(this.year(), 0, 1);
-            break;
-          case "quarter":
-            time = startOfDate(
-              this.year(),
-              this.month() - this.month() % 3,
-              1
-            );
-            break;
-          case "month":
-            time = startOfDate(this.year(), this.month(), 1);
-            break;
-          case "week":
-            time = startOfDate(
-              this.year(),
-              this.month(),
-              this.date() - this.weekday()
-            );
-            break;
-          case "isoWeek":
-            time = startOfDate(
-              this.year(),
-              this.month(),
-              this.date() - (this.isoWeekday() - 1)
-            );
-            break;
-          case "day":
-          case "date":
-            time = startOfDate(this.year(), this.month(), this.date());
-            break;
-          case "hour":
-            time = this._d.valueOf();
-            time -= mod$1(
-              time + (this._isUTC ? 0 : this.utcOffset() * MS_PER_MINUTE),
-              MS_PER_HOUR2
-            );
-            break;
-          case "minute":
-            time = this._d.valueOf();
-            time -= mod$1(time, MS_PER_MINUTE);
-            break;
-          case "second":
-            time = this._d.valueOf();
-            time -= mod$1(time, MS_PER_SECOND);
-            break;
-        }
-        this._d.setTime(time);
-        hooks.updateOffset(this, true);
-        return this;
-      }
-      function endOf(units) {
-        var time, startOfDate;
-        units = normalizeUnits(units);
-        if (units === void 0 || units === "millisecond" || !this.isValid()) {
-          return this;
-        }
-        startOfDate = this._isUTC ? utcStartOfDate : localStartOfDate;
-        switch (units) {
-          case "year":
-            time = startOfDate(this.year() + 1, 0, 1) - 1;
-            break;
-          case "quarter":
-            time = startOfDate(
-              this.year(),
-              this.month() - this.month() % 3 + 3,
-              1
-            ) - 1;
-            break;
-          case "month":
-            time = startOfDate(this.year(), this.month() + 1, 1) - 1;
-            break;
-          case "week":
-            time = startOfDate(
-              this.year(),
-              this.month(),
-              this.date() - this.weekday() + 7
-            ) - 1;
-            break;
-          case "isoWeek":
-            time = startOfDate(
-              this.year(),
-              this.month(),
-              this.date() - (this.isoWeekday() - 1) + 7
-            ) - 1;
-            break;
-          case "day":
-          case "date":
-            time = startOfDate(this.year(), this.month(), this.date() + 1) - 1;
-            break;
-          case "hour":
-            time = this._d.valueOf();
-            time += MS_PER_HOUR2 - mod$1(
-              time + (this._isUTC ? 0 : this.utcOffset() * MS_PER_MINUTE),
-              MS_PER_HOUR2
-            ) - 1;
-            break;
-          case "minute":
-            time = this._d.valueOf();
-            time += MS_PER_MINUTE - mod$1(time, MS_PER_MINUTE) - 1;
-            break;
-          case "second":
-            time = this._d.valueOf();
-            time += MS_PER_SECOND - mod$1(time, MS_PER_SECOND) - 1;
-            break;
-        }
-        this._d.setTime(time);
-        hooks.updateOffset(this, true);
-        return this;
-      }
-      function valueOf() {
-        return this._d.valueOf() - (this._offset || 0) * 6e4;
-      }
-      function unix() {
-        return Math.floor(this.valueOf() / 1e3);
-      }
-      function toDate() {
-        return new Date(this.valueOf());
-      }
-      function toArray2() {
-        var m2 = this;
-        return [
-          m2.year(),
-          m2.month(),
-          m2.date(),
-          m2.hour(),
-          m2.minute(),
-          m2.second(),
-          m2.millisecond()
-        ];
-      }
-      function toObject() {
-        var m2 = this;
-        return {
-          years: m2.year(),
-          months: m2.month(),
-          date: m2.date(),
-          hours: m2.hours(),
-          minutes: m2.minutes(),
-          seconds: m2.seconds(),
-          milliseconds: m2.milliseconds()
-        };
-      }
-      function toJSON2() {
-        return this.isValid() ? this.toISOString() : null;
-      }
-      function isValid$2() {
-        return isValid2(this);
-      }
-      function parsingFlags() {
-        return extend({}, getParsingFlags(this));
-      }
-      function invalidAt() {
-        return getParsingFlags(this).overflow;
-      }
-      function creationData() {
-        return {
-          input: this._i,
-          format: this._f,
-          locale: this._locale,
-          isUTC: this._isUTC,
-          strict: this._strict
-        };
-      }
-      addFormatToken("N", 0, 0, "eraAbbr");
-      addFormatToken("NN", 0, 0, "eraAbbr");
-      addFormatToken("NNN", 0, 0, "eraAbbr");
-      addFormatToken("NNNN", 0, 0, "eraName");
-      addFormatToken("NNNNN", 0, 0, "eraNarrow");
-      addFormatToken("y", ["y", 1], "yo", "eraYear");
-      addFormatToken("y", ["yy", 2], 0, "eraYear");
-      addFormatToken("y", ["yyy", 3], 0, "eraYear");
-      addFormatToken("y", ["yyyy", 4], 0, "eraYear");
-      addRegexToken("N", matchEraAbbr);
-      addRegexToken("NN", matchEraAbbr);
-      addRegexToken("NNN", matchEraAbbr);
-      addRegexToken("NNNN", matchEraName);
-      addRegexToken("NNNNN", matchEraNarrow);
-      addParseToken(
-        ["N", "NN", "NNN", "NNNN", "NNNNN"],
-        function(input, array, config, token2) {
-          var era = config._locale.erasParse(input, token2, config._strict);
-          if (era) {
-            getParsingFlags(config).era = era;
-          } else {
-            getParsingFlags(config).invalidEra = input;
-          }
-        }
-      );
-      addRegexToken("y", matchUnsigned);
-      addRegexToken("yy", matchUnsigned);
-      addRegexToken("yyy", matchUnsigned);
-      addRegexToken("yyyy", matchUnsigned);
-      addRegexToken("yo", matchEraYearOrdinal);
-      addParseToken(["y", "yy", "yyy", "yyyy"], YEAR);
-      addParseToken(["yo"], function(input, array, config, token2) {
-        var match;
-        if (config._locale._eraYearOrdinalRegex) {
-          match = input.match(config._locale._eraYearOrdinalRegex);
-        }
-        if (config._locale.eraYearOrdinalParse) {
-          array[YEAR] = config._locale.eraYearOrdinalParse(input, match);
-        } else {
-          array[YEAR] = parseInt(input, 10);
-        }
-      });
-      function localeEras(m2, format3) {
-        var i2, l, date, eras = this._eras || getLocale("en")._eras;
-        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
-          switch (typeof eras[i2].since) {
-            case "string":
-              date = hooks(eras[i2].since).startOf("day");
-              eras[i2].since = date.valueOf();
-              break;
-          }
-          switch (typeof eras[i2].until) {
-            case "undefined":
-              eras[i2].until = Infinity;
-              break;
-            case "string":
-              date = hooks(eras[i2].until).startOf("day").valueOf();
-              eras[i2].until = date.valueOf();
-              break;
-          }
-        }
-        return eras;
-      }
-      function localeErasParse(eraName, format3, strict) {
-        var i2, l, eras = this.eras(), name, abbr, narrow;
-        eraName = eraName.toUpperCase();
-        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
-          name = eras[i2].name.toUpperCase();
-          abbr = eras[i2].abbr.toUpperCase();
-          narrow = eras[i2].narrow.toUpperCase();
-          if (strict) {
-            switch (format3) {
-              case "N":
-              case "NN":
-              case "NNN":
-                if (abbr === eraName) {
-                  return eras[i2];
-                }
-                break;
-              case "NNNN":
-                if (name === eraName) {
-                  return eras[i2];
-                }
-                break;
-              case "NNNNN":
-                if (narrow === eraName) {
-                  return eras[i2];
-                }
-                break;
-            }
-          } else if ([name, abbr, narrow].indexOf(eraName) >= 0) {
-            return eras[i2];
-          }
-        }
-      }
-      function localeErasConvertYear(era, year) {
-        var dir = era.since <= era.until ? 1 : -1;
-        if (year === void 0) {
-          return hooks(era.since).year();
-        } else {
-          return hooks(era.since).year() + (year - era.offset) * dir;
-        }
-      }
-      function getEraName() {
-        var i2, l, val, eras = this.localeData().eras();
-        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
-          val = this.clone().startOf("day").valueOf();
-          if (eras[i2].since <= val && val <= eras[i2].until) {
-            return eras[i2].name;
-          }
-          if (eras[i2].until <= val && val <= eras[i2].since) {
-            return eras[i2].name;
-          }
-        }
-        return "";
-      }
-      function getEraNarrow() {
-        var i2, l, val, eras = this.localeData().eras();
-        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
-          val = this.clone().startOf("day").valueOf();
-          if (eras[i2].since <= val && val <= eras[i2].until) {
-            return eras[i2].narrow;
-          }
-          if (eras[i2].until <= val && val <= eras[i2].since) {
-            return eras[i2].narrow;
-          }
-        }
-        return "";
-      }
-      function getEraAbbr() {
-        var i2, l, val, eras = this.localeData().eras();
-        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
-          val = this.clone().startOf("day").valueOf();
-          if (eras[i2].since <= val && val <= eras[i2].until) {
-            return eras[i2].abbr;
-          }
-          if (eras[i2].until <= val && val <= eras[i2].since) {
-            return eras[i2].abbr;
-          }
-        }
-        return "";
-      }
-      function getEraYear() {
-        var i2, l, dir, val, eras = this.localeData().eras();
-        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
-          dir = eras[i2].since <= eras[i2].until ? 1 : -1;
-          val = this.clone().startOf("day").valueOf();
-          if (eras[i2].since <= val && val <= eras[i2].until || eras[i2].until <= val && val <= eras[i2].since) {
-            return (this.year() - hooks(eras[i2].since).year()) * dir + eras[i2].offset;
-          }
-        }
-        return this.year();
-      }
-      function erasNameRegex(isStrict) {
-        if (!hasOwnProp(this, "_erasNameRegex")) {
-          computeErasParse.call(this);
-        }
-        return isStrict ? this._erasNameRegex : this._erasRegex;
-      }
-      function erasAbbrRegex(isStrict) {
-        if (!hasOwnProp(this, "_erasAbbrRegex")) {
-          computeErasParse.call(this);
-        }
-        return isStrict ? this._erasAbbrRegex : this._erasRegex;
-      }
-      function erasNarrowRegex(isStrict) {
-        if (!hasOwnProp(this, "_erasNarrowRegex")) {
-          computeErasParse.call(this);
-        }
-        return isStrict ? this._erasNarrowRegex : this._erasRegex;
-      }
-      function matchEraAbbr(isStrict, locale2) {
-        return locale2.erasAbbrRegex(isStrict);
-      }
-      function matchEraName(isStrict, locale2) {
-        return locale2.erasNameRegex(isStrict);
-      }
-      function matchEraNarrow(isStrict, locale2) {
-        return locale2.erasNarrowRegex(isStrict);
-      }
-      function matchEraYearOrdinal(isStrict, locale2) {
-        return locale2._eraYearOrdinalRegex || matchUnsigned;
-      }
-      function computeErasParse() {
-        var abbrPieces = [], namePieces = [], narrowPieces = [], mixedPieces = [], i2, l, erasName, erasAbbr, erasNarrow, eras = this.eras();
-        for (i2 = 0, l = eras.length; i2 < l; ++i2) {
-          erasName = regexEscape(eras[i2].name);
-          erasAbbr = regexEscape(eras[i2].abbr);
-          erasNarrow = regexEscape(eras[i2].narrow);
-          namePieces.push(erasName);
-          abbrPieces.push(erasAbbr);
-          narrowPieces.push(erasNarrow);
-          mixedPieces.push(erasName);
-          mixedPieces.push(erasAbbr);
-          mixedPieces.push(erasNarrow);
-        }
-        this._erasRegex = new RegExp("^(" + mixedPieces.join("|") + ")", "i");
-        this._erasNameRegex = new RegExp("^(" + namePieces.join("|") + ")", "i");
-        this._erasAbbrRegex = new RegExp("^(" + abbrPieces.join("|") + ")", "i");
-        this._erasNarrowRegex = new RegExp(
-          "^(" + narrowPieces.join("|") + ")",
-          "i"
-        );
-      }
-      addFormatToken(0, ["gg", 2], 0, function() {
-        return this.weekYear() % 100;
-      });
-      addFormatToken(0, ["GG", 2], 0, function() {
-        return this.isoWeekYear() % 100;
-      });
-      function addWeekYearFormatToken(token2, getter) {
-        addFormatToken(0, [token2, token2.length], 0, getter);
-      }
-      addWeekYearFormatToken("gggg", "weekYear");
-      addWeekYearFormatToken("ggggg", "weekYear");
-      addWeekYearFormatToken("GGGG", "isoWeekYear");
-      addWeekYearFormatToken("GGGGG", "isoWeekYear");
-      addRegexToken("G", matchSigned);
-      addRegexToken("g", matchSigned);
-      addRegexToken("GG", match1to2, match2);
-      addRegexToken("gg", match1to2, match2);
-      addRegexToken("GGGG", match1to4, match4);
-      addRegexToken("gggg", match1to4, match4);
-      addRegexToken("GGGGG", match1to6, match6);
-      addRegexToken("ggggg", match1to6, match6);
-      addWeekParseToken(
-        ["gggg", "ggggg", "GGGG", "GGGGG"],
-        function(input, week, config, token2) {
-          week[token2.substr(0, 2)] = toInt(input);
-        }
-      );
-      addWeekParseToken(["gg", "GG"], function(input, week, config, token2) {
-        week[token2] = hooks.parseTwoDigitYear(input);
-      });
-      function getSetWeekYear(input) {
-        return getSetWeekYearHelper.call(
-          this,
-          input,
-          this.week(),
-          this.weekday() + this.localeData()._week.dow,
-          this.localeData()._week.dow,
-          this.localeData()._week.doy
-        );
-      }
-      function getSetISOWeekYear(input) {
-        return getSetWeekYearHelper.call(
-          this,
-          input,
-          this.isoWeek(),
-          this.isoWeekday(),
-          1,
-          4
-        );
-      }
-      function getISOWeeksInYear() {
-        return weeksInYear(this.year(), 1, 4);
-      }
-      function getISOWeeksInISOWeekYear() {
-        return weeksInYear(this.isoWeekYear(), 1, 4);
-      }
-      function getWeeksInYear() {
-        var weekInfo = this.localeData()._week;
-        return weeksInYear(this.year(), weekInfo.dow, weekInfo.doy);
-      }
-      function getWeeksInWeekYear() {
-        var weekInfo = this.localeData()._week;
-        return weeksInYear(this.weekYear(), weekInfo.dow, weekInfo.doy);
-      }
-      function getSetWeekYearHelper(input, week, weekday, dow, doy) {
-        var weeksTarget;
-        if (input == null) {
-          return weekOfYear(this, dow, doy).year;
-        } else {
-          weeksTarget = weeksInYear(input, dow, doy);
-          if (week > weeksTarget) {
-            week = weeksTarget;
-          }
-          return setWeekAll.call(this, input, week, weekday, dow, doy);
-        }
-      }
-      function setWeekAll(weekYear, week, weekday, dow, doy) {
-        var dayOfYearData = dayOfYearFromWeeks(weekYear, week, weekday, dow, doy), date = createUTCDate(dayOfYearData.year, 0, dayOfYearData.dayOfYear);
-        this.year(date.getUTCFullYear());
-        this.month(date.getUTCMonth());
-        this.date(date.getUTCDate());
-        return this;
-      }
-      addFormatToken("Q", 0, "Qo", "quarter");
-      addRegexToken("Q", match1);
-      addParseToken("Q", function(input, array) {
-        array[MONTH] = (toInt(input) - 1) * 3;
-      });
-      function getSetQuarter(input) {
-        return input == null ? Math.ceil((this.month() + 1) / 3) : this.month((input - 1) * 3 + this.month() % 3);
-      }
-      addFormatToken("D", ["DD", 2], "Do", "date");
-      addRegexToken("D", match1to2, match1to2NoLeadingZero);
-      addRegexToken("DD", match1to2, match2);
-      addRegexToken("Do", function(isStrict, locale2) {
-        return isStrict ? locale2._dayOfMonthOrdinalParse || locale2._ordinalParse : locale2._dayOfMonthOrdinalParseLenient;
-      });
-      addParseToken(["D", "DD"], DATE);
-      addParseToken("Do", function(input, array) {
-        array[DATE] = toInt(input.match(match1to2)[0]);
-      });
-      var getSetDayOfMonth = makeGetSet("Date", true);
-      addFormatToken("DDD", ["DDDD", 3], "DDDo", "dayOfYear");
-      addRegexToken("DDD", match1to3);
-      addRegexToken("DDDD", match3);
-      addParseToken(["DDD", "DDDD"], function(input, array, config) {
-        config._dayOfYear = toInt(input);
-      });
-      function getSetDayOfYear(input) {
-        var dayOfYear = Math.round(
-          (this.clone().startOf("day") - this.clone().startOf("year")) / 864e5
-        ) + 1;
-        return input == null ? dayOfYear : this.add(input - dayOfYear, "d");
-      }
-      addFormatToken("m", ["mm", 2], 0, "minute");
-      addRegexToken("m", match1to2, match1to2HasZero);
-      addRegexToken("mm", match1to2, match2);
-      addParseToken(["m", "mm"], MINUTE);
-      var getSetMinute = makeGetSet("Minutes", false);
-      addFormatToken("s", ["ss", 2], 0, "second");
-      addRegexToken("s", match1to2, match1to2HasZero);
-      addRegexToken("ss", match1to2, match2);
-      addParseToken(["s", "ss"], SECOND);
-      var getSetSecond = makeGetSet("Seconds", false);
-      addFormatToken("S", 0, 0, function() {
-        return ~~(this.millisecond() / 100);
-      });
-      addFormatToken(0, ["SS", 2], 0, function() {
-        return ~~(this.millisecond() / 10);
-      });
-      addFormatToken(0, ["SSS", 3], 0, "millisecond");
-      addFormatToken(0, ["SSSS", 4], 0, function() {
-        return this.millisecond() * 10;
-      });
-      addFormatToken(0, ["SSSSS", 5], 0, function() {
-        return this.millisecond() * 100;
-      });
-      addFormatToken(0, ["SSSSSS", 6], 0, function() {
-        return this.millisecond() * 1e3;
-      });
-      addFormatToken(0, ["SSSSSSS", 7], 0, function() {
-        return this.millisecond() * 1e4;
-      });
-      addFormatToken(0, ["SSSSSSSS", 8], 0, function() {
-        return this.millisecond() * 1e5;
-      });
-      addFormatToken(0, ["SSSSSSSSS", 9], 0, function() {
-        return this.millisecond() * 1e6;
-      });
-      addRegexToken("S", match1to3, match1);
-      addRegexToken("SS", match1to3, match2);
-      addRegexToken("SSS", match1to3, match3);
-      var token, getSetMillisecond;
-      for (token = "SSSS"; token.length <= 9; token += "S") {
-        addRegexToken(token, matchUnsigned);
-      }
-      function parseMs(input, array) {
-        array[MILLISECOND] = toInt(("0." + input) * 1e3);
-      }
-      for (token = "S"; token.length <= 9; token += "S") {
-        addParseToken(token, parseMs);
-      }
-      getSetMillisecond = makeGetSet("Milliseconds", false);
-      addFormatToken("z", 0, 0, "zoneAbbr");
-      addFormatToken("zz", 0, 0, "zoneName");
-      function getZoneAbbr() {
-        return this._isUTC ? "UTC" : "";
-      }
-      function getZoneName() {
-        return this._isUTC ? "Coordinated Universal Time" : "";
-      }
-      var proto = Moment.prototype;
-      proto.add = add;
-      proto.calendar = calendar$1;
-      proto.clone = clone2;
-      proto.diff = diff;
-      proto.endOf = endOf;
-      proto.format = format2;
-      proto.from = from;
-      proto.fromNow = fromNow;
-      proto.to = to;
-      proto.toNow = toNow;
-      proto.get = stringGet;
-      proto.invalidAt = invalidAt;
-      proto.isAfter = isAfter;
-      proto.isBefore = isBefore;
-      proto.isBetween = isBetween;
-      proto.isSame = isSame;
-      proto.isSameOrAfter = isSameOrAfter;
-      proto.isSameOrBefore = isSameOrBefore;
-      proto.isValid = isValid$2;
-      proto.lang = lang;
-      proto.locale = locale;
-      proto.localeData = localeData;
-      proto.max = prototypeMax;
-      proto.min = prototypeMin;
-      proto.parsingFlags = parsingFlags;
-      proto.set = stringSet;
-      proto.startOf = startOf;
-      proto.subtract = subtract;
-      proto.toArray = toArray2;
-      proto.toObject = toObject;
-      proto.toDate = toDate;
-      proto.toISOString = toISOString;
-      proto.inspect = inspect;
-      if (typeof Symbol !== "undefined" && Symbol.for != null) {
-        proto[/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")] = function() {
-          return "Moment<" + this.format() + ">";
-        };
-      }
-      proto.toJSON = toJSON2;
-      proto.toString = toString;
-      proto.unix = unix;
-      proto.valueOf = valueOf;
-      proto.creationData = creationData;
-      proto.eraName = getEraName;
-      proto.eraNarrow = getEraNarrow;
-      proto.eraAbbr = getEraAbbr;
-      proto.eraYear = getEraYear;
-      proto.year = getSetYear;
-      proto.isLeapYear = getIsLeapYear;
-      proto.weekYear = getSetWeekYear;
-      proto.isoWeekYear = getSetISOWeekYear;
-      proto.quarter = proto.quarters = getSetQuarter;
-      proto.month = getSetMonth;
-      proto.daysInMonth = getDaysInMonth;
-      proto.week = proto.weeks = getSetWeek;
-      proto.isoWeek = proto.isoWeeks = getSetISOWeek;
-      proto.weeksInYear = getWeeksInYear;
-      proto.weeksInWeekYear = getWeeksInWeekYear;
-      proto.isoWeeksInYear = getISOWeeksInYear;
-      proto.isoWeeksInISOWeekYear = getISOWeeksInISOWeekYear;
-      proto.date = getSetDayOfMonth;
-      proto.day = proto.days = getSetDayOfWeek;
-      proto.weekday = getSetLocaleDayOfWeek;
-      proto.isoWeekday = getSetISODayOfWeek;
-      proto.dayOfYear = getSetDayOfYear;
-      proto.hour = proto.hours = getSetHour;
-      proto.minute = proto.minutes = getSetMinute;
-      proto.second = proto.seconds = getSetSecond;
-      proto.millisecond = proto.milliseconds = getSetMillisecond;
-      proto.utcOffset = getSetOffset;
-      proto.utc = setOffsetToUTC;
-      proto.local = setOffsetToLocal;
-      proto.parseZone = setOffsetToParsedOffset;
-      proto.hasAlignedHourOffset = hasAlignedHourOffset;
-      proto.isDST = isDaylightSavingTime;
-      proto.isLocal = isLocal;
-      proto.isUtcOffset = isUtcOffset;
-      proto.isUtc = isUtc;
-      proto.isUTC = isUtc;
-      proto.zoneAbbr = getZoneAbbr;
-      proto.zoneName = getZoneName;
-      proto.dates = deprecate3(
-        "dates accessor is deprecated. Use date instead.",
-        getSetDayOfMonth
-      );
-      proto.months = deprecate3(
-        "months accessor is deprecated. Use month instead",
-        getSetMonth
-      );
-      proto.years = deprecate3(
-        "years accessor is deprecated. Use year instead",
-        getSetYear
-      );
-      proto.zone = deprecate3(
-        "moment().zone is deprecated, use moment().utcOffset instead. http://momentjs.com/guides/#/warnings/zone/",
-        getSetZone
-      );
-      proto.isDSTShifted = deprecate3(
-        "isDSTShifted is deprecated. See http://momentjs.com/guides/#/warnings/dst-shifted/ for more information",
-        isDaylightSavingTimeShifted
-      );
-      function createUnix(input) {
-        return createLocal(input * 1e3);
-      }
-      function createInZone() {
-        return createLocal.apply(null, arguments).parseZone();
-      }
-      function preParsePostFormat(string) {
-        return string;
-      }
-      var proto$1 = Locale.prototype;
-      proto$1.calendar = calendar;
-      proto$1.longDateFormat = longDateFormat;
-      proto$1.invalidDate = invalidDate;
-      proto$1.ordinal = ordinal;
-      proto$1.preparse = preParsePostFormat;
-      proto$1.postformat = preParsePostFormat;
-      proto$1.relativeTime = relativeTime;
-      proto$1.pastFuture = pastFuture;
-      proto$1.set = set;
-      proto$1.eras = localeEras;
-      proto$1.erasParse = localeErasParse;
-      proto$1.erasConvertYear = localeErasConvertYear;
-      proto$1.erasAbbrRegex = erasAbbrRegex;
-      proto$1.erasNameRegex = erasNameRegex;
-      proto$1.erasNarrowRegex = erasNarrowRegex;
-      proto$1.months = localeMonths;
-      proto$1.monthsShort = localeMonthsShort;
-      proto$1.monthsParse = localeMonthsParse;
-      proto$1.monthsRegex = monthsRegex;
-      proto$1.monthsShortRegex = monthsShortRegex;
-      proto$1.week = localeWeek;
-      proto$1.firstDayOfYear = localeFirstDayOfYear;
-      proto$1.firstDayOfWeek = localeFirstDayOfWeek;
-      proto$1.weekdays = localeWeekdays;
-      proto$1.weekdaysMin = localeWeekdaysMin;
-      proto$1.weekdaysShort = localeWeekdaysShort;
-      proto$1.weekdaysParse = localeWeekdaysParse;
-      proto$1.weekdaysRegex = weekdaysRegex;
-      proto$1.weekdaysShortRegex = weekdaysShortRegex;
-      proto$1.weekdaysMinRegex = weekdaysMinRegex;
-      proto$1.isPM = localeIsPM;
-      proto$1.meridiem = localeMeridiem;
-      function get$1(format3, index, field, setter) {
-        var locale2 = getLocale(), utc = createUTC().set(setter, index);
-        return locale2[field](utc, format3);
-      }
-      function listMonthsImpl(format3, index, field) {
-        if (isNumber(format3)) {
-          index = format3;
-          format3 = void 0;
-        }
-        format3 = format3 || "";
-        if (index != null) {
-          return get$1(format3, index, field, "month");
-        }
-        var i2, out = [];
-        for (i2 = 0; i2 < 12; i2++) {
-          out[i2] = get$1(format3, i2, field, "month");
-        }
-        return out;
-      }
-      function listWeekdaysImpl(localeSorted, format3, index, field) {
-        if (typeof localeSorted === "boolean") {
-          if (isNumber(format3)) {
-            index = format3;
-            format3 = void 0;
-          }
-          format3 = format3 || "";
-        } else {
-          format3 = localeSorted;
-          index = format3;
-          localeSorted = false;
-          if (isNumber(format3)) {
-            index = format3;
-            format3 = void 0;
-          }
-          format3 = format3 || "";
-        }
-        var locale2 = getLocale(), shift = localeSorted ? locale2._week.dow : 0, i2, out = [];
-        if (index != null) {
-          return get$1(format3, (index + shift) % 7, field, "day");
-        }
-        for (i2 = 0; i2 < 7; i2++) {
-          out[i2] = get$1(format3, (i2 + shift) % 7, field, "day");
-        }
-        return out;
-      }
-      function listMonths(format3, index) {
-        return listMonthsImpl(format3, index, "months");
-      }
-      function listMonthsShort(format3, index) {
-        return listMonthsImpl(format3, index, "monthsShort");
-      }
-      function listWeekdays(localeSorted, format3, index) {
-        return listWeekdaysImpl(localeSorted, format3, index, "weekdays");
-      }
-      function listWeekdaysShort(localeSorted, format3, index) {
-        return listWeekdaysImpl(localeSorted, format3, index, "weekdaysShort");
-      }
-      function listWeekdaysMin(localeSorted, format3, index) {
-        return listWeekdaysImpl(localeSorted, format3, index, "weekdaysMin");
-      }
-      getSetGlobalLocale("en", {
-        eras: [
+    }
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A1:Q1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[...SHEET_COLUMNS]] }
+    });
+  } catch (err) {
+    logger.warn({ err, userId, refId: err?.refId }, "ensureSheetReady non-fatal warning");
+  }
+}
+async function listRows(userId) {
+  const ctx = await getGoogleContext(userId);
+  try {
+    const response = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A2:Q`
+    });
+    const rows = response.data.values ?? [];
+    return rows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell) => cell !== void 0 && cell !== ""));
+  } catch (err) {
+    throw classifyGoogleError(err, "listRows", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
+}
+async function appendRow(values, userId) {
+  const ctx = await getGoogleContext(userId);
+  try {
+    const existing = await ctx.sheets.spreadsheets.values.get({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A2:Q`
+    });
+    const rawRows = existing.data.values ?? [];
+    let emptyRowId = null;
+    for (let i2 = 0; i2 < rawRows.length; i2++) {
+      const r2 = rawRows[i2];
+      const isEmpty = !r2 || r2.length === 0 || r2.every((cell) => cell === void 0 || cell === null || String(cell).trim() === "");
+      if (isEmpty) {
+        emptyRowId = i2 + 2;
+        break;
+      }
+    }
+    if (emptyRowId !== null) {
+      await updateRow(emptyRowId, values, userId);
+      return emptyRowId;
+    }
+  } catch (err) {
+    logger.warn({ err, userId }, "Failed to check empty rows before append, falling back to append API");
+  }
+  try {
+    const response = await ctx.sheets.spreadsheets.values.append({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A:Q`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [values] }
+    });
+    const updatedRange = response.data.updates?.updatedRange;
+    const match = updatedRange?.match(/![A-Z]+(\d+):/);
+    if (match) {
+      return Number(match[1]);
+    }
+    logger.warn({ updatedRange, userId }, "Could not parse appended row id from Sheets response");
+    const rows = await listRows(userId);
+    const last = rows[rows.length - 1];
+    if (!last) {
+      throw new GoogleSheetsError("Failed to determine id of newly created session row.", 502, "\u062A\u0639\u0630\u0631 \u062A\u062D\u062F\u064A\u062F \u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0633\u0637\u0631 \u0627\u0644\u0645\u0636\u0627\u0641.");
+    }
+    return last.id;
+  } catch (err) {
+    throw classifyGoogleError(err, "appendRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
+}
+async function updateRow(id, values, userId) {
+  const ctx = await getGoogleContext(userId);
+  try {
+    await ctx.sheets.spreadsheets.values.update({
+      spreadsheetId: ctx.spreadsheetId,
+      range: `'${ctx.sheetName}'!A${id}:Q${id}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [values] }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
+}
+async function updateRowCells(id, updates, userId) {
+  const ctx = await getGoogleContext(userId);
+  const data = Object.entries(updates).map(([colIndex, value]) => {
+    const column = String.fromCharCode("A".charCodeAt(0) + Number(colIndex));
+    return {
+      range: `'${ctx.sheetName}'!${column}${id}:${column}${id}`,
+      values: [[value]]
+    };
+  });
+  if (data.length === 0) {
+    return;
+  }
+  try {
+    await ctx.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: { valueInputOption: "RAW", data }
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "updateRowCells", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
+}
+async function deleteRow(id, userId) {
+  const ctx = await getGoogleContext(userId);
+  const sheetId = await getSheetId(ctx);
+  try {
+    await ctx.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ctx.spreadsheetId,
+      requestBody: {
+        requests: [
           {
-            since: "0001-01-01",
-            until: Infinity,
-            offset: 1,
-            name: "Anno Domini",
-            narrow: "AD",
-            abbr: "AD"
-          },
-          {
-            since: "0000-12-31",
-            until: -Infinity,
-            offset: 1,
-            name: "Before Christ",
-            narrow: "BC",
-            abbr: "BC"
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: id - 1,
+                endIndex: id
+              }
+            }
           }
-        ],
-        dayOfMonthOrdinalParse: /\d{1,2}(th|st|nd|rd)/,
-        ordinal: function(number) {
-          var b = number % 10, output = toInt(number % 100 / 10) === 1 ? "th" : b === 1 ? "st" : b === 2 ? "nd" : b === 3 ? "rd" : "th";
-          return number + output;
-        }
-      });
-      hooks.lang = deprecate3(
-        "moment.lang is deprecated. Use moment.locale instead.",
-        getSetGlobalLocale
-      );
-      hooks.langData = deprecate3(
-        "moment.langData is deprecated. Use moment.localeData instead.",
-        getLocale
-      );
-      var mathAbs = Math.abs;
-      function abs() {
-        var data = this._data;
-        this._milliseconds = mathAbs(this._milliseconds);
-        this._days = mathAbs(this._days);
-        this._months = mathAbs(this._months);
-        data.milliseconds = mathAbs(data.milliseconds);
-        data.seconds = mathAbs(data.seconds);
-        data.minutes = mathAbs(data.minutes);
-        data.hours = mathAbs(data.hours);
-        data.months = mathAbs(data.months);
-        data.years = mathAbs(data.years);
-        return this;
+        ]
       }
-      function addSubtract$1(duration, input, value, direction) {
-        var other = createDuration(input, value);
-        duration._milliseconds += direction * other._milliseconds;
-        duration._days += direction * other._days;
-        duration._months += direction * other._months;
-        return duration._bubble();
+    });
+  } catch (err) {
+    throw classifyGoogleError(err, "deleteRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
+  }
+}
+var import_googleapis, SHEET_COLUMNS, GoogleSheetsError, GoogleSheetsConfigError, GoogleBindingMissingError, GoogleSettingsStoreError, GoogleSheetsAuthError, GoogleSheetsPermissionError, GoogleSheetsNotFoundError, GoogleSheetsRangeError, GoogleSheetsNetworkError, userClientsMap;
+var init_googleSheets_service = __esm({
+  "src/services/googleSheets.service.ts"() {
+    "use strict";
+    import_googleapis = __toESM(require_src11(), 1);
+    init_env();
+    init_logger();
+    init_supabase_service();
+    SHEET_COLUMNS = [
+      "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629",
+      "\u0627\u0644\u0645\u062F\u0639\u064A",
+      "\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647",
+      "\u0627\u0644\u0645\u062D\u0643\u0645\u0629",
+      "\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629",
+      "\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0642\u0636\u064A\u0629",
+      "\u0646\u0648\u0639 \u0627\u0644\u062C\u0644\u0633\u0629",
+      "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062C\u0644\u0633\u0629 \u0647\u062C\u0631\u064A",
+      "\u064A\u0648\u0645 \u0627\u0644\u062C\u0644\u0633\u0629",
+      "\u0648\u0642\u062A \u0627\u0644\u062C\u0644\u0633\u0629",
+      "\u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629",
+      "\u0645\u0644\u0627\u062D\u0638\u0627\u062A",
+      "\u062D\u0627\u0644\u0629 \u0627\u0644\u062C\u0644\u0633\u0629",
+      "\u062A\u0630\u0643\u064A\u0631 24 \u0633\u0627\u0639\u0629",
+      "\u062A\u0630\u0643\u064A\u0631 6 \u0633\u0627\u0639\u0627\u062A",
+      "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621",
+      "\u0627\u0644\u062A\u0642\u0631\u064A\u0631"
+    ];
+    GoogleSheetsError = class extends Error {
+      refId;
+      statusCode;
+      userMessage;
+      constructor(message, statusCode, userMessage, refId) {
+        super(message);
+        this.name = "GoogleSheetsError";
+        this.refId = refId || `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        this.statusCode = statusCode;
+        this.userMessage = userMessage;
       }
-      function add$1(input, value) {
-        return addSubtract$1(this, input, value, 1);
+    };
+    GoogleSheetsConfigError = class extends GoogleSheetsError {
+      constructor(message, refId) {
+        super(
+          message,
+          503,
+          "\u0625\u0639\u062F\u0627\u062F\u0627\u062A Google Sheets \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u0632\u0648\u064A\u062F \u0645\u0644\u0641 Service Account \u0648\u0645\u0639\u0631\u0641 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.",
+          refId
+        );
+        this.name = "GoogleSheetsConfigError";
       }
-      function subtract$1(input, value) {
-        return addSubtract$1(this, input, value, -1);
+    };
+    GoogleBindingMissingError = class extends GoogleSheetsError {
+      constructor(message = "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641", refId) {
+        super(
+          message,
+          409,
+          "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641",
+          refId
+        );
+        this.name = "GoogleBindingMissingError";
       }
-      function absCeil(number) {
-        if (number < 0) {
-          return Math.floor(number);
-        } else {
-          return Math.ceil(number);
-        }
+    };
+    GoogleSettingsStoreError = class extends GoogleSheetsError {
+      constructor(message = "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.", refId) {
+        super(
+          message,
+          503,
+          "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",
+          refId
+        );
+        this.name = "GoogleSettingsStoreError";
       }
-      function bubble() {
-        var milliseconds2 = this._milliseconds, days2 = this._days, months2 = this._months, data = this._data, seconds2, minutes2, hours2, years2, monthsFromDays;
-        if (!(milliseconds2 >= 0 && days2 >= 0 && months2 >= 0 || milliseconds2 <= 0 && days2 <= 0 && months2 <= 0)) {
-          milliseconds2 += absCeil(monthsToDays(months2) + days2) * 864e5;
-          days2 = 0;
-          months2 = 0;
-        }
-        data.milliseconds = milliseconds2 % 1e3;
-        seconds2 = absFloor(milliseconds2 / 1e3);
-        data.seconds = seconds2 % 60;
-        minutes2 = absFloor(seconds2 / 60);
-        data.minutes = minutes2 % 60;
-        hours2 = absFloor(minutes2 / 60);
-        data.hours = hours2 % 24;
-        days2 += absFloor(hours2 / 24);
-        monthsFromDays = absFloor(daysToMonths(days2));
-        months2 += monthsFromDays;
-        days2 -= absCeil(monthsToDays(monthsFromDays));
-        years2 = absFloor(months2 / 12);
-        months2 %= 12;
-        data.days = days2;
-        data.months = months2;
-        data.years = years2;
-        return this;
+    };
+    GoogleSheetsAuthError = class extends GoogleSheetsError {
+      constructor(message, refId) {
+        super(
+          message,
+          503,
+          "\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0648\u064A\u0629 \u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0644\u062F\u0649 Google (Authentication Failed).",
+          refId
+        );
+        this.name = "GoogleSheetsAuthError";
       }
-      function daysToMonths(days2) {
-        return days2 * 4800 / 146097;
+    };
+    GoogleSheetsPermissionError = class extends GoogleSheetsError {
+      constructor(message, refId) {
+        super(
+          message,
+          503,
+          "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: \u064A\u0631\u062C\u0649 \u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u062C\u062F\u0648\u0644 \u0645\u0639 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0648\u0645\u0646\u062D\u0647 \u0635\u0644\u0627\u062D\u064A\u0629 \u0645\u062D\u0631\u0631 (Editor).",
+          refId
+        );
+        this.name = "GoogleSheetsPermissionError";
       }
-      function monthsToDays(months2) {
-        return months2 * 146097 / 4800;
+    };
+    GoogleSheetsNotFoundError = class extends GoogleSheetsError {
+      constructor(message, refId) {
+        super(
+          message,
+          502,
+          "\u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u062A\u0645 \u062D\u0630\u0641\u0647 (Spreadsheet Not Found).",
+          refId
+        );
+        this.name = "GoogleSheetsNotFoundError";
       }
-      function as(units) {
-        if (!this.isValid()) {
-          return NaN;
-        }
-        var days2, months2, milliseconds2 = this._milliseconds;
-        units = normalizeUnits(units);
-        if (units === "month" || units === "quarter" || units === "year") {
-          days2 = this._days + milliseconds2 / 864e5;
-          months2 = this._months + daysToMonths(days2);
-          switch (units) {
-            case "month":
-              return months2;
-            case "quarter":
-              return months2 / 3;
-            case "year":
-              return months2 / 12;
-          }
-        } else {
-          days2 = this._days + Math.round(monthsToDays(this._months));
-          switch (units) {
-            case "week":
-              return days2 / 7 + milliseconds2 / 6048e5;
-            case "day":
-              return days2 + milliseconds2 / 864e5;
-            case "hour":
-              return days2 * 24 + milliseconds2 / 36e5;
-            case "minute":
-              return days2 * 1440 + milliseconds2 / 6e4;
-            case "second":
-              return days2 * 86400 + milliseconds2 / 1e3;
-            // Math.floor prevents floating point math errors here
-            case "millisecond":
-              return Math.floor(days2 * 864e5) + milliseconds2;
-            default:
-              throw new Error("Unknown unit " + units);
-          }
-        }
+    };
+    GoogleSheetsRangeError = class extends GoogleSheetsError {
+      constructor(message, refId) {
+        super(
+          message,
+          502,
+          "\u062A\u0639\u0630\u0631 \u0642\u0631\u0627\u0621\u0629 \u0648\u0631\u0642\u0629 \u0627\u0644\u0639\u0645\u0644 \u0623\u0648 \u0627\u0644\u0646\u0637\u0627\u0642 \u0627\u0644\u0645\u062D\u062F\u062F (Worksheet Range Error).",
+          refId
+        );
+        this.name = "GoogleSheetsRangeError";
       }
-      function makeAs(alias) {
-        return function() {
-          return this.as(alias);
-        };
+    };
+    GoogleSheetsNetworkError = class extends GoogleSheetsError {
+      constructor(message, refId) {
+        super(
+          message,
+          504,
+          "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0648\u0627\u062F\u0645 Google \u0628\u0633\u0628\u0628 \u0627\u0646\u0642\u0637\u0627\u0639 \u0627\u0644\u0634\u0628\u0643\u0629 \u0623\u0648 \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0645\u0647\u0644\u0629 (Network Timeout).",
+          refId
+        );
+        this.name = "GoogleSheetsNetworkError";
       }
-      var asMilliseconds = makeAs("ms"), asSeconds = makeAs("s"), asMinutes = makeAs("m"), asHours = makeAs("h"), asDays = makeAs("d"), asWeeks = makeAs("w"), asMonths = makeAs("M"), asQuarters = makeAs("Q"), asYears = makeAs("y"), valueOf$1 = asMilliseconds;
-      function clone$1() {
-        return createDuration(this);
-      }
-      function get$2(units) {
-        units = normalizeUnits(units);
-        return this.isValid() ? this[units + "s"]() : NaN;
-      }
-      function makeGetter(name) {
-        return function() {
-          return this.isValid() ? this._data[name] : NaN;
-        };
-      }
-      var milliseconds = makeGetter("milliseconds"), seconds = makeGetter("seconds"), minutes = makeGetter("minutes"), hours = makeGetter("hours"), days = makeGetter("days"), months = makeGetter("months"), years = makeGetter("years");
-      function weeks() {
-        return absFloor(this.days() / 7);
-      }
-      var round = Math.round, thresholds = {
-        ss: 44,
-        // a few seconds to seconds
-        s: 45,
-        // seconds to minute
-        m: 45,
-        // minutes to hour
-        h: 22,
-        // hours to day
-        d: 26,
-        // days to month/week
-        w: null,
-        // weeks to month
-        M: 11
-        // months to year
-      };
-      function substituteTimeAgo(string, number, withoutSuffix, isFuture, locale2) {
-        return locale2.relativeTime(number || 1, !!withoutSuffix, string, isFuture);
-      }
-      function relativeTime$1(posNegDuration, withoutSuffix, thresholds2, locale2) {
-        var duration = createDuration(posNegDuration).abs(), seconds2 = round(duration.as("s")), minutes2 = round(duration.as("m")), hours2 = round(duration.as("h")), days2 = round(duration.as("d")), months2 = round(duration.as("M")), weeks2 = round(duration.as("w")), years2 = round(duration.as("y")), a = seconds2 <= thresholds2.ss && ["s", seconds2] || seconds2 < thresholds2.s && ["ss", seconds2] || minutes2 <= 1 && ["m"] || minutes2 < thresholds2.m && ["mm", minutes2] || hours2 <= 1 && ["h"] || hours2 < thresholds2.h && ["hh", hours2] || days2 <= 1 && ["d"] || days2 < thresholds2.d && ["dd", days2];
-        if (thresholds2.w != null) {
-          a = a || weeks2 <= 1 && ["w"] || weeks2 < thresholds2.w && ["ww", weeks2];
-        }
-        a = a || months2 <= 1 && ["M"] || months2 < thresholds2.M && ["MM", months2] || years2 <= 1 && ["y"] || ["yy", years2];
-        a[2] = withoutSuffix;
-        a[3] = +posNegDuration > 0;
-        a[4] = locale2;
-        return substituteTimeAgo.apply(null, a);
-      }
-      function getSetRelativeTimeRounding(roundingFunction) {
-        if (roundingFunction === void 0) {
-          return round;
-        }
-        if (typeof roundingFunction === "function") {
-          round = roundingFunction;
-          return true;
-        }
-        return false;
-      }
-      function getSetRelativeTimeThreshold(threshold, limit) {
-        if (thresholds[threshold] === void 0) {
-          return false;
-        }
-        if (limit === void 0) {
-          return thresholds[threshold];
-        }
-        thresholds[threshold] = limit;
-        if (threshold === "s") {
-          thresholds.ss = limit - 1;
-        }
-        return true;
-      }
-      function humanize(argWithSuffix, argThresholds) {
-        if (!this.isValid()) {
-          return this.localeData().invalidDate();
-        }
-        var withSuffix = false, th = thresholds, locale2, output;
-        if (typeof argWithSuffix === "object") {
-          argThresholds = argWithSuffix;
-          argWithSuffix = false;
-        }
-        if (typeof argWithSuffix === "boolean") {
-          withSuffix = argWithSuffix;
-        }
-        if (typeof argThresholds === "object") {
-          th = Object.assign({}, thresholds, argThresholds);
-          if (argThresholds.s != null && argThresholds.ss == null) {
-            th.ss = argThresholds.s - 1;
-          }
-        }
-        locale2 = this.localeData();
-        output = relativeTime$1(this, !withSuffix, th, locale2);
-        if (withSuffix) {
-          output = locale2.pastFuture(+this, output);
-        }
-        return locale2.postformat(output);
-      }
-      var abs$1 = Math.abs;
-      function sign(x2) {
-        return (x2 > 0) - (x2 < 0) || +x2;
-      }
-      function toISOString$1() {
-        if (!this.isValid()) {
-          return this.localeData().invalidDate();
-        }
-        var seconds2 = abs$1(this._milliseconds) / 1e3, days2 = abs$1(this._days), months2 = abs$1(this._months), minutes2, hours2, years2, s2, total = this.asSeconds(), totalSign, ymSign, daysSign, hmsSign;
-        if (!total) {
-          return "P0D";
-        }
-        minutes2 = absFloor(seconds2 / 60);
-        hours2 = absFloor(minutes2 / 60);
-        seconds2 %= 60;
-        minutes2 %= 60;
-        years2 = absFloor(months2 / 12);
-        months2 %= 12;
-        s2 = seconds2 ? seconds2.toFixed(3).replace(/\.?0+$/, "") : "";
-        totalSign = total < 0 ? "-" : "";
-        ymSign = sign(this._months) !== sign(total) ? "-" : "";
-        daysSign = sign(this._days) !== sign(total) ? "-" : "";
-        hmsSign = sign(this._milliseconds) !== sign(total) ? "-" : "";
-        return totalSign + "P" + (years2 ? ymSign + years2 + "Y" : "") + (months2 ? ymSign + months2 + "M" : "") + (days2 ? daysSign + days2 + "D" : "") + (hours2 || minutes2 || seconds2 ? "T" : "") + (hours2 ? hmsSign + hours2 + "H" : "") + (minutes2 ? hmsSign + minutes2 + "M" : "") + (seconds2 ? hmsSign + s2 + "S" : "");
-      }
-      var proto$2 = Duration.prototype;
-      proto$2.isValid = isValid$1;
-      proto$2.abs = abs;
-      proto$2.add = add$1;
-      proto$2.subtract = subtract$1;
-      proto$2.as = as;
-      proto$2.asMilliseconds = asMilliseconds;
-      proto$2.asSeconds = asSeconds;
-      proto$2.asMinutes = asMinutes;
-      proto$2.asHours = asHours;
-      proto$2.asDays = asDays;
-      proto$2.asWeeks = asWeeks;
-      proto$2.asMonths = asMonths;
-      proto$2.asQuarters = asQuarters;
-      proto$2.asYears = asYears;
-      proto$2.valueOf = valueOf$1;
-      proto$2._bubble = bubble;
-      proto$2.clone = clone$1;
-      proto$2.get = get$2;
-      proto$2.milliseconds = milliseconds;
-      proto$2.seconds = seconds;
-      proto$2.minutes = minutes;
-      proto$2.hours = hours;
-      proto$2.days = days;
-      proto$2.weeks = weeks;
-      proto$2.months = months;
-      proto$2.years = years;
-      proto$2.humanize = humanize;
-      proto$2.toISOString = toISOString$1;
-      proto$2.toString = toISOString$1;
-      proto$2.toJSON = toISOString$1;
-      proto$2.locale = locale;
-      proto$2.localeData = localeData;
-      proto$2.toIsoString = deprecate3(
-        "toIsoString() is deprecated. Please use toISOString() instead (notice the capitals)",
-        toISOString$1
-      );
-      proto$2.lang = lang;
-      addFormatToken("X", 0, 0, "unix");
-      addFormatToken("x", 0, 0, "valueOf");
-      addRegexToken("x", matchSigned);
-      addRegexToken("X", matchTimestamp);
-      addParseToken("X", function(input, array, config) {
-        config._d = new Date(parseFloat(input) * 1e3);
-      });
-      addParseToken("x", function(input, array, config) {
-        config._d = new Date(toInt(input));
-      });
-      hooks.version = "2.30.1";
-      setHookCallback(createLocal);
-      hooks.fn = proto;
-      hooks.min = min;
-      hooks.max = max;
-      hooks.now = now;
-      hooks.utc = createUTC;
-      hooks.unix = createUnix;
-      hooks.months = listMonths;
-      hooks.isDate = isDate;
-      hooks.locale = getSetGlobalLocale;
-      hooks.invalid = createInvalid;
-      hooks.duration = createDuration;
-      hooks.isMoment = isMoment;
-      hooks.weekdays = listWeekdays;
-      hooks.parseZone = createInZone;
-      hooks.localeData = getLocale;
-      hooks.isDuration = isDuration;
-      hooks.monthsShort = listMonthsShort;
-      hooks.weekdaysMin = listWeekdaysMin;
-      hooks.defineLocale = defineLocale;
-      hooks.updateLocale = updateLocale;
-      hooks.locales = listLocales;
-      hooks.weekdaysShort = listWeekdaysShort;
-      hooks.normalizeUnits = normalizeUnits;
-      hooks.relativeTimeRounding = getSetRelativeTimeRounding;
-      hooks.relativeTimeThreshold = getSetRelativeTimeThreshold;
-      hooks.calendarFormat = getCalendarFormat;
-      hooks.prototype = proto;
-      hooks.HTML5_FMT = {
-        DATETIME_LOCAL: "YYYY-MM-DDTHH:mm",
-        // <input type="datetime-local" />
-        DATETIME_LOCAL_SECONDS: "YYYY-MM-DDTHH:mm:ss",
-        // <input type="datetime-local" step="1" />
-        DATETIME_LOCAL_MS: "YYYY-MM-DDTHH:mm:ss.SSS",
-        // <input type="datetime-local" step="0.001" />
-        DATE: "YYYY-MM-DD",
-        // <input type="date" />
-        TIME: "HH:mm",
-        // <input type="time" />
-        TIME_SECONDS: "HH:mm:ss",
-        // <input type="time" step="1" />
-        TIME_MS: "HH:mm:ss.SSS",
-        // <input type="time" step="0.001" />
-        WEEK: "GGGG-[W]WW",
-        // <input type="week" />
-        MONTH: "YYYY-MM"
-        // <input type="month" />
-      };
-      return hooks;
-    }));
+    };
+    userClientsMap = /* @__PURE__ */ new Map();
   }
 });
 
-// ../../node_modules/.pnpm/moment-hijri@3.0.0/node_modules/moment-hijri/moment-hijri.js
-var require_moment_hijri = __commonJS({
-  "../../node_modules/.pnpm/moment-hijri@3.0.0/node_modules/moment-hijri/moment-hijri.js"(exports2, module2) {
-    "use strict";
-    (function(root, factory) {
-      if (typeof define === "function" && define.amd) {
-        define(["moment"], function(moment3) {
-          root.moment = factory(moment3);
-          return root.moment;
-        });
-      } else if (typeof exports2 === "object") {
-        module2.exports = factory(require_moment());
+// src/services/postgres.service.ts
+var postgres_service_exports = {};
+__export(postgres_service_exports, {
+  createJudgment: () => createJudgment,
+  createPoa: () => createPoa,
+  createSession: () => createSession,
+  createTask: () => createTask,
+  deleteJudgment: () => deleteJudgment,
+  deletePoa: () => deletePoa,
+  deleteSession: () => deleteSession,
+  deleteTask: () => deleteTask,
+  exportOfficeDataToGoogleSheets: () => exportOfficeDataToGoogleSheets,
+  getJudgmentById: () => getJudgmentById,
+  getPoaById: () => getPoaById,
+  getSessionById: () => getSessionById,
+  getSessionReport: () => getSessionReport,
+  getTaskById: () => getTaskById,
+  listJudgments: () => listJudgments,
+  listPoa: () => listPoa,
+  listSessions: () => listSessions,
+  listTasks: () => listTasks,
+  resetInMemoryStore: () => resetInMemoryStore,
+  saveSessionReport: () => saveSessionReport,
+  updateJudgment: () => updateJudgment,
+  updatePoa: () => updatePoa,
+  updateSession: () => updateSession,
+  updateTask: () => updateTask
+});
+function nextId() {
+  return ++_nextId;
+}
+function resetInMemoryStore() {
+  memorySessions.clear();
+  memoryTasks.clear();
+  memoryPoa.clear();
+  memoryJudgments.clear();
+  memoryReports.clear();
+}
+function calcDaysFromHijri(hijriDateStr) {
+  if (!hijriDateStr?.trim()) return 0;
+  try {
+    const parts = hijriDateStr.trim().split(/[\/\.-]/);
+    if (parts.length === 3) {
+      let day, month, year;
+      if (parts[0].length === 4) {
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+        day = parseInt(parts[2], 10);
       } else {
-        root.moment = factory(root.moment);
+        day = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+        year = parseInt(parts[2], 10);
       }
-    })(exports2, function(moment3) {
-      if (moment3 == null) {
-        throw new Error("Cannot find moment");
-      }
-      var ummalqura = {
-        ummalquraData: (function() {
-          let ummalquraDatByMonth = [
-            /* 1356= */
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1357= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1358= */
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            /* 1359= */
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1360= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1361= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1362= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1363= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1364= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            28,
-            30,
-            30,
-            30,
-            29,
-            /* 1365= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1366= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1367= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1368= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1369= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1370= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1371= */
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            /* 1372= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1373= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1374= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            30,
-            /* 1375= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            /* 1376= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1377= */
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            /* 1378= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1379= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1380= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1381= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1382= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1383= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1384= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1385= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            /* 1386= */
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1387= */
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1388= */
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1389= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1390= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            /* 1391= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1392= */
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1393= */
-            30,
-            29,
-            30,
-            29,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1394= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            /* 1395= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1396= */
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1397= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1398= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1399= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1400= */
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1401= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1402= */
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1403= */
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1404= */
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1405= */
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1406= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1407= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1408= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1409= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1410= */
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1411= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            /* 1412= */
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            /* 1413= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            /* 1414= */
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            /* 1415= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1416= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1417= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            /* 1418= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1419= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1420= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            30,
-            29,
-            30,
-            /* 1421= */
-            29,
-            29,
-            30,
-            29,
-            29,
-            29,
-            30,
-            30,
-            30,
-            30,
-            29,
-            30,
-            /* 1422= */
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            /* 1423= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1424= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1425= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            /* 1426= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1427= */
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1428= */
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            30,
-            /* 1429= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            /* 1430= */
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1431= */
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1432= */
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            /* 1433= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1434= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            /* 1435= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1436= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1437= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1438= */
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1439= */
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1440= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            /* 1441= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            /* 1442= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            /* 1443= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1444= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1445= */
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1446= */
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            /* 1447= */
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1448= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1449= */
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1450= */
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1451= */
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1452= */
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1453= */
-            29,
-            30,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1454= */
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1455= */
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            /* 1456= */
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            /* 1457= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            /* 1458= */
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1459= */
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            /* 1460= */
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            /* 1461= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1462= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1463= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1464= */
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            /* 1465= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            30,
-            /* 1466= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1467= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1468= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1469= */
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            /* 1470= */
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            /* 1471= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1472= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1473= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1474= */
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1475= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1476= */
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            /* 1477= */
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            29,
-            /* 1478= */
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1479= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1480= */
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1481= */
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1482= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1483= */
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            /* 1484= */
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1485= */
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30,
-            /* 1486= */
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1487= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1488= */
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1489= */
-            29,
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            /* 1490= */
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            /* 1491= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            /* 1492= */
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1493= */
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            30,
-            29,
-            30,
-            /* 1494= */
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1495= */
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1496= */
-            30,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            /* 1497= */
-            29,
-            30,
-            30,
-            29,
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            29,
-            /* 1498= */
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            /* 1499= */
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            29,
-            30,
-            30,
-            29,
-            /* 1500= */
-            30,
-            30,
-            29,
-            29,
-            30,
-            29,
-            29,
-            30,
-            29,
-            30,
-            30,
-            30
-          ];
-          let sum = 28607;
-          const dat = [sum];
-          ummalquraDatByMonth.forEach((value) => {
-            sum += value;
-            dat.push(sum);
-          });
-          return dat;
-        })()
-      };
-      var formattingTokens = /(\[[^\[]*\])|(\\)?i(Mo|MM?M?M?|Do|DDDo|DD?D?D?|w[o|w]?|YYYYY|YYYY|YY|gg(ggg?)?)|(\\)?(Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|YYYYY|YYYY|YY|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|mm?|ss?|SS?S?|X|zz?|ZZ?|.)/g, localFormattingTokens = /(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g, parseTokenOneOrTwoDigits = /\d\d?/, parseTokenOneToThreeDigits = /\d{1,3}/, parseTokenThreeDigits = /\d{3}/, parseTokenFourDigits = /\d{1,4}/, parseTokenSixDigits = /[+\-]?\d{1,6}/, parseTokenWord = /[0-9]*['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+(\.?)|[\u0600-\u06FF\/]+(\s*?[\u0600-\u06FF]+){1,2}/i, parseTokenTimezone = /Z|[\+\-]\d\d:?\d\d/i, parseTokenT = /T/i, parseTokenTimestampMs = /[\+\-]?\d+(\.\d{1,3})?/, unitAliases = {
-        hd: "idate",
-        hm: "imonth",
-        hy: "iyear"
-      }, formatFunctions = {}, ordinalizeTokens = "DDD w M D".split(" "), paddedTokens = "M D w".split(" "), formatTokenFunctions = {
-        iM: function() {
-          return this.iMonth() + 1;
-        },
-        iMMM: function(format2) {
-          return this.localeData().iMonthsShort(this, format2);
-        },
-        iMMMM: function(format2) {
-          return this.localeData().iMonths(this, format2);
-        },
-        iD: function() {
-          return this.iDate();
-        },
-        iDDD: function() {
-          return this.iDayOfYear();
-        },
-        iw: function() {
-          return this.iWeek();
-        },
-        iYY: function() {
-          return leftZeroFill(this.iYear() % 100, 2);
-        },
-        iYYYY: function() {
-          return leftZeroFill(this.iYear(), 4);
-        },
-        iYYYYY: function() {
-          return leftZeroFill(this.iYear(), 5);
-        },
-        igg: function() {
-          return leftZeroFill(this.iWeekYear() % 100, 2);
-        },
-        igggg: function() {
-          return this.iWeekYear();
-        },
-        iggggg: function() {
-          return leftZeroFill(this.iWeekYear(), 5);
-        }
-      }, i2;
-      function padToken(func, count) {
-        return function(a) {
-          return leftZeroFill(func.call(this, a), count);
-        };
-      }
-      function ordinalizeToken(func, period) {
-        return function(a) {
-          return this.localeData().ordinal(func.call(this, a), period);
-        };
-      }
-      while (ordinalizeTokens.length) {
-        i2 = ordinalizeTokens.pop();
-        formatTokenFunctions["i" + i2 + "o"] = ordinalizeToken(formatTokenFunctions["i" + i2], i2);
-      }
-      while (paddedTokens.length) {
-        i2 = paddedTokens.pop();
-        formatTokenFunctions["i" + i2 + i2] = padToken(formatTokenFunctions["i" + i2], 2);
-      }
-      formatTokenFunctions.iDDDD = padToken(formatTokenFunctions.iDDD, 3);
-      function extend(a, b) {
-        var key;
-        for (key in b)
-          if (b.hasOwnProperty(key))
-            a[key] = b[key];
-        return a;
-      }
-      function leftZeroFill(number, targetLength) {
-        var output = number + "";
-        while (output.length < targetLength)
-          output = "0" + output;
-        return output;
-      }
-      function isArray(input) {
-        return Object.prototype.toString.call(input) === "[object Array]";
-      }
-      function normalizeUnits(units) {
-        return units ? unitAliases[units] || units.toLowerCase().replace(/(.)s$/, "$1") : units;
-      }
-      function setDate(moment4, year, month, date) {
-        var utc = moment4._isUTC ? "UTC" : "";
-        moment4._d["set" + utc + "FullYear"](year);
-        moment4._d["set" + utc + "Month"](month);
-        moment4._d["set" + utc + "Date"](date);
-      }
-      function objectCreate(parent) {
-        function F2() {
-        }
-        F2.prototype = parent;
-        return new F2();
-      }
-      function getPrototypeOf(object) {
-        if (Object.getPrototypeOf)
-          return Object.getPrototypeOf(object);
-        else if ("".__proto__)
-          return object.__proto__;
-        else
-          return object.constructor.prototype;
-      }
-      extend(getPrototypeOf(moment3.localeData()), {
-        _iMonths: [
-          "Muharram",
-          "Safar",
-          "Rabi' al-Awwal",
-          "Rabi' al-Thani",
-          "Jumada al-Ula",
-          "Jumada al-Alkhirah",
-          "Rajab",
-          "Sha\u2019ban",
-          "Ramadhan",
-          "Shawwal",
-          "Thul-Qi\u2019dah",
-          "Thul-Hijjah"
-        ],
-        iMonths: function(m2) {
-          return this._iMonths[m2.iMonth()];
-        },
-        _iMonthsShort: [
-          "Muh",
-          "Saf",
-          "Rab-I",
-          "Rab-II",
-          "Jum-I",
-          "Jum-II",
-          "Raj",
-          "Sha",
-          "Ram",
-          "Shw",
-          "Dhu-Q",
-          "Dhu-H"
-        ],
-        iMonthsShort: function(m2) {
-          return this._iMonthsShort[m2.iMonth()];
-        },
-        iMonthsParse: function(monthName) {
-          var i3, mom, regex;
-          if (!this._iMonthsParse)
-            this._iMonthsParse = [];
-          for (i3 = 0; i3 < 12; i3 += 1) {
-            if (!this._iMonthsParse[i3]) {
-              mom = hMoment([2e3, (2 + i3) % 12, 25]);
-              regex = "^" + this.iMonths(mom, "") + "$|^" + this.iMonthsShort(mom, "") + "$";
-              this._iMonthsParse[i3] = new RegExp(regex.replace(".", ""), "i");
-            }
-            if (this._iMonthsParse[i3].test(monthName))
-              return i3;
-          }
-        }
-      });
-      var iMonthNames = {
-        iMonths: "\u0645\u062D\u0631\u0645_\u0635\u0641\u0631_\u0631\u0628\u064A\u0639 \u0627\u0644\u0623\u0648\u0644_\u0631\u0628\u064A\u0639 \u0627\u0644\u062B\u0627\u0646\u064A_\u062C\u0645\u0627\u062F\u0649 \u0627\u0644\u0623\u0648\u0644\u0649_\u062C\u0645\u0627\u062F\u0649 \u0627\u0644\u0622\u062E\u0631\u0629_\u0631\u062C\u0628_\u0634\u0639\u0628\u0627\u0646_\u0631\u0645\u0636\u0627\u0646_\u0634\u0648\u0627\u0644_\u0630\u0648 \u0627\u0644\u0642\u0639\u062F\u0629_\u0630\u0648 \u0627\u0644\u062D\u062C\u0629".split("_"),
-        iMonthsShort: "\u0645\u062D\u0631\u0645_\u0635\u0641\u0631_\u0631\u0628\u064A\u0639 \u0661_\u0631\u0628\u064A\u0639 \u0662_\u062C\u0645\u0627\u062F\u0649 \u0661_\u062C\u0645\u0627\u062F\u0649 \u0662_\u0631\u062C\u0628_\u0634\u0639\u0628\u0627\u0646_\u0631\u0645\u0636\u0627\u0646_\u0634\u0648\u0627\u0644_\u0630\u0648 \u0627\u0644\u0642\u0639\u062F\u0629_\u0630\u0648 \u0627\u0644\u062D\u062C\u0629".split("_")
-      };
-      if (typeof moment3.updateLocale === "function") {
-        moment3.updateLocale("ar-sa", iMonthNames);
-      } else {
-        var oldLocale = moment3.locale();
-        moment3.defineLocale("ar-sa", iMonthNames);
-        moment3.locale(oldLocale);
-      }
-      function makeFormatFunction(format2) {
-        var array = format2.match(formattingTokens), length = array.length, i3;
-        for (i3 = 0; i3 < length; i3 += 1)
-          if (formatTokenFunctions[array[i3]])
-            array[i3] = formatTokenFunctions[array[i3]];
-        return function(mom) {
-          var output = "";
-          for (i3 = 0; i3 < length; i3 += 1)
-            output += array[i3] instanceof Function ? "[" + array[i3].call(mom, format2) + "]" : array[i3];
-          return output;
-        };
-      }
-      function getParseRegexForToken(token, config) {
-        switch (token) {
-          case "iDDDD":
-            return parseTokenThreeDigits;
-          case "iYYYY":
-            return parseTokenFourDigits;
-          case "iYYYYY":
-            return parseTokenSixDigits;
-          case "iDDD":
-            return parseTokenOneToThreeDigits;
-          case "iMMM":
-          case "iMMMM":
-            return parseTokenWord;
-          case "iMM":
-          case "iDD":
-          case "iYY":
-          case "iM":
-          case "iD":
-            return parseTokenOneOrTwoDigits;
-          case "DDDD":
-            return parseTokenThreeDigits;
-          case "YYYY":
-            return parseTokenFourDigits;
-          case "YYYYY":
-            return parseTokenSixDigits;
-          case "S":
-          case "SS":
-          case "SSS":
-          case "DDD":
-            return parseTokenOneToThreeDigits;
-          case "MMM":
-          case "MMMM":
-          case "dd":
-          case "ddd":
-          case "dddd":
-            return parseTokenWord;
-          case "a":
-          case "A":
-            return moment3.localeData(config._l)._meridiemParse;
-          case "X":
-            return parseTokenTimestampMs;
-          case "Z":
-          case "ZZ":
-            return parseTokenTimezone;
-          case "T":
-            return parseTokenT;
-          case "MM":
-          case "DD":
-          case "YY":
-          case "HH":
-          case "hh":
-          case "mm":
-          case "ss":
-          case "M":
-          case "D":
-          case "d":
-          case "H":
-          case "h":
-          case "m":
-          case "s":
-            return parseTokenOneOrTwoDigits;
-          default:
-            return new RegExp(token.replace("\\", ""));
+      if (year > 1300 && year < 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 30) {
+        const mExpiry = (0, import_moment_hijri2.default)(`${year}/${month}/${day}`, "iYYYY/iM/iD");
+        if (mExpiry.isValid()) {
+          return mExpiry.diff((0, import_moment_hijri2.default)().startOf("day"), "days");
         }
       }
-      function addTimeToArrayFromToken(token, input, config) {
-        var a, datePartArray = config._a;
-        switch (token) {
-          case "iM":
-          case "iMM":
-            datePartArray[1] = input == null ? 0 : ~~input - 1;
-            break;
-          case "iMMM":
-          case "iMMMM":
-            a = moment3.localeData(config._l).iMonthsParse(input);
-            if (a != null)
-              datePartArray[1] = a;
-            else
-              config._isValid = false;
-            break;
-          case "iD":
-          case "iDD":
-          case "iDDD":
-          case "iDDDD":
-            if (input != null)
-              datePartArray[2] = ~~input;
-            break;
-          case "iYY":
-            datePartArray[0] = ~~input + (~~input > 47 ? 1300 : 1400);
-            break;
-          case "iYYYY":
-          case "iYYYYY":
-            datePartArray[0] = ~~input;
-        }
-        if (input == null)
-          config._isValid = false;
+    }
+  } catch (_) {
+  }
+  return 0;
+}
+function calcRemainingDays(dueDate) {
+  if (!dueDate) return "";
+  const due = new Date(dueDate);
+  due.setHours(23, 59, 59, 999);
+  const now = /* @__PURE__ */ new Date();
+  const days = Math.ceil((due.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
+  if (days < 0) return `\u0645\u062A\u0623\u062E\u0631 ${Math.abs(days)} \u064A\u0648\u0645`;
+  if (days === 0) return "\u0627\u0644\u064A\u0648\u0645";
+  return `${days} \u064A\u0648\u0645`;
+}
+function formatSession(s2) {
+  const hearingAt = s2.hearingAt ? new Date(s2.hearingAt).toISOString() : s2.hearing_at ? new Date(s2.hearing_at).toISOString() : null;
+  const createdAt = s2.createdAt ? new Date(s2.createdAt).toISOString() : s2.created_at ? new Date(s2.created_at).toISOString() : (/* @__PURE__ */ new Date()).toISOString();
+  return {
+    id: Number(s2.id),
+    caseNumber: s2.caseNumber ?? s2.case_number ?? null,
+    plaintiff: s2.plaintiff ?? null,
+    defendant: s2.defendant ?? null,
+    court: s2.court ?? null,
+    courtCircuit: s2.courtCircuit ?? s2.court_circuit ?? null,
+    caseSubject: s2.caseSubject ?? s2.case_subject ?? null,
+    sessionType: s2.sessionType ?? s2.session_type ?? null,
+    sessionDateHijri: s2.sessionDateHijri ?? s2.session_date_hijri ?? null,
+    sessionDay: s2.sessionDay ?? s2.session_day ?? null,
+    sessionTime: s2.sessionTime ?? s2.session_time ?? null,
+    notes: s2.notes ?? null,
+    status: s2.status || "Upcoming",
+    reminder24: Boolean(s2.reminder24 ?? s2.reminder_24),
+    reminder6: Boolean(s2.reminder6 ?? s2.reminder_6),
+    createdAt,
+    hearingAt
+  };
+}
+async function listSessions(officeId, statusFilter) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      let query = client.from("sessions").select("*").eq("office_id", officeId);
+      if (statusFilter && statusFilter !== "All") {
+        query = query.eq("status", statusFilter);
       }
-      function dateFromArray(config) {
-        var g, h2, hy = config._a[0], hm = config._a[1], hd = config._a[2];
-        if (hy == null && hm == null && hd == null)
-          return [0, 0, 1];
-        hy = hy || 0;
-        hm = hm || 0;
-        hd = hd || 1;
-        if (hd < 1 || hd > hMoment.iDaysInMonth(hy, hm))
-          config._isValid = false;
-        g = toGregorian(hy, hm, hd);
-        h2 = toHijri(g.gy, g.gm, g.gd);
-        config._hDiff = 0;
-        if (~~h2.hy !== hy)
-          config._hDiff += 1;
-        if (~~h2.hm !== hm)
-          config._hDiff += 1;
-        if (~~h2.hd !== hd)
-          config._hDiff += 1;
-        return [g.gy, g.gm, g.gd];
+      const { data, error } = await query.order("id", { ascending: false });
+      if (!error && data) {
+        return data.map(formatSession);
       }
-      function makeDateFromStringAndFormat(config) {
-        var tokens = config._f.match(formattingTokens), string = config._i, len = tokens.length, i3, token, parsedInput;
-        config._a = [];
-        for (i3 = 0; i3 < len; i3 += 1) {
-          token = tokens[i3];
-          parsedInput = (getParseRegexForToken(token, config).exec(string) || [])[0];
-          if (parsedInput)
-            string = string.slice(string.indexOf(parsedInput) + parsedInput.length);
-          if (formatTokenFunctions[token])
-            addTimeToArrayFromToken(token, parsedInput, config);
-        }
-        if (string)
-          config._il = string;
-        return dateFromArray(config);
+    } catch (err) {
+      logger.warn({ err }, "Supabase query failed in listSessions, falling back to memory");
+    }
+  }
+  const list = memorySessions.get(officeId) || [];
+  return list.filter((s2) => !statusFilter || statusFilter === "All" || s2.status === statusFilter).map(formatSession);
+}
+async function getSessionById(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("sessions").select("*").eq("id", id).eq("office_id", officeId).single();
+      if (!error && data) {
+        return formatSession(data);
       }
-      function makeDateFromStringAndArray(config, utc) {
-        var len = config._f.length, i3, format2, tempMoment, bestMoment, currentScore, scoreToBeat;
-        if (len === 0) {
-          return makeMoment(/* @__PURE__ */ new Date(NaN));
+    } catch (err) {
+      logger.warn({ err }, "Supabase query failed in getSessionById, falling back to memory");
+    }
+  }
+  const list = memorySessions.get(officeId) || [];
+  const s2 = list.find((item) => item.id === id);
+  if (!s2) return null;
+  return formatSession(s2);
+}
+async function createSession(data, officeId) {
+  const hearingAtDate = computeHearingDateTime(data.sessionDateHijri ?? void 0, data.sessionTime ?? void 0);
+  const hearingAt = hearingAtDate ? hearingAtDate.toISOString() : null;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client.from("sessions").insert([
+        {
+          office_id: officeId,
+          case_number: data.caseNumber || null,
+          plaintiff: data.plaintiff || null,
+          defendant: data.defendant || null,
+          court: data.court || null,
+          court_circuit: data.courtCircuit || null,
+          case_subject: data.caseSubject || null,
+          session_type: data.sessionType || null,
+          session_date_hijri: data.sessionDateHijri || null,
+          session_day: data.sessionDay || null,
+          session_time: data.sessionTime || null,
+          notes: data.notes || null,
+          status: data.status || "Upcoming",
+          reminder24: Boolean(data.reminder24),
+          reminder6: Boolean(data.reminder6),
+          hearing_at: hearingAt
         }
-        for (i3 = 0; i3 < len; i3 += 1) {
-          format2 = config._f[i3];
-          currentScore = 0;
-          tempMoment = makeMoment(config._i, format2, config._l, utc);
-          if (!tempMoment.isValid()) continue;
-          currentScore += tempMoment._hDiff;
-          if (tempMoment._il)
-            currentScore += tempMoment._il.length;
-          if (scoreToBeat == null || currentScore < scoreToBeat) {
-            scoreToBeat = currentScore;
-            bestMoment = tempMoment;
-          }
-        }
-        return bestMoment;
+      ]).select().single();
+      if (!error && inserted) {
+        return formatSession(inserted);
       }
-      function removeParsedTokens(config) {
-        var string = config._i, input = "", format2 = "", array = config._f.match(formattingTokens), len = array.length, i3, match, parsed;
-        for (i3 = 0; i3 < len; i3 += 1) {
-          match = array[i3];
-          parsed = (getParseRegexForToken(match, config).exec(string) || [])[0];
-          if (parsed)
-            string = string.slice(string.indexOf(parsed) + parsed.length);
-          if (!(formatTokenFunctions[match] instanceof Function)) {
-            format2 += match;
-            if (parsed)
-              input += parsed;
-          }
-        }
-        config._i = input;
-        config._f = format2;
+    } catch (err) {
+      logger.warn({ err }, "Supabase insert failed in createSession, falling back to memory");
+    }
+  }
+  const id = nextId();
+  const record = {
+    id,
+    officeId,
+    caseNumber: data.caseNumber || null,
+    plaintiff: data.plaintiff || null,
+    defendant: data.defendant || null,
+    court: data.court || null,
+    courtCircuit: data.courtCircuit || null,
+    caseSubject: data.caseSubject || null,
+    sessionType: data.sessionType || null,
+    sessionDateHijri: data.sessionDateHijri || null,
+    sessionDay: data.sessionDay || null,
+    sessionTime: data.sessionTime || null,
+    notes: data.notes || null,
+    status: data.status || "Upcoming",
+    reminder24: Boolean(data.reminder24),
+    reminder6: Boolean(data.reminder6),
+    hearingAt,
+    createdAt: now,
+    updatedAt: now
+  };
+  const list = memorySessions.get(officeId) || [];
+  list.unshift(record);
+  memorySessions.set(officeId, list);
+  return formatSession(record);
+}
+async function updateSession(id, data, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const updatePayload = { updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      if (data.caseNumber !== void 0) updatePayload.case_number = data.caseNumber;
+      if (data.plaintiff !== void 0) updatePayload.plaintiff = data.plaintiff;
+      if (data.defendant !== void 0) updatePayload.defendant = data.defendant;
+      if (data.court !== void 0) updatePayload.court = data.court;
+      if (data.courtCircuit !== void 0) updatePayload.court_circuit = data.courtCircuit;
+      if (data.caseSubject !== void 0) updatePayload.case_subject = data.caseSubject;
+      if (data.sessionType !== void 0) updatePayload.session_type = data.sessionType;
+      if (data.sessionDateHijri !== void 0) updatePayload.session_date_hijri = data.sessionDateHijri;
+      if (data.sessionDay !== void 0) updatePayload.session_day = data.sessionDay;
+      if (data.sessionTime !== void 0) updatePayload.session_time = data.sessionTime;
+      if (data.notes !== void 0) updatePayload.notes = data.notes;
+      if (data.status !== void 0) updatePayload.status = data.status;
+      if (data.reminder24 !== void 0) updatePayload.reminder24 = data.reminder24;
+      if (data.reminder6 !== void 0) updatePayload.reminder6 = data.reminder6;
+      if (data.sessionDateHijri !== void 0 || data.sessionTime !== void 0) {
+        const hearingAt = computeHearingDateTime(data.sessionDateHijri ?? void 0, data.sessionTime ?? void 0);
+        updatePayload.hearing_at = hearingAt ? hearingAt.toISOString() : null;
       }
-      function iWeekOfYear(mom, firstDayOfWeek, firstDayOfWeekOfYear) {
-        var end = firstDayOfWeekOfYear - firstDayOfWeek, daysToDayOfWeek = firstDayOfWeekOfYear - mom.day(), adjustedMoment;
-        if (daysToDayOfWeek > end) {
-          daysToDayOfWeek -= 7;
-        }
-        if (daysToDayOfWeek < end - 7) {
-          daysToDayOfWeek += 7;
-        }
-        adjustedMoment = hMoment(mom).add(daysToDayOfWeek, "d");
-        return {
-          week: Math.ceil(adjustedMoment.iDayOfYear() / 7),
-          year: adjustedMoment.iYear()
-        };
+      const { data: updated2, error } = await client.from("sessions").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
+      if (!error && updated2) {
+        return formatSession(updated2);
       }
-      function makeMoment(input, format2, lang, utc) {
-        var config = {
-          _i: input,
-          _f: format2,
-          _l: lang
-        }, date, m2, hm;
-        if (format2) {
-          if (isArray(format2)) {
-            return makeDateFromStringAndArray(config, utc);
-          } else {
-            date = makeDateFromStringAndFormat(config);
-            removeParsedTokens(config);
-            format2 = "YYYY-MM-DD-" + config._f;
-            input = leftZeroFill(date[0], 4) + "-" + leftZeroFill(date[1] + 1, 2) + "-" + leftZeroFill(date[2], 2) + "-" + config._i;
-          }
-        }
-        if (utc)
-          m2 = moment3.utc(input, format2, lang);
-        else
-          m2 = moment3(input, format2, lang);
-        if (config._isValid === false)
-          m2._isValid = false;
-        m2._hDiff = config._hDiff || 0;
-        hm = objectCreate(hMoment.fn);
-        extend(hm, m2);
-        return hm;
+    } catch (err) {
+      logger.warn({ err }, "Supabase update failed in updateSession, falling back to memory");
+    }
+  }
+  const list = memorySessions.get(officeId) || [];
+  const idx = list.findIndex((s2) => s2.id === id);
+  if (idx === -1) return null;
+  const current = list[idx];
+  const updated = {
+    ...current,
+    caseNumber: data.caseNumber !== void 0 ? data.caseNumber : current.caseNumber,
+    plaintiff: data.plaintiff !== void 0 ? data.plaintiff : current.plaintiff,
+    defendant: data.defendant !== void 0 ? data.defendant : current.defendant,
+    court: data.court !== void 0 ? data.court : current.court,
+    courtCircuit: data.courtCircuit !== void 0 ? data.courtCircuit : current.courtCircuit,
+    caseSubject: data.caseSubject !== void 0 ? data.caseSubject : current.caseSubject,
+    sessionType: data.sessionType !== void 0 ? data.sessionType : current.sessionType,
+    sessionDateHijri: data.sessionDateHijri !== void 0 ? data.sessionDateHijri : current.sessionDateHijri,
+    sessionDay: data.sessionDay !== void 0 ? data.sessionDay : current.sessionDay,
+    sessionTime: data.sessionTime !== void 0 ? data.sessionTime : current.sessionTime,
+    notes: data.notes !== void 0 ? data.notes : current.notes,
+    status: data.status !== void 0 ? data.status : current.status,
+    reminder24: data.reminder24 !== void 0 ? Boolean(data.reminder24) : current.reminder24,
+    reminder6: data.reminder6 !== void 0 ? Boolean(data.reminder6) : current.reminder6,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  list[idx] = updated;
+  return formatSession(updated);
+}
+async function deleteSession(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error, count } = await client.from("sessions").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
+      if (!error && (count ?? 0) > 0) return true;
+    } catch (err) {
+      logger.warn({ err }, "Supabase delete failed in deleteSession, falling back to memory");
+    }
+  }
+  const list = memorySessions.get(officeId) || [];
+  const idx = list.findIndex((s2) => s2.id === id);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
+async function getSessionReport(id, officeId) {
+  const session = await getSessionById(id, officeId);
+  if (!session) return null;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data } = await client.from("reports").select("report").eq("session_id", id).eq("office_id", officeId).order("id", { ascending: false }).limit(1);
+      if (data && data.length > 0) {
+        return { session, report: data[0].report };
       }
-      function hMoment(input, format2, lang) {
-        return makeMoment(input, format2, lang, false);
+      const { data: sRow } = await client.from("sessions").select("report").eq("id", id).eq("office_id", officeId).single();
+      if (sRow?.report) {
+        return { session, report: sRow.report };
       }
-      extend(hMoment, moment3);
-      hMoment.fn = objectCreate(moment3.fn);
-      hMoment.utc = function(input, format2, lang) {
-        return makeMoment(input, format2, lang, true);
-      };
-      hMoment.fn.format = function(format2) {
-        var i3, replace2, me = this;
-        if (format2) {
-          i3 = 5;
-          replace2 = function(input) {
-            return me.localeData().longDateFormat(input) || input;
-          };
-          while (i3 > 0 && localFormattingTokens.test(format2)) {
-            i3 -= 1;
-            format2 = format2.replace(localFormattingTokens, replace2);
-          }
-          if (!formatFunctions[format2]) {
-            formatFunctions[format2] = makeFormatFunction(format2);
-          }
-          format2 = formatFunctions[format2](this);
+    } catch (err) {
+      logger.warn({ err }, "Supabase getSessionReport failed, falling back to memory");
+    }
+  }
+  const reportsList = memoryReports.get(officeId) || [];
+  const found = reportsList.find((r2) => r2.sessionId === id);
+  return { session, report: found ? found.report : null };
+}
+async function saveSessionReport(id, report, officeId) {
+  const session = await getSessionById(id, officeId);
+  if (!session) return null;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      await client.from("reports").insert([
+        {
+          office_id: officeId,
+          session_id: id,
+          report,
+          created_at: (/* @__PURE__ */ new Date()).toISOString(),
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
         }
-        return moment3.fn.format.call(this, format2);
-      };
-      hMoment.fn.iYear = function(input) {
-        var lastDay, h2, g;
-        if (typeof input === "number") {
-          h2 = toHijri(this.year(), this.month(), this.date());
-          lastDay = Math.min(h2.hd, hMoment.iDaysInMonth(input, h2.hm));
-          g = toGregorian(input, h2.hm, lastDay);
-          setDate(this, g.gy, g.gm, g.gd);
-          if (this.month() !== g.gm || this.date() !== g.gd || this.year() !== g.gy) {
-            setDate(this, g.gy, g.gm, g.gd);
-          }
-          moment3.updateOffset(this);
-          return this;
-        } else {
-          return toHijri(this.year(), this.month(), this.date()).hy;
-        }
-      };
-      hMoment.fn.iMonth = function(input) {
-        var lastDay, h2, g;
-        if (input != null) {
-          if (typeof input === "string") {
-            input = this.localeData().iMonthsParse(input);
-            if (input >= 0) {
-              input -= 1;
-            } else {
-              return this;
-            }
-          }
-          h2 = toHijri(this.year(), this.month(), this.date());
-          lastDay = Math.min(h2.hd, hMoment.iDaysInMonth(h2.hy, input));
-          this.iYear(h2.hy + div(input, 12));
-          input = mod(input, 12);
-          if (input < 0) {
-            input += 12;
-            this.iYear(this.iYear() - 1);
-          }
-          g = toGregorian(this.iYear(), input, lastDay);
-          setDate(this, g.gy, g.gm, g.gd);
-          if (this.month() !== g.gm || this.date() !== g.gd || this.year() !== g.gy) {
-            setDate(this, g.gy, g.gm, g.gd);
-          }
-          moment3.updateOffset(this);
-          return this;
-        } else {
-          return toHijri(this.year(), this.month(), this.date()).hm;
-        }
-      };
-      hMoment.fn.iDate = function(input) {
-        var h2, g;
-        if (typeof input === "number") {
-          h2 = toHijri(this.year(), this.month(), this.date());
-          g = toGregorian(h2.hy, h2.hm, input);
-          setDate(this, g.gy, g.gm, g.gd);
-          if (this.month() !== g.gm || this.date() !== g.gd || this.year() !== g.gy) {
-            setDate(this, g.gy, g.gm, g.gd);
-          }
-          moment3.updateOffset(this);
-          return this;
-        } else {
-          return toHijri(this.year(), this.month(), this.date()).hd;
-        }
-      };
-      hMoment.fn.iDayOfYear = function(input) {
-        var dayOfYear = Math.round((hMoment(this).startOf("day") - hMoment(this).startOf("iYear")) / 864e5) + 1;
-        return input == null ? dayOfYear : this.add(input - dayOfYear, "d");
-      };
-      hMoment.fn.iDaysInMonth = function() {
-        return parseInt(hMoment(this).endOf("iMonth").format("iDD"));
-      };
-      hMoment.fn.iWeek = function(input) {
-        var week = iWeekOfYear(this, this.localeData()._week.dow, this.localeData()._week.doy).week;
-        return input == null ? week : this.add((input - week) * 7, "d");
-      };
-      hMoment.fn.iWeekYear = function(input) {
-        var year = iWeekOfYear(this, this.localeData()._week.dow, this.localeData()._week.doy).year;
-        return input == null ? year : this.add(input - year, "y");
-      };
-      hMoment.fn.add = function(val, units) {
-        var temp;
-        if (units !== null && !isNaN(+units)) {
-          temp = val;
-          val = units;
-          units = temp;
-        }
-        units = normalizeUnits(units);
-        if (units === "iyear") {
-          this.iYear(this.iYear() + val);
-        } else if (units === "imonth") {
-          this.iMonth(this.iMonth() + val);
-        } else if (units === "idate") {
-          this.iDate(this.iDate() + val);
-        } else {
-          moment3.fn.add.call(this, val, units);
-        }
-        return this;
-      };
-      hMoment.fn.subtract = function(val, units) {
-        var temp;
-        if (units !== null && !isNaN(+units)) {
-          temp = val;
-          val = units;
-          units = temp;
-        }
-        units = normalizeUnits(units);
-        if (units === "iyear") {
-          this.iYear(this.iYear() - val);
-        } else if (units === "imonth") {
-          this.iMonth(this.iMonth() - val);
-        } else if (units === "idate") {
-          this.iDate(this.iDate() - val);
-        } else {
-          moment3.fn.subtract.call(this, val, units);
-        }
-        return this;
-      };
-      hMoment.fn.startOf = function(units) {
-        units = normalizeUnits(units);
-        if (units === "iyear" || units === "imonth") {
-          if (units === "iyear") {
-            this.iMonth(0);
-          }
-          this.iDate(1);
-          this.hours(0);
-          this.minutes(0);
-          this.seconds(0);
-          this.milliseconds(0);
-          return this;
-        } else {
-          return moment3.fn.startOf.call(this, units);
-        }
-      };
-      hMoment.fn.endOf = function(units) {
-        units = normalizeUnits(units);
-        if (units === void 0 || units === "milisecond") {
-          return this;
-        }
-        return this.startOf(units).add(1, units === "isoweek" ? "week" : units).subtract(1, "milliseconds");
-      };
-      hMoment.fn.clone = function() {
-        return hMoment(this);
-      };
-      hMoment.fn.iYears = hMoment.fn.iYear;
-      hMoment.fn.iMonths = hMoment.fn.iMonth;
-      hMoment.fn.iDates = hMoment.fn.iDate;
-      hMoment.fn.iWeeks = hMoment.fn.iWeek;
-      hMoment.iDaysInMonth = function(year, month) {
-        var i3 = getNewMoonMJDNIndex(year, month + 1), daysInMonth = ummalqura.ummalquraData[i3] - ummalqura.ummalquraData[i3 - 1];
-        return daysInMonth;
-      };
-      function toHijri(gy, gm, gd) {
-        var h2 = d2h(g2d(gy, gm + 1, gd));
-        h2.hm -= 1;
-        return h2;
-      }
-      function toGregorian(hy, hm, hd) {
-        var g = d2g(h2d(hy, hm + 1, hd));
-        g.gm -= 1;
-        return g;
-      }
-      hMoment.iConvert = {
-        toHijri,
-        toGregorian
-      };
-      return hMoment;
-      function div(a, b) {
-        return ~~(a / b);
-      }
-      function mod(a, b) {
-        return a - ~~(a / b) * b;
-      }
-      function h2d(hy, hm, hd) {
-        var i3 = getNewMoonMJDNIndex(hy, hm), mjdn = hd + ummalqura.ummalquraData[i3 - 1] - 1, jdn = mjdn + 24e5;
-        return jdn;
-      }
-      function d2h(jdn) {
-        var mjdn = jdn - 24e5, i3 = getNewMoonMJDNIndexByJDN(mjdn), totalMonths = i3 + 16260, cYears = Math.floor((totalMonths - 1) / 12), hy = cYears + 1, hm = totalMonths - 12 * cYears, hd = mjdn - ummalqura.ummalquraData[i3 - 1] + 1;
-        return {
-          hy,
-          hm,
-          hd
-        };
-      }
-      function g2d(gy, gm, gd) {
-        var d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408;
-        d = d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752;
-        return d;
-      }
-      function d2g(jdn) {
-        var j, i3, gd, gm, gy;
-        j = 4 * jdn + 139361631;
-        j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
-        i3 = div(mod(j, 1461), 4) * 5 + 308;
-        gd = div(mod(i3, 153), 5) + 1;
-        gm = mod(div(i3, 153), 12) + 1;
-        gy = div(j, 1461) - 100100 + div(8 - gm, 6);
-        return {
-          gy,
-          gm,
-          gd
-        };
-      }
-      function getNewMoonMJDNIndex(hy, hm) {
-        var cYears = hy - 1, totalMonths = cYears * 12 + 1 + (hm - 1), i3 = totalMonths - 16260;
-        return i3;
-      }
-      function getNewMoonMJDNIndexByJDN(mjdn) {
-        for (var i3 = 0; i3 < ummalqura.ummalquraData.length; i3 = i3 + 1) {
-          if (ummalqura.ummalquraData[i3] > mjdn)
-            return i3;
-        }
-      }
+      ]);
+      await client.from("sessions").update({ report, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id).eq("office_id", officeId);
+      return { session, report };
+    } catch (err) {
+      logger.warn({ err }, "Supabase saveSessionReport failed, falling back to memory");
+    }
+  }
+  const reportsList = memoryReports.get(officeId) || [];
+  const existingIdx = reportsList.findIndex((r2) => r2.sessionId === id);
+  if (existingIdx !== -1) {
+    reportsList[existingIdx].report = report;
+    reportsList[existingIdx].updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  } else {
+    reportsList.push({
+      id: nextId(),
+      officeId,
+      sessionId: id,
+      report,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     });
+  }
+  memoryReports.set(officeId, reportsList);
+  return { session, report };
+}
+async function listTasks(officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("tasks").select("*").eq("office_id", officeId).order("id", { ascending: false });
+      if (!error && data) {
+        return data.map((r2) => ({
+          id: r2.id,
+          officeId: r2.office_id,
+          title: r2.title,
+          assignee: r2.assignee || "",
+          priority: r2.priority || "\u0639\u0627\u062F\u064A\u0629",
+          dueDate: r2.due_date || "",
+          remainingDays: r2.remaining_days || calcRemainingDays(r2.due_date),
+          status: r2.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
+          notes: r2.notes || "",
+          createdAt: r2.created_at
+        }));
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listTasks failed, falling back to memory");
+    }
+  }
+  return (memoryTasks.get(officeId) || []).map((t2) => ({ ...t2 }));
+}
+async function getTaskById(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("tasks").select("*").eq("id", id).eq("office_id", officeId).single();
+      if (!error && data) {
+        return {
+          id: data.id,
+          officeId: data.office_id,
+          title: data.title,
+          assignee: data.assignee || "",
+          priority: data.priority || "\u0639\u0627\u062F\u064A\u0629",
+          dueDate: data.due_date || "",
+          remainingDays: data.remaining_days || calcRemainingDays(data.due_date),
+          status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
+          notes: data.notes || "",
+          createdAt: data.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getTaskById failed, falling back to memory");
+    }
+  }
+  const list = memoryTasks.get(officeId) || [];
+  const t2 = list.find((item) => item.id === id);
+  return t2 ? { ...t2 } : null;
+}
+async function createTask(data, officeId) {
+  const remaining = calcRemainingDays(data.dueDate || "");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client.from("tasks").insert([
+        {
+          office_id: officeId,
+          title: data.title,
+          assignee: data.assignee || "",
+          priority: data.priority || "\u0639\u0627\u062F\u064A\u0629",
+          due_date: data.dueDate || "",
+          remaining_days: remaining,
+          status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
+          notes: data.notes || ""
+        }
+      ]).select().single();
+      if (!error && inserted) {
+        return {
+          id: inserted.id,
+          officeId: inserted.office_id,
+          title: inserted.title,
+          assignee: inserted.assignee,
+          priority: inserted.priority,
+          dueDate: inserted.due_date,
+          remainingDays: inserted.remaining_days,
+          status: inserted.status,
+          notes: inserted.notes,
+          createdAt: inserted.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createTask failed, falling back to memory");
+    }
+  }
+  const id = nextId();
+  const record = {
+    id,
+    officeId,
+    title: data.title,
+    assignee: data.assignee || "",
+    priority: data.priority || "\u0639\u0627\u062F\u064A\u0629",
+    dueDate: data.dueDate || "",
+    remainingDays: remaining,
+    status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
+    notes: data.notes || "",
+    createdAt: now
+  };
+  const list = memoryTasks.get(officeId) || [];
+  list.unshift(record);
+  memoryTasks.set(officeId, list);
+  return { ...record };
+}
+async function updateTask(id, data, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const updatePayload = { updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      if (data.title !== void 0) updatePayload.title = data.title;
+      if (data.assignee !== void 0) updatePayload.assignee = data.assignee;
+      if (data.priority !== void 0) updatePayload.priority = data.priority;
+      if (data.dueDate !== void 0) {
+        updatePayload.due_date = data.dueDate;
+        updatePayload.remaining_days = calcRemainingDays(data.dueDate);
+      }
+      if (data.status !== void 0) updatePayload.status = data.status;
+      if (data.notes !== void 0) updatePayload.notes = data.notes;
+      const { data: updated2, error } = await client.from("tasks").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
+      if (!error && updated2) {
+        return {
+          id: updated2.id,
+          officeId: updated2.office_id,
+          title: updated2.title,
+          assignee: updated2.assignee,
+          priority: updated2.priority,
+          dueDate: updated2.due_date,
+          remainingDays: updated2.remaining_days,
+          status: updated2.status,
+          notes: updated2.notes,
+          createdAt: updated2.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase updateTask failed, falling back to memory");
+    }
+  }
+  const list = memoryTasks.get(officeId) || [];
+  const idx = list.findIndex((t2) => t2.id === id);
+  if (idx === -1) return null;
+  const current = list[idx];
+  const updated = {
+    ...current,
+    title: data.title !== void 0 ? data.title : current.title,
+    assignee: data.assignee !== void 0 ? data.assignee : current.assignee,
+    priority: data.priority !== void 0 ? data.priority : current.priority,
+    dueDate: data.dueDate !== void 0 ? data.dueDate : current.dueDate,
+    remainingDays: data.dueDate !== void 0 ? calcRemainingDays(data.dueDate) : current.remainingDays,
+    status: data.status !== void 0 ? data.status : current.status,
+    notes: data.notes !== void 0 ? data.notes : current.notes
+  };
+  list[idx] = updated;
+  return { ...updated };
+}
+async function deleteTask(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error, count } = await client.from("tasks").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
+      if (!error && (count ?? 0) > 0) return true;
+    } catch (err) {
+      logger.warn({ err }, "Supabase deleteTask failed, falling back to memory");
+    }
+  }
+  const list = memoryTasks.get(officeId) || [];
+  const idx = list.findIndex((t2) => t2.id === id);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
+async function listPoa(officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("poa").select("*").eq("office_id", officeId).order("id", { ascending: false });
+      if (!error && data) {
+        return data.map((r2) => ({
+          id: r2.id,
+          officeId: r2.office_id,
+          clientName: r2.client_name,
+          poaNumber: r2.poa_number,
+          issueDateHijri: r2.issue_date_hijri || "",
+          expiryDateHijri: r2.expiry_date_hijri || "",
+          daysRemaining: r2.days_remaining ?? calcDaysFromHijri(r2.expiry_date_hijri),
+          notes: r2.notes || "",
+          createdAt: r2.created_at
+        }));
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listPoa failed, falling back to memory");
+    }
+  }
+  return (memoryPoa.get(officeId) || []).map((p) => ({ ...p }));
+}
+async function getPoaById(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("poa").select("*").eq("id", id).eq("office_id", officeId).single();
+      if (!error && data) {
+        return {
+          id: data.id,
+          officeId: data.office_id,
+          clientName: data.client_name,
+          poaNumber: data.poa_number,
+          issueDateHijri: data.issue_date_hijri || "",
+          expiryDateHijri: data.expiry_date_hijri || "",
+          daysRemaining: data.days_remaining ?? calcDaysFromHijri(data.expiry_date_hijri),
+          notes: data.notes || "",
+          createdAt: data.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getPoaById failed, falling back to memory");
+    }
+  }
+  const list = memoryPoa.get(officeId) || [];
+  const item = list.find((p) => p.id === id);
+  return item ? { ...item } : null;
+}
+async function createPoa(data, officeId) {
+  const days = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri || "");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client.from("poa").insert([
+        {
+          office_id: officeId,
+          client_name: data.clientName,
+          poa_number: data.poaNumber,
+          issue_date_hijri: data.issueDateHijri || "",
+          expiry_date_hijri: data.expiryDateHijri || "",
+          days_remaining: days,
+          notes: data.notes || ""
+        }
+      ]).select().single();
+      if (!error && inserted) {
+        return {
+          id: inserted.id,
+          officeId: inserted.office_id,
+          clientName: inserted.client_name,
+          poaNumber: inserted.poa_number,
+          issueDateHijri: inserted.issue_date_hijri,
+          expiryDateHijri: inserted.expiry_date_hijri,
+          daysRemaining: inserted.days_remaining,
+          notes: inserted.notes,
+          createdAt: inserted.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createPoa failed, falling back to memory");
+    }
+  }
+  const id = nextId();
+  const record = {
+    id,
+    officeId,
+    clientName: data.clientName,
+    poaNumber: data.poaNumber,
+    issueDateHijri: data.issueDateHijri || "",
+    expiryDateHijri: data.expiryDateHijri || "",
+    daysRemaining: days,
+    notes: data.notes || "",
+    createdAt: now
+  };
+  const list = memoryPoa.get(officeId) || [];
+  list.unshift(record);
+  memoryPoa.set(officeId, list);
+  return { ...record };
+}
+async function updatePoa(id, data, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const updatePayload = { updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      if (data.clientName !== void 0) updatePayload.client_name = data.clientName;
+      if (data.poaNumber !== void 0) updatePayload.poa_number = data.poaNumber;
+      if (data.issueDateHijri !== void 0) updatePayload.issue_date_hijri = data.issueDateHijri;
+      if (data.expiryDateHijri !== void 0) {
+        updatePayload.expiry_date_hijri = data.expiryDateHijri;
+        updatePayload.days_remaining = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri);
+      }
+      if (data.notes !== void 0) updatePayload.notes = data.notes;
+      const { data: updated2, error } = await client.from("poa").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
+      if (!error && updated2) {
+        return {
+          id: updated2.id,
+          officeId: updated2.office_id,
+          clientName: updated2.client_name,
+          poaNumber: updated2.poa_number,
+          issueDateHijri: updated2.issue_date_hijri,
+          expiryDateHijri: updated2.expiry_date_hijri,
+          daysRemaining: updated2.days_remaining,
+          notes: updated2.notes,
+          createdAt: updated2.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase updatePoa failed, falling back to memory");
+    }
+  }
+  const list = memoryPoa.get(officeId) || [];
+  const idx = list.findIndex((p) => p.id === id);
+  if (idx === -1) return null;
+  const current = list[idx];
+  const updated = {
+    ...current,
+    clientName: data.clientName !== void 0 ? data.clientName : current.clientName,
+    poaNumber: data.poaNumber !== void 0 ? data.poaNumber : current.poaNumber,
+    issueDateHijri: data.issueDateHijri !== void 0 ? data.issueDateHijri : current.issueDateHijri,
+    expiryDateHijri: data.expiryDateHijri !== void 0 ? data.expiryDateHijri : current.expiryDateHijri,
+    daysRemaining: data.daysRemaining !== void 0 ? data.daysRemaining : data.expiryDateHijri !== void 0 ? calcDaysFromHijri(data.expiryDateHijri) : current.daysRemaining,
+    notes: data.notes !== void 0 ? data.notes : current.notes
+  };
+  list[idx] = updated;
+  return { ...updated };
+}
+async function deletePoa(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error, count } = await client.from("poa").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
+      if (!error && (count ?? 0) > 0) return true;
+    } catch (err) {
+      logger.warn({ err }, "Supabase deletePoa failed, falling back to memory");
+    }
+  }
+  const list = memoryPoa.get(officeId) || [];
+  const idx = list.findIndex((p) => p.id === id);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
+async function listJudgments(officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("judgments").select("*").eq("office_id", officeId).order("id", { ascending: false });
+      if (!error && data) {
+        return data.map((r2) => ({
+          id: r2.id,
+          officeId: r2.office_id,
+          caseNumber: r2.case_number || "",
+          court: r2.court || "",
+          plaintiff: r2.plaintiff || "",
+          defendant: r2.defendant || "",
+          assignedLawyer: r2.assigned_lawyer || "",
+          judgmentNumber: r2.judgment_number || "",
+          judgmentDate: r2.judgment_date || "",
+          summary: r2.summary || "",
+          isFavorable: r2.is_favorable || "\u0646\u0647\u0627\u0626\u064A",
+          createdAt: r2.created_at
+        }));
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listJudgments failed, falling back to memory");
+    }
+  }
+  return (memoryJudgments.get(officeId) || []).map((j) => ({ ...j }));
+}
+async function getJudgmentById(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("judgments").select("*").eq("id", id).eq("office_id", officeId).single();
+      if (!error && data) {
+        return {
+          id: data.id,
+          officeId: data.office_id,
+          caseNumber: data.case_number || "",
+          court: data.court || "",
+          plaintiff: data.plaintiff || "",
+          defendant: data.defendant || "",
+          assignedLawyer: data.assigned_lawyer || "",
+          judgmentNumber: data.judgment_number || "",
+          judgmentDate: data.judgment_date || "",
+          summary: data.summary || "",
+          isFavorable: data.is_favorable || "\u0646\u0647\u0627\u0626\u064A",
+          createdAt: data.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getJudgmentById failed, falling back to memory");
+    }
+  }
+  const list = memoryJudgments.get(officeId) || [];
+  const j = list.find((item) => item.id === id);
+  return j ? { ...j } : null;
+}
+async function createJudgment(data, officeId) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client.from("judgments").insert([
+        {
+          office_id: officeId,
+          case_number: data.caseNumber || "",
+          court: data.court || "",
+          plaintiff: data.plaintiff || "",
+          defendant: data.defendant || "",
+          assigned_lawyer: data.assignedLawyer || "",
+          judgment_number: data.judgmentNumber || "",
+          judgment_date: data.judgmentDate || "",
+          summary: data.summary || "",
+          is_favorable: data.isFavorable || "\u0646\u0647\u0627\u0626\u064A"
+        }
+      ]).select().single();
+      if (!error && inserted) {
+        return {
+          id: inserted.id,
+          officeId: inserted.office_id,
+          caseNumber: inserted.case_number,
+          court: inserted.court,
+          plaintiff: inserted.plaintiff,
+          defendant: inserted.defendant,
+          assignedLawyer: inserted.assigned_lawyer,
+          judgmentNumber: inserted.judgment_number,
+          judgmentDate: inserted.judgment_date,
+          summary: inserted.summary,
+          isFavorable: inserted.is_favorable,
+          createdAt: inserted.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createJudgment failed, falling back to memory");
+    }
+  }
+  const id = nextId();
+  const record = {
+    id,
+    officeId,
+    caseNumber: data.caseNumber || "",
+    court: data.court || "",
+    plaintiff: data.plaintiff || "",
+    defendant: data.defendant || "",
+    assignedLawyer: data.assignedLawyer || "",
+    judgmentNumber: data.judgmentNumber || "",
+    judgmentDate: data.judgmentDate || "",
+    summary: data.summary || "",
+    isFavorable: data.isFavorable || "\u0646\u0647\u0627\u0626\u064A",
+    createdAt: now
+  };
+  const list = memoryJudgments.get(officeId) || [];
+  list.unshift(record);
+  memoryJudgments.set(officeId, list);
+  return { ...record };
+}
+async function updateJudgment(id, data, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const updatePayload = { updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      if (data.caseNumber !== void 0) updatePayload.case_number = data.caseNumber;
+      if (data.court !== void 0) updatePayload.court = data.court;
+      if (data.plaintiff !== void 0) updatePayload.plaintiff = data.plaintiff;
+      if (data.defendant !== void 0) updatePayload.defendant = data.defendant;
+      if (data.assignedLawyer !== void 0) updatePayload.assigned_lawyer = data.assignedLawyer;
+      if (data.judgmentNumber !== void 0) updatePayload.judgment_number = data.judgmentNumber;
+      if (data.judgmentDate !== void 0) updatePayload.judgment_date = data.judgmentDate;
+      if (data.summary !== void 0) updatePayload.summary = data.summary;
+      if (data.isFavorable !== void 0) updatePayload.is_favorable = data.isFavorable;
+      const { data: updated2, error } = await client.from("judgments").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
+      if (!error && updated2) {
+        return {
+          id: updated2.id,
+          officeId: updated2.office_id,
+          caseNumber: updated2.case_number,
+          court: updated2.court,
+          plaintiff: updated2.plaintiff,
+          defendant: updated2.defendant,
+          assignedLawyer: updated2.assigned_lawyer,
+          judgmentNumber: updated2.judgment_number,
+          judgmentDate: updated2.judgment_date,
+          summary: updated2.summary,
+          isFavorable: updated2.is_favorable,
+          createdAt: updated2.created_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase updateJudgment failed, falling back to memory");
+    }
+  }
+  const list = memoryJudgments.get(officeId) || [];
+  const idx = list.findIndex((j) => j.id === id);
+  if (idx === -1) return null;
+  const current = list[idx];
+  const updated = {
+    ...current,
+    caseNumber: data.caseNumber !== void 0 ? data.caseNumber : current.caseNumber,
+    court: data.court !== void 0 ? data.court : current.court,
+    plaintiff: data.plaintiff !== void 0 ? data.plaintiff : current.plaintiff,
+    defendant: data.defendant !== void 0 ? data.defendant : current.defendant,
+    assignedLawyer: data.assignedLawyer !== void 0 ? data.assignedLawyer : current.assignedLawyer,
+    judgmentNumber: data.judgmentNumber !== void 0 ? data.judgmentNumber : current.judgmentNumber,
+    judgmentDate: data.judgmentDate !== void 0 ? data.judgmentDate : current.judgmentDate,
+    summary: data.summary !== void 0 ? data.summary : current.summary,
+    isFavorable: data.isFavorable !== void 0 ? data.isFavorable : current.isFavorable
+  };
+  list[idx] = updated;
+  return { ...updated };
+}
+async function deleteJudgment(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error, count } = await client.from("judgments").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
+      if (!error && (count ?? 0) > 0) return true;
+    } catch (err) {
+      logger.warn({ err }, "Supabase deleteJudgment failed, falling back to memory");
+    }
+  }
+  const list = memoryJudgments.get(officeId) || [];
+  const idx = list.findIndex((j) => j.id === id);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
+async function exportOfficeDataToGoogleSheets(officeId) {
+  const [sessions, tasks3, poas, judgments] = await Promise.all([
+    listSessions(officeId),
+    listTasks(officeId),
+    listPoa(officeId),
+    listJudgments(officeId)
+  ]);
+  try {
+    const { getGoogleContext: getGoogleContext2 } = await Promise.resolve().then(() => (init_googleSheets_service(), googleSheets_service_exports));
+    const creds = await getGoogleContext2(officeId);
+    if (!creds?.sheets || !creds?.spreadsheetId) {
+      throw new Error("\u0644\u0645 \u064A\u062A\u0645 \u062A\u0643\u0648\u064A\u0646 \u0631\u0628\u0637 Google Sheets \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628 \u0628\u0639\u062F.");
+    }
+    const { sheets, spreadsheetId } = creds;
+    const sessionRows = sessions.map((s2) => [
+      s2.caseNumber || "",
+      s2.plaintiff || "",
+      s2.defendant || "",
+      s2.court || "",
+      s2.courtCircuit || "",
+      s2.caseSubject || "",
+      s2.sessionType || "",
+      s2.sessionDateHijri || "",
+      s2.sessionDay || "",
+      s2.sessionTime || "",
+      "",
+      s2.notes || "",
+      s2.status || "Upcoming",
+      s2.reminder24 ? "TRUE" : "FALSE",
+      s2.reminder6 ? "TRUE" : "FALSE",
+      String(s2.createdAt || ""),
+      ""
+    ]);
+    if (sessionRows.length > 0) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "Sessions!A2",
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: sessionRows }
+      });
+    }
+    return {
+      sessionsCount: sessions.length,
+      tasksCount: tasks3.length,
+      poaCount: poas.length,
+      judgmentsCount: judgments.length
+    };
+  } catch (err) {
+    logger.warn({ err, officeId }, "One-way Google Sheets export skipped or failed");
+    return {
+      sessionsCount: sessions.length,
+      tasksCount: tasks3.length,
+      poaCount: poas.length,
+      judgmentsCount: judgments.length
+    };
+  }
+}
+var import_moment_hijri2, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, _nextId;
+var init_postgres_service = __esm({
+  "src/services/postgres.service.ts"() {
+    "use strict";
+    init_supabase_service();
+    init_logger();
+    init_hijri();
+    import_moment_hijri2 = __toESM(require_moment_hijri(), 1);
+    memorySessions = /* @__PURE__ */ new Map();
+    memoryTasks = /* @__PURE__ */ new Map();
+    memoryPoa = /* @__PURE__ */ new Map();
+    memoryJudgments = /* @__PURE__ */ new Map();
+    memoryReports = /* @__PURE__ */ new Map();
+    _nextId = 1e3;
   }
 });
 
@@ -828080,11 +829597,14 @@ async function attachAuthUser(req, res, next) {
         const currentVersion = getUserSessionVersion(trustedUser.id);
         const tokenVersion = token.sessionVersion ?? 1;
         if (tokenVersion === currentVersion) {
+          const derivedOfficeId = trustedUser.role === "admin" ? trustedUser.office_id || trustedUser.id : trustedUser.role === "staff" ? trustedUser.office_id || trustedUser.admin_id || void 0 : void 0;
           req.authUser = {
             userId: trustedUser.id,
             username: trustedUser.username,
             role: trustedUser.role,
             // Live role from server-side store
+            officeId: derivedOfficeId,
+            adminId: trustedUser.admin_id || void 0,
             displayName: trustedUser.display_name || trustedUser.username,
             issuedAt: token.issuedAt
           };
@@ -828274,53 +829794,76 @@ var SupabaseRateLimitStore = class {
   async get(key) {
     const client = getSupabaseClient();
     if (!client) {
-      throw new Error("Supabase client is not available");
+      return _defaultMemoryStore.get(key);
     }
-    const { data, error } = await client.from("rate_limits").select("count, reset_time").eq("key", key).maybeSingle();
-    if (error) {
-      throw new Error(`Failed to query rate_limits from Supabase: ${error.message}`);
+    try {
+      const { data, error } = await client.from("rate_limits").select("count, reset_time").eq("key", key).maybeSingle();
+      if (error) {
+        if (error.code === "42P01" || error.message?.includes("does not exist") || error.message?.includes("relation")) {
+          return _defaultMemoryStore.get(key);
+        }
+        logger.warn({ error: error.message }, "Supabase rate limit query failed, falling back to memory store");
+        return _defaultMemoryStore.get(key);
+      }
+      if (!data) return null;
+      const resetTime = Number(data.reset_time);
+      const count = Number(data.count);
+      if (Date.now() > resetTime) {
+        return null;
+      }
+      return { count, resetTime };
+    } catch (err) {
+      logger.warn({ err: err?.message || err }, "Supabase rate limit get exception, falling back to memory store");
+      return _defaultMemoryStore.get(key);
     }
-    if (!data) return null;
-    const resetTime = Number(data.reset_time);
-    const count = Number(data.count);
-    if (Date.now() > resetTime) {
-      return null;
-    }
-    return { count, resetTime };
   }
   async increment(key, windowMs) {
     const client = getSupabaseClient();
     if (!client) {
-      throw new Error("Supabase client is not available");
+      return _defaultMemoryStore.increment(key, windowMs);
     }
-    const now = Date.now();
-    const existing = await this.get(key);
-    if (!existing) {
-      const resetTime = now + windowMs;
-      const { error } = await client.from("rate_limits").upsert({
-        key,
-        count: 1,
-        reset_time: resetTime,
-        updated_at: (/* @__PURE__ */ new Date()).toISOString()
-      });
-      if (error) {
-        throw new Error(`Failed to upsert rate limit in Supabase: ${error.message}`);
+    try {
+      const now = Date.now();
+      const existing = await this.get(key);
+      if (!existing) {
+        const resetTime = now + windowMs;
+        const { error } = await client.from("rate_limits").upsert({
+          key,
+          count: 1,
+          reset_time: resetTime,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        });
+        if (error) {
+          if (error.code === "42P01" || error.message?.includes("does not exist") || error.message?.includes("relation")) {
+            return _defaultMemoryStore.increment(key, windowMs);
+          }
+          logger.warn({ error: error.message }, "Supabase rate limit upsert failed, falling back to memory store");
+          return _defaultMemoryStore.increment(key, windowMs);
+        }
+        return { count: 1, resetTime };
+      } else {
+        const nextCount = existing.count + 1;
+        const { error } = await client.from("rate_limits").update({
+          count: nextCount,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        }).eq("key", key);
+        if (error) {
+          if (error.code === "42P01" || error.message?.includes("does not exist") || error.message?.includes("relation")) {
+            return _defaultMemoryStore.increment(key, windowMs);
+          }
+          logger.warn({ error: error.message }, "Supabase rate limit update failed, falling back to memory store");
+          return _defaultMemoryStore.increment(key, windowMs);
+        }
+        return { count: nextCount, resetTime: existing.resetTime };
       }
-      return { count: 1, resetTime };
-    } else {
-      const nextCount = existing.count + 1;
-      const { error } = await client.from("rate_limits").update({
-        count: nextCount,
-        updated_at: (/* @__PURE__ */ new Date()).toISOString()
-      }).eq("key", key);
-      if (error) {
-        throw new Error(`Failed to update rate limit in Supabase: ${error.message}`);
-      }
-      return { count: nextCount, resetTime: existing.resetTime };
+    } catch (err) {
+      logger.warn({ err: err?.message || err }, "Supabase rate limit increment exception, falling back to memory store");
+      return _defaultMemoryStore.increment(key, windowMs);
     }
   }
   async reset(key) {
     const client = getSupabaseClient();
+    _defaultMemoryStore.reset(key);
     if (!client) return;
     try {
       await client.from("rate_limits").delete().eq("key", key);
@@ -828330,6 +829873,7 @@ var SupabaseRateLimitStore = class {
   }
   async clear() {
     const client = getSupabaseClient();
+    _defaultMemoryStore.clear();
     if (!client) return;
     try {
       await client.from("rate_limits").delete().neq("key", "");
@@ -828744,1401 +830288,11 @@ var auth_default = router2;
 var import_express3 = __toESM(require_express2(), 1);
 init_src();
 
-// src/services/googleSheets.service.ts
-var import_googleapis = __toESM(require_src11(), 1);
-init_env();
-init_logger();
+// src/services/session.service.ts
+init_postgres_service();
 init_supabase_service();
-var SHEET_COLUMNS = [
-  "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629",
-  "\u0627\u0644\u0645\u062F\u0639\u064A",
-  "\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647",
-  "\u0627\u0644\u0645\u062D\u0643\u0645\u0629",
-  "\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629",
-  "\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0642\u0636\u064A\u0629",
-  "\u0646\u0648\u0639 \u0627\u0644\u062C\u0644\u0633\u0629",
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062C\u0644\u0633\u0629 \u0647\u062C\u0631\u064A",
-  "\u064A\u0648\u0645 \u0627\u0644\u062C\u0644\u0633\u0629",
-  "\u0648\u0642\u062A \u0627\u0644\u062C\u0644\u0633\u0629",
-  "\u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629",
-  "\u0645\u0644\u0627\u062D\u0638\u0627\u062A",
-  "\u062D\u0627\u0644\u0629 \u0627\u0644\u062C\u0644\u0633\u0629",
-  "\u062A\u0630\u0643\u064A\u0631 24 \u0633\u0627\u0639\u0629",
-  "\u062A\u0630\u0643\u064A\u0631 6 \u0633\u0627\u0639\u0627\u062A",
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621",
-  "\u0627\u0644\u062A\u0642\u0631\u064A\u0631"
-];
-var GoogleSheetsError = class extends Error {
-  refId;
-  statusCode;
-  userMessage;
-  constructor(message, statusCode, userMessage, refId) {
-    super(message);
-    this.name = "GoogleSheetsError";
-    this.refId = refId || `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    this.statusCode = statusCode;
-    this.userMessage = userMessage;
-  }
-};
-var GoogleBindingMissingError = class extends GoogleSheetsError {
-  constructor(message = "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641", refId) {
-    super(
-      message,
-      409,
-      "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641",
-      refId
-    );
-    this.name = "GoogleBindingMissingError";
-  }
-};
-var GoogleSettingsStoreError = class extends GoogleSheetsError {
-  constructor(message = "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.", refId) {
-    super(
-      message,
-      503,
-      "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",
-      refId
-    );
-    this.name = "GoogleSettingsStoreError";
-  }
-};
-var GoogleSheetsAuthError = class extends GoogleSheetsError {
-  constructor(message, refId) {
-    super(
-      message,
-      503,
-      "\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0648\u064A\u0629 \u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0644\u062F\u0649 Google (Authentication Failed).",
-      refId
-    );
-    this.name = "GoogleSheetsAuthError";
-  }
-};
-var GoogleSheetsPermissionError = class extends GoogleSheetsError {
-  constructor(message, refId) {
-    super(
-      message,
-      503,
-      "\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: \u064A\u0631\u062C\u0649 \u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u062C\u062F\u0648\u0644 \u0645\u0639 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0648\u0645\u0646\u062D\u0647 \u0635\u0644\u0627\u062D\u064A\u0629 \u0645\u062D\u0631\u0631 (Editor).",
-      refId
-    );
-    this.name = "GoogleSheetsPermissionError";
-  }
-};
-var GoogleSheetsNotFoundError = class extends GoogleSheetsError {
-  constructor(message, refId) {
-    super(
-      message,
-      502,
-      "\u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u062A\u0645 \u062D\u0630\u0641\u0647 (Spreadsheet Not Found).",
-      refId
-    );
-    this.name = "GoogleSheetsNotFoundError";
-  }
-};
-var GoogleSheetsRangeError = class extends GoogleSheetsError {
-  constructor(message, refId) {
-    super(
-      message,
-      502,
-      "\u062A\u0639\u0630\u0631 \u0642\u0631\u0627\u0621\u0629 \u0648\u0631\u0642\u0629 \u0627\u0644\u0639\u0645\u0644 \u0623\u0648 \u0627\u0644\u0646\u0637\u0627\u0642 \u0627\u0644\u0645\u062D\u062F\u062F (Worksheet Range Error).",
-      refId
-    );
-    this.name = "GoogleSheetsRangeError";
-  }
-};
-var GoogleSheetsNetworkError = class extends GoogleSheetsError {
-  constructor(message, refId) {
-    super(
-      message,
-      504,
-      "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0648\u0627\u062F\u0645 Google \u0628\u0633\u0628\u0628 \u0627\u0646\u0642\u0637\u0627\u0639 \u0627\u0644\u0634\u0628\u0643\u0629 \u0623\u0648 \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0645\u0647\u0644\u0629 (Network Timeout).",
-      refId
-    );
-    this.name = "GoogleSheetsNetworkError";
-  }
-};
-function maskIdentifier(val) {
-  if (!val) return "(none)";
-  if (val.length <= 4) return "****";
-  return `****${val.slice(-4)}`;
-}
-function classifyGoogleError(err, operation, meta) {
-  if (err instanceof GoogleSheetsError) {
-    return err;
-  }
-  const rawMsg = String(err?.message || err || "");
-  const status = Number(err?.status || err?.code || err?.response?.status || 0);
-  const errorCode = String(err?.code || err?.errno || err?.cause?.code || "");
-  const maskedId = meta?.spreadsheetId ? maskIdentifier(meta.spreadsheetId) : void 0;
-  let classified;
-  if (status === 401 || rawMsg.includes("invalid_grant") || rawMsg.includes("Unauthorized") || rawMsg.includes("unauthorized_client") || rawMsg.includes("Authentication with Google failed")) {
-    classified = new GoogleSheetsAuthError(`Google Auth Failure in ${operation}: ${rawMsg}`);
-  } else if (status === 403 || rawMsg.includes("The caller does not have permission") || rawMsg.includes("PERMISSION_DENIED") || rawMsg.includes("does not have permission")) {
-    classified = new GoogleSheetsPermissionError(`Google Permission Denied in ${operation}: ${rawMsg}`);
-  } else if (status === 404 || rawMsg.includes("Requested entity was not found") || rawMsg.includes("NOT_FOUND") || rawMsg.includes("Spreadsheet not found")) {
-    classified = new GoogleSheetsNotFoundError(`Google Spreadsheet Not Found in ${operation}: ${rawMsg}`);
-  } else if (status === 400 || rawMsg.includes("Unable to parse range") || rawMsg.includes("badRequest") || rawMsg.includes("Sheet tab")) {
-    classified = new GoogleSheetsRangeError(`Google Sheets Range Error in ${operation}: ${rawMsg}`);
-  } else if (errorCode.includes("ETIMEDOUT") || errorCode.includes("ECONNRESET") || errorCode.includes("ECONNREFUSED") || errorCode.includes("ENOTFOUND") || rawMsg.includes("ETIMEDOUT") || rawMsg.includes("ECONNRESET") || rawMsg.includes("ECONNREFUSED") || rawMsg.includes("ENOTFOUND") || rawMsg.includes("network timeout") || rawMsg.includes("timed out") || rawMsg.includes("Client network socket disconnected") || status === 504) {
-    classified = new GoogleSheetsNetworkError(`Google Network Timeout in ${operation}: ${rawMsg}`);
-  } else {
-    classified = new GoogleSheetsError(
-      `Google API Error in ${operation}: ${rawMsg}`,
-      502,
-      "\u062A\u0639\u0630\u0631 \u0645\u0639\u0627\u0644\u062C\u0629 \u0637\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0627\u062A \u0645\u0639 \u062E\u0627\u062F\u0645 Google."
-    );
-  }
-  logger.error(
-    {
-      operation,
-      refId: classified.refId,
-      status: classified.statusCode,
-      googleStatus: status,
-      errorName: classified.name,
-      maskedSpreadsheetId: maskedId,
-      sheetName: meta?.sheetName,
-      userId: meta?.userId,
-      googleMessage: rawMsg.slice(0, 300)
-    },
-    `[GoogleSheets Diagnostic] ${operation} failed with ${classified.name} (refId: ${classified.refId})`
-  );
-  return classified;
-}
-var userClientsMap = /* @__PURE__ */ new Map();
-async function getGoogleContext(userId, defaultSheetName = "Sessions") {
-  const cleanUserId = userId?.trim();
-  if (!cleanUserId) {
-    throw new GoogleBindingMissingError("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645/\u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 Google Sheets.");
-  }
-  let userCreds = null;
-  try {
-    userCreds = await getUserGoogleCredentials(cleanUserId);
-  } catch (err) {
-    logger.error({ err, userId: cleanUserId }, "Failed to load user Google settings from store");
-    throw new GoogleSettingsStoreError(
-      `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645 ${cleanUserId}: ${err?.message || err}`
-    );
-  }
-  if (!userCreds) {
-    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
-  }
-  const spreadsheetId = userCreds.spreadsheetId?.trim();
-  if (!spreadsheetId) {
-    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
-  }
-  const credentials = userCreds.serviceAccountJson;
-  if (!credentials || typeof credentials !== "object" || !credentials.client_email?.trim() || !credentials.private_key?.trim()) {
-    throw new GoogleBindingMissingError("\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641");
-  }
-  let client = userClientsMap.get(cleanUserId);
-  if (!client) {
-    try {
-      const privateKey = credentials.private_key.replace(/\\n/g, "\n");
-      const auth = new import_googleapis.google.auth.JWT({
-        email: credentials.client_email,
-        key: privateKey,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-      });
-      client = import_googleapis.google.sheets({ version: "v4", auth });
-      userClientsMap.set(cleanUserId, client);
-    } catch (err) {
-      throw classifyGoogleError(err, "getGoogleContext.createClient", { userId: cleanUserId });
-    }
-  }
-  const sheetName = userCreds.sheetName?.trim() || defaultSheetName;
-  return { sheets: client, spreadsheetId, sheetName };
-}
-async function getSheetId(ctx) {
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const sheet = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === ctx.sheetName
-    );
-    if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
-      throw new GoogleSheetsRangeError(
-        `Sheet tab "${ctx.sheetName}" was not found in the configured spreadsheet.`
-      );
-    }
-    return sheet.properties.sheetId;
-  } catch (err) {
-    throw classifyGoogleError(err, "getSheetId", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName });
-  }
-}
-async function ensureSheetReady(userId) {
-  let ctx;
-  try {
-    ctx = await getGoogleContext(userId);
-  } catch (err) {
-    throw classifyGoogleError(err, "ensureSheetReady.getContext", { userId });
-  }
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const existing = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === ctx.sheetName
-    );
-    if (!existing) {
-      await ctx.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: ctx.spreadsheetId,
-        requestBody: {
-          requests: [{ addSheet: { properties: { title: ctx.sheetName } } }]
-        }
-      });
-    }
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `'${ctx.sheetName}'!A1:Q1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[...SHEET_COLUMNS]] }
-    });
-  } catch (err) {
-    logger.warn({ err, userId, refId: err?.refId }, "ensureSheetReady non-fatal warning");
-  }
-}
-async function listRows(userId) {
-  const ctx = await getGoogleContext(userId);
-  try {
-    const response = await ctx.sheets.spreadsheets.values.get({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `'${ctx.sheetName}'!A2:Q`
-    });
-    const rows = response.data.values ?? [];
-    return rows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell2) => cell2 !== void 0 && cell2 !== ""));
-  } catch (err) {
-    throw classifyGoogleError(err, "listRows", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
-  }
-}
-async function appendRow(values, userId) {
-  const ctx = await getGoogleContext(userId);
-  try {
-    const existing = await ctx.sheets.spreadsheets.values.get({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `'${ctx.sheetName}'!A2:Q`
-    });
-    const rawRows = existing.data.values ?? [];
-    let emptyRowId = null;
-    for (let i2 = 0; i2 < rawRows.length; i2++) {
-      const r2 = rawRows[i2];
-      const isEmpty = !r2 || r2.length === 0 || r2.every((cell2) => cell2 === void 0 || cell2 === null || String(cell2).trim() === "");
-      if (isEmpty) {
-        emptyRowId = i2 + 2;
-        break;
-      }
-    }
-    if (emptyRowId !== null) {
-      await updateRow(emptyRowId, values, userId);
-      return emptyRowId;
-    }
-  } catch (err) {
-    logger.warn({ err, userId }, "Failed to check empty rows before append, falling back to append API");
-  }
-  try {
-    const response = await ctx.sheets.spreadsheets.values.append({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `'${ctx.sheetName}'!A:Q`,
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [values] }
-    });
-    const updatedRange = response.data.updates?.updatedRange;
-    const match = updatedRange?.match(/![A-Z]+(\d+):/);
-    if (match) {
-      return Number(match[1]);
-    }
-    logger.warn({ updatedRange, userId }, "Could not parse appended row id from Sheets response");
-    const rows = await listRows(userId);
-    const last = rows[rows.length - 1];
-    if (!last) {
-      throw new GoogleSheetsError("Failed to determine id of newly created session row.", 502, "\u062A\u0639\u0630\u0631 \u062A\u062D\u062F\u064A\u062F \u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0633\u0637\u0631 \u0627\u0644\u0645\u0636\u0627\u0641.");
-    }
-    return last.id;
-  } catch (err) {
-    throw classifyGoogleError(err, "appendRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
-  }
-}
-async function updateRow(id, values, userId) {
-  const ctx = await getGoogleContext(userId);
-  try {
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `'${ctx.sheetName}'!A${id}:Q${id}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [values] }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "updateRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
-  }
-}
-async function updateRowCells(id, updates, userId) {
-  const ctx = await getGoogleContext(userId);
-  const data = Object.entries(updates).map(([colIndex, value]) => {
-    const column = String.fromCharCode("A".charCodeAt(0) + Number(colIndex));
-    return {
-      range: `'${ctx.sheetName}'!${column}${id}:${column}${id}`,
-      values: [[value]]
-    };
-  });
-  if (data.length === 0) {
-    return;
-  }
-  try {
-    await ctx.sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: ctx.spreadsheetId,
-      requestBody: { valueInputOption: "RAW", data }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "updateRowCells", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
-  }
-}
-async function deleteRow(id, userId) {
-  const ctx = await getGoogleContext(userId);
-  const sheetId = await getSheetId(ctx);
-  try {
-    await ctx.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: ctx.spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            deleteDimension: {
-              range: {
-                sheetId,
-                dimension: "ROWS",
-                startIndex: id - 1,
-                endIndex: id
-              }
-            }
-          }
-        ]
-      }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "deleteRow", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
-  }
-}
-
-// src/utils/hijri.ts
-var import_moment_hijri = __toESM(require_moment_hijri(), 1);
+init_hijri();
 init_env();
-var ARABIC_INDIC_DIGITS = "\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669";
-function normalizeDigits(input) {
-  return input.replace(/[٠-٩]/g, (d) => String(ARABIC_INDIC_DIGITS.indexOf(d)));
-}
-function parseHijriDateString(input) {
-  if (!input || typeof input !== "string") {
-    return null;
-  }
-  const normalized = normalizeDigits(input.trim());
-  if (!normalized) {
-    return null;
-  }
-  const formats = [
-    "iDD/iMM/iYYYY",
-    "iD/iM/iYYYY",
-    "iDD-iMM-iYYYY",
-    "iD-iM-iYYYY",
-    "iYYYY/iMM/iDD",
-    "iYYYY-iMM-iDD"
-  ];
-  for (const fmt of formats) {
-    try {
-      const m2 = (0, import_moment_hijri.default)(normalized, fmt, true);
-      if (m2 && typeof m2.isValid === "function" && m2.isValid()) {
-        const year = m2.iYear();
-        const month = m2.iMonth() + 1;
-        const day = m2.iDate();
-        if (!isNaN(year) && !isNaN(month) && !isNaN(day) && year > 1300 && year < 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 30) {
-          return { year, month, day };
-        }
-      }
-    } catch {
-    }
-  }
-  for (const fmt of formats) {
-    try {
-      const m2 = (0, import_moment_hijri.default)(normalized, fmt);
-      if (m2 && typeof m2.isValid === "function" && m2.isValid()) {
-        const year = m2.iYear();
-        const month = m2.iMonth() + 1;
-        const day = m2.iDate();
-        if (!isNaN(year) && !isNaN(month) && !isNaN(day) && year > 1300 && year < 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 30) {
-          return { year, month, day };
-        }
-      }
-    } catch {
-    }
-  }
-  return null;
-}
-function parseArabicTime(input) {
-  if (!input || typeof input !== "string") {
-    return null;
-  }
-  const normalized = normalizeDigits(input.trim());
-  if (!normalized) {
-    return null;
-  }
-  const isArabicPm = /م(?!ص)/.test(normalized) || /مساء/.test(normalized);
-  const isArabicAm = /ص/.test(normalized) || /صباح/.test(normalized);
-  const isPm = /pm/i.test(normalized) || isArabicPm;
-  const isAm = /am/i.test(normalized) || isArabicAm;
-  let hours = null;
-  let minutes = 0;
-  const matchColonOrDot = normalized.match(/(\d{1,2})[:\.](\d{2})/);
-  if (matchColonOrDot) {
-    hours = Number(matchColonOrDot[1]);
-    minutes = Number(matchColonOrDot[2]);
-  } else {
-    const matchHourOnly = normalized.match(/(\d{1,2})/);
-    if (matchHourOnly) {
-      hours = Number(matchHourOnly[1]);
-      minutes = 0;
-    }
-  }
-  if (hours === null || isNaN(hours) || isNaN(minutes) || hours > 23 || minutes > 59) {
-    return null;
-  }
-  if (isPm && !isAm) {
-    if (hours < 12) {
-      hours += 12;
-    }
-  } else if (isAm) {
-    if (hours === 12) {
-      hours = 0;
-    }
-  } else {
-    if (hours >= 1 && hours <= 6) {
-      hours += 12;
-    }
-  }
-  return { hours, minutes };
-}
-function hijriToGregorian(hijri) {
-  try {
-    const dateString = `${hijri.year}/${String(hijri.month).padStart(2, "0")}/${String(hijri.day).padStart(2, "0")}`;
-    const m2 = (0, import_moment_hijri.default)(dateString, "iYYYY/iMM/iDD");
-    if (!m2 || typeof m2.isValid !== "function" || !m2.isValid()) {
-      return null;
-    }
-    const year = m2.year();
-    const month = m2.month() + 1;
-    const day = m2.date();
-    if (isNaN(year) || isNaN(month) || isNaN(day)) {
-      return null;
-    }
-    return { year, month, day };
-  } catch {
-    return null;
-  }
-}
-function parseGregorianDateString(input) {
-  if (!input || typeof input !== "string") {
-    return null;
-  }
-  const normalized = normalizeDigits(input.trim());
-  if (!normalized) {
-    return null;
-  }
-  const ymdMatch = normalized.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if (ymdMatch) {
-    const year = Number(ymdMatch[1]);
-    const month = Number(ymdMatch[2]);
-    const day = Number(ymdMatch[3]);
-    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return { year, month, day };
-    }
-  }
-  const dmyMatch = normalized.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (dmyMatch) {
-    const day = Number(dmyMatch[1]);
-    const month = Number(dmyMatch[2]);
-    const year = Number(dmyMatch[3]);
-    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return { year, month, day };
-    }
-  }
-  return null;
-}
-function computeHearingDateTime(sessionDateHijri, sessionTime) {
-  if (!sessionDateHijri) {
-    return null;
-  }
-  try {
-    const offsetHours = env.courtTimezoneOffsetHours;
-    let timeHours = 23;
-    let timeMinutes = 59;
-    if (sessionTime) {
-      const time = parseArabicTime(sessionTime);
-      if (time) {
-        timeHours = time.hours;
-        timeMinutes = time.minutes;
-      }
-    }
-    const greg = parseGregorianDateString(sessionDateHijri);
-    if (greg) {
-      const hearingDate2 = new Date(
-        Date.UTC(
-          greg.year,
-          greg.month - 1,
-          greg.day,
-          timeHours - offsetHours,
-          timeMinutes
-        )
-      );
-      return isNaN(hearingDate2.getTime()) ? null : hearingDate2;
-    }
-    const hijriDate = parseHijriDateString(sessionDateHijri);
-    if (!hijriDate) {
-      return null;
-    }
-    const gregorian = hijriToGregorian(hijriDate);
-    if (!gregorian) {
-      return null;
-    }
-    const hearingDate = new Date(
-      Date.UTC(
-        gregorian.year,
-        gregorian.month - 1,
-        gregorian.day,
-        timeHours - offsetHours,
-        timeMinutes
-      )
-    );
-    return isNaN(hearingDate.getTime()) ? null : hearingDate;
-  } catch {
-    return null;
-  }
-}
-
-// src/services/session.service.ts
-init_env();
-init_logger();
-
-// src/services/poa.sheets.service.ts
-init_env();
-init_logger();
-var POA_SHEET_NAME = "Attorney";
-var POA_SHEET_COLUMNS = [
-  "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644",
-  // Col 0 (A)
-  "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629",
-  // Col 1 (B)
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0647\u062C\u0631\u064A",
-  // Col 2 (C)
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 \u0647\u062C\u0631\u064A",
-  // Col 3 (D)
-  "\u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629",
-  // Col 4 (E)
-  "\u0645\u0644\u0627\u062D\u0638\u0627\u062A",
-  // Col 5 (F)
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621",
-  // Col 6 (G)
-  "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628"
-  // Col 7 (H) - Office ID
-];
-var POA_COLS = POA_SHEET_COLUMNS.length;
-var COL_LAST = String.fromCharCode("A".charCodeAt(0) + POA_COLS - 1);
-var POA_OFFICE_COL_INDEX = 7;
-var poaDataCache = null;
-var lastPoaCacheTime = 0;
-var POA_CACHE_TTL_MS = 15e3;
-function invalidatePoaCache() {
-  poaDataCache = null;
-  lastPoaCacheTime = 0;
-}
-async function getPoaSheetId(officeId) {
-  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const sheet = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === POA_SHEET_NAME
-    );
-    if (!sheet?.properties || sheet.properties.sheetId == null) {
-      throw new Error(`Sheet tab "${POA_SHEET_NAME}" not found.`);
-    }
-    return sheet.properties.sheetId;
-  } catch (err) {
-    throw classifyGoogleError(err, "getPoaSheetId", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: POA_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function ensurePoaSheetReady(officeId) {
-  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const existing = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === POA_SHEET_NAME
-    );
-    if (!existing) {
-      await ctx.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: ctx.spreadsheetId,
-        requestBody: {
-          requests: [{ addSheet: { properties: { title: POA_SHEET_NAME } } }]
-        }
-      });
-      logger.info(`Created sheet tab "${POA_SHEET_NAME}"`);
-    }
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${POA_SHEET_NAME}!A1:${COL_LAST}1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[...POA_SHEET_COLUMNS]] }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "ensurePoaSheetReady", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: POA_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function fetchAllRawPoaRows(officeId, forceRefresh = false) {
-  const now = Date.now();
-  if (!forceRefresh && poaDataCache !== null && now - lastPoaCacheTime < POA_CACHE_TTL_MS) {
-    return poaDataCache;
-  }
-  await ensurePoaSheetReady(officeId);
-  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
-  try {
-    const response = await ctx.sheets.spreadsheets.values.get({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${POA_SHEET_NAME}!A2:${COL_LAST}`
-    });
-    const rows = response.data.values ?? [];
-    const result = rows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell2) => cell2 !== void 0 && cell2 !== ""));
-    poaDataCache = result;
-    lastPoaCacheTime = now;
-    return result;
-  } catch (err) {
-    throw classifyGoogleError(err, "fetchAllRawPoaRows", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: POA_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function listPoaRows(officeId, forceRefresh = false) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to list POA records.");
-  }
-  const cleanOfficeId = officeId.trim();
-  const allRows = await fetchAllRawPoaRows(cleanOfficeId, forceRefresh);
-  return allRows.filter((r2) => (r2.values[POA_OFFICE_COL_INDEX] || "").trim() === cleanOfficeId);
-}
-async function getPoaRowById(officeId, id) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to get a POA record.");
-  }
-  const cleanOfficeId = officeId.trim();
-  const allRows = await fetchAllRawPoaRows(cleanOfficeId);
-  const match = allRows.find((r2) => r2.id === id);
-  if (!match) return null;
-  const rowOffice = (match.values[POA_OFFICE_COL_INDEX] || "").trim();
-  if (rowOffice !== cleanOfficeId) {
-    return null;
-  }
-  return match;
-}
-async function appendPoaRow(officeId, values) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to create a POA record.");
-  }
-  invalidatePoaCache();
-  await ensurePoaSheetReady(officeId);
-  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
-  const padded = Array.from({ length: POA_COLS }, (_, i2) => values[i2] ?? "");
-  padded[POA_OFFICE_COL_INDEX] = officeId.trim();
-  try {
-    const response = await ctx.sheets.spreadsheets.values.append({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${POA_SHEET_NAME}!A:${COL_LAST}`,
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [padded] }
-    });
-    const updatedRange = response.data.updates?.updatedRange;
-    const match = updatedRange?.match(/![A-Z]+(\d+):/);
-    if (match) return Number(match[1]);
-    const rows = await fetchAllRawPoaRows(officeId, true);
-    const last = rows[rows.length - 1];
-    if (!last) throw new Error("Failed to determine id of newly created POA row.");
-    return last.id;
-  } catch (err) {
-    throw classifyGoogleError(err, "appendPoaRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: POA_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function updatePoaRow(officeId, id, values) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to update a POA record.");
-  }
-  const existing = await getPoaRowById(officeId, id);
-  if (!existing) {
-    throw new Error("POA record not found for this office.");
-  }
-  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
-  invalidatePoaCache();
-  const padded = Array.from({ length: POA_COLS }, (_, i2) => values[i2] ?? "");
-  padded[POA_OFFICE_COL_INDEX] = officeId.trim();
-  try {
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${POA_SHEET_NAME}!A${id}:${COL_LAST}${id}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [padded] }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "updatePoaRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: POA_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function deletePoaRow(officeId, id) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to delete a POA record.");
-  }
-  const existing = await getPoaRowById(officeId, id);
-  if (!existing) {
-    throw new Error("POA record not found for this office.");
-  }
-  const ctx = await getGoogleContext(officeId, POA_SHEET_NAME);
-  invalidatePoaCache();
-  const sheetId = await getPoaSheetId(officeId);
-  try {
-    await ctx.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: ctx.spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            deleteDimension: {
-              range: {
-                sheetId,
-                dimension: "ROWS",
-                startIndex: id - 1,
-                endIndex: id
-              }
-            }
-          }
-        ]
-      }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "deletePoaRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: POA_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-
-// src/services/judgment.sheets.service.ts
-init_env();
-init_logger();
-var JUDGMENT_SHEET_NAME = "Judgment";
-var JUDGMENT_SHEET_COLUMNS = [
-  "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629",
-  // Col 0 (A)
-  "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0645\u062E\u062A\u0635\u0629",
-  // Col 1 (B)
-  "\u0627\u0644\u0645\u062F\u0639\u064A",
-  // Col 2 (C)
-  "\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647",
-  // Col 3 (D)
-  "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u0643\u0644\u0641",
-  // Col 4 (E)
-  "\u0631\u0642\u0645 \u0627\u0644\u0635\u0643",
-  // Col 5 (F)
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062D\u0643\u0645",
-  // Col 6 (G)
-  "\u0645\u0644\u062E\u0635 \u0627\u0644\u062D\u0643\u0645",
-  // Col 7 (H)
-  "\u0627\u0644\u062D\u0643\u0645",
-  // Col 8 (I)
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621",
-  // Col 9 (J)
-  "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628"
-  // Col 10 (K) - Office ID
-];
-var JUDGMENT_COLS = JUDGMENT_SHEET_COLUMNS.length;
-var COL_LAST2 = String.fromCharCode("A".charCodeAt(0) + JUDGMENT_COLS - 1);
-var JUDGMENT_OFFICE_COL_INDEX = 10;
-var judgmentDataCache = null;
-var lastJudgmentCacheTime = 0;
-var JUDGMENT_CACHE_TTL_MS = 15e3;
-function invalidateJudgmentCache() {
-  judgmentDataCache = null;
-  lastJudgmentCacheTime = 0;
-}
-async function getJudgmentSheetId(officeId) {
-  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const sheet = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === JUDGMENT_SHEET_NAME
-    );
-    if (!sheet?.properties || sheet.properties.sheetId == null) {
-      throw new Error(`Sheet tab "${JUDGMENT_SHEET_NAME}" not found.`);
-    }
-    return sheet.properties.sheetId;
-  } catch (err) {
-    throw classifyGoogleError(err, "getJudgmentSheetId", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: JUDGMENT_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function ensureJudgmentSheetReady(officeId) {
-  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const existing = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === JUDGMENT_SHEET_NAME
-    );
-    if (!existing) {
-      await ctx.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: ctx.spreadsheetId,
-        requestBody: {
-          requests: [{ addSheet: { properties: { title: JUDGMENT_SHEET_NAME } } }]
-        }
-      });
-      logger.info(`Created sheet tab "${JUDGMENT_SHEET_NAME}"`);
-    }
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST2}1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[...JUDGMENT_SHEET_COLUMNS]] }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "ensureJudgmentSheetReady", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: JUDGMENT_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function fetchAllRawJudgmentRows(officeId, forceRefresh = false) {
-  await ensureJudgmentSheetReady(officeId);
-  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
-  const now = Date.now();
-  const useCache = !forceRefresh && judgmentDataCache !== null && now - lastJudgmentCacheTime < JUDGMENT_CACHE_TTL_MS;
-  try {
-    if (useCache) {
-      const headerRes = await ctx.sheets.spreadsheets.values.get({
-        spreadsheetId: ctx.spreadsheetId,
-        range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST2}1`
-      });
-      const headers2 = headerRes.data.values?.[0] ?? [...JUDGMENT_SHEET_COLUMNS];
-      return { headers: headers2, rows: judgmentDataCache };
-    }
-    const response = await ctx.sheets.spreadsheets.values.get({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${JUDGMENT_SHEET_NAME}!A1:${COL_LAST2}`
-    });
-    const data = response.data.values ?? [];
-    const headers = data[0] ?? [...JUDGMENT_SHEET_COLUMNS];
-    const dataRows = data.slice(1);
-    const rows = dataRows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell2) => cell2 !== void 0 && cell2 !== ""));
-    judgmentDataCache = rows;
-    lastJudgmentCacheTime = now;
-    return { headers, rows };
-  } catch (err) {
-    throw classifyGoogleError(err, "fetchAllRawJudgmentRows", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: JUDGMENT_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function listJudgmentRowsWithHeaders(officeId, forceRefresh = false) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to list Judgment records.");
-  }
-  const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawJudgmentRows(cleanOfficeId, forceRefresh);
-  const officeColIdx = headers.findIndex((h2) => h2.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
-  const actualColIdx = officeColIdx !== -1 ? officeColIdx : JUDGMENT_OFFICE_COL_INDEX;
-  const filtered = rows.filter((r2) => (r2.values[actualColIdx] || "").trim() === cleanOfficeId);
-  return { headers, rows: filtered };
-}
-async function getJudgmentRowById(officeId, id) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to get a Judgment record.");
-  }
-  const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawJudgmentRows(cleanOfficeId);
-  const match = rows.find((r2) => r2.id === id);
-  if (!match) return null;
-  const officeColIdx = headers.findIndex((h2) => h2.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
-  const actualColIdx = officeColIdx !== -1 ? officeColIdx : JUDGMENT_OFFICE_COL_INDEX;
-  if ((match.values[actualColIdx] || "").trim() !== cleanOfficeId) {
-    return null;
-  }
-  return { id: match.id, values: match.values, headers };
-}
-async function appendJudgmentRow(officeId, values) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to create a Judgment record.");
-  }
-  invalidateJudgmentCache();
-  await ensureJudgmentSheetReady(officeId);
-  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
-  const paddedValues = Array.from({ length: JUDGMENT_COLS }, (_, i2) => values[i2] ?? "");
-  paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
-  try {
-    const response = await ctx.sheets.spreadsheets.values.append({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${JUDGMENT_SHEET_NAME}!A:${COL_LAST2}`,
-      valueInputOption: "RAW",
-      insertDataOption: "OVERWRITE",
-      requestBody: { values: [paddedValues] }
-    });
-    const updatedRange = response.data.updates?.updatedRange;
-    const match = updatedRange?.match(/![A-Z]+(\d+):/);
-    if (match) return Number(match[1]);
-    const { rows } = await fetchAllRawJudgmentRows(officeId, true);
-    const last = rows[rows.length - 1];
-    if (!last) throw new Error("Failed to determine id of newly created Judgment row.");
-    return last.id;
-  } catch (err) {
-    throw classifyGoogleError(err, "appendJudgmentRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: JUDGMENT_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function updateJudgmentRow(officeId, id, values) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to update a Judgment record.");
-  }
-  const existing = await getJudgmentRowById(officeId, id);
-  if (!existing) {
-    throw new Error("Judgment record not found for this office.");
-  }
-  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
-  invalidateJudgmentCache();
-  const paddedValues = Array.from({ length: JUDGMENT_COLS }, (_, i2) => values[i2] ?? "");
-  paddedValues[JUDGMENT_OFFICE_COL_INDEX] = officeId.trim();
-  try {
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${JUDGMENT_SHEET_NAME}!A${id}:${COL_LAST2}${id}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [paddedValues] }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "updateJudgmentRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: JUDGMENT_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function deleteJudgmentRow(officeId, id) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to delete a Judgment record.");
-  }
-  const existing = await getJudgmentRowById(officeId, id);
-  if (!existing) {
-    throw new Error("Judgment record not found for this office.");
-  }
-  const ctx = await getGoogleContext(officeId, JUDGMENT_SHEET_NAME);
-  invalidateJudgmentCache();
-  const sheetId = await getJudgmentSheetId(officeId);
-  try {
-    await ctx.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: ctx.spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            deleteDimension: {
-              range: {
-                sheetId,
-                dimension: "ROWS",
-                startIndex: id - 1,
-                endIndex: id
-              }
-            }
-          }
-        ]
-      }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "deleteJudgmentRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: JUDGMENT_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-
-// src/services/task.sheets.service.ts
-init_env();
-init_logger();
-var TASK_SHEET_NAME = "Tasks";
-var TASK_SHEET_COLUMNS = [
-  "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629",
-  // Col 0 (A)
-  "\u0627\u0644\u0645\u0643\u0644\u0641",
-  // Col 1 (B)
-  "\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629",
-  // Col 2 (C)
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0633\u0644\u064A\u0645",
-  // Col 3 (D)
-  "\u0639\u062F\u062F \u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629",
-  // Col 4 (E)
-  "\u0627\u0644\u062D\u0627\u0644\u0629",
-  // Col 5 (F)
-  "\u0645\u0644\u0627\u062D\u0638\u0627\u062A",
-  // Col 6 (G)
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621",
-  // Col 7 (H)
-  "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628"
-  // Col 8 (I) - Office ID
-];
-var TASK_COLS = TASK_SHEET_COLUMNS.length;
-var COL_LAST3 = String.fromCharCode("A".charCodeAt(0) + TASK_COLS - 1);
-var TASK_OFFICE_COL_INDEX = 8;
-var taskDataCache = null;
-var lastTaskCacheTime = 0;
-var TASK_CACHE_TTL_MS = 15e3;
-function invalidateTaskCache() {
-  taskDataCache = null;
-  lastTaskCacheTime = 0;
-}
-async function getTaskSheetId(officeId) {
-  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const sheet = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === TASK_SHEET_NAME
-    );
-    if (!sheet?.properties || sheet.properties.sheetId == null) {
-      throw new Error(`Sheet tab "${TASK_SHEET_NAME}" not found.`);
-    }
-    return sheet.properties.sheetId;
-  } catch (err) {
-    throw classifyGoogleError(err, "getTaskSheetId", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: TASK_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function ensureTaskSheetReady(officeId) {
-  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
-  try {
-    const spreadsheet = await ctx.sheets.spreadsheets.get({
-      spreadsheetId: ctx.spreadsheetId
-    });
-    const existing = spreadsheet.data.sheets?.find(
-      (s2) => s2.properties?.title === TASK_SHEET_NAME
-    );
-    if (!existing) {
-      await ctx.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: ctx.spreadsheetId,
-        requestBody: {
-          requests: [{ addSheet: { properties: { title: TASK_SHEET_NAME } } }]
-        }
-      });
-      logger.info(`Created sheet tab "${TASK_SHEET_NAME}"`);
-    }
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${TASK_SHEET_NAME}!A1:${COL_LAST3}1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[...TASK_SHEET_COLUMNS]] }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "ensureTaskSheetReady", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: TASK_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function fetchAllRawTaskRows(officeId, forceRefresh = false) {
-  await ensureTaskSheetReady(officeId);
-  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
-  const now = Date.now();
-  const useCache = !forceRefresh && taskDataCache !== null && now - lastTaskCacheTime < TASK_CACHE_TTL_MS;
-  try {
-    if (useCache) {
-      const headerRes = await ctx.sheets.spreadsheets.values.get({
-        spreadsheetId: ctx.spreadsheetId,
-        range: `${TASK_SHEET_NAME}!A1:${COL_LAST3}1`
-      });
-      const headers2 = headerRes.data.values?.[0] ?? [...TASK_SHEET_COLUMNS];
-      return { headers: headers2, rows: taskDataCache };
-    }
-    const response = await ctx.sheets.spreadsheets.values.get({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${TASK_SHEET_NAME}!A1:${COL_LAST3}`
-    });
-    const data = response.data.values ?? [];
-    const headers = data[0] ?? [...TASK_SHEET_COLUMNS];
-    const dataRows = data.slice(1);
-    const rows = dataRows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell2) => cell2 !== void 0 && cell2 !== ""));
-    taskDataCache = rows;
-    lastTaskCacheTime = now;
-    return { headers, rows };
-  } catch (err) {
-    throw classifyGoogleError(err, "fetchAllRawTaskRows", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: TASK_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function listTaskRowsWithHeaders(officeId, forceRefresh = false) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to list Task records.");
-  }
-  const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawTaskRows(cleanOfficeId, forceRefresh);
-  const officeColIdx = headers.findIndex((h2) => h2.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
-  const actualColIdx = officeColIdx !== -1 ? officeColIdx : TASK_OFFICE_COL_INDEX;
-  const filtered = rows.filter((r2) => (r2.values[actualColIdx] || "").trim() === cleanOfficeId);
-  return { headers, rows: filtered };
-}
-async function getTaskRowById(officeId, id) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to get a Task record.");
-  }
-  const cleanOfficeId = officeId.trim();
-  const { headers, rows } = await fetchAllRawTaskRows(cleanOfficeId);
-  const match = rows.find((r2) => r2.id === id);
-  if (!match) return null;
-  const officeColIdx = headers.findIndex((h2) => h2.trim() === "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628");
-  const actualColIdx = officeColIdx !== -1 ? officeColIdx : TASK_OFFICE_COL_INDEX;
-  if ((match.values[actualColIdx] || "").trim() !== cleanOfficeId) {
-    return null;
-  }
-  return { id: match.id, values: match.values, headers };
-}
-async function appendTaskRow(officeId, values) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to create a Task record.");
-  }
-  invalidateTaskCache();
-  await ensureTaskSheetReady(officeId);
-  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
-  const paddedValues = Array.from({ length: TASK_COLS }, (_, i2) => values[i2] ?? "");
-  paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
-  try {
-    const response = await ctx.sheets.spreadsheets.values.append({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${TASK_SHEET_NAME}!A:${COL_LAST3}`,
-      valueInputOption: "RAW",
-      insertDataOption: "OVERWRITE",
-      requestBody: { values: [paddedValues] }
-    });
-    const updatedRange = response.data.updates?.updatedRange;
-    const match = updatedRange?.match(/![A-Z]+(\d+):/);
-    if (match) return Number(match[1]);
-    const { rows } = await fetchAllRawTaskRows(officeId, true);
-    const last = rows[rows.length - 1];
-    if (!last) throw new Error("Failed to determine id of newly created Task row.");
-    return last.id;
-  } catch (err) {
-    throw classifyGoogleError(err, "appendTaskRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: TASK_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function updateTaskRow(officeId, id, values) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to update a Task record.");
-  }
-  const existing = await getTaskRowById(officeId, id);
-  if (!existing) {
-    throw new Error("Task record not found for this office.");
-  }
-  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
-  invalidateTaskCache();
-  const paddedValues = Array.from({ length: TASK_COLS }, (_, i2) => values[i2] ?? "");
-  paddedValues[TASK_OFFICE_COL_INDEX] = officeId.trim();
-  try {
-    await ctx.sheets.spreadsheets.values.update({
-      spreadsheetId: ctx.spreadsheetId,
-      range: `${TASK_SHEET_NAME}!A${id}:${COL_LAST3}${id}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [paddedValues] }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "updateTaskRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: TASK_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-async function deleteTaskRow(officeId, id) {
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to delete a Task record.");
-  }
-  const existing = await getTaskRowById(officeId, id);
-  if (!existing) {
-    throw new Error("Task record not found for this office.");
-  }
-  const ctx = await getGoogleContext(officeId, TASK_SHEET_NAME);
-  invalidateTaskCache();
-  const sheetId = await getTaskSheetId(officeId);
-  try {
-    await ctx.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: ctx.spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            deleteDimension: {
-              range: {
-                sheetId,
-                dimension: "ROWS",
-                startIndex: id - 1,
-                endIndex: id
-              }
-            }
-          }
-        ]
-      }
-    });
-  } catch (err) {
-    throw classifyGoogleError(err, "deleteTaskRow", {
-      spreadsheetId: ctx.spreadsheetId,
-      sheetName: TASK_SHEET_NAME,
-      userId: officeId
-    });
-  }
-}
-
-// src/services/session.service.ts
-var COLUMN_INDEX = {
-  // Arabic headers
-  "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629": 0,
-  "\u0627\u0644\u0645\u062F\u0639\u064A": 1,
-  "\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647": 2,
-  "\u0627\u0644\u0645\u062D\u0643\u0645\u0629": 3,
-  "\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629": 4,
-  "\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0642\u0636\u064A\u0629": 5,
-  "\u0646\u0648\u0639 \u0627\u0644\u062C\u0644\u0633\u0629": 6,
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062C\u0644\u0633\u0629 \u0647\u062C\u0631\u064A": 7,
-  "\u064A\u0648\u0645 \u0627\u0644\u062C\u0644\u0633\u0629": 8,
-  "\u0648\u0642\u062A \u0627\u0644\u062C\u0644\u0633\u0629": 9,
-  "\u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629": 10,
-  "\u0645\u0644\u0627\u062D\u0638\u0627\u062A": 11,
-  "\u062D\u0627\u0644\u0629 \u0627\u0644\u062C\u0644\u0633\u0629": 12,
-  "\u062A\u0630\u0643\u064A\u0631 24 \u0633\u0627\u0639\u0629": 13,
-  "\u062A\u0630\u0643\u064A\u0631 6 \u0633\u0627\u0639\u0627\u062A": 14,
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621": 15,
-  "\u0627\u0644\u062A\u0642\u0631\u064A\u0631": 16,
-  // English header aliases
-  "Case Number": 0,
-  "Plaintiff": 1,
-  "Defendant": 2,
-  "Court": 3,
-  "Court Circuit": 4,
-  "Case Subject": 5,
-  "Session Type": 6,
-  "Session Date Hijri": 7,
-  "Session Day": 8,
-  "Session Time": 9,
-  "Days Remaining": 10,
-  "Notes": 11,
-  "Status": 12,
-  "Reminder24": 13,
-  "Reminder6": 14,
-  "Created At": 15,
-  "Report": 16
-};
-function cell(row, name) {
-  const index = COLUMN_INDEX[name];
-  if (index === void 0) return "";
-  return row[index] ?? "";
-}
-function nullableString(value) {
-  if (!value) return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-function parseStatus(raw) {
-  const normalized = raw.trim();
-  if (normalized === "Upcoming" || normalized === "\u0642\u0627\u062F\u0645\u0629") return "Upcoming";
-  if (normalized === "Today" || normalized === "\u0627\u0644\u064A\u0648\u0645") return "Today";
-  if (normalized === "Finished" || normalized === "\u0645\u0646\u062A\u0647\u064A\u0629") return "Finished";
-  if (normalized === "Cancelled" || normalized === "\u0645\u0644\u063A\u0627\u0629") return "Cancelled";
-  return "Upcoming";
-}
-var ARABIC_DAYS = [
-  "\u0627\u0644\u0623\u062D\u062F",
-  "\u0627\u0644\u0627\u062B\u0646\u064A\u0646",
-  "\u0627\u0644\u062B\u0644\u0627\u062B\u0627\u0621",
-  "\u0627\u0644\u0623\u0631\u0628\u0639\u0627\u0621",
-  "\u0627\u0644\u062E\u0645\u064A\u0633",
-  "\u0627\u0644\u062C\u0645\u0639\u0629",
-  "\u0627\u0644\u0633\u0628\u062A"
-];
-function computeSessionDayStr(sessionDateHijri, sessionTime) {
-  const hearingAt = computeHearingDateTime(sessionDateHijri, sessionTime);
-  if (hearingAt) {
-    return ARABIC_DAYS[hearingAt.getUTCDay()] ?? "\u2014";
-  }
-  const hijri = parseHijriDateString(sessionDateHijri);
-  if (!hijri) return "\u2014";
-  const greg = hijriToGregorian(hijri);
-  if (!greg) return "\u2014";
-  const date = new Date(Date.UTC(greg.year, greg.month - 1, greg.day));
-  return ARABIC_DAYS[date.getUTCDay()] ?? "\u2014";
-}
-function rowToSession(id, row) {
-  const sessionDateHijri = nullableString(cell(row, "Session Date Hijri"));
-  const sessionTime = nullableString(cell(row, "Session Time"));
-  const hearingDate = computeHearingDateTime(sessionDateHijri, sessionTime);
-  const rawSessionDay = nullableString(cell(row, "Session Day"));
-  const sessionDay = rawSessionDay || computeSessionDayStr(sessionDateHijri, sessionTime);
-  return {
-    id,
-    caseNumber: nullableString(cell(row, "Case Number")),
-    plaintiff: nullableString(cell(row, "Plaintiff")),
-    defendant: nullableString(cell(row, "Defendant")),
-    court: nullableString(cell(row, "Court")),
-    courtCircuit: nullableString(cell(row, "Court Circuit")),
-    caseSubject: nullableString(cell(row, "Case Subject")),
-    sessionType: nullableString(cell(row, "Session Type")),
-    sessionDateHijri,
-    sessionDay: sessionDay && sessionDay !== "\u2014" ? sessionDay : null,
-    sessionTime,
-    notes: nullableString(cell(row, "Notes")),
-    status: parseStatus(cell(row, "Status")),
-    reminder24: cell(row, "Reminder24") === "true",
-    reminder6: cell(row, "Reminder6") === "true",
-    createdAt: cell(row, "Created At") || (/* @__PURE__ */ new Date()).toISOString(),
-    hearingAt: hearingDate ? hearingDate.toISOString() : null
-  };
-}
 function computeDaysRemainingStr(sessionDateHijri, sessionTime) {
   let hearingAt = computeHearingDateTime(sessionDateHijri, sessionTime);
   if (!hearingAt) {
@@ -830165,46 +830319,6 @@ function computeDaysRemainingStr(sessionDateHijri, sessionTime) {
   if (diffDays < 0) return `\u0627\u0646\u062A\u0647\u062A (\u0645\u0646\u0630 ${Math.abs(diffDays)} \u064A\u0648\u0645)`;
   return `${diffDays} \u064A\u0648\u0645`;
 }
-function sessionInputToRow(input, createdAt) {
-  const daysRemaining = computeDaysRemainingStr(input.sessionDateHijri, input.sessionTime);
-  const sessionDay = computeSessionDayStr(input.sessionDateHijri, input.sessionTime);
-  return [
-    input.caseNumber ?? "",
-    // 0: رقم القضية
-    input.plaintiff ?? "",
-    // 1: المدعي
-    input.defendant ?? "",
-    // 2: المدعى عليه
-    input.court ?? "",
-    // 3: المحكمة
-    input.courtCircuit ?? "",
-    // 4: الدائرة القضائية
-    input.caseSubject ?? "",
-    // 5: موضوع القضية
-    input.sessionType ?? "",
-    // 6: نوع الجلسة
-    input.sessionDateHijri ?? "",
-    // 7: تاريخ الجلسة هجري
-    sessionDay,
-    // 8: يوم الجلسة
-    input.sessionTime ?? "",
-    // 9: وقت الجلسة
-    daysRemaining,
-    // 10: الأيام المتبقية
-    input.notes ?? "",
-    // 11: ملاحظات
-    "Upcoming",
-    // 12: حالة الجلسة
-    "false",
-    // 13: تذكير 24 ساعة
-    "false",
-    // 14: تذكير 6 ساعات
-    createdAt,
-    // 15: تاريخ الإنشاء
-    ""
-    // 16: التقرير
-  ];
-}
 function deriveEffectiveStatus(session) {
   if (session.status === "Cancelled" || session.status === "Finished") {
     return session.status;
@@ -830216,246 +830330,115 @@ function deriveEffectiveStatus(session) {
   if (!hearingAt) {
     return session.status;
   }
-  const now = /* @__PURE__ */ new Date();
-  if (hearingAt.getTime() < now.getTime()) {
+  const offsetHours = env.courtTimezoneOffsetHours;
+  const nowMecca = new Date(Date.now() + offsetHours * 3600 * 1e3);
+  const hearingMecca = new Date(hearingAt.getTime() + offsetHours * 3600 * 1e3);
+  const hearingYear = hearingMecca.getUTCFullYear();
+  const hearingMonth = hearingMecca.getUTCMonth();
+  const hearingDay = hearingMecca.getUTCDate();
+  const nowYear = nowMecca.getUTCFullYear();
+  const nowMonth = nowMecca.getUTCMonth();
+  const nowDay = nowMecca.getUTCDate();
+  const hearingMidnight = Date.UTC(hearingYear, hearingMonth, hearingDay);
+  const nowMidnight = Date.UTC(nowYear, nowMonth, nowDay);
+  if (hearingMidnight === nowMidnight) {
+    return "Today";
+  }
+  if (hearingMidnight < nowMidnight) {
     return "Finished";
   }
-  const offsetHours = env.courtTimezoneOffsetHours;
-  const meccaHearing = new Date(hearingAt.getTime() + offsetHours * 3600 * 1e3);
-  const meccaNow = new Date(now.getTime() + offsetHours * 3600 * 1e3);
-  const isSameDay = meccaHearing.getUTCFullYear() === meccaNow.getUTCFullYear() && meccaHearing.getUTCMonth() === meccaNow.getUTCMonth() && meccaHearing.getUTCDate() === meccaNow.getUTCDate();
-  return isSameDay ? "Today" : "Upcoming";
+  return "Upcoming";
 }
-function sortSessionsByNearestTime(sessions) {
-  const now = Date.now();
-  return [...sessions].sort((a, b) => {
-    const timeA = a.hearingAt ? new Date(a.hearingAt).getTime() : null;
-    const timeB = b.hearingAt ? new Date(b.hearingAt).getTime() : null;
-    const validA = timeA !== null && !isNaN(timeA);
-    const validB = timeB !== null && !isNaN(timeB);
-    if (validA && validB) {
-      const isPastA = timeA < now;
-      const isPastB = timeB < now;
-      if (!isPastA && isPastB) return -1;
-      if (isPastA && !isPastB) return 1;
-      if (!isPastA && !isPastB) {
-        return timeA - timeB;
-      }
-      if (isPastA && isPastB) {
-        return timeB - timeA;
-      }
-    }
-    if (validA && !validB) return -1;
-    if (!validA && validB) return 1;
-    return (b.id ?? 0) - (a.id ?? 0);
-  });
-}
-async function listSessions(arg1, arg2) {
-  let officeId;
-  let statusFilter;
-  if (typeof arg1 === "string" && !["Upcoming", "Today", "Finished", "Cancelled"].includes(arg1)) {
-    officeId = arg1;
-    statusFilter = arg2;
-  } else {
-    statusFilter = arg1;
-    officeId = arg2;
+async function resolveOfficeId(userIdOrOfficeId) {
+  if (!userIdOrOfficeId || !userIdOrOfficeId.trim()) {
+    throw new Error("officeId is required");
   }
-  if (!officeId || !officeId.trim()) {
-    throw new Error("officeId is required to list sessions.");
+  try {
+    const user = await findUserByIdOrUsername(userIdOrOfficeId);
+    if (!user) return userIdOrOfficeId;
+    if (user.role === "admin") return user.id;
+    if (user.role === "staff") return user.admin_id || user.id;
+    return userIdOrOfficeId;
+  } catch {
+    return userIdOrOfficeId;
   }
-  const cleanOfficeId = officeId.trim();
-  await ensureSheetReady(cleanOfficeId);
-  const rows = await listRows(cleanOfficeId);
-  let sessions = rows.map(({ id, values }) => {
-    const s2 = rowToSession(id, values);
-    const expectedDay = computeSessionDayStr(s2.sessionDateHijri, s2.sessionTime);
-    const expectedRemaining = computeDaysRemainingStr(s2.sessionDateHijri, s2.sessionTime);
-    const currentDayCell = cell(values, "Session Day");
-    const currentRemainingCell = cell(values, "Days Remaining");
-    if (currentDayCell !== expectedDay || currentRemainingCell !== expectedRemaining) {
-      updateRowCells(id, {
-        [COLUMN_INDEX["Days Remaining"]]: expectedRemaining,
-        [COLUMN_INDEX["Session Day"]]: expectedDay
-      }, cleanOfficeId).catch((err) => logger.warn({ err, id, userId: cleanOfficeId }, "Failed to auto-sync row cells"));
-    }
-    return s2;
-  });
-  if (statusFilter) {
-    sessions = sessions.filter((s2) => deriveEffectiveStatus(s2) === statusFilter);
-  }
-  return sortSessionsByNearestTime(sessions);
 }
-async function getSessionById(id, userId) {
-  const rows = await listRows(userId);
-  const match = rows.find((r2) => r2.id === id);
-  return match ? rowToSession(match.id, match.values) : null;
+async function markReminderSent(id, kind, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  const updateData = kind === "24h" ? { reminder24: true } : { reminder6: true };
+  await updateSession(id, updateData, officeId);
 }
-async function createSession(input, userId) {
-  await ensureSheetReady(userId);
-  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
-  const row = sessionInputToRow(input, createdAt);
-  const id = await appendRow(row, userId);
-  return rowToSession(id, row);
+async function listSessions2(status, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  const sessions = await listSessions(officeId, status);
+  return sessions.map((s2) => ({
+    ...s2,
+    status: deriveEffectiveStatus(s2)
+  }));
 }
-async function updateSession(id, patch, userId) {
-  const rows = await listRows(userId);
-  const match = rows.find((r2) => r2.id === id);
-  if (!match) {
-    return null;
-  }
-  const existing = rowToSession(id, match.values);
-  const existingReport = match.values[COLUMN_INDEX["Report"]] ?? "";
-  const merged = {
-    ...existing,
-    ...Object.fromEntries(
-      Object.entries(patch).filter(([, value]) => value !== void 0)
-    )
+async function getSessionById2(id, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  const session = await getSessionById(id, officeId);
+  if (!session) return null;
+  return {
+    ...session,
+    status: deriveEffectiveStatus(session)
   };
-  const daysRemaining = computeDaysRemainingStr(merged.sessionDateHijri, merged.sessionTime);
-  const sessionDay = computeSessionDayStr(merged.sessionDateHijri, merged.sessionTime);
-  const row = [
-    merged.caseNumber ?? "",
-    // 0: رقم القضية
-    merged.plaintiff ?? "",
-    // 1: المدعي
-    merged.defendant ?? "",
-    // 2: المدعى عليه
-    merged.court ?? "",
-    // 3: المحكمة
-    merged.courtCircuit ?? "",
-    // 4: الدائرة القضائية
-    merged.caseSubject ?? "",
-    // 5: موضوع القضية
-    merged.sessionType ?? "",
-    // 6: نوع الجلسة
-    merged.sessionDateHijri ?? "",
-    // 7: تاريخ الجلسة هجري
-    sessionDay,
-    // 8: يوم الجلسة
-    merged.sessionTime ?? "",
-    // 9: وقت الجلسة
-    daysRemaining,
-    // 10: الأيام المتبقية
-    merged.notes ?? "",
-    // 11: ملاحظات
-    merged.status,
-    // 12: حالة الجلسة
-    String(merged.reminder24),
-    // 13: تذكير 24 ساعة
-    String(merged.reminder6),
-    // 14: تذكير 6 ساعات
-    merged.createdAt,
-    // 15: تاريخ الإنشاء
-    existingReport
-    // 16: التقرير
-  ];
-  await updateRow(id, row, userId);
-  return merged;
 }
-async function deleteSession(id, userId) {
-  const existing = await getSessionById(id, userId);
-  if (!existing) {
-    return false;
-  }
-  await deleteRow(id, userId);
-  return true;
+async function createSession2(data, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  const session = await createSession(data, officeId);
+  return {
+    ...session,
+    status: deriveEffectiveStatus(session)
+  };
 }
-async function markReminderSent(id, kind, userId) {
-  if (!userId || !userId.trim()) {
-    throw new Error("officeId is required to mark reminder sent.");
-  }
-  const colIndex = kind === "24h" ? COLUMN_INDEX["Reminder24"] : COLUMN_INDEX["Reminder6"];
-  await updateRowCells(id, { [colIndex]: "true" }, userId.trim());
+async function updateSession2(id, data, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  const session = await updateSession(id, data, officeId);
+  if (!session) return null;
+  return {
+    ...session,
+    status: deriveEffectiveStatus(session)
+  };
 }
-async function getDashboardStats(userId) {
-  const [sessionsRes, poaRes, judgmentRes, taskRes] = await Promise.allSettled([
-    userId ? listSessions(void 0, userId) : Promise.resolve([]),
-    userId ? listPoaRows(userId) : Promise.resolve([]),
-    userId ? listJudgmentRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] }),
-    userId ? listTaskRowsWithHeaders(userId) : Promise.resolve({ headers: [], rows: [] })
+async function deleteSession2(id, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  return deleteSession(id, officeId);
+}
+async function getSessionReport2(id, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  return getSessionReport(id, officeId);
+}
+async function saveSessionReport2(id, report, userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  return saveSessionReport(id, report, officeId);
+}
+async function getDashboardStats(userIdOrOfficeId) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  const [sessions, poas] = await Promise.all([
+    listSessions(officeId),
+    listPoa(officeId)
   ]);
-  const sessions = sessionsRes.status === "fulfilled" ? sessionsRes.value : [];
-  const poas = poaRes.status === "fulfilled" ? poaRes.value : [];
-  const judgmentData = judgmentRes.status === "fulfilled" ? judgmentRes.value : { headers: [], rows: [] };
-  const taskData49 = taskRes.status === "fulfilled" ? taskRes.value : { headers: [], rows: [] };
-  const uniqueCases = /* @__PURE__ */ new Set();
+  const uniqueCases = new Set(
+    sessions.map((s2) => s2.caseNumber?.trim()).filter(Boolean)
+  );
   let todayHearings = 0;
   let upcomingHearings = 0;
   let finishedHearings = 0;
   for (const s2 of sessions) {
-    if (s2.caseNumber && s2.caseNumber.trim()) {
-      uniqueCases.add(s2.caseNumber.trim());
-    }
     const status = deriveEffectiveStatus(s2);
     if (status === "Today") todayHearings++;
     else if (status === "Upcoming") upcomingHearings++;
     else if (status === "Finished") finishedHearings++;
-  }
-  for (const j of judgmentData.rows) {
-    const caseNumber = j.values[0];
-    if (caseNumber && caseNumber.trim()) {
-      uniqueCases.add(caseNumber.trim());
-    }
-  }
-  let favorableJudgments = 0;
-  let unfavorableJudgments = 0;
-  for (const j of judgmentData.rows) {
-    const ruling = (j.values[8] || "").trim();
-    if (ruling === "\u0644\u0635\u0627\u0644\u062D\u0646\u0627" || ruling.toLowerCase() === "favorable") {
-      favorableJudgments++;
-    } else if (ruling === "\u0636\u062F\u0646\u0627" || ruling.toLowerCase() === "unfavorable") {
-      unfavorableJudgments++;
-    }
-  }
-  let inProgressTasks = 0;
-  let completedTasks = 0;
-  let urgentTasks = 0;
-  for (const t2 of taskData49.rows) {
-    const status = (t2.values[4] || "").trim();
-    const priority = (t2.values[3] || "").trim();
-    if (status === "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630" || status === "\u062C\u062F\u064A\u062F\u0629" || status === "\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629") {
-      inProgressTasks++;
-    } else if (status === "\u0645\u0643\u062A\u0645\u0644\u0629") {
-      completedTasks++;
-    }
-    if (priority === "\u0639\u0627\u062C\u0644\u0629" || priority === "\u0639\u0627\u0644\u064A\u0629") {
-      urgentTasks++;
-    }
   }
   return {
     totalCases: uniqueCases.size,
     todayHearings,
     upcomingHearings,
     finishedHearings,
-    totalPoas: poas.length,
-    favorableJudgments,
-    unfavorableJudgments,
-    totalTasks: taskData49.rows.length,
-    inProgressTasks,
-    completedTasks,
-    urgentTasks
+    totalPoas: poas.length
   };
-}
-async function getSessionReport(id, userId) {
-  const rows = await listRows(userId);
-  const match = rows.find((r2) => r2.id === id);
-  if (!match) {
-    return null;
-  }
-  const session = rowToSession(match.id, match.values);
-  const rawReport = match.values[COLUMN_INDEX["Report"]];
-  const report = rawReport && rawReport.trim().length > 0 ? rawReport.trim() : null;
-  return { session, report };
-}
-async function saveSessionReport(id, report, userId) {
-  const rows = await listRows(userId);
-  const match = rows.find((r2) => r2.id === id);
-  if (!match) {
-    return null;
-  }
-  await updateRowCells(id, { [COLUMN_INDEX["Report"]]: report }, userId);
-  const session = rowToSession(match.id, match.values);
-  return { session, report };
 }
 
 // src/routes/dashboard.ts
@@ -830463,15 +830446,13 @@ init_logger();
 var router3 = (0, import_express3.Router)();
 router3.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
   try {
-    const userId = req.authUser?.userId;
-    const stats = await getDashboardStats(userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const stats = await getDashboardStats(officeId);
     const data = GetDashboardStatsResponse.parse(stats);
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to load dashboard stats");
-    const isClockError = String(err?.message || "").includes("invalid_grant") || String(err?.stack || "").includes("invalid_grant");
-    const errorMsg = isClockError ? "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets \u0628\u0633\u0628\u0628 \u0639\u062F\u0645 \u062A\u0632\u0627\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0648\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u062C\u0647\u0627\u0632 \u0645\u0639 \u0633\u064A\u0631\u0641\u0631\u0627\u062A Google (invalid_grant)." : "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645.";
-    res.status(500).json({ error: errorMsg });
+    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645." });
   }
 });
 var dashboard_default = router3;
@@ -846666,6 +846647,7 @@ var ai_default = router4;
 // src/routes/sessions.ts
 var import_express5 = __toESM(require_express2(), 1);
 init_src();
+init_googleSheets_service();
 init_logger();
 
 // src/services/reminder/channels/whatsappChannel.ts
@@ -846868,6 +846850,7 @@ var WhatsappReminderChannel = class {
 };
 
 // src/routes/sessions.ts
+init_hijri();
 var router5 = (0, import_express5.Router)();
 router5.use("/sessions", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function handleRouteError(res, err, defaultMsg) {
@@ -846905,12 +846888,12 @@ router5.get("/sessions", async (req, res) => {
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    if (!userId) {
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    if (!officeId) {
       res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
       return;
     }
-    const sessions = await listSessions(parseResult.data.status, userId);
+    const sessions = await listSessions2(parseResult.data.status, officeId);
     const data = ListSessionsResponse.parse(sessions);
     res.json(data);
   } catch (err) {
@@ -846932,8 +846915,8 @@ router5.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const session = await createSession(parseResult.data, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const session = await createSession2(parseResult.data, officeId);
     const data = CreateSessionResponse.parse(session);
     res.status(201).json(data);
   } catch (err) {
@@ -846948,8 +846931,8 @@ router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const session = await getSessionById(id, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const session = await getSessionById2(id, officeId);
     if (!session) {
       res.status(404).json({ error: "Session not found." });
       return;
@@ -846973,8 +846956,8 @@ router5.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => 
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const session = await updateSession(id, parseResult.data, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const session = await updateSession2(id, parseResult.data, officeId);
     if (!session) {
       res.status(404).json({ error: "Session not found." });
       return;
@@ -846993,8 +846976,8 @@ router5.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) =>
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const deleted = await deleteSession(id, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const deleted = await deleteSession2(id, officeId);
     if (!deleted) {
       res.status(404).json({ error: "Session not found." });
       return;
@@ -847017,7 +847000,7 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
       res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
       return;
     }
-    const session = await getSessionById(id, userId);
+    const session = await getSessionById2(id, userId);
     if (!session) {
       res.status(404).json({ error: "\u0627\u0644\u062C\u0644\u0633\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
@@ -847084,6 +847067,7 @@ var import_googleapis2 = __toESM(require_src11(), 1);
 init_settings_store();
 init_logger();
 init_supabase_service();
+init_googleSheets_service();
 var router6 = (0, import_express6.Router)();
 var testAttemptsMap = /* @__PURE__ */ new Map();
 function checkTestRateLimit(key) {
@@ -847305,11 +847289,7 @@ function buildSettingsResponse(s2) {
     whatsappApiUrl: s2.whatsappApiUrl ?? "",
     whatsappToken: s2.whatsappToken ? maskToken(s2.whatsappToken) : "",
     whatsappTokenIsSet: Boolean(s2.whatsappToken),
-    whatsappInstanceId: s2.whatsappInstanceId ?? "",
-    supabaseUrl: s2.supabaseUrl ?? "",
-    supabaseKey: s2.supabaseKey ? maskToken(s2.supabaseKey) : "",
-    supabaseKeyIsSet: Boolean(s2.supabaseKey),
-    supabaseTableName: s2.supabaseTableName ?? "app_users"
+    whatsappInstanceId: s2.whatsappInstanceId ?? ""
   };
 }
 router6.get("/settings", (_req, res) => {
@@ -847324,6 +847304,21 @@ router6.put("/settings", (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to save settings");
     res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A." });
+  }
+});
+router6.post("/settings/google-export", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const { exportOfficeDataToGoogleSheets: exportOfficeDataToGoogleSheets2 } = await Promise.resolve().then(() => (init_postgres_service(), postgres_service_exports));
+    const result = await exportOfficeDataToGoogleSheets2(adminId);
+    res.json({
+      success: true,
+      message: "\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Google Sheets \u0628\u0646\u062C\u0627\u062D.",
+      ...result
+    });
+  } catch (err) {
+    logger.error({ err }, "Google export failed");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Google Sheets." });
   }
 });
 router6.post("/settings/test-whatsapp", async (_req, res) => {
@@ -847359,6 +847354,7 @@ var settings_default = router6;
 
 // src/routes/reports.ts
 var import_express7 = __toESM(require_express2(), 1);
+init_googleSheets_service();
 init_logger();
 var router7 = (0, import_express7.Router)();
 router7.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
@@ -847368,8 +847364,8 @@ router7.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const report = await getSessionReport(id, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const report = await getSessionReport2(id, officeId);
     if (!report) {
       res.status(200).json(null);
       return;
@@ -847396,9 +847392,9 @@ router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
   }
   try {
     logger.info({ id, body: req.body }, "Saving session report...");
-    const userId = req.authUser?.userId;
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
     const reportText = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
-    const updated = await saveSessionReport(id, reportText, userId);
+    const updated = await saveSessionReport2(id, reportText, officeId);
     if (!updated) {
       res.status(404).json({ error: "Session not found." });
       return;
@@ -847523,7 +847519,9 @@ async function notify(payload, officeId) {
 }
 
 // src/scheduler/reminderScheduler.ts
+init_hijri();
 init_supabase_service();
+init_googleSheets_service();
 var MS_PER_HOUR = 60 * 60 * 1e3;
 function maskPhone2(phone) {
   if (!phone) return "";
@@ -847583,7 +847581,7 @@ async function runReminderSweep() {
     try {
       let sessions = [];
       try {
-        sessions = await listSessions(officeId);
+        sessions = await listSessions2(officeId);
       } catch (err) {
         if (err instanceof GoogleBindingMissingError || String(err?.message || "").toLowerCase().includes("binding")) {
           results.push({
@@ -847745,222 +847743,111 @@ var cron_default = router8;
 // src/routes/poa.ts
 var import_express9 = __toESM(require_express2(), 1);
 init_logger();
-var import_moment_hijri2 = __toESM(require_moment_hijri(), 1);
+init_postgres_service();
 var router9 = (0, import_express9.Router)();
 function generateRefId() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
-function handlePoaError(res, err, defaultMsg) {
-  if (err instanceof GoogleBindingMissingError) {
-    res.status(409).json({
-      error: `\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      code: "GOOGLE_BINDING_INCOMPLETE",
-      refId: err.refId
-    });
-    return;
-  }
-  if (err instanceof GoogleSettingsStoreError) {
-    res.status(503).json({
-      error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      code: "SETTINGS_STORE_UNAVAILABLE",
-      refId: err.refId
-    });
-    return;
-  }
-  if (err instanceof GoogleSheetsError) {
-    res.status(err.statusCode).json({
-      error: `${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      refId: err.refId,
-      code: err.name
-    });
-    return;
-  }
-  const refId = generateRefId();
-  logger.error(
-    {
-      refId,
-      errName: err?.name,
-      errCode: err?.code,
-      message: err?.message || String(err)
-    },
-    defaultMsg
-  );
-  res.status(500).json({
-    error: `${defaultMsg} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`,
-    refId,
-    code: "INTERNAL_ERROR"
-  });
-}
 router9.use("/poa", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
-function calcDaysFromHijri(hijriDateStr) {
-  if (!hijriDateStr?.trim()) return 0;
-  try {
-    const parts = hijriDateStr.trim().split(/[\/\.-]/);
-    if (parts.length === 3) {
-      let day, month, year;
-      if (parts[0].length === 4) {
-        year = parseInt(parts[0], 10);
-        month = parseInt(parts[1], 10);
-        day = parseInt(parts[2], 10);
-      } else {
-        day = parseInt(parts[0], 10);
-        month = parseInt(parts[1], 10);
-        year = parseInt(parts[2], 10);
-      }
-      if (year > 1300 && year < 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 30) {
-        const mExpiry = (0, import_moment_hijri2.default)(`${year}/${month}/${day}`, "iYYYY/iM/iD");
-        if (mExpiry.isValid()) {
-          return mExpiry.diff((0, import_moment_hijri2.default)().startOf("day"), "days");
-        }
-      }
-    }
-  } catch (_) {
-  }
-  return 0;
+function getOfficeId(req) {
+  return req.authUser?.officeId || req.authUser?.userId || "default-office";
 }
-function rowToRecord(values) {
+function formatPoa(p) {
   return {
-    clientName: values[0] || "",
-    poaNumber: values[1] || "",
-    issueDateHijri: values[2] || "",
-    expiryDateHijri: values[3] || "",
-    daysRemaining: values[4] && values[4].trim() !== "" ? Number(values[4]) : calcDaysFromHijri(values[3] || ""),
-    notes: values[5] || "",
-    createdAt: values[6] || (/* @__PURE__ */ new Date()).toISOString(),
-    officeId: values[7] || ""
+    ...p,
+    sheetRowId: p.id
   };
 }
-function recordToRow(record, officeId) {
-  return [
-    record.clientName,
-    record.poaNumber,
-    record.issueDateHijri,
-    record.expiryDateHijri,
-    String(record.daysRemaining ?? 0),
-    record.notes || "",
-    record.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-    officeId
-  ];
-}
-router9.get("/poa", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router9.get("/poa", async (req, res) => {
+  const officeId = getOfficeId(req);
   try {
-    await ensurePoaSheetReady(officeId);
-    const forceRefresh = req.query.refresh === "true";
-    const rows = await listPoaRows(officeId, forceRefresh);
-    const records = rows.map(({ id, values }) => ({
-      ...rowToRecord(values),
-      sheetRowId: id
-    }));
-    res.json(records);
+    const list = await listPoa(officeId);
+    res.json(list.map(formatPoa));
   } catch (err) {
-    handlePoaError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0627\u062A.");
+    const refId = generateRefId();
+    logger.error({ refId, err }, "Failed to list POA records");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0627\u062A. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router9.post("/poa", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router9.post("/poa", async (req, res) => {
+  const officeId = getOfficeId(req);
   const body = req.body;
   if (!body.clientName?.trim() || !body.poaNumber?.trim()) {
     res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
     return;
   }
   try {
-    await ensurePoaSheetReady(officeId);
-    const record = {
-      clientName: body.clientName.trim(),
-      poaNumber: body.poaNumber.trim(),
-      issueDateHijri: body.issueDateHijri?.trim() || "",
-      expiryDateHijri: body.expiryDateHijri?.trim() || "",
-      daysRemaining: Number(body.daysRemaining) || 0,
-      notes: body.notes?.trim() || "",
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+    const created = await createPoa(
+      {
+        clientName: body.clientName.trim(),
+        poaNumber: body.poaNumber.trim(),
+        issueDateHijri: body.issueDateHijri?.trim() || "",
+        expiryDateHijri: body.expiryDateHijri?.trim() || "",
+        daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : void 0,
+        notes: body.notes?.trim() || ""
+      },
       officeId
-      // Always use authenticated session officeId
-    };
-    const rowId = await appendPoaRow(officeId, recordToRow(record, officeId));
-    const verified = await getPoaRowById(officeId, rowId);
-    if (!verified) {
-      throw new GoogleSheetsError(
-        `POA record with rowId ${rowId} could not be confirmed upon re-reading.`,
-        502,
-        "\u062A\u0645\u062A \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F\u0647\u0627 \u0641\u064A \u0627\u0644\u0634\u064A\u062A."
-      );
-    }
-    const savedRecord = { ...rowToRecord(verified.values), sheetRowId: verified.id };
-    logger.info({ rowId, officeId }, "POA record created and verified");
-    res.status(201).json(savedRecord);
+    );
+    logger.info({ id: created.id, officeId }, "POA record created in database");
+    res.status(201).json(formatPoa(created));
   } catch (err) {
-    handlePoaError(res, err, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0648\u0643\u0627\u0644\u0629.");
+    const refId = generateRefId();
+    logger.error({ refId, err }, "Failed to create POA record");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router9.put("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router9.put("/poa/:rowId", async (req, res) => {
+  const officeId = getOfficeId(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   const body = req.body;
   try {
-    await ensurePoaSheetReady(officeId);
-    const existing = await getPoaRowById(officeId, rowId);
-    if (!existing) {
+    const updated = await updatePoa(
+      rowId,
+      {
+        clientName: body.clientName?.trim(),
+        poaNumber: body.poaNumber?.trim(),
+        issueDateHijri: body.issueDateHijri?.trim(),
+        expiryDateHijri: body.expiryDateHijri?.trim(),
+        daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : void 0,
+        notes: body.notes?.trim()
+      },
+      officeId
+    );
+    if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
-    const existingRecord = rowToRecord(existing.values);
-    const updated = {
-      ...existingRecord,
-      clientName: body.clientName?.trim() || existingRecord.clientName,
-      poaNumber: body.poaNumber?.trim() || existingRecord.poaNumber,
-      issueDateHijri: body.issueDateHijri?.trim() ?? existingRecord.issueDateHijri,
-      expiryDateHijri: body.expiryDateHijri?.trim() ?? existingRecord.expiryDateHijri,
-      daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : existingRecord.daysRemaining,
-      notes: body.notes?.trim() ?? existingRecord.notes,
-      officeId
-      // Preserve caller's office
-    };
-    await updatePoaRow(officeId, rowId, recordToRow(updated, officeId));
-    logger.info({ rowId, officeId }, "POA record updated");
-    res.json({ ...updated, sheetRowId: rowId });
+    logger.info({ id: rowId, officeId }, "POA record updated in database");
+    res.json(formatPoa(updated));
   } catch (err) {
-    handlePoaError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629.");
+    const refId = generateRefId();
+    logger.error({ refId, err, rowId }, "Failed to update POA record");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router9.delete("/poa/:rowId", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router9.delete("/poa/:rowId", async (req, res) => {
+  const officeId = getOfficeId(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
-    const existing = await getPoaRowById(officeId, rowId);
-    if (!existing) {
+    const deleted = await deletePoa(rowId, officeId);
+    if (!deleted) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
-    await deletePoaRow(officeId, rowId);
-    logger.info({ rowId, officeId }, "POA record deleted");
+    logger.info({ id: rowId, officeId }, "POA record deleted from database");
     res.status(204).send();
   } catch (err) {
-    handlePoaError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629.");
+    const refId = generateRefId();
+    logger.error({ refId, err, rowId }, "Failed to delete POA record");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
 var poa_default = router9;
@@ -847968,268 +847855,131 @@ var poa_default = router9;
 // src/routes/judgments.ts
 var import_express10 = __toESM(require_express2(), 1);
 init_logger();
+init_postgres_service();
 var router10 = (0, import_express10.Router)();
 function generateRefId2() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
-function handleJudgmentError(res, err, defaultMsg) {
-  if (err instanceof GoogleBindingMissingError) {
-    res.status(409).json({
-      error: `\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      code: "GOOGLE_BINDING_INCOMPLETE",
-      refId: err.refId
-    });
-    return;
-  }
-  if (err instanceof GoogleSettingsStoreError) {
-    res.status(503).json({
-      error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      code: "SETTINGS_STORE_UNAVAILABLE",
-      refId: err.refId
-    });
-    return;
-  }
-  if (err instanceof GoogleSheetsError) {
-    res.status(err.statusCode).json({
-      error: `${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      refId: err.refId,
-      code: err.name
-    });
-    return;
-  }
-  const refId = generateRefId2();
-  logger.error(
-    {
-      refId,
-      errName: err?.name,
-      errCode: err?.code,
-      message: err?.message || String(err)
-    },
-    defaultMsg
-  );
-  res.status(500).json({
-    error: `${defaultMsg} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`,
-    refId,
-    code: "INTERNAL_ERROR"
-  });
-}
 router10.use("/judgments", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
-function normalizeJudgmentType(val) {
-  const trimmed = (val || "").trim();
-  if (trimmed === "\u0627\u0628\u062A\u062F\u0627\u0626\u064A" || trimmed === "\u0644\u0627") return "\u0627\u0628\u062A\u062F\u0627\u0626\u064A";
-  return "\u0646\u0647\u0627\u0626\u064A";
+function getOfficeId2(req) {
+  return req.authUser?.officeId || req.authUser?.userId || "default-office";
 }
-var FIELD_KEYS = {
-  "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629": "caseNumber",
-  "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0645\u062E\u062A\u0635\u0629": "court",
-  "\u0627\u0644\u0645\u062F\u0639\u064A": "plaintiff",
-  "\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647": "defendant",
-  "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u0643\u0644\u0641": "assignedLawyer",
-  "\u0631\u0642\u0645 \u0627\u0644\u0635\u0643": "judgmentNumber",
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062D\u0643\u0645": "judgmentDate",
-  "\u0645\u0644\u062E\u0635 \u0627\u0644\u062D\u0643\u0645": "summary",
-  "\u0627\u0644\u062D\u0643\u0645": "isFavorable",
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621": "createdAt",
-  "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628": "officeId"
-};
-function rowToRecord2(id, values, headers) {
-  const record = {};
-  headers.forEach((header, colIdx) => {
-    const fieldKey = FIELD_KEYS[header.trim()];
-    if (fieldKey) {
-      record[fieldKey] = (values[colIdx] ?? "").trim();
-    }
-  });
-  return {
-    id,
-    caseNumber: record.caseNumber || "",
-    court: record.court || "",
-    plaintiff: record.plaintiff || "",
-    defendant: record.defendant || "",
-    assignedLawyer: record.assignedLawyer || "",
-    judgmentNumber: record.judgmentNumber || "",
-    judgmentDate: record.judgmentDate || "",
-    summary: record.summary || "",
-    isFavorable: normalizeJudgmentType(record.isFavorable || ""),
-    createdAt: record.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-    officeId: record.officeId || ""
-  };
-}
-function recordToRow2(record, officeId) {
-  return [
-    record.caseNumber || "",
-    // A: رقم القضية
-    record.court || "",
-    // B: المحكمة المختصة
-    record.plaintiff || "",
-    // C: المدعي
-    record.defendant || "",
-    // D: المدعى عليه
-    record.assignedLawyer || "",
-    // E: المحامي المكلف
-    record.judgmentNumber || "",
-    // F: رقم الصك
-    record.judgmentDate || "",
-    // G: تاريخ الحكم
-    record.summary || "",
-    // H: ملخص الحكم
-    normalizeJudgmentType(record.isFavorable),
-    // I: الحكم
-    record.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-    // J: تاريخ الإنشاء
-    officeId
-    // K: معرف المكتب
-  ];
-}
-router10.get("/judgments", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router10.get("/judgments", async (req, res) => {
+  const officeId = getOfficeId2(req);
   try {
-    await ensureJudgmentSheetReady(officeId);
-    const forceRefresh = req.query.refresh === "true";
-    const { headers, rows } = await listJudgmentRowsWithHeaders(officeId, forceRefresh);
-    const records = rows.map(({ id, values }) => rowToRecord2(id, values, headers));
-    res.json(records);
+    const list = await listJudgments(officeId);
+    res.json(list);
   } catch (err) {
-    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u062D\u0643\u0627\u0645.");
+    const refId = generateRefId2();
+    logger.error({ refId, err }, "Failed to list judgments");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u062D\u0643\u0627\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router10.get("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router10.get("/judgments/:id", async (req, res) => {
+  const officeId = getOfficeId2(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
-    await ensureJudgmentSheetReady(officeId);
-    const match = await getJudgmentRowById(officeId, id);
-    if (!match) {
+    const judgment = await getJudgmentById(id, officeId);
+    if (!judgment) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
     }
-    res.json(rowToRecord2(match.id, match.values, match.headers));
+    res.json(judgment);
   } catch (err) {
-    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0643\u0645.");
+    const refId = generateRefId2();
+    logger.error({ refId, err, id }, "Failed to get judgment");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router10.post("/judgments", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router10.post("/judgments", async (req, res) => {
+  const officeId = getOfficeId2(req);
   const body = req.body;
-  if (!body.caseNumber?.trim()) {
-    res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0645\u0637\u0644\u0648\u0628." });
-    return;
-  }
-  if (!body.judgmentNumber?.trim()) {
-    res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0635\u0643 \u0645\u0637\u0644\u0648\u0628." });
+  if (!body.caseNumber?.trim() || !body.judgmentNumber?.trim()) {
+    res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0648\u0631\u0642\u0645 \u0627\u0644\u0635\u0643 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
     return;
   }
   try {
-    await ensureJudgmentSheetReady(officeId);
-    const record = {
-      caseNumber: body.caseNumber.trim(),
-      court: body.court?.trim() || "",
-      plaintiff: body.plaintiff?.trim() || "",
-      defendant: body.defendant?.trim() || "",
-      assignedLawyer: body.assignedLawyer?.trim() || "",
-      judgmentNumber: body.judgmentNumber.trim(),
-      judgmentDate: body.judgmentDate?.trim() || "",
-      summary: body.summary?.trim() || "",
-      isFavorable: normalizeJudgmentType(body.isFavorable || ""),
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+    const created = await createJudgment(
+      {
+        caseNumber: body.caseNumber.trim(),
+        court: body.court?.trim() || "",
+        plaintiff: body.plaintiff?.trim() || "",
+        defendant: body.defendant?.trim() || "",
+        assignedLawyer: body.assignedLawyer?.trim() || "",
+        judgmentNumber: body.judgmentNumber.trim(),
+        judgmentDate: body.judgmentDate?.trim() || "",
+        summary: body.summary?.trim() || "",
+        isFavorable: body.isFavorable || "\u0646\u0647\u0627\u0626\u064A"
+      },
       officeId
-      // Always use authenticated session officeId
-    };
-    const rowId = await appendJudgmentRow(officeId, recordToRow2(record, officeId));
-    const verified = await getJudgmentRowById(officeId, rowId);
-    if (!verified) {
-      throw new GoogleSheetsError(
-        `Judgment record with rowId ${rowId} could not be confirmed upon re-reading.`,
-        502,
-        "\u062A\u0645\u062A \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u062D\u0643\u0645 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F\u0647 \u0641\u064A \u0627\u0644\u0634\u064A\u062A."
-      );
-    }
-    const createdRecord = rowToRecord2(verified.id, verified.values, verified.headers);
-    logger.info({ rowId, officeId }, "Judgment record created and verified");
-    res.status(201).json(createdRecord);
+    );
+    logger.info({ id: created.id, officeId }, "Judgment record created in database");
+    res.status(201).json(created);
   } catch (err) {
-    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0643\u0645.");
+    const refId = generateRefId2();
+    logger.error({ refId, err }, "Failed to create judgment");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router10.put("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router10.put("/judgments/:id", async (req, res) => {
+  const officeId = getOfficeId2(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   const body = req.body;
   try {
-    await ensureJudgmentSheetReady(officeId);
-    const existing = await getJudgmentRowById(officeId, id);
-    if (!existing) {
+    const updated = await updateJudgment(
+      id,
+      {
+        caseNumber: body.caseNumber?.trim(),
+        court: body.court?.trim(),
+        plaintiff: body.plaintiff?.trim(),
+        defendant: body.defendant?.trim(),
+        assignedLawyer: body.assignedLawyer?.trim(),
+        judgmentNumber: body.judgmentNumber?.trim(),
+        judgmentDate: body.judgmentDate?.trim(),
+        summary: body.summary?.trim(),
+        isFavorable: body.isFavorable
+      },
+      officeId
+    );
+    if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
     }
-    const current = rowToRecord2(existing.id, existing.values, existing.headers);
-    const updated = {
-      caseNumber: body.caseNumber !== void 0 ? body.caseNumber.trim() : current.caseNumber,
-      court: body.court !== void 0 ? body.court.trim() : current.court,
-      plaintiff: body.plaintiff !== void 0 ? body.plaintiff.trim() : current.plaintiff,
-      defendant: body.defendant !== void 0 ? body.defendant.trim() : current.defendant,
-      assignedLawyer: body.assignedLawyer !== void 0 ? body.assignedLawyer.trim() : current.assignedLawyer,
-      judgmentNumber: body.judgmentNumber !== void 0 ? body.judgmentNumber.trim() : current.judgmentNumber,
-      judgmentDate: body.judgmentDate !== void 0 ? body.judgmentDate.trim() : current.judgmentDate,
-      summary: body.summary !== void 0 ? body.summary.trim() : current.summary,
-      isFavorable: body.isFavorable !== void 0 ? normalizeJudgmentType(body.isFavorable) : current.isFavorable,
-      createdAt: current.createdAt,
-      officeId
-      // Preserve caller's office
-    };
-    await updateJudgmentRow(officeId, id, recordToRow2(updated, officeId));
-    logger.info({ id, officeId }, "Judgment record updated");
-    res.json({ id, ...updated });
+    logger.info({ id, officeId }, "Judgment record updated in database");
+    res.json(updated);
   } catch (err) {
-    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645.");
+    const refId = generateRefId2();
+    logger.error({ refId, err, id }, "Failed to update judgment");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router10.delete("/judgments/:id", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router10.delete("/judgments/:id", async (req, res) => {
+  const officeId = getOfficeId2(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
-    const existing = await getJudgmentRowById(officeId, id);
-    if (!existing) {
+    const deleted = await deleteJudgment(id, officeId);
+    if (!deleted) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
     }
-    await deleteJudgmentRow(officeId, id);
-    logger.info({ id, officeId }, "Judgment record deleted");
+    logger.info({ id, officeId }, "Judgment record deleted from database");
     res.status(204).send();
   } catch (err) {
-    handleJudgmentError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u0643\u0645.");
+    const refId = generateRefId2();
+    logger.error({ refId, err, id }, "Failed to delete judgment");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
 var judgments_default = router10;
@@ -848237,257 +847987,114 @@ var judgments_default = router10;
 // src/routes/tasks.ts
 var import_express11 = __toESM(require_express2(), 1);
 init_logger();
+init_postgres_service();
 var router11 = (0, import_express11.Router)();
 function generateRefId3() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
-function handleTaskError(res, err, defaultMsg) {
-  if (err instanceof GoogleBindingMissingError) {
-    res.status(409).json({
-      error: `\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      code: "GOOGLE_BINDING_INCOMPLETE",
-      refId: err.refId
-    });
-    return;
-  }
-  if (err instanceof GoogleSettingsStoreError) {
-    res.status(503).json({
-      error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062E\u0632\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      code: "SETTINGS_STORE_UNAVAILABLE",
-      refId: err.refId
-    });
-    return;
-  }
-  if (err instanceof GoogleSheetsError) {
-    res.status(err.statusCode).json({
-      error: `${err.userMessage} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${err.refId}`,
-      refId: err.refId,
-      code: err.name
-    });
-    return;
-  }
-  const refId = generateRefId3();
-  logger.error(
-    {
-      refId,
-      errName: err?.name,
-      errCode: err?.code,
-      message: err?.message || String(err)
-    },
-    defaultMsg
-  );
-  res.status(500).json({
-    error: `${defaultMsg} \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`,
-    refId,
-    code: "INTERNAL_ERROR"
-  });
-}
 router11.use("/tasks", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
-var FIELD_KEYS2 = {
-  "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629": "title",
-  "\u0627\u0644\u0645\u0643\u0644\u0641": "assignee",
-  "\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629": "priority",
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0633\u0644\u064A\u0645": "dueDate",
-  "\u0639\u062F\u062F \u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629": "remainingDays",
-  "\u0627\u0644\u062D\u0627\u0644\u0629": "status",
-  "\u0645\u0644\u0627\u062D\u0638\u0627\u062A": "notes",
-  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621": "createdAt",
-  "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628": "officeId"
-};
-function calcRemainingDays(dueDate) {
-  if (!dueDate) return "";
-  const due = new Date(dueDate);
-  due.setHours(23, 59, 59, 999);
-  const now = /* @__PURE__ */ new Date();
-  const days = Math.ceil((due.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
-  if (days < 0) return `\u0645\u062A\u0623\u062E\u0631 ${Math.abs(days)} \u064A\u0648\u0645`;
-  if (days === 0) return "\u0627\u0644\u064A\u0648\u0645";
-  return `${days} \u064A\u0648\u0645`;
+function getOfficeId3(req) {
+  return req.authUser?.officeId || req.authUser?.userId || "default-office";
 }
-function rowToRecord3(id, values, headers) {
-  const record = {};
-  headers.forEach((header, colIdx) => {
-    const fieldKey = FIELD_KEYS2[header.trim()];
-    if (fieldKey) {
-      record[fieldKey] = (values[colIdx] ?? "").trim();
-    }
-  });
-  return {
-    id,
-    title: record.title || "",
-    assignee: record.assignee || "",
-    priority: record.priority || "\u0639\u0627\u062F\u064A\u0629",
-    dueDate: record.dueDate || "",
-    remainingDays: record.remainingDays || "",
-    status: record.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
-    notes: record.notes || "",
-    createdAt: record.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-    officeId: record.officeId || ""
-  };
-}
-function recordToRow3(record, officeId) {
-  return [
-    record.title || "",
-    // A: عنوان المهمة
-    record.assignee || "",
-    // B: المكلف
-    record.priority || "",
-    // C: الأولوية
-    record.dueDate || "",
-    // D: تاريخ التسليم
-    calcRemainingDays(record.dueDate),
-    // E: عدد الأيام المتبقية (auto)
-    record.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
-    // F: الحالة
-    record.notes || "",
-    // G: ملاحظات
-    record.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-    // H: تاريخ الإنشاء
-    officeId
-    // I: معرف المكتب
-  ];
-}
-router11.get("/tasks", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router11.get("/tasks", async (req, res) => {
+  const officeId = getOfficeId3(req);
   try {
-    await ensureTaskSheetReady(officeId);
-    const forceRefresh = req.query.refresh === "true";
-    const { headers, rows } = await listTaskRowsWithHeaders(officeId, forceRefresh);
-    const records = rows.map(({ id, values }) => rowToRecord3(id, values, headers));
-    res.json(records);
+    const tasks3 = await listTasks(officeId);
+    res.json(tasks3);
   } catch (err) {
-    handleTaskError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0627\u0645.");
+    const refId = generateRefId3();
+    logger.error({ refId, err }, "Failed to list tasks");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0647\u0627\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router11.get("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router11.get("/tasks/:id", async (req, res) => {
+  const officeId = getOfficeId3(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
-    await ensureTaskSheetReady(officeId);
-    const match = await getTaskRowById(officeId, id);
-    if (!match) {
+    const task = await getTaskById(id, officeId);
+    if (!task) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
-    res.json(rowToRecord3(match.id, match.values, match.headers));
+    res.json(task);
   } catch (err) {
-    handleTaskError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0645\u0629.");
+    const refId = generateRefId3();
+    logger.error({ refId, err, id }, "Failed to get task");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router11.post("/tasks", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router11.post("/tasks", async (req, res) => {
+  const officeId = getOfficeId3(req);
   const body = req.body;
   if (!body.title?.trim()) {
     res.status(400).json({ error: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
   try {
-    await ensureTaskSheetReady(officeId);
-    const record = {
-      title: body.title.trim(),
-      assignee: body.assignee?.trim() || "",
-      priority: body.priority || "\u0639\u0627\u062F\u064A\u0629",
-      dueDate: body.dueDate?.trim() || "",
-      remainingDays: calcRemainingDays(body.dueDate || ""),
-      status: body.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
-      notes: body.notes?.trim() || "",
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+    const created = await createTask(
+      {
+        title: body.title.trim(),
+        assignee: body.assignee?.trim() || "",
+        priority: body.priority || "\u0639\u0627\u062F\u064A\u0629",
+        dueDate: body.dueDate?.trim() || "",
+        status: body.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
+        notes: body.notes?.trim() || ""
+      },
       officeId
-      // Always use authenticated session officeId
-    };
-    const rowId = await appendTaskRow(officeId, recordToRow3(record, officeId));
-    const verified = await getTaskRowById(officeId, rowId);
-    if (!verified) {
-      throw new GoogleSheetsError(
-        `Task record with rowId ${rowId} could not be confirmed upon re-reading.`,
-        502,
-        "\u062A\u0645\u062A \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u0645\u0647\u0645\u0629 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F\u0647\u0627 \u0641\u064A \u0627\u0644\u0634\u064A\u062A."
-      );
-    }
-    const createdRecord = rowToRecord3(verified.id, verified.values, verified.headers);
-    logger.info({ rowId, officeId }, "Task record created and verified");
-    res.status(201).json(createdRecord);
+    );
+    logger.info({ id: created.id, officeId }, "Task record created in database");
+    res.status(201).json(created);
   } catch (err) {
-    handleTaskError(res, err, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629.");
+    const refId = generateRefId3();
+    logger.error({ refId, err }, "Failed to create task");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router11.put("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router11.put("/tasks/:id", async (req, res) => {
+  const officeId = getOfficeId3(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   const body = req.body;
   try {
-    await ensureTaskSheetReady(officeId);
-    const existing = await getTaskRowById(officeId, id);
-    if (!existing) {
+    const updated = await updateTask(id, body, officeId);
+    if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
-    const current = rowToRecord3(existing.id, existing.values, existing.headers);
-    const updated = {
-      title: body.title !== void 0 ? body.title.trim() : current.title,
-      assignee: body.assignee !== void 0 ? body.assignee.trim() : current.assignee,
-      priority: body.priority || current.priority,
-      dueDate: body.dueDate !== void 0 ? body.dueDate.trim() : current.dueDate,
-      remainingDays: calcRemainingDays(body.dueDate !== void 0 ? body.dueDate : current.dueDate),
-      status: body.status || current.status,
-      notes: body.notes !== void 0 ? body.notes.trim() : current.notes,
-      createdAt: current.createdAt,
-      officeId
-      // Preserve caller's office
-    };
-    await updateTaskRow(officeId, id, recordToRow3(updated, officeId));
-    logger.info({ id, officeId }, "Task record updated");
-    res.json({ id, ...updated });
+    logger.info({ id, officeId }, "Task record updated in database");
+    res.json(updated);
   } catch (err) {
-    handleTaskError(res, err, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629.");
+    const refId = generateRefId3();
+    logger.error({ refId, err, id }, "Failed to update task");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
-router11.delete("/tasks/:id", attachAuthUser, requireAuth, async (req, res) => {
-  const officeId = req.authUser?.userId || req.authUser?.username;
-  if (!officeId) {
-    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
-    return;
-  }
+router11.delete("/tasks/:id", async (req, res) => {
+  const officeId = getOfficeId3(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
-    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
-    const existing = await getTaskRowById(officeId, id);
-    if (!existing) {
+    const deleted = await deleteTask(id, officeId);
+    if (!deleted) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
-    await deleteTaskRow(officeId, id);
-    logger.info({ id, officeId }, "Task record deleted");
+    logger.info({ id, officeId }, "Task record deleted from database");
     res.status(204).send();
   } catch (err) {
-    handleTaskError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629.");
+    const refId = generateRefId3();
+    logger.error({ refId, err, id }, "Failed to delete task");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
 var tasks_default = router11;
@@ -849226,6 +848833,13 @@ bcryptjs/dist/bcrypt.js:
    * see: https://github.com/dcodeIO/bcrypt.js for details
    *)
 
+moment/moment.js:
+  (*! moment.js *)
+  (*! version : 2.30.1 *)
+  (*! authors : Tim Wood, Iskren Chernev, Moment.js contributors *)
+  (*! license : MIT *)
+  (*! momentjs.com *)
+
 web-streams-polyfill/dist/ponyfill.es2018.js:
   (**
    * @license
@@ -849568,11 +849182,4 @@ googleapis/build/src/apis/youtubereporting/index.js:
 googleapis/build/src/apis/index.js:
 googleapis/build/src/index.js:
   (*! THIS FILE IS AUTO-GENERATED *)
-
-moment/moment.js:
-  (*! moment.js *)
-  (*! version : 2.30.1 *)
-  (*! authors : Tim Wood, Iskren Chernev, Moment.js contributors *)
-  (*! license : MIT *)
-  (*! momentjs.com *)
 */

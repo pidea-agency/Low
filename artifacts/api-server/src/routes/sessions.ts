@@ -77,12 +77,12 @@ router.get("/sessions", async (req, res) => {
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    if (!userId) {
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    if (!officeId) {
       res.status(401).json({ error: "غير مصرح." });
       return;
     }
-    const sessions = await listSessions(parseResult.data.status, userId);
+    const sessions = await listSessions(parseResult.data.status, officeId);
     const data = ListSessionsResponse.parse(sessions);
     res.json(data);
   } catch (err: any) {
@@ -105,8 +105,8 @@ router.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const session = await createSession(parseResult.data, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const session = await createSession(parseResult.data, officeId);
     const data = CreateSessionResponse.parse(session);
     res.status(201).json(data);
   } catch (err: any) {
@@ -122,8 +122,8 @@ router.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const session = await getSessionById(id, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const session = await getSessionById(id, officeId);
     if (!session) {
       res.status(404).json({ error: "Session not found." });
       return;
@@ -148,8 +148,8 @@ router.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const session = await updateSession(id, parseResult.data, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const session = await updateSession(id, parseResult.data, officeId);
     if (!session) {
       res.status(404).json({ error: "Session not found." });
       return;
@@ -169,8 +169,8 @@ router.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => 
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    const deleted = await deleteSession(id, userId);
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const deleted = await deleteSession(id, officeId);
     if (!deleted) {
       res.status(404).json({ error: "Session not found." });
       return;

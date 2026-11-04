@@ -21,8 +21,6 @@ async function main() {
   const targetUser = localUsers.find((u) => u.username === "lawyer_2") || localUsers[0];
   console.log(`Testing with user: ${targetUser.username} (${targetUser.id})`);
 
-  // Allow-list target user so getGoogleContext succeeds
-  process.env.GLOBAL_SHEET_ALLOWED_USER_IDS = `${targetUser.id},${targetUser.username}`;
 
   // Step 1: Check getGoogleContext
   console.log("\n[Step 1] Calling getGoogleContext(targetUser.id, 'Tasks')...");

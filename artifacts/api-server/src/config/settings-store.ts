@@ -41,12 +41,6 @@ export interface AppSettings {
   whatsappToken?: string;
   /** Green API Instance ID (e.g. 7107XXXXXXXXX) */
   whatsappInstanceId?: string;
-  /** Supabase Project URL */
-  supabaseUrl?: string;
-  /** Supabase Service Role Key or Anon Key */
-  supabaseKey?: string;
-  /** Supabase Table Name for Users (defaults to "app_users") */
-  supabaseTableName?: string;
 }
 
 /**
@@ -124,9 +118,6 @@ export function getSettings(): AppSettings {
     aiModel:             merged.aiModel              || process.env.AI_MODEL               || undefined,
     googleSpreadsheetId: merged.googleSpreadsheetId  || process.env.GOOGLE_SPREADSHEET_ID  || undefined,
     googleSheetName:     merged.googleSheetName      || process.env.GOOGLE_SHEET_NAME      || undefined,
-    supabaseUrl:         merged.supabaseUrl          || process.env.SUPABASE_URL           || undefined,
-    supabaseKey:         merged.supabaseKey          || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || undefined,
-    supabaseTableName:   merged.supabaseTableName    || process.env.SUPABASE_TABLE_NAME    || "app_users",
   };
 }
 
@@ -157,9 +148,6 @@ export function saveSettings(patch: Partial<AppSettings>): AppSettings {
   if (patch.whatsappApiUrl === "") delete _cache.whatsappApiUrl;
   if (patch.whatsappToken === "") delete _cache.whatsappToken;
   if (patch.whatsappInstanceId === "") delete _cache.whatsappInstanceId;
-  if (patch.supabaseUrl === "") delete _cache.supabaseUrl;
-  if (patch.supabaseKey === "") delete _cache.supabaseKey;
-  if (patch.supabaseTableName === "") delete _cache.supabaseTableName;
 
   saveToDisk(_cache);
   return getSettings();

@@ -16,9 +16,9 @@ describe("Reminder Scheduler Tenant Isolation & Security", () => {
 
   describe("1. listSessions Requires Office Context", () => {
     it("throws an error when officeId is missing, empty, or undefined", async () => {
-      // @ts-expect-error - testing missing officeId enforcement
+      // @ts-ignore - testing missing officeId enforcement
       await expect(sessionService.listSessions()).rejects.toThrow(/officeId is required/i);
-      // @ts-expect-error - testing undefined officeId enforcement
+      // @ts-ignore - testing undefined officeId enforcement
       await expect(sessionService.listSessions(undefined, undefined)).rejects.toThrow(/officeId is required/i);
       // Testing empty officeId enforcement at runtime
       await expect(sessionService.listSessions(undefined, "   ")).rejects.toThrow(/officeId is required/i);
