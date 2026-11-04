@@ -442,4 +442,29 @@
   .fade-in-up-delay-2 { animation-delay: 0.1s; opacity: 0; }
   .fade-in-up-delay-3 { animation-delay: 0.15s; opacity: 0; }
   .fade-in-up-delay-4 { animation-delay: 0.2s; opacity: 0; }
+
+  /* Custom thin scrollbar for sidebar */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 164, 73, 0.4) rgba(0, 0, 0, 0.12);
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 9999px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(201, 164, 73, 0.4);
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(201, 164, 73, 0.7);
+  }
 }

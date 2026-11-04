@@ -92,7 +92,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto sidebar-scrollbar">
         <p
           className="text-[10px] font-semibold uppercase tracking-widest px-3 py-2"
           style={{ color: 'rgba(255,255,255,0.4)' }}
@@ -112,39 +112,21 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               data-testid={`nav-${item.path === '/' ? 'dashboard' : item.path.slice(1)}`}
             >
               <div
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#C9A449] text-white shadow-xs'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
                 style={
                   isActive
                     ? {
-                        background: '#C9A449',
-                        color: '#ffffff',
                         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.25)',
                       }
-                    : {
-                        color: 'rgba(255,255,255,0.7)',
-                      }
+                    : undefined
                 }
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.1)';
-                    (e.currentTarget as HTMLDivElement).style.color = '#ffffff';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.background = '';
-                    (e.currentTarget as HTMLDivElement).style.color = 'rgba(255,255,255,0.7)';
-                  }
-                }}
               >
                 <Icon className="w-4 h-4 shrink-0" />
-                <span className="flex-1">{item.name}</span>
-                {isActive && (
-                  <div
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: '#ffffff' }}
-                  />
-                )}
+                <span className="flex-1 text-start">{item.name}</span>
               </div>
             </Link>
           );
@@ -248,27 +230,18 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       >
         <button
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-          style={{ color: 'rgba(255,255,255,0.65)' }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)';
-            (e.currentTarget as HTMLButtonElement).style.color = '#ffffff';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = '';
-            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.65)';
-          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-white/70 hover:bg-white/10 hover:text-white"
           data-testid="button-toggle-theme"
         >
           {theme === 'light' ? (
             <>
               <Moon className="w-4 h-4 shrink-0" />
-              الوضع الداكن
+              <span className="flex-1 text-start">الوضع الداكن</span>
             </>
           ) : (
             <>
               <Sun className="w-4 h-4 shrink-0" />
-              الوضع الفاتح
+              <span className="flex-1 text-start">الوضع الفاتح</span>
             </>
           )}
         </button>
@@ -276,20 +249,13 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <button
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 disabled:opacity-40"
-          style={{ color: 'rgba(255,180,180,0.8)' }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.18)';
-            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(252,165,165,1)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = '';
-            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,180,180,0.8)';
-          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer disabled:opacity-40 text-amber-100/70 hover:bg-rose-500/15 hover:text-rose-200 group"
           data-testid="button-logout"
         >
-          <LogOut className="w-4 h-4 shrink-0" />
-          {logoutMutation.isPending ? 'جارٍ الخروج...' : 'تسجيل الخروج'}
+          <LogOut className="w-4 h-4 shrink-0 text-rose-400/80 group-hover:text-rose-300 transition-colors" />
+          <span className="flex-1 text-start">
+            {logoutMutation.isPending ? 'جارٍ الخروج...' : 'تسجيل الخروج'}
+          </span>
         </button>
       </div>
     </div>
