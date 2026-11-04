@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, MessageSquare, Calendar, Moon, Sun, LogOut, Settings, Scale, FileText, ShieldCheck, Gavel, CheckSquare, Users, Sparkles, Shield, AlertTriangle, Database } from 'lucide-react';
+import { Moon, Sun, LogOut, Scale } from 'lucide-react';
 import { useTheme } from './theme-provider';
 import { useLogout, useGetCurrentUser } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -132,96 +132,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           );
         })}
       </nav>
-
-      {/* Subscription & Excel Drive Connection Info */}
-      {user && (
-        <div
-          className="mx-3 mb-2 p-2.5 rounded-xl border space-y-1.5 text-xs"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            borderColor: user.isExpired || user.isSuspended ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)',
-          }}
-        >
-          {user.isExpired || user.isSuspended ? (
-            <div className="space-y-1 text-red-300">
-              <div className="flex items-center gap-1.5 font-bold text-[11px] text-red-400">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 animate-pulse" />
-                <span>الاشتراك منتهي الصلاحية ❌</span>
-              </div>
-              <p className="text-[10px] leading-tight text-red-200/80">
-                تم إيقاف المزامنة مع الإكسل والتقارير والذكاء الاصطناعي لحين التجديد.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  {user.plan_tier === 'pro' ? 'باقة برو (Pro)' : 'باقة بلس (Plus)'}
-                </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff' }}>
-                  {user.billing_cycle === 'monthly' ? 'شهري' : 'سنوي'}
-                </span>
-              </div>
-
-              {user.role === 'admin' ? (
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-[10px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                    <span>استهلاك ذكاء المكتب</span>
-                    <span className="font-mono font-bold text-amber-300">
-                      {user.ai_usage_count || 0} / {user.ai_quota_limit || 100}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${Math.min(100, Math.round(((user.ai_usage_count || 0) / (user.ai_quota_limit || 100)) * 100))}%`,
-                        background: (user.ai_usage_count || 0) >= (user.ai_quota_limit || 100) ? '#ef4444' : '#C9A449',
-                      }}
-                    />
-                  </div>
-                  <Link
-                    href="/subscription"
-                    onClick={() => onNavigate?.()}
-                    className="block text-center text-[10px] font-bold py-1 px-2 rounded-lg transition-colors hover:brightness-110"
-                    style={{
-                      background: 'rgba(201, 164, 73, 0.2)',
-                      color: '#C9A449',
-                      border: '1px solid rgba(201, 164, 73, 0.35)',
-                    }}
-                  >
-                    إدارة الحصص والاستهلاك ←
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[10px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                    <span>استهلاك الذكاء الاصطناعي</span>
-                    <span className="font-mono font-bold text-amber-300">
-                      {user.ai_usage_count || 0} / {user.ai_quota_limit ?? 'مشترك'}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${user.ai_quota_limit ? Math.min(100, Math.round(((user.ai_usage_count || 0) / user.ai_quota_limit) * 100)) : Math.min(100, Math.round(((user.ai_usage_count || 0) / 100) * 100))}%`,
-                        background: user.ai_quota_limit && (user.ai_usage_count || 0) >= user.ai_quota_limit ? '#ef4444' : '#C9A449',
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-1 text-[10px] pt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                <Database className="w-2.5 h-2.5 text-emerald-400" />
-                <span>متصل مباشرة بـ Google Drive Sheets</span>
-              </div>
-            </>
-          )}
-        </div>
-      )}
 
       {/* Footer actions */}
       <div

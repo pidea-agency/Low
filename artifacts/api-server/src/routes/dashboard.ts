@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { GetDashboardStatsResponse } from "@workspace/api-zod";
-import { getDashboardStats } from "../services/session.service";
+import { getDashboardStats, getDashboardChartsData } from "../services/session.service";
 import { isGoogleSheetsConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { attachAuthUser, requireAuth, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
@@ -18,6 +18,20 @@ router.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromO
   } catch (err: any) {
     logger.error({ err }, "Failed to load dashboard stats");
     res.status(500).json({ error: "فشل تحميل إحصائيات لوحة التحكم." });
+  }
+});
+
+router.get("/dashboard/charts", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
+  try {
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const isPersonal = req.query.scope === "personal";
+    const assignee = isPersonal ? (req.authUser?.displayName || req.authUser?.username) : undefined;
+    const isAdmin = req.authUser?.role === "admin";
+    const chartsData = await getDashboardChartsData(officeId, assignee, isAdmin);
+    res.json(chartsData);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to load dashboard charts data");
+    res.status(500).json({ error: "فشل تحميل بيانات المخططات البيانية." });
   }
 });
 

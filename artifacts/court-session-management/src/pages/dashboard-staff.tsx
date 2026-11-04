@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Timer,
   Scale,
+  BarChart3,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'wouter';
@@ -26,6 +27,11 @@ import {
   AiQuotaCard,
   QuickActionCard,
   SubscriptionBanner,
+  SessionsTrendChart,
+  SessionsStatusDonutChart,
+  TasksStatusChart,
+  CourtsDistributionChart,
+  type DashboardChartsData,
 } from '@/components/dashboard';
 
 interface StaffTask {
@@ -59,6 +65,30 @@ export default function DashboardStaffPage() {
     error: sessionsError,
     refetch: refetchSessions,
   } = useListSessions();
+
+  const [chartsData, setChartsData] = useState<DashboardChartsData | null>(null);
+  const [isLoadingCharts, setIsLoadingCharts] = useState(true);
+
+  // Load personal dashboard charts
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingCharts(true);
+    fetch('/api/dashboard/charts?scope=personal', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data) {
+          setChartsData(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setIsLoadingCharts(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.username]);
 
   const [personalTasks, setPersonalTasks] = useState<StaffTask[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
@@ -308,6 +338,35 @@ export default function DashboardStaffPage() {
           isUnavailable={Boolean(sessionsError)}
           dataTestId="stat-staff-totalCases"
         />
+      </div>
+
+      {/* Visual Analytics & Charts Section */}
+      <div className="space-y-4 fade-in-up">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-5 h-5 rounded-lg flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #3F4A2C, #52603B)' }}
+          >
+            <BarChart3 className="w-3 h-3 text-[#C9A449]" />
+          </div>
+          <h2 className="text-sm font-bold text-foreground">مخططات الأداء ومتابعة القضايا والمهام</h2>
+        </div>
+
+        {/* Top Charts Row: Sessions Trend & Status Donut */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <SessionsTrendChart data={chartsData?.sessionsTrend} isLoading={isLoadingCharts} />
+          </div>
+          <div>
+            <SessionsStatusDonutChart data={chartsData?.sessionsStatusDistribution} isLoading={isLoadingCharts} />
+          </div>
+        </div>
+
+        {/* Bottom Charts Row: Tasks Status & Courts Distribution */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <TasksStatusChart data={chartsData?.tasksStatusDistribution} isLoading={isLoadingCharts} />
+          <CourtsDistributionChart data={chartsData?.courtsDistribution} isLoading={isLoadingCharts} />
+        </div>
       </div>
 
       {/* Activity Section: Staff Upcoming Hearings & Urgent Tasks */}
