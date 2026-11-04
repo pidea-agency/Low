@@ -183,6 +183,7 @@ create table if not exists public.${cleanName} (
   password_hash text not null,
   role text default 'staff' check (role in ('admin', 'staff')),
   display_name text,
+  phone text,
   status text default 'active' check (status in ('active', 'suspended')),
   subscription_end_date text,    -- YYYY-MM-DD
   subscription_notes text,
@@ -204,6 +205,7 @@ create index if not exists idx_${cleanName}_status on public.${cleanName} (statu
 create index if not exists idx_${cleanName}_role on public.${cleanName} (role);
 
 -- أوامر تحديث الجدول إذا كان موجوداً مسبقاً في مشروعك:
+alter table public.${cleanName} add column if not exists phone text;
 alter table public.${cleanName} add column if not exists status text default 'active';
 alter table public.${cleanName} add column if not exists subscription_end_date text;
 alter table public.${cleanName} add column if not exists subscription_notes text;

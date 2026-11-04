@@ -33489,13 +33489,13 @@ var init_env = __esm({
       },
       // --- Supabase Settings (Environment Variables only - no UI override) ---
       get supabaseUrl() {
-        return process.env.SUPABASE_URL?.trim() || void 0;
+        return readEnv("SUPABASE_URL")?.trim() || void 0;
       },
       get supabaseKey() {
-        return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? process.env.SUPABASE_KEY?.trim() ?? process.env.SUPABASE_ANON_KEY?.trim() ?? void 0;
+        return readEnv("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? readEnv("SUPABASE_KEY")?.trim() ?? readEnv("SUPABASE_ANON_KEY")?.trim() ?? void 0;
       },
       get supabaseTableName() {
-        return process.env.SUPABASE_TABLE_NAME?.trim() || "app_users";
+        return readEnv("SUPABASE_TABLE_NAME")?.trim() || "app_users";
       },
       // --- Scheduler ---
       get reminderCronExpression() {
@@ -56948,6 +56948,7 @@ __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
   OfficeMemberNotFoundError: () => OfficeMemberNotFoundError,
   checkAndIncrementOfficeAiUsage: () => checkAndIncrementOfficeAiUsage,
+  checkHasPhoneColumn: () => checkHasPhoneColumn,
   clearUserAuthCache: () => clearUserAuthCache,
   countActiveAdmins: () => countActiveAdmins,
   createOfficeMember: () => createOfficeMember,
@@ -57668,6 +57669,29 @@ function sanitizeGoogleServiceJson(raw) {
     throw new Error(err.message || "\u0635\u064A\u063A\u0629 Google Service Account JSON \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629.");
   }
 }
+async function checkHasPhoneColumn(client) {
+  const now = Date.now();
+  if (hasPhoneColumnCache !== null && now - lastPhoneCheck < 6e4) {
+    return hasPhoneColumnCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client.from(tableName).select("*").limit(1);
+    if (!error && Array.isArray(data) && data.length > 0) {
+      hasPhoneColumnCache = "phone" in data[0];
+      lastPhoneCheck = now;
+      return hasPhoneColumnCache;
+    }
+    const testRes = await client.from(tableName).select("phone").limit(1);
+    hasPhoneColumnCache = !testRes.error;
+    lastPhoneCheck = now;
+    return hasPhoneColumnCache;
+  } catch {
+    hasPhoneColumnCache = false;
+    lastPhoneCheck = now;
+    return false;
+  }
+}
 async function listSupabaseUsers() {
   const client = getSupabaseClient();
   if (!client) {
@@ -57695,7 +57719,9 @@ async function listSupabaseUsers() {
     }));
   }
   const tableName = env.supabaseTableName;
-  const { data, error } = await client.from(tableName).select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").order("created_at", { ascending: false });
+  const hasPhone = await checkHasPhoneColumn(client);
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
+  const { data, error } = await client.from(tableName).select(selectCols).order("created_at", { ascending: false });
   if (error) {
     logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
     const local = loadLocalUsers();
@@ -58092,6 +58118,7 @@ async function createSupabaseUser(input) {
   if (existing && existing.length > 0) {
     throw new Error(`\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 "${username}" \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B.`);
   }
+  const hasPhone = await checkHasPhoneColumn(client);
   const newUserData = {
     username,
     email: input.email?.trim() || null,
@@ -58101,7 +58128,6 @@ async function createSupabaseUser(input) {
     office_name: isOfficeAdmin ? input.office_name?.trim() || null : null,
     display_name: input.display_name?.trim() || username,
     status,
-    phone: input.phone?.trim() || null,
     subscription_end_date,
     subscription_notes,
     plan_tier,
@@ -58112,31 +58138,36 @@ async function createSupabaseUser(input) {
     google_spreadsheet_id: isOfficeAdmin ? input.google_spreadsheet_id?.trim() || null : null,
     google_sheet_name: isOfficeAdmin ? input.google_sheet_name?.trim() || null : null
   };
-  const { data, error } = await client.from(tableName).insert([newUserData]).select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at").single();
+  if (hasPhone && input.phone !== void 0) {
+    newUserData.phone = input.phone?.trim() || null;
+  }
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
+  const { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
   if (error) {
     logger.error({ error }, "Failed to insert user into Supabase");
     throw new Error(`\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
   }
+  const row = data;
   return {
-    id: data.id,
-    username: data.username,
-    email: data.email,
-    role: data.role,
-    admin_id: data.admin_id || null,
-    office_name: data.office_name || null,
-    display_name: data.display_name,
-    status: data.status || "active",
-    phone: data.phone || null,
-    subscription_end_date: data.subscription_end_date || null,
-    subscription_notes: data.subscription_notes || null,
-    plan_tier: data.plan_tier,
-    billing_cycle: data.billing_cycle,
-    ai_quota_limit: data.ai_quota_limit,
-    ai_usage_count: data.ai_usage_count ?? 0,
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    admin_id: row.admin_id || null,
+    office_name: row.office_name || null,
+    display_name: row.display_name,
+    status: row.status || "active",
+    phone: row.phone || null,
+    subscription_end_date: row.subscription_end_date || null,
+    subscription_notes: row.subscription_notes || null,
+    plan_tier: row.plan_tier,
+    billing_cycle: row.billing_cycle,
+    ai_quota_limit: row.ai_quota_limit,
+    ai_usage_count: row.ai_usage_count ?? 0,
     has_google_service: Boolean(encryptedGoogleJson),
-    google_spreadsheet_id: data.google_spreadsheet_id,
-    google_sheet_name: data.google_sheet_name,
-    created_at: data.created_at
+    google_spreadsheet_id: row.google_spreadsheet_id,
+    google_sheet_name: row.google_sheet_name,
+    created_at: row.created_at
   };
 }
 async function countActiveAdmins(excludeUserId) {
@@ -58318,7 +58349,10 @@ async function updateSupabaseUser(id, input) {
   if (input.office_name !== void 0) updates.office_name = input.office_name ? input.office_name.trim() : null;
   if (input.display_name !== void 0) updates.display_name = input.display_name.trim() || null;
   if (input.email !== void 0) updates.email = input.email.trim() || null;
-  if (input.phone !== void 0) updates.phone = input.phone ? input.phone.trim() : null;
+  const hasPhone = await checkHasPhoneColumn(client);
+  if (hasPhone && input.phone !== void 0) {
+    updates.phone = input.phone ? input.phone.trim() : null;
+  }
   if (input.status !== void 0) updates.status = input.status;
   if (input.subscription_end_date !== void 0) updates.subscription_end_date = input.subscription_end_date;
   if (input.subscription_notes !== void 0) updates.subscription_notes = input.subscription_notes?.trim() || null;
@@ -58346,7 +58380,8 @@ async function updateSupabaseUser(id, input) {
     throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0639\u062F\u064A\u0644.");
   }
   invalidateUserGoogleCache(id);
-  const { data, error } = await client.from(tableName).update(updates).eq("id", id).select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at").single();
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
+  const { data, error } = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
   if (error) {
     logger.error({ error, id }, "Failed to update user in Supabase");
     throw new Error(`\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
@@ -58355,26 +58390,27 @@ async function updateSupabaseUser(id, input) {
   if (input.password && input.password.trim()) {
     revokeUserSessions(id);
   }
+  const row = data;
   return {
-    id: data.id,
-    username: data.username,
-    email: data.email,
-    role: data.role,
-    admin_id: data.admin_id || null,
-    office_name: data.office_name || null,
-    display_name: data.display_name,
-    status: data.status || "active",
-    phone: data.phone || null,
-    subscription_end_date: data.subscription_end_date || null,
-    subscription_notes: data.subscription_notes || null,
-    plan_tier: data.plan_tier,
-    billing_cycle: data.billing_cycle,
-    ai_quota_limit: data.ai_quota_limit,
-    ai_usage_count: data.ai_usage_count ?? 0,
-    has_google_service: Boolean(data.google_service_account_json && data.google_service_account_json.trim().length > 10),
-    google_spreadsheet_id: data.google_spreadsheet_id,
-    google_sheet_name: data.google_sheet_name,
-    created_at: data.created_at
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    admin_id: row.admin_id || null,
+    office_name: row.office_name || null,
+    display_name: row.display_name,
+    status: row.status || "active",
+    phone: row.phone || null,
+    subscription_end_date: row.subscription_end_date || null,
+    subscription_notes: row.subscription_notes || null,
+    plan_tier: row.plan_tier,
+    billing_cycle: row.billing_cycle,
+    ai_quota_limit: row.ai_quota_limit,
+    ai_usage_count: row.ai_usage_count ?? 0,
+    has_google_service: Boolean(row.google_service_account_json && row.google_service_account_json.trim().length > 10),
+    google_spreadsheet_id: row.google_spreadsheet_id,
+    google_sheet_name: row.google_sheet_name,
+    created_at: row.created_at
   };
 }
 async function resetUserAiUsage(userId) {
@@ -58402,7 +58438,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, OfficeMemberNotFoundError;
+var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, OfficeMemberNotFoundError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -58434,6 +58470,8 @@ var init_supabase_service = __esm({
     TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
     _localUsersCache = null;
     officeAiLocks = /* @__PURE__ */ new Map();
+    hasPhoneColumnCache = null;
+    lastPhoneCheck = 0;
     OfficeMemberNotFoundError = class extends Error {
       statusCode = 404;
       constructor(message = "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.") {

@@ -918,6 +918,33 @@ function sanitizeGoogleServiceJson(raw?: any): string | null {
   }
 }
 
+let hasPhoneColumnCache: boolean | null = null;
+let lastPhoneCheck = 0;
+
+export async function checkHasPhoneColumn(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasPhoneColumnCache !== null && now - lastPhoneCheck < 60_000) {
+    return hasPhoneColumnCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client.from(tableName).select("*").limit(1);
+    if (!error && Array.isArray(data) && data.length > 0) {
+      hasPhoneColumnCache = "phone" in data[0];
+      lastPhoneCheck = now;
+      return hasPhoneColumnCache;
+    }
+    const testRes = await client.from(tableName).select("phone").limit(1);
+    hasPhoneColumnCache = !testRes.error;
+    lastPhoneCheck = now;
+    return hasPhoneColumnCache;
+  } catch {
+    hasPhoneColumnCache = false;
+    lastPhoneCheck = now;
+    return false;
+  }
+}
+
 /**
  * List all users across the system (legacy / internal use).
  */
@@ -949,9 +976,11 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
   }
 
   const tableName = env.supabaseTableName;
+  const hasPhone = await checkHasPhoneColumn(client);
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
   const { data, error } = await client
     .from(tableName)
-    .select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at")
+    .select(selectCols)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -1543,7 +1572,8 @@ export async function createSupabaseUser(input: {
     throw new Error(`اسم المستخدم "${username}" مسجل مسبقاً.`);
   }
 
-  const newUserData = {
+  const hasPhone = await checkHasPhoneColumn(client);
+  const newUserData: Record<string, any> = {
     username,
     email: input.email?.trim() || null,
     password_hash,
@@ -1552,7 +1582,6 @@ export async function createSupabaseUser(input: {
     office_name: isOfficeAdmin ? (input.office_name?.trim() || null) : null,
     display_name: input.display_name?.trim() || username,
     status,
-    phone: input.phone?.trim() || null,
     subscription_end_date,
     subscription_notes,
     plan_tier,
@@ -1563,11 +1592,16 @@ export async function createSupabaseUser(input: {
     google_spreadsheet_id: isOfficeAdmin ? (input.google_spreadsheet_id?.trim() || null) : null,
     google_sheet_name: isOfficeAdmin ? (input.google_sheet_name?.trim() || null) : null,
   };
+  if (hasPhone && input.phone !== undefined) {
+    newUserData.phone = input.phone?.trim() || null;
+  }
+
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
 
   const { data, error } = await client
     .from(tableName)
     .insert([newUserData])
-    .select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at")
+    .select(selectCols)
     .single();
 
   if (error) {
@@ -1575,26 +1609,27 @@ export async function createSupabaseUser(input: {
     throw new Error(`فشل إنشاء المستخدم: ${error.message}`);
   }
 
+  const row = data as any;
   return {
-    id: data.id,
-    username: data.username,
-    email: data.email,
-    role: data.role,
-    admin_id: data.admin_id || null,
-    office_name: data.office_name || null,
-    display_name: data.display_name,
-    status: data.status || "active",
-    phone: data.phone || null,
-    subscription_end_date: data.subscription_end_date || null,
-    subscription_notes: data.subscription_notes || null,
-    plan_tier: data.plan_tier,
-    billing_cycle: data.billing_cycle,
-    ai_quota_limit: data.ai_quota_limit,
-    ai_usage_count: data.ai_usage_count ?? 0,
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    admin_id: row.admin_id || null,
+    office_name: row.office_name || null,
+    display_name: row.display_name,
+    status: row.status || "active",
+    phone: row.phone || null,
+    subscription_end_date: row.subscription_end_date || null,
+    subscription_notes: row.subscription_notes || null,
+    plan_tier: row.plan_tier,
+    billing_cycle: row.billing_cycle,
+    ai_quota_limit: row.ai_quota_limit,
+    ai_usage_count: row.ai_usage_count ?? 0,
     has_google_service: Boolean(encryptedGoogleJson),
-    google_spreadsheet_id: data.google_spreadsheet_id,
-    google_sheet_name: data.google_sheet_name,
-    created_at: data.created_at,
+    google_spreadsheet_id: row.google_spreadsheet_id,
+    google_sheet_name: row.google_sheet_name,
+    created_at: row.created_at,
   };
 }
 
@@ -1817,7 +1852,10 @@ export async function updateSupabaseUser(
   if (input.office_name !== undefined) updates.office_name = input.office_name ? input.office_name.trim() : null;
   if (input.display_name !== undefined) updates.display_name = input.display_name.trim() || null;
   if (input.email !== undefined) updates.email = input.email.trim() || null;
-  if (input.phone !== undefined) updates.phone = input.phone ? input.phone.trim() : null;
+  const hasPhone = await checkHasPhoneColumn(client);
+  if (hasPhone && input.phone !== undefined) {
+    updates.phone = input.phone ? input.phone.trim() : null;
+  }
   if (input.status !== undefined) updates.status = input.status;
   if (input.subscription_end_date !== undefined) updates.subscription_end_date = input.subscription_end_date;
   if (input.subscription_notes !== undefined) updates.subscription_notes = input.subscription_notes?.trim() || null;
@@ -1849,11 +1887,13 @@ export async function updateSupabaseUser(
 
   invalidateUserGoogleCache(id);
 
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
+
   const { data, error } = await client
     .from(tableName)
     .update(updates)
     .eq("id", id)
-    .select("id, username, email, role, admin_id, office_name, display_name, status, phone, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at")
+    .select(selectCols)
     .single();
 
   if (error) {
@@ -1866,26 +1906,27 @@ export async function updateSupabaseUser(
     revokeUserSessions(id);
   }
 
+  const row = data as any;
   return {
-    id: data.id,
-    username: data.username,
-    email: data.email,
-    role: data.role,
-    admin_id: data.admin_id || null,
-    office_name: data.office_name || null,
-    display_name: data.display_name,
-    status: data.status || "active",
-    phone: data.phone || null,
-    subscription_end_date: data.subscription_end_date || null,
-    subscription_notes: data.subscription_notes || null,
-    plan_tier: data.plan_tier,
-    billing_cycle: data.billing_cycle,
-    ai_quota_limit: data.ai_quota_limit,
-    ai_usage_count: data.ai_usage_count ?? 0,
-    has_google_service: Boolean(data.google_service_account_json && data.google_service_account_json.trim().length > 10),
-    google_spreadsheet_id: data.google_spreadsheet_id,
-    google_sheet_name: data.google_sheet_name,
-    created_at: data.created_at,
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    admin_id: row.admin_id || null,
+    office_name: row.office_name || null,
+    display_name: row.display_name,
+    status: row.status || "active",
+    phone: row.phone || null,
+    subscription_end_date: row.subscription_end_date || null,
+    subscription_notes: row.subscription_notes || null,
+    plan_tier: row.plan_tier,
+    billing_cycle: row.billing_cycle,
+    ai_quota_limit: row.ai_quota_limit,
+    ai_usage_count: row.ai_usage_count ?? 0,
+    has_google_service: Boolean(row.google_service_account_json && row.google_service_account_json.trim().length > 10),
+    google_spreadsheet_id: row.google_spreadsheet_id,
+    google_sheet_name: row.google_sheet_name,
+    created_at: row.created_at,
   };
 }
 

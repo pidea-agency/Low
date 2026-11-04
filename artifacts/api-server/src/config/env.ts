@@ -159,18 +159,18 @@ export const env = {
 
   // --- Supabase Settings (Environment Variables only - no UI override) ---
   get supabaseUrl(): string | undefined {
-    return process.env.SUPABASE_URL?.trim() || undefined;
+    return readEnv("SUPABASE_URL")?.trim() || undefined;
   },
   get supabaseKey(): string | undefined {
     return (
-      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ??
-      process.env.SUPABASE_KEY?.trim() ??
-      process.env.SUPABASE_ANON_KEY?.trim() ??
+      readEnv("SUPABASE_SERVICE_ROLE_KEY")?.trim() ??
+      readEnv("SUPABASE_KEY")?.trim() ??
+      readEnv("SUPABASE_ANON_KEY")?.trim() ??
       undefined
     );
   },
   get supabaseTableName(): string {
-    return process.env.SUPABASE_TABLE_NAME?.trim() || "app_users";
+    return readEnv("SUPABASE_TABLE_NAME")?.trim() || "app_users";
   },
 
   // --- Scheduler ---
