@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   useGetDashboardStats,
   useGetCurrentUser,
@@ -22,8 +22,11 @@ import {
   CreditCard,
   Building2,
   BarChart3,
+  Search,
+  User,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { Link } from 'wouter';
 import {
   StatCard,
@@ -98,9 +101,17 @@ export default function DashboardAdminPage() {
   }, []);
 
   const [urgentTasks, setUrgentTasks] = useState<OfficeTask[]>([]);
+  const [allOfficeTasks, setAllOfficeTasks] = useState<OfficeTask[]>([]);
+  const [officeMembers, setOfficeMembers] = useState<Array<{ id: string; username: string; displayName?: string }>>([]);
   const [membersCount, setMembersCount] = useState<number | null>(null);
 
-  // Load office members count
+  // Filter state for Office Team Oversight
+  const [selectedLawyerFilter, setSelectedLawyerFilter] = useState<string>('all');
+  const [sessionStatusFilter, setSessionStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeOversightTab, setActiveOversightTab] = useState<'sessions' | 'tasks'>('sessions');
+
+  // Load office members
   useEffect(() => {
     let isMounted = true;
     fetch('/api/users', { credentials: 'include' })
@@ -108,6 +119,13 @@ export default function DashboardAdminPage() {
       .then((data) => {
         if (isMounted && data?.users) {
           setMembersCount(data.users.length);
+          setOfficeMembers(
+            data.users.map((u: any) => ({
+              id: u.id,
+              username: u.username,
+              displayName: u.displayName || u.display_name || u.username,
+            }))
+          );
         }
       })
       .catch(() => {});
@@ -123,6 +141,7 @@ export default function DashboardAdminPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (isMounted && Array.isArray(data)) {
+          setAllOfficeTasks(data);
           const urgent = data
             .filter((t: OfficeTask) => t.status !== 'مكتملة' && t.status !== 'ملغاة')
             .slice(0, 5);
@@ -134,6 +153,7 @@ export default function DashboardAdminPage() {
           const raw = localStorage.getItem('legal_tasks_v1');
           if (raw && isMounted) {
             const parsed = JSON.parse(raw);
+            setAllOfficeTasks(parsed);
             const filtered = parsed
               .filter((t: any) => t.status !== 'مكتملة' && t.status !== 'ملغاة')
               .slice(0, 5);
@@ -147,6 +167,47 @@ export default function DashboardAdminPage() {
       isMounted = false;
     };
   }, []);
+
+  // Computed: Filtered Office Sessions
+  const filteredOfficeSessions = useMemo(() => {
+    return (allSessions || []).filter((s: Session) => {
+      // 1. Status filter
+      if (sessionStatusFilter !== 'all') {
+        const eff = deriveEffectiveStatus(s.status, s.hearingAt);
+        if (eff !== sessionStatusFilter) return false;
+      }
+      // 2. Lawyer filter
+      if (selectedLawyerFilter !== 'all') {
+        const text = `${s.notes || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.courtCircuit || ''}`.toLowerCase();
+        if (!text.includes(selectedLawyerFilter.toLowerCase())) return false;
+      }
+      // 3. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const text = `${s.caseNumber || ''} ${s.court || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.notes || ''}`.toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [allSessions, sessionStatusFilter, selectedLawyerFilter, searchQuery]);
+
+  // Computed: Filtered Office Tasks
+  const filteredOfficeTasks = useMemo(() => {
+    return (allOfficeTasks || []).filter((t: OfficeTask) => {
+      // 1. Lawyer filter
+      if (selectedLawyerFilter !== 'all') {
+        const a = (t.assignee || '').toLowerCase();
+        if (!a.includes(selectedLawyerFilter.toLowerCase())) return false;
+      }
+      // 2. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const text = `${t.title || ''} ${t.assignee || ''} ${t.notes || ''}`.toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [allOfficeTasks, selectedLawyerFilter, searchQuery]);
 
   // Filter today and upcoming sessions, sorted chronologically
   const upcomingSessions = (allSessions || [])
@@ -483,6 +544,202 @@ export default function DashboardAdminPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Comprehensive Office Team Sessions & Tasks Oversight Section */}
+      <div className="space-y-4 fade-in-up">
+        {/* Section Header with Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-border bg-card shadow-xs">
+          <div>
+            <div className="flex items-center gap-2">
+              <div
+                className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #2A321D 100%)' }}
+              >
+                <Briefcase className="w-4 h-4 text-[#C9A449]" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">
+                سجل جلسات ومهام فريق عمل المكتب
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 mr-9">
+              متابعة شاملة لجميع الجلسات القضائية والمهام الموزعة على محامي المكتب
+            </p>
+          </div>
+
+          {/* Tab Switcher Pills */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border/60 self-start sm:self-auto">
+            <button
+              onClick={() => setActiveOversightTab('sessions')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                activeOversightTab === 'sessions'
+                  ? 'bg-card text-foreground shadow-xs border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+              <span>جلسات القضايا ({filteredOfficeSessions.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveOversightTab('tasks')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                activeOversightTab === 'tasks'
+                  ? 'bg-card text-foreground shadow-xs border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <CheckSquare className="w-3.5 h-3.5 text-[#C9A449]" />
+              <span>مهام المحامين ({filteredOfficeTasks.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter & Search Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl border border-border bg-card/60">
+          {/* Search Box */}
+          <div className="relative lg:col-span-2">
+            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={activeOversightTab === 'sessions' ? "بحث برقم القضية، المحكمة، الموكل..." : "بحث بعنوان المهمة، التفاصيل..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10 h-10 text-xs rounded-xl bg-card border-border"
+            />
+          </div>
+
+          {/* Lawyer Filter Selector */}
+          <div>
+            <select
+              value={selectedLawyerFilter}
+              onChange={(e) => setSelectedLawyerFilter(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl text-xs font-medium bg-card border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              <option value="all">جميع محامي المكتب</option>
+              {officeMembers.map((m) => (
+                <option key={m.id} value={m.displayName || m.username}>
+                  المحامي: {m.displayName || m.username}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sessions Status Filter (visible if sessions tab) */}
+          {activeOversightTab === 'sessions' ? (
+            <div>
+              <select
+                value={sessionStatusFilter}
+                onChange={(e) => setSessionStatusFilter(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl text-xs font-medium bg-card border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value="all">كافة الحالات</option>
+                <option value="Today">جلسات اليوم</option>
+                <option value="Upcoming">جلسات قادمة</option>
+                <option value="Finished">جلسات منتهية</option>
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end">
+              <Link
+                href="/tasks"
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>فتح صفحة المهام الكاملة</span>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Content View: Sessions or Tasks */}
+        {activeOversightTab === 'sessions' ? (
+          <div className="space-y-3">
+            {isLoadingSessions ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="rounded-xl border border-border bg-card p-4">
+                    <Skeleton className="h-4 w-40 mb-2" />
+                    <Skeleton className="h-3 w-64" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredOfficeSessions.length > 0 ? (
+              <div className="space-y-2.5">
+                {filteredOfficeSessions.slice(0, 10).map((session: Session) => (
+                  <SessionListItem key={session.id} session={session} />
+                ))}
+                {filteredOfficeSessions.length > 10 && (
+                  <div className="text-center pt-2">
+                    <Link
+                      href="/sessions"
+                      className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      <span>عرض باقي الجلسات في جدول الجلسات الكامل ({filteredOfficeSessions.length - 10} جلسة إضافية)</span>
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center space-y-2">
+                <Calendar className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
+                <p className="text-xs text-muted-foreground font-medium">لا توجد جلسات تطابق خيارات التصفية المحددة.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredOfficeTasks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredOfficeTasks.slice(0, 10).map((task) => (
+                  <div
+                    key={task.id}
+                    className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/40 hover:shadow-xs flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <span className="font-bold text-xs text-foreground line-clamp-1">{task.title}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            task.status === 'مكتملة'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : task.status === 'قيد التنفيذ'
+                              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {task.status || 'جديدة'}
+                        </span>
+                      </div>
+                      {task.notes && (
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">{task.notes}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] pt-2 border-t border-border/60">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <User className="w-3.5 h-3.5 text-primary" />
+                        <span className="font-semibold text-foreground">
+                          {task.assignee ? task.assignee : 'غير محدد'}
+                        </span>
+                      </div>
+                      {task.dueDate && (
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          الاستحقاق: {task.dueDate}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center space-y-2">
+                <CheckSquare className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
+                <p className="text-xs text-muted-foreground font-medium">لا توجد مهام تطابق خيارات التصفية المحددة.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Admin Quick Action Shortcuts */}
