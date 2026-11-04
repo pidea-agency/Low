@@ -23,7 +23,7 @@ export interface AppUser {
   subscription_notes?: string | null;
   plan_tier?: "plus" | "pro";
   billing_cycle?: "monthly" | "annual";
-  ai_quota_limit?: number;
+  ai_quota_limit?: number | null;
   ai_usage_count?: number;
   google_service_account_json?: string | null;
   google_spreadsheet_id?: string | null;
@@ -861,13 +861,32 @@ export async function checkAndIncrementOfficeAiUsage(userId: string): Promise<{
       }
     }
 
+    // 1. Check individual staff member's quota cap if set
+    if (user.role === "staff" && user.ai_quota_limit !== null && user.ai_quota_limit !== undefined) {
+      const memberLimit = Number(user.ai_quota_limit);
+      const memberUsage = Number(user.ai_usage_count || 0);
+      if (memberLimit !== -1 && memberUsage >= memberLimit) {
+        return {
+          allowed: false,
+          remaining: 0,
+          limit: memberLimit,
+          currentUsage: memberUsage,
+          plan_tier: admin.plan_tier || "plus",
+          error: `تم استهلاك حد الذكاء الاصطناعي المخصص لك (${memberUsage}/${memberLimit} طلب). تواصل مع مدير المكتب لزيادة حصتك.`,
+        };
+      }
+    }
+
+    // 2. Check office-wide limit
     const planTier = admin.plan_tier || "plus";
-    const quotaLimit = admin.ai_quota_limit !== undefined ? admin.ai_quota_limit : (planTier === "pro" ? 300 : 100);
+    const quotaLimit = admin.ai_quota_limit !== undefined && admin.ai_quota_limit !== null
+      ? admin.ai_quota_limit
+      : (planTier === "pro" ? 300 : 100);
     const currentUsage = admin.ai_usage_count || 0;
 
     if (quotaLimit !== -1 && currentUsage >= quotaLimit) {
       const msg = user.role === "staff"
-        ? "تم استهلاك رصيد تحليلات الذكاء الاصطناعي للمكتب لهذا الشهر. تواصل مع مدير المكتب لترقية الباقة."
+        ? "تم استهلاك رصيد تحليلات الذكاء الاصطناعي للمكتب لهذا الشهر بالكامل. تواصل مع مدير المكتب لترقية الباقة."
         : `تم استهلاك الحد المسموح به لتحليلات الذكاء الاصطناعي لباقة المكتب (${currentUsage}/${quotaLimit}). تواصل مع إدارة المنظومة لترقية الباقة.`;
       return {
         allowed: false,
@@ -879,14 +898,30 @@ export async function checkAndIncrementOfficeAiUsage(userId: string): Promise<{
       };
     }
 
+    // 3. Atomically increment office-wide usage AND member usage if staff
     const newUsage = currentUsage + 1;
     await updateSupabaseUser(admin.id, { ai_usage_count: newUsage });
 
+    if (user.role === "staff") {
+      const newMemberUsage = (user.ai_usage_count || 0) + 1;
+      await updateSupabaseUser(user.id, { ai_usage_count: newMemberUsage });
+      clearUserAuthCache(user.id);
+    }
+    clearUserAuthCache(admin.id);
+
+    const memberLimit = (user.role === "staff" && user.ai_quota_limit !== null && user.ai_quota_limit !== undefined)
+      ? Number(user.ai_quota_limit)
+      : null;
+    const officeRemaining = quotaLimit === -1 ? 999999 : Math.max(0, quotaLimit - newUsage);
+    const memberRemaining = memberLimit !== null && memberLimit !== -1
+      ? Math.max(0, memberLimit - ((user.ai_usage_count || 0) + 1))
+      : officeRemaining;
+
     return {
       allowed: true,
-      remaining: quotaLimit === -1 ? 999999 : Math.max(0, quotaLimit - newUsage),
-      limit: quotaLimit,
-      currentUsage: newUsage,
+      remaining: Math.min(officeRemaining, memberRemaining),
+      limit: memberLimit !== null ? memberLimit : quotaLimit,
+      currentUsage: user.role === "staff" && memberLimit !== null ? (user.ai_usage_count || 0) + 1 : newUsage,
       plan_tier: planTier,
     };
   } finally {
@@ -1333,6 +1368,217 @@ export async function toggleOfficeMemberStatus(
 }
 
 // ============================================================================
+// Office Subscription & Per-Member Quota Allocation Operations (Office Admin)
+// ============================================================================
+
+export class QuotaExceededError extends Error {
+  readonly statusCode = 400;
+  constructor(message: string, public readonly remainingHeadroom: number) {
+    super(message);
+    this.name = "QuotaExceededError";
+  }
+}
+
+export interface OfficeSubscriptionOverview {
+  office: {
+    id: string;
+    office_name: string;
+    display_name: string;
+    plan_tier: "plus" | "pro";
+    billing_cycle: "monthly" | "annual";
+    subscription_end_date: string | null;
+    status: "active" | "suspended";
+    ai_quota_limit: number;
+    ai_usage_count: number;
+    allocated_quota: number;
+    unallocated_quota: number;
+    days_remaining: number | null;
+    is_expired: boolean;
+    is_expiring_soon: boolean;
+    members_count: number;
+  };
+  members: Array<{
+    id: string;
+    username: string;
+    display_name: string;
+    email: string | null;
+    phone: string | null;
+    role: "staff";
+    status: "active" | "suspended";
+    ai_quota_limit: number | null;
+    ai_usage_count: number;
+    usage_percent_of_office: number;
+    individual_usage_percent: number | null;
+    created_at?: string;
+  }>;
+}
+
+export async function getOfficeSubscriptionOverview(adminId: string): Promise<OfficeSubscriptionOverview> {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("حساب مدير المكتب غير صالح.");
+  }
+
+  const planTier = admin.plan_tier || "plus";
+  const billingCycle = admin.billing_cycle || "annual";
+  const quotaLimit = admin.ai_quota_limit !== undefined && admin.ai_quota_limit !== null
+    ? admin.ai_quota_limit
+    : (planTier === "pro" ? 300 : 100);
+  const usageCount = admin.ai_usage_count || 0;
+
+  let daysRemaining: number | null = null;
+  let isExpired = false;
+  let isExpiringSoon = false;
+
+  if (admin.subscription_end_date) {
+    const end = new Date(admin.subscription_end_date).getTime();
+    const diff = end - Date.now();
+    daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    isExpired = daysRemaining <= 0;
+    isExpiringSoon = !isExpired && daysRemaining <= 7;
+  }
+
+  const allUsers = await listSupabaseUsers();
+  const rawMembers = allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId);
+
+  const members = rawMembers.map((m) => {
+    const memberLimit = m.ai_quota_limit !== undefined && m.ai_quota_limit !== null ? Number(m.ai_quota_limit) : null;
+    const memberUsage = m.ai_usage_count || 0;
+    const usagePercentOfOffice = quotaLimit > 0
+      ? Number(((memberUsage / quotaLimit) * 100).toFixed(1))
+      : 0;
+    const individualUsagePercent = memberLimit && memberLimit > 0
+      ? Number(((memberUsage / memberLimit) * 100).toFixed(1))
+      : null;
+
+    return {
+      id: m.id,
+      username: m.username,
+      display_name: m.display_name || m.username,
+      email: m.email || null,
+      phone: m.phone || null,
+      role: "staff" as const,
+      status: (m.status as "active" | "suspended") || "active",
+      ai_quota_limit: memberLimit,
+      ai_usage_count: memberUsage,
+      usage_percent_of_office: usagePercentOfOffice,
+      individual_usage_percent: individualUsagePercent,
+      created_at: m.created_at,
+    };
+  });
+
+  const allocatedQuota = members.reduce(
+    (sum, m) => sum + (m.ai_quota_limit && m.ai_quota_limit > 0 ? m.ai_quota_limit : 0),
+    0,
+  );
+  const unallocatedQuota = quotaLimit === -1 ? 999999 : Math.max(0, quotaLimit - allocatedQuota);
+
+  return {
+    office: {
+      id: admin.id,
+      office_name: admin.office_name || "مكتب المحاماة",
+      display_name: admin.display_name || admin.username,
+      plan_tier: planTier,
+      billing_cycle: billingCycle,
+      subscription_end_date: admin.subscription_end_date || null,
+      status: (admin.status as "active" | "suspended") || "active",
+      ai_quota_limit: quotaLimit,
+      ai_usage_count: usageCount,
+      allocated_quota: allocatedQuota,
+      unallocated_quota: unallocatedQuota,
+      days_remaining: daysRemaining,
+      is_expired: isExpired,
+      is_expiring_soon: isExpiringSoon,
+      members_count: members.length,
+    },
+    members,
+  };
+}
+
+export async function updateOfficeMemberQuota(
+  adminId: string,
+  memberId: string,
+  quotaLimit: number | null,
+): Promise<{
+  success: boolean;
+  message: string;
+  memberId: string;
+  ai_quota_limit: number | null;
+  allocated_quota: number;
+  unallocated_quota: number;
+}> {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("حساب مدير المكتب غير صالح.");
+  }
+
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff" || member.admin_id !== adminId) {
+    throw new OfficeMemberNotFoundError();
+  }
+
+  if (admin.status === "suspended") {
+    throw new Error("لا يمكن تعديل حصص الاستخدام لأن اشتراك المكتب موقوف مؤقتاً.");
+  }
+
+  if (admin.subscription_end_date) {
+    const end = new Date(admin.subscription_end_date).getTime();
+    if (end < Date.now()) {
+      throw new Error("لا يمكن تعديل حصص الاستخدام لأن اشتراك المكتب منتهي الصلاحية.");
+    }
+  }
+
+  let sanitizedLimit: number | null = null;
+  if (quotaLimit !== null && quotaLimit !== undefined && quotaLimit !== ("" as any)) {
+    const parsed = Number(quotaLimit);
+    if (isNaN(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+      throw new Error("يجب أن تكون الحصة رقماً صحيحاً موجباً أو فارغة للمشاركة من الرصيد المشترك.");
+    }
+    sanitizedLimit = parsed;
+  }
+
+  const planTier = admin.plan_tier || "plus";
+  const officeLimit = admin.ai_quota_limit !== undefined && admin.ai_quota_limit !== null
+    ? admin.ai_quota_limit
+    : (planTier === "pro" ? 300 : 100);
+
+  const allUsers = await listSupabaseUsers();
+  const otherMembers = allUsers.filter(
+    (u) => u.role === "staff" && u.admin_id === adminId && u.id !== memberId,
+  );
+  const otherAllocated = otherMembers.reduce(
+    (sum, m) => sum + (m.ai_quota_limit && m.ai_quota_limit > 0 ? m.ai_quota_limit : 0),
+    0,
+  );
+
+  const maxHeadroom = officeLimit === -1 ? 999999 : Math.max(0, officeLimit - otherAllocated);
+
+  if (officeLimit !== -1 && sanitizedLimit !== null && sanitizedLimit > maxHeadroom) {
+    throw new QuotaExceededError(
+      `لا يمكن تخصيص ${sanitizedLimit} طلب. الحصة المتاحة للتخصيص المتبقية من باقة المكتب (${officeLimit}) هي ${maxHeadroom} طلب فقط.`,
+      maxHeadroom,
+    );
+  }
+
+  await updateSupabaseUser(memberId, { ai_quota_limit: sanitizedLimit });
+  clearUserAuthCache(memberId);
+
+  const newAllocated = otherAllocated + (sanitizedLimit || 0);
+  const newUnallocated = officeLimit === -1 ? 999999 : Math.max(0, officeLimit - newAllocated);
+
+  return {
+    success: true,
+    message: sanitizedLimit === null
+      ? "تم إلغاء السقف الفردي بنجاح، أصبح المحامي يشارك رصيد المكتب المتاح."
+      : `تم تحديد سقف استخدام الذكاء الاصطناعي للمحامي (${sanitizedLimit} طلب) بنجاح.`,
+    memberId,
+    ai_quota_limit: sanitizedLimit,
+    allocated_quota: newAllocated,
+    unallocated_quota: newUnallocated,
+  };
+}
+
+// ============================================================================
 // Google Sheets Binding for Office Admin
 // ============================================================================
 
@@ -1454,7 +1700,7 @@ export async function createSupabaseUser(input: {
   subscription_notes?: string;
   plan_tier?: "plus" | "pro";
   billing_cycle?: "monthly" | "annual";
-  ai_quota_limit?: number;
+  ai_quota_limit?: number | null;
   google_service_account_json?: string;
   google_spreadsheet_id?: string;
   google_sheet_name?: string;
@@ -1719,7 +1965,7 @@ export async function updateSupabaseUser(
     subscription_notes?: string | null;
     plan_tier?: "plus" | "pro";
     billing_cycle?: "monthly" | "annual";
-    ai_quota_limit?: number;
+    ai_quota_limit?: number | null;
     ai_usage_count?: number;
     google_service_account_json?: string;
     google_spreadsheet_id?: string;

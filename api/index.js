@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router15;
+    module2.exports = Router16;
     module2.exports.Route = Route;
-    function Router15(options) {
-      if (!(this instanceof Router15)) {
-        return new Router15(options);
+    function Router16(options) {
+      if (!(this instanceof Router16)) {
+        return new Router16(options);
       }
       const opts = options || {};
-      function router15(req, res, next) {
-        router15.handle(req, res, next);
+      function router16(req, res, next) {
+        router16.handle(req, res, next);
       }
-      Object.setPrototypeOf(router15, this);
-      router15.caseSensitive = opts.caseSensitive;
-      router15.mergeParams = opts.mergeParams;
-      router15.params = {};
-      router15.strict = opts.strict;
-      router15.stack = [];
-      return router15;
+      Object.setPrototypeOf(router16, this);
+      router16.caseSensitive = opts.caseSensitive;
+      router16.mergeParams = opts.mergeParams;
+      router16.params = {};
+      router16.strict = opts.strict;
+      router16.stack = [];
+      return router16;
     }
-    Router15.prototype = function() {
+    Router16.prototype = function() {
     };
-    Router15.prototype.param = function param(name, fn) {
+    Router16.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router15.prototype.handle = function handle(req, res, callback) {
+    Router16.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router15.prototype.use = function use(handler2) {
+    Router16.prototype.use = function use(handler2) {
       let offset = 0;
       let path4 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router15.prototype.route = function route(path4) {
+    Router16.prototype.route = function route(path4) {
       const route2 = new Route(path4);
       const layer = new Layer(path4, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router15.prototype[method] = function(path4) {
+      Router16.prototype[method] = function(path4) {
         const route = this.route(path4);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve4 = require("node:path").resolve;
     var once = require_once();
-    var Router15 = require_router();
+    var Router16 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router15 = null;
+      var router16 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router15 === null) {
-            router15 = new Router15({
+          if (router16 === null) {
+            router16 = new Router16({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router15;
+          return router16;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router15 = this.router;
+      var router16 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router15.use(path4, fn2);
+          return router16.use(path4, fn2);
         }
         debug(".use app under %s", path4);
         fn2.mountpath = path4;
         fn2.parent = this;
-        router15.use(path4, function mounted_app(req, res, next) {
+        router16.use(path4, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router15 = require_router();
+    var Router16 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router15.Route;
-    exports2.Router = Router15;
+    exports2.Route = Router16.Route;
+    exports2.Router = Router16;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -56947,6 +56947,7 @@ var supabase_service_exports = {};
 __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
   OfficeMemberNotFoundError: () => OfficeMemberNotFoundError,
+  QuotaExceededError: () => QuotaExceededError,
   checkAndIncrementOfficeAiUsage: () => checkAndIncrementOfficeAiUsage,
   checkHasPhoneColumn: () => checkHasPhoneColumn,
   clearUserAuthCache: () => clearUserAuthCache,
@@ -56961,6 +56962,7 @@ __export(supabase_service_exports, {
   ensureDefaultAdmin: () => ensureDefaultAdmin,
   findUserByIdOrUsername: () => findUserByIdOrUsername,
   getOfficeGoogleBinding: () => getOfficeGoogleBinding,
+  getOfficeSubscriptionOverview: () => getOfficeSubscriptionOverview,
   getSupabaseClient: () => getSupabaseClient,
   getUserGoogleCredentials: () => getUserGoogleCredentials,
   getUserSessionVersion: () => getUserSessionVersion,
@@ -56982,6 +56984,7 @@ __export(supabase_service_exports, {
   toggleOfficeMemberStatus: () => toggleOfficeMemberStatus,
   toggleUserStatus: () => toggleUserStatus,
   updateOfficeMember: () => updateOfficeMember,
+  updateOfficeMemberQuota: () => updateOfficeMemberQuota,
   updateSupabaseAdmin: () => updateSupabaseAdmin,
   updateSupabaseUser: () => updateSupabaseUser,
   verifySupabaseUser: () => verifySupabaseUser
@@ -57622,11 +57625,25 @@ async function checkAndIncrementOfficeAiUsage(userId) {
         };
       }
     }
+    if (user.role === "staff" && user.ai_quota_limit !== null && user.ai_quota_limit !== void 0) {
+      const memberLimit2 = Number(user.ai_quota_limit);
+      const memberUsage = Number(user.ai_usage_count || 0);
+      if (memberLimit2 !== -1 && memberUsage >= memberLimit2) {
+        return {
+          allowed: false,
+          remaining: 0,
+          limit: memberLimit2,
+          currentUsage: memberUsage,
+          plan_tier: admin.plan_tier || "plus",
+          error: `\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u062D\u062F \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0627\u0644\u0645\u062E\u0635\u0635 \u0644\u0643 (${memberUsage}/${memberLimit2} \u0637\u0644\u0628). \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u0632\u064A\u0627\u062F\u0629 \u062D\u0635\u062A\u0643.`
+        };
+      }
+    }
     const planTier = admin.plan_tier || "plus";
-    const quotaLimit = admin.ai_quota_limit !== void 0 ? admin.ai_quota_limit : planTier === "pro" ? 300 : 100;
+    const quotaLimit = admin.ai_quota_limit !== void 0 && admin.ai_quota_limit !== null ? admin.ai_quota_limit : planTier === "pro" ? 300 : 100;
     const currentUsage = admin.ai_usage_count || 0;
     if (quotaLimit !== -1 && currentUsage >= quotaLimit) {
-      const msg = user.role === "staff" ? "\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0631\u0635\u064A\u062F \u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0644\u0645\u0643\u062A\u0628 \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u062A\u0631\u0642\u064A\u0629 \u0627\u0644\u0628\u0627\u0642\u0629." : `\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u062D\u062F \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647 \u0644\u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0645\u0643\u062A\u0628 (${currentUsage}/${quotaLimit}). \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u062A\u0631\u0642\u064A\u0629 \u0627\u0644\u0628\u0627\u0642\u0629.`;
+      const msg = user.role === "staff" ? "\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0631\u0635\u064A\u062F \u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0644\u0645\u0643\u062A\u0628 \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631 \u0628\u0627\u0644\u0643\u0627\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0644\u062A\u0631\u0642\u064A\u0629 \u0627\u0644\u0628\u0627\u0642\u0629." : `\u062A\u0645 \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u062D\u062F \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647 \u0644\u062A\u062D\u0644\u064A\u0644\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0645\u0643\u062A\u0628 (${currentUsage}/${quotaLimit}). \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u062A\u0631\u0642\u064A\u0629 \u0627\u0644\u0628\u0627\u0642\u0629.`;
       return {
         allowed: false,
         remaining: 0,
@@ -57638,11 +57655,20 @@ async function checkAndIncrementOfficeAiUsage(userId) {
     }
     const newUsage = currentUsage + 1;
     await updateSupabaseUser(admin.id, { ai_usage_count: newUsage });
+    if (user.role === "staff") {
+      const newMemberUsage = (user.ai_usage_count || 0) + 1;
+      await updateSupabaseUser(user.id, { ai_usage_count: newMemberUsage });
+      clearUserAuthCache(user.id);
+    }
+    clearUserAuthCache(admin.id);
+    const memberLimit = user.role === "staff" && user.ai_quota_limit !== null && user.ai_quota_limit !== void 0 ? Number(user.ai_quota_limit) : null;
+    const officeRemaining = quotaLimit === -1 ? 999999 : Math.max(0, quotaLimit - newUsage);
+    const memberRemaining = memberLimit !== null && memberLimit !== -1 ? Math.max(0, memberLimit - ((user.ai_usage_count || 0) + 1)) : officeRemaining;
     return {
       allowed: true,
-      remaining: quotaLimit === -1 ? 999999 : Math.max(0, quotaLimit - newUsage),
-      limit: quotaLimit,
-      currentUsage: newUsage,
+      remaining: Math.min(officeRemaining, memberRemaining),
+      limit: memberLimit !== null ? memberLimit : quotaLimit,
+      currentUsage: user.role === "staff" && memberLimit !== null ? (user.ai_usage_count || 0) + 1 : newUsage,
       plan_tier: planTier
     };
   } finally {
@@ -57956,6 +57982,129 @@ async function toggleOfficeMemberStatus(adminId, memberId, status) {
   }
   const newStatus = status || (member.status === "suspended" ? "active" : "suspended");
   return updateOfficeMember(adminId, memberId, { status: newStatus });
+}
+async function getOfficeSubscriptionOverview(adminId) {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("\u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  const planTier = admin.plan_tier || "plus";
+  const billingCycle = admin.billing_cycle || "annual";
+  const quotaLimit = admin.ai_quota_limit !== void 0 && admin.ai_quota_limit !== null ? admin.ai_quota_limit : planTier === "pro" ? 300 : 100;
+  const usageCount = admin.ai_usage_count || 0;
+  let daysRemaining = null;
+  let isExpired = false;
+  let isExpiringSoon = false;
+  if (admin.subscription_end_date) {
+    const end = new Date(admin.subscription_end_date).getTime();
+    const diff = end - Date.now();
+    daysRemaining = Math.ceil(diff / (1e3 * 60 * 60 * 24));
+    isExpired = daysRemaining <= 0;
+    isExpiringSoon = !isExpired && daysRemaining <= 7;
+  }
+  const allUsers = await listSupabaseUsers();
+  const rawMembers = allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId);
+  const members = rawMembers.map((m2) => {
+    const memberLimit = m2.ai_quota_limit !== void 0 && m2.ai_quota_limit !== null ? Number(m2.ai_quota_limit) : null;
+    const memberUsage = m2.ai_usage_count || 0;
+    const usagePercentOfOffice = quotaLimit > 0 ? Number((memberUsage / quotaLimit * 100).toFixed(1)) : 0;
+    const individualUsagePercent = memberLimit && memberLimit > 0 ? Number((memberUsage / memberLimit * 100).toFixed(1)) : null;
+    return {
+      id: m2.id,
+      username: m2.username,
+      display_name: m2.display_name || m2.username,
+      email: m2.email || null,
+      phone: m2.phone || null,
+      role: "staff",
+      status: m2.status || "active",
+      ai_quota_limit: memberLimit,
+      ai_usage_count: memberUsage,
+      usage_percent_of_office: usagePercentOfOffice,
+      individual_usage_percent: individualUsagePercent,
+      created_at: m2.created_at
+    };
+  });
+  const allocatedQuota = members.reduce(
+    (sum, m2) => sum + (m2.ai_quota_limit && m2.ai_quota_limit > 0 ? m2.ai_quota_limit : 0),
+    0
+  );
+  const unallocatedQuota = quotaLimit === -1 ? 999999 : Math.max(0, quotaLimit - allocatedQuota);
+  return {
+    office: {
+      id: admin.id,
+      office_name: admin.office_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629",
+      display_name: admin.display_name || admin.username,
+      plan_tier: planTier,
+      billing_cycle: billingCycle,
+      subscription_end_date: admin.subscription_end_date || null,
+      status: admin.status || "active",
+      ai_quota_limit: quotaLimit,
+      ai_usage_count: usageCount,
+      allocated_quota: allocatedQuota,
+      unallocated_quota: unallocatedQuota,
+      days_remaining: daysRemaining,
+      is_expired: isExpired,
+      is_expiring_soon: isExpiringSoon,
+      members_count: members.length
+    },
+    members
+  };
+}
+async function updateOfficeMemberQuota(adminId, memberId, quotaLimit) {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("\u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff" || member.admin_id !== adminId) {
+    throw new OfficeMemberNotFoundError();
+  }
+  if (admin.status === "suspended") {
+    throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0639\u062F\u064A\u0644 \u062D\u0635\u0635 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0644\u0623\u0646 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627\u064B.");
+  }
+  if (admin.subscription_end_date) {
+    const end = new Date(admin.subscription_end_date).getTime();
+    if (end < Date.now()) {
+      throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0639\u062F\u064A\u0644 \u062D\u0635\u0635 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0644\u0623\u0646 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0646\u062A\u0647\u064A \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629.");
+    }
+  }
+  let sanitizedLimit = null;
+  if (quotaLimit !== null && quotaLimit !== void 0 && quotaLimit !== "") {
+    const parsed = Number(quotaLimit);
+    if (isNaN(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+      throw new Error("\u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0627\u0644\u062D\u0635\u0629 \u0631\u0642\u0645\u0627\u064B \u0635\u062D\u064A\u062D\u0627\u064B \u0645\u0648\u062C\u0628\u0627\u064B \u0623\u0648 \u0641\u0627\u0631\u063A\u0629 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629 \u0645\u0646 \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0645\u0634\u062A\u0631\u0643.");
+    }
+    sanitizedLimit = parsed;
+  }
+  const planTier = admin.plan_tier || "plus";
+  const officeLimit = admin.ai_quota_limit !== void 0 && admin.ai_quota_limit !== null ? admin.ai_quota_limit : planTier === "pro" ? 300 : 100;
+  const allUsers = await listSupabaseUsers();
+  const otherMembers = allUsers.filter(
+    (u) => u.role === "staff" && u.admin_id === adminId && u.id !== memberId
+  );
+  const otherAllocated = otherMembers.reduce(
+    (sum, m2) => sum + (m2.ai_quota_limit && m2.ai_quota_limit > 0 ? m2.ai_quota_limit : 0),
+    0
+  );
+  const maxHeadroom = officeLimit === -1 ? 999999 : Math.max(0, officeLimit - otherAllocated);
+  if (officeLimit !== -1 && sanitizedLimit !== null && sanitizedLimit > maxHeadroom) {
+    throw new QuotaExceededError(
+      `\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u062E\u0635\u064A\u0635 ${sanitizedLimit} \u0637\u0644\u0628. \u0627\u0644\u062D\u0635\u0629 \u0627\u0644\u0645\u062A\u0627\u062D\u0629 \u0644\u0644\u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629 \u0645\u0646 \u0628\u0627\u0642\u0629 \u0627\u0644\u0645\u0643\u062A\u0628 (${officeLimit}) \u0647\u064A ${maxHeadroom} \u0637\u0644\u0628 \u0641\u0642\u0637.`,
+      maxHeadroom
+    );
+  }
+  await updateSupabaseUser(memberId, { ai_quota_limit: sanitizedLimit });
+  clearUserAuthCache(memberId);
+  const newAllocated = otherAllocated + (sanitizedLimit || 0);
+  const newUnallocated = officeLimit === -1 ? 999999 : Math.max(0, officeLimit - newAllocated);
+  return {
+    success: true,
+    message: sanitizedLimit === null ? "\u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0633\u0642\u0641 \u0627\u0644\u0641\u0631\u062F\u064A \u0628\u0646\u062C\u0627\u062D\u060C \u0623\u0635\u0628\u062D \u0627\u0644\u0645\u062D\u0627\u0645\u064A \u064A\u0634\u0627\u0631\u0643 \u0631\u0635\u064A\u062F \u0627\u0644\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062A\u0627\u062D." : `\u062A\u0645 \u062A\u062D\u062F\u064A\u062F \u0633\u0642\u0641 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0644\u0644\u0645\u062D\u0627\u0645\u064A (${sanitizedLimit} \u0637\u0644\u0628) \u0628\u0646\u062C\u0627\u062D.`,
+    memberId,
+    ai_quota_limit: sanitizedLimit,
+    allocated_quota: newAllocated,
+    unallocated_quota: newUnallocated
+  };
 }
 async function getOfficeGoogleBinding(adminId) {
   const admin = await findUserByIdOrUsername(adminId);
@@ -58438,7 +58587,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, OfficeMemberNotFoundError;
+var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -58478,6 +58627,14 @@ var init_supabase_service = __esm({
         super(message);
         this.name = "OfficeMemberNotFoundError";
       }
+    };
+    QuotaExceededError = class extends Error {
+      constructor(message, remainingHeadroom) {
+        super(message);
+        this.remainingHeadroom = remainingHeadroom;
+        this.name = "QuotaExceededError";
+      }
+      statusCode = 400;
     };
   }
 });
@@ -829538,7 +829695,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express16 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -829547,7 +829704,7 @@ var import_fs4 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express14 = __toESM(require_express2(), 1);
+var import_express15 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -848548,22 +848705,64 @@ router13.post("/super-admin/link-member", async (req, res) => {
 });
 var super_admin_default = router13;
 
-// src/routes/index.ts
+// src/routes/subscription.ts
+var import_express14 = __toESM(require_express2(), 1);
+init_supabase_service();
+init_logger();
 var router14 = (0, import_express14.Router)();
-router14.use(health_default);
-router14.use(auth_default);
-router14.use(dashboard_default);
-router14.use(ai_default);
-router14.use(sessions_default);
-router14.use(settings_default);
-router14.use(reports_default);
-router14.use(cron_default);
-router14.use(poa_default);
-router14.use(judgments_default);
-router14.use(tasks_default);
-router14.use(users_default);
-router14.use(super_admin_default);
-var routes_default = router14;
+router14.use("/subscription", attachAuthUser, requireAdmin);
+router14.get("/subscription/overview", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const overview = await getOfficeSubscriptionOverview(adminId);
+    res.json(overview);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch office subscription overview");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0648\u0627\u0644\u0627\u0633\u062A\u0647\u0644\u0627\u0643." });
+  }
+});
+router14.patch("/subscription/members/:id/quota", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const memberId = req.params.id;
+    const { ai_quota_limit } = req.body;
+    const result = await updateOfficeMemberQuota(adminId, memberId, ai_quota_limit);
+    res.json(result);
+  } catch (err) {
+    if (err instanceof OfficeMemberNotFoundError) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
+    if (err instanceof QuotaExceededError) {
+      res.status(400).json({
+        error: err.message,
+        remainingHeadroom: err.remainingHeadroom
+      });
+      return;
+    }
+    logger.error({ err }, "Failed to update member AI quota");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0635\u0629 \u0627\u0644\u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0644\u0644\u0645\u062D\u0627\u0645\u064A." });
+  }
+});
+var subscription_default = router14;
+
+// src/routes/index.ts
+var router15 = (0, import_express15.Router)();
+router15.use(health_default);
+router15.use(auth_default);
+router15.use(dashboard_default);
+router15.use(ai_default);
+router15.use(sessions_default);
+router15.use(settings_default);
+router15.use(reports_default);
+router15.use(cron_default);
+router15.use(poa_default);
+router15.use(judgments_default);
+router15.use(tasks_default);
+router15.use(users_default);
+router15.use(super_admin_default);
+router15.use(subscription_default);
+var routes_default = router15;
 
 // src/app.ts
 init_logger();
@@ -848571,7 +848770,7 @@ init_env();
 var import_meta = {};
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path5.default.dirname(currentFilename);
-var app = (0, import_express15.default)();
+var app = (0, import_express16.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -848604,8 +848803,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express15.default.json());
-app.use(import_express15.default.urlencoded({ extended: true }));
+app.use(import_express16.default.json());
+app.use(import_express16.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -848625,7 +848824,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express15.default.static(distPath));
+  app.use(import_express16.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path5.default.join(distPath, "index.html"));

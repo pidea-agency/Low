@@ -12,6 +12,7 @@ import judgmentsRouter from "./judgments";
 import tasksRouter from "./tasks";
 import usersRouter from "./users";
 import superAdminRouter from "./super-admin";
+import subscriptionRouter from "./subscription";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(judgmentsRouter);
 router.use(tasksRouter);
 router.use(usersRouter);
 router.use(superAdminRouter);
+router.use(subscriptionRouter);
 
 export default router;

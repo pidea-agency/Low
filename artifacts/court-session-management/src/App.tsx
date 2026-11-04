@@ -24,6 +24,7 @@ const ChatPage = React.lazy(() => import('@/pages/chat'));
 const SessionsPage = React.lazy(() => import('@/pages/sessions'));
 const SessionDetailPage = React.lazy(() => import('@/pages/session-detail'));
 const SettingsPage = React.lazy(() => import('@/pages/settings'));
+const SubscriptionPage = React.lazy(() => import('@/pages/subscription'));
 const ReportsPage = React.lazy(() => import('@/pages/reports'));
 const SessionReportPage = React.lazy(() => import('@/pages/session-report'));
 const PoaPage = React.lazy(() => import('@/pages/poa'));
@@ -174,6 +175,13 @@ function Router() {
         <RequireRole roles={['admin']}>
           <AppShell>
             <SettingsPage />
+          </AppShell>
+        </RequireRole>
+      </Route>
+      <Route path="/subscription">
+        <RequireRole roles={['admin']}>
+          <AppShell>
+            <SubscriptionPage />
           </AppShell>
         </RequireRole>
       </Route>

@@ -88,6 +88,15 @@ export const APP_NAVIGATION_CONFIG: NavItemConfig[] = [
     category: "admin",
   },
   {
+    id: "subscription",
+    name: "الاشتراك وحصص الاستهلاك",
+    path: "/subscription",
+    iconName: "CreditCard",
+    roles: ["admin"],
+    keywords: "الاشتراك الباقة استهلاك الذكاء الاصطناعي الحصص كوتا subscription usage quota",
+    category: "admin",
+  },
+  {
     id: "settings",
     name: "إعدادات وربط Google Sheet",
     path: "/settings",

@@ -182,20 +182,50 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                 </span>
               </div>
 
-              {user.role !== 'admin' && (
-                <div className="space-y-1">
+              {user.role === 'admin' ? (
+                <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between text-[10px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                    <span>استهلاك الذكاء الاصطناعي</span>
+                    <span>استهلاك ذكاء المكتب</span>
                     <span className="font-mono font-bold text-amber-300">
-                      {user.ai_usage_count || 0} / {user.ai_quota_limit || 50}
+                      {user.ai_usage_count || 0} / {user.ai_quota_limit || 100}
                     </span>
                   </div>
                   <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{
-                        width: `${Math.min(100, Math.round(((user.ai_usage_count || 0) / (user.ai_quota_limit || 50)) * 100))}%`,
-                        background: (user.ai_usage_count || 0) >= (user.ai_quota_limit || 50) ? '#ef4444' : '#B88A3B',
+                        width: `${Math.min(100, Math.round(((user.ai_usage_count || 0) / (user.ai_quota_limit || 100)) * 100))}%`,
+                        background: (user.ai_usage_count || 0) >= (user.ai_quota_limit || 100) ? '#ef4444' : '#B88A3B',
+                      }}
+                    />
+                  </div>
+                  <Link
+                    href="/subscription"
+                    onClick={() => onNavigate?.()}
+                    className="block text-center text-[10px] font-bold py-1 px-2 rounded-lg transition-colors hover:brightness-110"
+                    style={{
+                      background: 'rgba(184,138,59,0.2)',
+                      color: '#f59e0b',
+                      border: '1px solid rgba(184,138,59,0.3)',
+                    }}
+                  >
+                    إدارة الحصص والاستهلاك ←
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    <span>استهلاك الذكاء الاصطناعي</span>
+                    <span className="font-mono font-bold text-amber-300">
+                      {user.ai_usage_count || 0} / {user.ai_quota_limit ?? 'مشترك'}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${user.ai_quota_limit ? Math.min(100, Math.round(((user.ai_usage_count || 0) / user.ai_quota_limit) * 100)) : Math.min(100, Math.round(((user.ai_usage_count || 0) / 100) * 100))}%`,
+                        background: user.ai_quota_limit && (user.ai_usage_count || 0) >= user.ai_quota_limit ? '#ef4444' : '#B88A3B',
                       }}
                     />
                   </div>
