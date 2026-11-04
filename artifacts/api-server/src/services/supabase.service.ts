@@ -7,6 +7,7 @@ import { validatePassword } from "@workspace/api-zod";
 import { env, isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { encryptSecret, decryptSecret, isEncrypted } from "../lib/encryption";
+import { sendActivationEmail } from "./email.service";
 
 export interface AppUser {
   id: string;
@@ -17,7 +18,7 @@ export interface AppUser {
   office_id?: string | null;
   office_name?: string | null;
   display_name?: string | null;
-  status?: "active" | "suspended";
+  status?: "active" | "suspended" | "pending_activation";
   phone?: string | null;
   subscription_end_date?: string | null;
   subscription_notes?: string | null;
@@ -30,7 +31,17 @@ export interface AppUser {
   google_sheet_name?: string | null;
   has_google_service?: boolean;
   member_count?: number;
+  activation_token_hash?: string | null;
+  activation_token_expires_at?: string | null;
   created_at?: string;
+}
+
+export class UserPendingActivationError extends Error {
+  readonly statusCode = 403;
+  constructor(message = "يجب إكمال التسجيل أولاً عبر الرابط المرسل إلى بريدك الإلكتروني لتفعيل حسابك.") {
+    super(message);
+    this.name = "UserPendingActivationError";
+  }
 }
 
 export interface AppUserWithHash extends AppUser {
@@ -389,7 +400,11 @@ export async function verifySupabaseUser(
         u.username.toLowerCase() === cleanIdentifier ||
         (u.email && u.email.toLowerCase() === cleanIdentifier),
     );
-    if (!user || !user.password_hash) return null;
+    if (!user) return null;
+    if (user.status === "pending_activation") {
+      throw new UserPendingActivationError();
+    }
+    if (!user.password_hash) return null;
 
     let isValid = false;
     if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
@@ -523,6 +538,13 @@ export async function verifySupabaseUser(
     }
 
     const record = data[0] as AppUserWithHash;
+    const isPending =
+      record.status === "pending_activation" ||
+      record.password_hash === "!LOCKED:pending_activation!" ||
+      fallbackActivationTokens.has(`user:${record.id}`);
+    if (isPending) {
+      throw new UserPendingActivationError();
+    }
     if (!record.password_hash) {
       return null;
     }
@@ -646,7 +668,11 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
       return null;
     }
 
-    const u = data[0];
+    const u: any = data[0];
+    const isPending =
+      u.status === "pending_activation" ||
+      fallbackActivationTokens.has(`user:${u.id}`) ||
+      (u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash));
     const result: AppUser = {
       id: u.id,
       username: u.username,
@@ -655,7 +681,7 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
       admin_id: u.admin_id || null,
       office_name: u.office_name || null,
       display_name: u.display_name,
-      status: u.status || "active",
+      status: isPending ? "pending_activation" : (u.status || "active"),
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier,
@@ -980,6 +1006,63 @@ export async function checkHasPhoneColumn(client: any): Promise<boolean> {
   }
 }
 
+let hasActivationColumnsCache: boolean | null = null;
+let lastActivationCheck = 0;
+
+export async function checkHasActivationColumns(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasActivationColumnsCache !== null && now - lastActivationCheck < 60_000) {
+    return hasActivationColumnsCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client.from(tableName).select("*").limit(1);
+    if (!error && Array.isArray(data) && data.length > 0) {
+      hasActivationColumnsCache = "activation_token_hash" in data[0];
+      lastActivationCheck = now;
+      return hasActivationColumnsCache;
+    }
+    const testRes = await client.from(tableName).select("activation_token_hash").limit(1);
+    hasActivationColumnsCache = !testRes.error;
+    lastActivationCheck = now;
+    return hasActivationColumnsCache;
+  } catch {
+    hasActivationColumnsCache = false;
+    lastActivationCheck = now;
+    return false;
+  }
+}
+
+export interface FallbackActivationRecord {
+  userId: string;
+  tokenHash: string;
+  expiresAt: string;
+}
+
+const fallbackActivationTokens = new Map<string, FallbackActivationRecord>(); // keyed by tokenHash AND by userId
+
+export function saveFallbackActivationToken(userId: string, tokenHash: string, expiresAt: Date): void {
+  const record: FallbackActivationRecord = {
+    userId,
+    tokenHash,
+    expiresAt: expiresAt.toISOString(),
+  };
+  fallbackActivationTokens.set(tokenHash, record);
+  fallbackActivationTokens.set(`user:${userId}`, record);
+}
+
+export function getFallbackActivationTokenByHash(tokenHash: string): FallbackActivationRecord | undefined {
+  return fallbackActivationTokens.get(tokenHash);
+}
+
+export function clearFallbackActivationToken(userId: string): void {
+  const userRec = fallbackActivationTokens.get(`user:${userId}`);
+  if (userRec) {
+    fallbackActivationTokens.delete(userRec.tokenHash);
+    fallbackActivationTokens.delete(`user:${userId}`);
+  }
+}
+
 /**
  * List all users across the system (legacy / internal use).
  */
@@ -1241,30 +1324,42 @@ export async function listOfficeMembers(adminId: string): Promise<AppUser[]> {
   // Filter only staff linked to this office admin, stripping any subscription/google fields
   return allUsers
     .filter((u) => u.role === "staff" && u.admin_id === adminId)
-    .map((u) => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      role: "staff",
-      admin_id: adminId,
-      display_name: u.display_name,
-      status: u.status || "active",
-      phone: u.phone,
-      created_at: u.created_at,
-    }));
+    .map((u) => {
+      const isPending =
+        u.status === "pending_activation" ||
+        fallbackActivationTokens.has(`user:${u.id}`) ||
+        (u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash));
+      return {
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        role: "staff" as const,
+        admin_id: adminId,
+        display_name: u.display_name,
+        status: isPending ? ("pending_activation" as const) : (u.status || "active"),
+        phone: u.phone,
+        created_at: u.created_at,
+      };
+    });
+}
+
+export interface CreateOfficeMemberResult {
+  member: AppUser;
+  emailSent: boolean;
+  emailError?: string;
+  rawToken?: string;
 }
 
 export async function createOfficeMember(
   adminId: string,
   input: {
     username: string;
-    password: string;
+    email: string;
     display_name?: string;
-    email?: string;
     phone?: string;
-    status?: "active" | "suspended";
+    status?: "active" | "suspended" | "pending_activation";
   },
-): Promise<AppUser> {
+): Promise<CreateOfficeMemberResult> {
   // Validate office admin exists and is active
   const admin = await findUserByIdOrUsername(adminId);
   if (!admin || admin.role !== "admin") {
@@ -1273,29 +1368,317 @@ export async function createOfficeMember(
   if (admin.status === "suspended") {
     throw new Error("لا يمكن إضافة أعضاء جدد لأن اشتراك المكتب موقوف مؤقتاً.");
   }
+  if (!input.email || !input.email.trim()) {
+    throw new Error("البريد الإلكتروني مطلوب لإرسال رابط التفعيل.");
+  }
 
-  // Create member with role staff and linked to this admin
+  // Generate random 32-byte (64-char hex) activation token
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+
+  // Create member with role staff and status pending_activation
+  // Locked password_hash prevents login until activated
   const user = await createSupabaseUser({
     username: input.username,
-    password: input.password,
+    password_hash: "!LOCKED:pending_activation!",
     display_name: input.display_name,
-    email: input.email,
+    email: input.email.trim(),
     phone: input.phone,
     role: "staff",
     admin_id: adminId,
-    status: input.status || "active",
+    status: input.status || "pending_activation",
+    activation_token_hash: tokenHash,
+    activation_token_expires_at: expiresAt.toISOString(),
   });
 
+  // Always save in fallback store so it is immediately findable even if DB schema cache is refreshing
+  saveFallbackActivationToken(user.id, tokenHash, expiresAt);
+
+  // Send activation email
+  let emailSent = false;
+  let emailError: string | undefined;
+  try {
+    const emailRes = await sendActivationEmail({
+      to: input.email.trim(),
+      memberName: input.display_name || input.username,
+      officeName: admin.office_name,
+      token: rawToken,
+    });
+    emailSent = emailRes.success;
+    emailError = emailRes.error;
+  } catch (err: any) {
+    emailSent = false;
+    emailError = err?.message || "فشل إرسال بريد التفعيل.";
+  }
+
   return {
-    id: user.id,
+    member: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: "staff",
+      admin_id: adminId,
+      display_name: user.display_name,
+      status: user.status,
+      phone: user.phone,
+      created_at: user.created_at,
+    },
+    emailSent,
+    emailError,
+    rawToken,
+  };
+}
+
+export async function resendOfficeMemberActivation(
+  adminId: string,
+  memberId: string,
+): Promise<{
+  success: boolean;
+  emailSent: boolean;
+  emailError?: string;
+  rawToken?: string;
+}> {
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff" || member.admin_id !== adminId) {
+    throw new OfficeMemberNotFoundError();
+  }
+
+  if (member.status !== "pending_activation") {
+    throw new Error("الحساب مفعل بالفعل ولا يحتاج إلى إعادة إرسال رابط التفعيل.");
+  }
+
+  if (!member.email || !member.email.trim()) {
+    throw new Error("لا يوجد بريد إلكتروني مسجل لهذا العضو لإرسال رابط التفعيل.");
+  }
+
+  const admin = await findUserByIdOrUsername(adminId);
+  if (admin && admin.status === "suspended") {
+    throw new Error("لا يمكن إرسال روابط تفعيل لأن اشتراك المكتب موقوف مؤقتاً.");
+  }
+
+  // Generate new token and invalidate old one
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+  // Clear previous token
+  clearFallbackActivationToken(memberId);
+  saveFallbackActivationToken(memberId, tokenHash, expiresAt);
+
+  // Update in DB
+  await updateSupabaseUser(memberId, {
+    activation_token_hash: tokenHash,
+    activation_token_expires_at: expiresAt.toISOString(),
+  });
+
+  let emailSent = false;
+  let emailError: string | undefined;
+  try {
+    const emailRes = await sendActivationEmail({
+      to: member.email.trim(),
+      memberName: member.display_name || member.username,
+      officeName: admin?.office_name,
+      token: rawToken,
+    });
+    emailSent = emailRes.success;
+    emailError = emailRes.error;
+  } catch (err: any) {
+    emailSent = false;
+    emailError = err?.message || "فشل إرسال بريد التفعيل.";
+  }
+
+  return {
+    success: true,
+    emailSent,
+    emailError,
+    rawToken,
+  };
+}
+
+export async function findUserByActivationToken(rawToken: string): Promise<{
+  valid: boolean;
+  reason?: "invalid" | "expired" | "already_active";
+  error?: string;
+  user?: AppUser;
+  officeName?: string | null;
+}> {
+  if (!rawToken || typeof rawToken !== "string" || rawToken.trim().length < 8) {
+    return {
+      valid: false,
+      reason: "invalid",
+      error: "رابط التفعيل غير صالح.",
+    };
+  }
+
+  const cleanToken = rawToken.trim();
+  const tokenHash = crypto.createHash("sha256").update(cleanToken).digest("hex");
+  const now = Date.now();
+
+  // 1. Check fallback store first
+  const fallback = getFallbackActivationTokenByHash(tokenHash);
+  if (fallback) {
+    const expiryTime = new Date(fallback.expiresAt).getTime();
+    if (expiryTime < now) {
+      return {
+        valid: false,
+        reason: "expired",
+        error: "انتهت صلاحية رابط التفعيل. يرجى التواصل مع مدير مكتبك لإعادة إرسال رابط تفعيل جديد.",
+      };
+    }
+
+    const user = await findUserByIdOrUsername(fallback.userId);
+    if (!user) {
+      return { valid: false, reason: "invalid", error: "رابط التفعيل غير صالح أو تم حذفه." };
+    }
+    if (user.status !== "pending_activation") {
+      return {
+        valid: false,
+        reason: "already_active",
+        error: "تم تفعيل هذا الحساب مسبقاً. يمكنك تسجيل الدخول مباشرة.",
+      };
+    }
+
+    let officeName: string | null = null;
+    if (user.admin_id) {
+      const officeAdmin = await findUserByIdOrUsername(user.admin_id);
+      officeName = officeAdmin?.office_name || null;
+    }
+
+    return {
+      valid: true,
+      user,
+      officeName,
+    };
+  }
+
+  // 2. Query Supabase
+  const client = getSupabaseClient();
+  if (client) {
+    const tableName = env.supabaseTableName;
+    const hasActivation = await checkHasActivationColumns(client);
+
+    if (hasActivation) {
+      const { data, error } = await client
+        .from(tableName)
+        .select("*")
+        .eq("activation_token_hash", tokenHash)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const row = data[0];
+        const expiryTime = row.activation_token_expires_at ? new Date(row.activation_token_expires_at).getTime() : 0;
+        if (expiryTime > 0 && expiryTime < now) {
+          return {
+            valid: false,
+            reason: "expired",
+            error: "انتهت صلاحية رابط التفعيل. يرجى التواصل مع مدير مكتبك لإعادة إرسال رابط تفعيل جديد.",
+          };
+        }
+
+        if (row.status !== "pending_activation") {
+          return {
+            valid: false,
+            reason: "already_active",
+            error: "تم تفعيل هذا الحساب مسبقاً. يمكنك تسجيل الدخول مباشرة.",
+          };
+        }
+
+        const user = await findUserByIdOrUsername(row.id);
+        let officeName: string | null = null;
+        if (user?.admin_id) {
+          const officeAdmin = await findUserByIdOrUsername(user.admin_id);
+          officeName = officeAdmin?.office_name || null;
+        }
+
+        return {
+          valid: true,
+          user: user || row,
+          officeName,
+        };
+      }
+    }
+
+    // 3. Fallback: check pending users in DB in case token was bcrypt-hashed or in local store
+    const allUsers = await listSupabaseUsers();
+    for (const u of allUsers) {
+      if (u.status === "pending_activation") {
+        const uWithHash = await findUserByIdOrUsername(u.id);
+        const storedHash = (uWithHash as any)?.activation_token_hash || (u as any)?.activation_token_hash;
+        if (storedHash) {
+          let matches = storedHash === tokenHash;
+          if (!matches && (storedHash.startsWith("$2a$") || storedHash.startsWith("$2b$"))) {
+            matches = await bcrypt.compare(cleanToken, storedHash);
+          }
+          if (matches) {
+            const exp = (u as any).activation_token_expires_at;
+            if (exp && new Date(exp).getTime() < now) {
+              return {
+                valid: false,
+                reason: "expired",
+                error: "انتهت صلاحية رابط التفعيل. يرجى التواصل مع مدير مكتبك لإعادة إرسال رابط تفعيل جديد.",
+              };
+            }
+            let officeName: string | null = null;
+            if (u.admin_id) {
+              const officeAdmin = await findUserByIdOrUsername(u.admin_id);
+              officeName = officeAdmin?.office_name || null;
+            }
+            return {
+              valid: true,
+              user: u,
+              officeName,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    valid: false,
+    reason: "invalid",
+    error: "رابط التفعيل غير صالح أو تم استخدامه مسبقاً.",
+  };
+}
+
+export async function activateOfficeMember(
+  rawToken: string,
+  newPassword: string,
+): Promise<{ success: boolean; user: AppUser }> {
+  const tokenValidation = await findUserByActivationToken(rawToken);
+  if (!tokenValidation.valid || !tokenValidation.user) {
+    throw new Error(tokenValidation.error || "رابط التفعيل غير صالح.");
+  }
+
+  const user = tokenValidation.user;
+  const passwordValidation = validatePassword(newPassword, {
     username: user.username,
-    email: user.email,
-    role: "staff",
-    admin_id: adminId,
-    display_name: user.display_name,
-    status: user.status,
-    phone: user.phone,
-    created_at: user.created_at,
+    email: user.email || undefined,
+  });
+
+  if (!passwordValidation.isValid) {
+    throw new Error(passwordValidation.message);
+  }
+
+  const password_hash = await bcrypt.hash(newPassword.trim(), 10);
+
+  // Update user to active, update password_hash, and clear token
+  const updated = await updateSupabaseUser(user.id, {
+    password_hash,
+    status: "active",
+    activation_token_hash: null,
+    activation_token_expires_at: null,
+  });
+
+  // Clear from fallback store
+  clearFallbackActivationToken(user.id);
+  userAuthCache.delete(user.id);
+  userAuthCache.delete(user.username.toLowerCase());
+
+  return {
+    success: true,
+    user: updated,
   };
 }
 
@@ -1689,34 +2072,45 @@ export async function disconnectOfficeGoogleBinding(adminId: string): Promise<{ 
 export async function createSupabaseUser(input: {
   username: string;
   email?: string;
-  password: string;
+  password?: string;
+  password_hash?: string;
   role?: "super_admin" | "admin" | "staff";
   admin_id?: string | null;
   office_name?: string | null;
   display_name?: string;
-  status?: "active" | "suspended";
+  status?: "active" | "suspended" | "pending_activation";
   phone?: string | null;
   subscription_end_date?: string;
   subscription_notes?: string;
   plan_tier?: "plus" | "pro";
   billing_cycle?: "monthly" | "annual";
   ai_quota_limit?: number | null;
+  activation_token_hash?: string | null;
+  activation_token_expires_at?: string | null;
   google_service_account_json?: string;
   google_spreadsheet_id?: string;
   google_sheet_name?: string;
 }): Promise<AppUser> {
   const username = input.username.trim().toLowerCase();
-  const password = input.password.trim();
-
   if (!username) {
     throw new Error("اسم المستخدم مطلوب.");
   }
-  const passwordValidation = validatePassword(password, {
-    username,
-    email: input.email,
-  });
-  if (!passwordValidation.isValid) {
-    throw new Error(passwordValidation.message);
+
+  let password_hash: string;
+  if (input.password_hash) {
+    password_hash = input.password_hash;
+  } else if (input.password && input.password.trim()) {
+    const password = input.password.trim();
+    const passwordValidation = validatePassword(password, {
+      username,
+      email: input.email,
+    });
+    if (!passwordValidation.isValid) {
+      throw new Error(passwordValidation.message);
+    }
+    password_hash = await bcrypt.hash(password, 10);
+  } else {
+    throw new Error("كلمة المرور مطلوبة.");
   }
 
   const role = input.role || "staff";
@@ -1736,7 +2130,6 @@ export async function createSupabaseUser(input: {
     }
   }
 
-  const password_hash = await bcrypt.hash(password, 10);
   const status = input.status || "active";
   const subscription_end_date = isOfficeAdmin ? (input.subscription_end_date || null) : null;
   const subscription_notes = isOfficeAdmin ? (input.subscription_notes?.trim() || null) : null;
@@ -1777,6 +2170,8 @@ export async function createSupabaseUser(input: {
       google_sheet_name: isOfficeAdmin ? (input.google_sheet_name?.trim() || null) : null,
       has_google_service: Boolean(encryptedGoogleJson),
       password_hash,
+      activation_token_hash: input.activation_token_hash || null,
+      activation_token_expires_at: input.activation_token_expires_at || null,
       created_at: new Date().toISOString(),
     };
 
@@ -1799,6 +2194,8 @@ export async function createSupabaseUser(input: {
       billing_cycle: newUser.billing_cycle,
       ai_quota_limit: newUser.ai_quota_limit,
       ai_usage_count: newUser.ai_usage_count,
+      activation_token_hash: newUser.activation_token_hash,
+      activation_token_expires_at: newUser.activation_token_expires_at,
       has_google_service: newUser.has_google_service,
       google_spreadsheet_id: newUser.google_spreadsheet_id,
       google_sheet_name: newUser.google_sheet_name,
@@ -1819,6 +2216,7 @@ export async function createSupabaseUser(input: {
   }
 
   const hasPhone = await checkHasPhoneColumn(client);
+  const hasActivation = await checkHasActivationColumns(client);
   const newUserData: Record<string, any> = {
     username,
     email: input.email?.trim() || null,
@@ -1841,14 +2239,39 @@ export async function createSupabaseUser(input: {
   if (hasPhone && input.phone !== undefined) {
     newUserData.phone = input.phone?.trim() || null;
   }
+  if (hasActivation) {
+    if (input.activation_token_hash !== undefined) {
+      newUserData.activation_token_hash = input.activation_token_hash;
+    }
+    if (input.activation_token_expires_at !== undefined) {
+      newUserData.activation_token_expires_at = input.activation_token_expires_at;
+    }
+  }
 
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
 
-  const { data, error } = await client
+  let { data, error } = await client
     .from(tableName)
     .insert([newUserData])
     .select(selectCols)
     .single();
+
+  // If the remote DB still has the old check constraint (active, suspended) before migration 004 is run:
+  if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
+    logger.warn({ err: error.message }, "[createSupabaseUser] DB app_users_status_check rejected 'pending_activation'; inserting with 'suspended' in DB and tracking pending_activation in app layer until migration 004 is applied.");
+    newUserData.status = "suspended";
+    const retry = await client
+      .from(tableName)
+      .insert([newUserData])
+      .select(selectCols)
+      .single();
+    if (!retry.error && retry.data) {
+      data = retry.data;
+      error = null;
+    } else if (retry.error) {
+      error = retry.error;
+    }
+  }
 
   if (error) {
     logger.error({ error }, "Failed to insert user into Supabase");
@@ -1856,6 +2279,12 @@ export async function createSupabaseUser(input: {
   }
 
   const row = data as any;
+  const isPending =
+    input.status === "pending_activation" ||
+    newUserData.status === "pending_activation" ||
+    (input.activation_token_hash && fallbackActivationTokens.has(input.activation_token_hash)) ||
+    fallbackActivationTokens.has(`user:${row.id}`);
+
   return {
     id: row.id,
     username: row.username,
@@ -1864,7 +2293,7 @@ export async function createSupabaseUser(input: {
     admin_id: row.admin_id || null,
     office_name: row.office_name || null,
     display_name: row.display_name,
-    status: row.status || "active",
+    status: isPending ? "pending_activation" : (row.status || "active"),
     phone: row.phone || null,
     subscription_end_date: row.subscription_end_date || null,
     subscription_notes: row.subscription_notes || null,
@@ -1954,12 +2383,13 @@ export async function updateSupabaseUser(
   id: string,
   input: {
     password?: string;
+    password_hash?: string;
     role?: "super_admin" | "admin" | "staff";
     admin_id?: string | null;
     office_name?: string | null;
     display_name?: string;
     email?: string;
-    status?: "active" | "suspended";
+    status?: "active" | "suspended" | "pending_activation";
     phone?: string | null;
     subscription_end_date?: string | null;
     subscription_notes?: string | null;
@@ -1967,6 +2397,8 @@ export async function updateSupabaseUser(
     billing_cycle?: "monthly" | "annual";
     ai_quota_limit?: number | null;
     ai_usage_count?: number;
+    activation_token_hash?: string | null;
+    activation_token_expires_at?: string | null;
     google_service_account_json?: string;
     google_spreadsheet_id?: string;
     google_sheet_name?: string;
@@ -2001,7 +2433,9 @@ export async function updateSupabaseUser(
       throw new Error("المستخدم غير موجود.");
     }
     const user = local[index];
-    if (input.password && input.password.trim()) {
+    if (input.password_hash) {
+      user.password_hash = input.password_hash;
+    } else if (input.password && input.password.trim()) {
       const passwordValidation = validatePassword(input.password, {
         username: user.username,
         email: input.email !== undefined ? input.email : user.email,
@@ -2018,6 +2452,8 @@ export async function updateSupabaseUser(
     if (input.email !== undefined) user.email = input.email.trim() || null;
     if (input.phone !== undefined) user.phone = input.phone ? input.phone.trim() : null;
     if (input.status !== undefined) user.status = input.status;
+    if (input.activation_token_hash !== undefined) user.activation_token_hash = input.activation_token_hash;
+    if (input.activation_token_expires_at !== undefined) user.activation_token_expires_at = input.activation_token_expires_at;
     if (input.subscription_end_date !== undefined) user.subscription_end_date = input.subscription_end_date;
     if (input.subscription_notes !== undefined) user.subscription_notes = input.subscription_notes;
     if (input.plan_tier !== undefined) user.plan_tier = input.plan_tier;
@@ -2072,7 +2508,9 @@ export async function updateSupabaseUser(
   const tableName = env.supabaseTableName;
   const updates: Record<string, unknown> = {};
 
-  if (input.password && input.password.trim()) {
+  if (input.password_hash) {
+    updates.password_hash = input.password_hash;
+  } else if (input.password && input.password.trim()) {
     let existingUsername: string | undefined;
     let existingEmail: string | undefined;
     try {
@@ -2102,6 +2540,15 @@ export async function updateSupabaseUser(
   if (hasPhone && input.phone !== undefined) {
     updates.phone = input.phone ? input.phone.trim() : null;
   }
+  const hasActivation = await checkHasActivationColumns(client);
+  if (hasActivation) {
+    if (input.activation_token_hash !== undefined) {
+      updates.activation_token_hash = input.activation_token_hash;
+    }
+    if (input.activation_token_expires_at !== undefined) {
+      updates.activation_token_expires_at = input.activation_token_expires_at;
+    }
+  }
   if (input.status !== undefined) updates.status = input.status;
   if (input.subscription_end_date !== undefined) updates.subscription_end_date = input.subscription_end_date;
   if (input.subscription_notes !== undefined) updates.subscription_notes = input.subscription_notes?.trim() || null;
@@ -2128,6 +2575,12 @@ export async function updateSupabaseUser(
   }
 
   if (Object.keys(updates).length === 0) {
+    if (input.activation_token_hash !== undefined || input.activation_token_expires_at !== undefined) {
+      // If only activation token fields were supplied and activation columns are not in DB schema yet,
+      // the fallback token store was already updated. Return current user cleanly without error.
+      const existing = await findUserByIdOrUsername(id);
+      if (existing) return existing;
+    }
     throw new Error("لا توجد بيانات للتعديل.");
   }
 

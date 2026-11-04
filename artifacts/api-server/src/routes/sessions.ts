@@ -82,7 +82,15 @@ router.get("/sessions", async (req, res) => {
       res.status(401).json({ error: "غير مصرح." });
       return;
     }
-    const sessions = await listSessions(parseResult.data.status, officeId);
+    let sessions = await listSessions(parseResult.data.status, officeId);
+    if (req.query.scope === "personal") {
+      const username = (req.authUser?.username || "").toLowerCase();
+      const displayName = ((req.authUser as any)?.displayName || "").toLowerCase();
+      sessions = sessions.filter((s) => {
+        const text = `${s.notes || ""} ${s.plaintiff || ""}`.toLowerCase();
+        return (username && text.includes(username)) || (displayName && text.includes(displayName));
+      });
+    }
     const data = ListSessionsResponse.parse(sessions);
     res.json(data);
   } catch (err: any) {

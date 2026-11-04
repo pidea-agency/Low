@@ -256,7 +256,10 @@ export async function saveSessionReport(id: number, report: string, userIdOrOffi
   return postgresService.saveSessionReport(id, report, officeId);
 }
 
-export async function getDashboardStats(userIdOrOfficeId?: string): Promise<{
+export async function getDashboardStats(
+  userIdOrOfficeId?: string,
+  assignee?: string
+): Promise<{
   totalCases: number;
   todayHearings: number;
   upcomingHearings: number;
@@ -264,10 +267,17 @@ export async function getDashboardStats(userIdOrOfficeId?: string): Promise<{
   totalPoas: number;
 }> {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
-  const [sessions, poas] = await Promise.all([
+  const [allSessions, poas] = await Promise.all([
     postgresService.listSessions(officeId),
     postgresService.listPoa(officeId),
   ]);
+
+  const sessions = assignee
+    ? allSessions.filter((s) => {
+        const text = `${s.notes || ""} ${s.plaintiff || ""}`.toLowerCase();
+        return text.includes(assignee.toLowerCase());
+      })
+    : allSessions;
 
   const uniqueCases = new Set(
     sessions.map((s) => s.caseNumber?.trim()).filter(Boolean),

@@ -12,12 +12,15 @@ import {
   blockSuperAdminFromOfficeData,
   setSessionCookie,
 } from "../middlewares/auth.middleware";
-import { loginRateLimiter, adminLoginRateLimiter } from "../middlewares/rate-limiter.middleware";
+import { loginRateLimiter, adminLoginRateLimiter, activationRateLimiter } from "../middlewares/rate-limiter.middleware";
 import {
   verifySupabaseUser,
   ensureDefaultAdmin,
   listSupabaseUsers,
   findUserByIdOrUsername,
+  findUserByActivationToken,
+  activateOfficeMember,
+  UserPendingActivationError,
 } from "../services/supabase.service";
 
 const router: IRouter = Router();
@@ -46,7 +49,18 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
         await ensureDefaultAdmin();
       }
       verifiedUser = await verifySupabaseUser(username, password);
-    } catch (err) {
+    } catch (err: any) {
+      if (
+        err instanceof UserPendingActivationError ||
+        err?.statusCode === 403 ||
+        err?.message?.includes("يجب إكمال التسجيل أولاً")
+      ) {
+        res.status(403).json({
+          error: "يجب إكمال التسجيل أولاً عبر الرابط المرسل إلى بريدك الإلكتروني لتفعيل حسابك.",
+          isPendingActivation: true,
+        });
+        return;
+      }
       logger.error({ err }, "Account source unavailable during login");
       res.status(503).json({
         error: "تعذر الاتصال بقاعدة البيانات. يرجى المحاولة لاحقاً.",
@@ -55,6 +69,18 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
     }
 
     if (!verifiedUser) {
+      // Check if account exists with pending_activation status under wrong password attempt
+      try {
+        const existing = await findUserByIdOrUsername(username);
+        if (existing && existing.status === "pending_activation") {
+          res.status(403).json({
+            error: "يجب إكمال التسجيل أولاً عبر الرابط المرسل إلى بريدك الإلكتروني لتفعيل حسابك.",
+            isPendingActivation: true,
+          });
+          return;
+        }
+      } catch {}
+
       res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة." });
       return;
     }
@@ -331,6 +357,83 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to serialize current user");
     res.status(500).json({ error: "Failed to load current user." });
+  }
+});
+
+/**
+ * GET /api/auth/activate/:token
+ * Validates activation token and returns basic member and office information.
+ * Public endpoint protected by IP/token rate-limiter.
+ */
+router.get("/auth/activate/:token", activationRateLimiter, async (req, res) => {
+  try {
+    const token = String(req.params.token || "").trim();
+    const result = await findUserByActivationToken(token);
+    if (!result.valid || !result.user) {
+      const statusCode = result.reason === "expired" ? 410 : 400;
+      res.status(statusCode).json({
+        error: result.error || "رابط التفعيل غير صالح.",
+        reason: result.reason,
+      });
+      return;
+    }
+
+    res.json({
+      valid: true,
+      username: result.user.username,
+      displayName: result.user.display_name || result.user.username,
+      email: result.user.email,
+      officeName: result.officeName || "مكتب المحاماة",
+    });
+  } catch (err: any) {
+    logger.error({ err, token: req.params.token }, "Error validating activation token");
+    res.status(400).json({ error: err.message || "حدث خطأ أثناء التحقق من رابط التفعيل." });
+  }
+});
+
+/**
+ * POST /api/auth/activate
+ * Sets the password for a pending member, activates their account, and invalidates the token.
+ * Does not auto-login; directs user to manual login.
+ * Public endpoint protected by IP/token rate-limiter.
+ */
+router.post("/auth/activate", activationRateLimiter, async (req, res) => {
+  try {
+    const { token, password, password_confirmation } = req.body;
+
+    if (!token || typeof token !== "string" || !token.trim()) {
+      res.status(400).json({ error: "رمز التفعيل مطلوب." });
+      return;
+    }
+
+    if (!password || typeof password !== "string") {
+      res.status(400).json({ error: "كلمة المرور مطلوبة." });
+      return;
+    }
+
+    if (!password_confirmation || typeof password_confirmation !== "string") {
+      res.status(400).json({ error: "تأكيد كلمة المرور مطلوب." });
+      return;
+    }
+
+    if (password !== password_confirmation) {
+      res.status(400).json({ error: "كلمة المرور وتأكيدها غير متطابقين." });
+      return;
+    }
+
+    const result = await activateOfficeMember(token.trim(), password);
+
+    res.json({
+      success: true,
+      message: "تم تفعيل حسابك بنجاح! يمكنك الآن تسجيل الدخول.",
+      user: {
+        username: result.user.username,
+        displayName: result.user.display_name,
+      },
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Error activating office member account");
+    res.status(400).json({ error: err.message || "فشل تفعيل الحساب." });
   }
 });
 

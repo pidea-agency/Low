@@ -33537,6 +33537,16 @@ var init_env = __esm({
       },
       get isProduction() {
         return true;
+      },
+      get resendApiKey() {
+        return readEnv("RESEND_API_KEY");
+      },
+      get emailFrom() {
+        return readEnv("EMAIL_FROM") || "onboarding@resend.dev";
+      },
+      get frontendUrl() {
+        const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || "http://localhost:5173";
+        return raw.replace(/\/+$/, "");
       }
     };
   }
@@ -56942,14 +56952,132 @@ var init_encryption = __esm({
   }
 });
 
+// src/services/email.service.ts
+async function sendActivationEmail(params) {
+  const { to, memberName, officeName, token } = params;
+  const activationUrl = `${env.frontendUrl}/activate?token=${encodeURIComponent(token)}`;
+  const displayOffice = officeName ? officeName.trim() : "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629";
+  sentEmailsHistory.push({
+    to,
+    subject: `\u062F\u0639\u0648\u0629 \u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643 - ${displayOffice}`,
+    token,
+    activationUrl,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  const apiKey = env.resendApiKey;
+  if (!apiKey || apiKey.trim() === "") {
+    logger.warn(
+      { to, memberName, activationUrl },
+      "[EmailService] RESEND_API_KEY is not configured. Email not sent. Activation URL logged for development."
+    );
+    return {
+      success: false,
+      error: "\u0644\u0645 \u064A\u062A\u0645 \u0636\u0628\u0637 \u0645\u0641\u062A\u0627\u062D RESEND_API_KEY \u0641\u064A \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0638\u0627\u0645. \u064A\u0631\u062C\u0649 \u062A\u0632\u0648\u064A\u062F \u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0628\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u064A\u062F\u0648\u064A\u0627\u064B."
+    };
+  }
+  const subject = `\u062F\u0639\u0648\u0629 \u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643 - ${displayOffice}`;
+  const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; direction: rtl; }
+    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 36px 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .header { text-align: center; margin-bottom: 24px; }
+    .title { color: #0f172a; font-size: 22px; font-weight: 700; margin: 0 0 8px 0; }
+    .subtitle { color: #64748b; font-size: 14px; margin: 0; }
+    .content { color: #334155; font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
+    .btn-container { text-align: center; margin: 32px 0; }
+    .btn { display: inline-block; background-color: #2563eb; color: #ffffff !important; padding: 14px 32px; border-radius: 10px; font-weight: 600; text-decoration: none; font-size: 15px; }
+    .link-box { background: #f1f5f9; border-radius: 8px; padding: 14px; font-size: 13px; color: #475569; word-break: break-all; text-align: left; direction: ltr; margin-top: 16px; }
+    .footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1 class="title">\u062F\u0639\u0648\u0629 \u0644\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u0648\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628</h1>
+      <p class="subtitle">${displayOffice}</p>
+    </div>
+    <div class="content">
+      <p>\u0645\u0631\u062D\u0628\u0627\u064B <strong>${memberName}</strong>\u060C</p>
+      <p>\u062A\u0645\u062A \u062F\u0639\u0648\u062A\u0643 \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 <strong>${displayOffice}</strong> \u0644\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u0625\u0644\u0649 \u0645\u0646\u0638\u0648\u0645\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062C\u0644\u0633\u0627\u062A \u0648\u0627\u0644\u0642\u0636\u0627\u064A\u0627. \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643 \u0648\u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062E\u0627\u0635\u0629 \u0628\u0643\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631 \u0623\u062F\u0646\u0627\u0647:</p>
+      <div class="btn-container">
+        <a href="${activationUrl}" class="btn" target="_blank">\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628 \u0648\u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631</a>
+      </div>
+      <p><strong>\u0645\u0644\u0627\u062D\u0638\u0629 \u0647\u0627\u0645\u0629:</strong> \u0647\u0630\u0627 \u0627\u0644\u0631\u0627\u0628\u0637 \u0635\u0627\u0644\u062D \u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0648\u0644\u0645\u062F\u0629 48 \u0633\u0627\u0639\u0629 \u0641\u0642\u0637.</p>
+      <p>\u0625\u0630\u0627 \u0644\u0645 \u064A\u0639\u0645\u0644 \u0627\u0644\u0632\u0631 \u0645\u0639\u0643\u060C \u064A\u0645\u0643\u0646\u0643 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0645\u062A\u0635\u0641\u062D\u0643 \u0645\u0628\u0627\u0634\u0631\u0629:</p>
+      <div class="link-box">${activationUrl}</div>
+    </div>
+    <div class="footer">
+      <p>\u0625\u0630\u0627 \u0644\u0645 \u062A\u0643\u0646 \u0645\u0639\u0646\u064A\u0627\u064B \u0628\u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0623\u0648 \u0648\u0635\u0644\u062A\u0643 \u0639\u0646 \u0637\u0631\u064A\u0642 \u0627\u0644\u062E\u0637\u0623\u060C \u064A\u0645\u0643\u0646\u0643 \u062A\u062C\u0627\u0647\u0644\u0647\u0627 \u0628\u0623\u0645\u0627\u0646.</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: env.emailFrom,
+        to: [to.trim()],
+        subject,
+        html
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const errorMsg = data?.message || data?.error?.message || `HTTP ${res.status}`;
+      logger.error(
+        { to, status: res.status, errorData: data },
+        "[EmailService] Resend API error while sending activation email"
+      );
+      return {
+        success: false,
+        error: `\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A: ${errorMsg}`
+      };
+    }
+    logger.info({ to, messageId: data?.id }, "[EmailService] Activation email sent successfully");
+    return {
+      success: true,
+      messageId: data?.id
+    };
+  } catch (err) {
+    logger.error({ err, to }, "[EmailService] Unexpected network error sending activation email");
+    return {
+      success: false,
+      error: err?.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u062F\u0645\u0629 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A."
+    };
+  }
+}
+var sentEmailsHistory;
+var init_email_service = __esm({
+  "src/services/email.service.ts"() {
+    "use strict";
+    init_env();
+    init_logger();
+    sentEmailsHistory = [];
+  }
+});
+
 // src/services/supabase.service.ts
 var supabase_service_exports = {};
 __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
   OfficeMemberNotFoundError: () => OfficeMemberNotFoundError,
   QuotaExceededError: () => QuotaExceededError,
+  UserPendingActivationError: () => UserPendingActivationError,
+  activateOfficeMember: () => activateOfficeMember,
   checkAndIncrementOfficeAiUsage: () => checkAndIncrementOfficeAiUsage,
+  checkHasActivationColumns: () => checkHasActivationColumns,
   checkHasPhoneColumn: () => checkHasPhoneColumn,
+  clearFallbackActivationToken: () => clearFallbackActivationToken,
   clearUserAuthCache: () => clearUserAuthCache,
   countActiveAdmins: () => countActiveAdmins,
   createOfficeMember: () => createOfficeMember,
@@ -56960,7 +57088,9 @@ __export(supabase_service_exports, {
   deleteSupabaseUser: () => deleteSupabaseUser,
   disconnectOfficeGoogleBinding: () => disconnectOfficeGoogleBinding,
   ensureDefaultAdmin: () => ensureDefaultAdmin,
+  findUserByActivationToken: () => findUserByActivationToken,
   findUserByIdOrUsername: () => findUserByIdOrUsername,
+  getFallbackActivationTokenByHash: () => getFallbackActivationTokenByHash,
   getOfficeGoogleBinding: () => getOfficeGoogleBinding,
   getOfficeSubscriptionOverview: () => getOfficeSubscriptionOverview,
   getSupabaseClient: () => getSupabaseClient,
@@ -56974,9 +57104,11 @@ __export(supabase_service_exports, {
   listSupabaseUsers: () => listSupabaseUsers,
   listUnlinkedMembers: () => listUnlinkedMembers,
   loadLocalUsers: () => loadLocalUsers,
+  resendOfficeMemberActivation: () => resendOfficeMemberActivation,
   resetAdminAiUsage: () => resetAdminAiUsage,
   resetUserAiUsage: () => resetUserAiUsage,
   revokeUserSessions: () => revokeUserSessions,
+  saveFallbackActivationToken: () => saveFallbackActivationToken,
   saveLocalUsers: () => saveLocalUsers,
   saveOfficeGoogleBinding: () => saveOfficeGoogleBinding,
   setupFirstSuperAdmin: () => setupFirstSuperAdmin,
@@ -57252,7 +57384,11 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
     const user = localUsers.find(
       (u) => u.username.toLowerCase() === cleanIdentifier || u.email && u.email.toLowerCase() === cleanIdentifier
     );
-    if (!user || !user.password_hash) return null;
+    if (!user) return null;
+    if (user.status === "pending_activation") {
+      throw new UserPendingActivationError();
+    }
+    if (!user.password_hash) return null;
     let isValid2 = false;
     if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
       isValid2 = await import_bcryptjs.default.compare(plainPassword, user.password_hash);
@@ -57358,6 +57494,10 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
       return null;
     }
     const record = data[0];
+    const isPending = record.status === "pending_activation" || record.password_hash === "!LOCKED:pending_activation!" || fallbackActivationTokens.has(`user:${record.id}`);
+    if (isPending) {
+      throw new UserPendingActivationError();
+    }
     if (!record.password_hash) {
       return null;
     }
@@ -57458,6 +57598,7 @@ async function findUserByIdOrUsername(identifier) {
       return null;
     }
     const u = data[0];
+    const isPending = u.status === "pending_activation" || fallbackActivationTokens.has(`user:${u.id}`) || u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash);
     const result = {
       id: u.id,
       username: u.username,
@@ -57466,7 +57607,7 @@ async function findUserByIdOrUsername(identifier) {
       admin_id: u.admin_id || null,
       office_name: u.office_name || null,
       display_name: u.display_name,
-      status: u.status || "active",
+      status: isPending ? "pending_activation" : u.status || "active",
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier,
@@ -57718,6 +57859,48 @@ async function checkHasPhoneColumn(client) {
     return false;
   }
 }
+async function checkHasActivationColumns(client) {
+  const now = Date.now();
+  if (hasActivationColumnsCache !== null && now - lastActivationCheck < 6e4) {
+    return hasActivationColumnsCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client.from(tableName).select("*").limit(1);
+    if (!error && Array.isArray(data) && data.length > 0) {
+      hasActivationColumnsCache = "activation_token_hash" in data[0];
+      lastActivationCheck = now;
+      return hasActivationColumnsCache;
+    }
+    const testRes = await client.from(tableName).select("activation_token_hash").limit(1);
+    hasActivationColumnsCache = !testRes.error;
+    lastActivationCheck = now;
+    return hasActivationColumnsCache;
+  } catch {
+    hasActivationColumnsCache = false;
+    lastActivationCheck = now;
+    return false;
+  }
+}
+function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
+  const record = {
+    userId,
+    tokenHash,
+    expiresAt: expiresAt.toISOString()
+  };
+  fallbackActivationTokens.set(tokenHash, record);
+  fallbackActivationTokens.set(`user:${userId}`, record);
+}
+function getFallbackActivationTokenByHash(tokenHash) {
+  return fallbackActivationTokens.get(tokenHash);
+}
+function clearFallbackActivationToken(userId) {
+  const userRec = fallbackActivationTokens.get(`user:${userId}`);
+  if (userRec) {
+    fallbackActivationTokens.delete(userRec.tokenHash);
+    fallbackActivationTokens.delete(`user:${userId}`);
+  }
+}
 async function listSupabaseUsers() {
   const client = getSupabaseClient();
   if (!client) {
@@ -57902,17 +58085,20 @@ async function setupFirstSuperAdmin(input) {
 }
 async function listOfficeMembers(adminId) {
   const allUsers = await listSupabaseUsers();
-  return allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId).map((u) => ({
-    id: u.id,
-    username: u.username,
-    email: u.email,
-    role: "staff",
-    admin_id: adminId,
-    display_name: u.display_name,
-    status: u.status || "active",
-    phone: u.phone,
-    created_at: u.created_at
-  }));
+  return allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId).map((u) => {
+    const isPending = u.status === "pending_activation" || fallbackActivationTokens.has(`user:${u.id}`) || u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash);
+    return {
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: "staff",
+      admin_id: adminId,
+      display_name: u.display_name,
+      status: isPending ? "pending_activation" : u.status || "active",
+      phone: u.phone,
+      created_at: u.created_at
+    };
+  });
 }
 async function createOfficeMember(adminId, input) {
   const admin = await findUserByIdOrUsername(adminId);
@@ -57922,26 +58108,248 @@ async function createOfficeMember(adminId, input) {
   if (admin.status === "suspended") {
     throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0623\u0639\u0636\u0627\u0621 \u062C\u062F\u062F \u0644\u0623\u0646 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627\u064B.");
   }
+  if (!input.email || !input.email.trim()) {
+    throw new Error("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0637\u0644\u0648\u0628 \u0644\u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.");
+  }
+  const rawToken = import_crypto2.default.randomBytes(32).toString("hex");
+  const tokenHash = import_crypto2.default.createHash("sha256").update(rawToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1e3);
   const user = await createSupabaseUser({
     username: input.username,
-    password: input.password,
+    password_hash: "!LOCKED:pending_activation!",
     display_name: input.display_name,
-    email: input.email,
+    email: input.email.trim(),
     phone: input.phone,
     role: "staff",
     admin_id: adminId,
-    status: input.status || "active"
+    status: input.status || "pending_activation",
+    activation_token_hash: tokenHash,
+    activation_token_expires_at: expiresAt.toISOString()
   });
+  saveFallbackActivationToken(user.id, tokenHash, expiresAt);
+  let emailSent = false;
+  let emailError;
+  try {
+    const emailRes = await sendActivationEmail({
+      to: input.email.trim(),
+      memberName: input.display_name || input.username,
+      officeName: admin.office_name,
+      token: rawToken
+    });
+    emailSent = emailRes.success;
+    emailError = emailRes.error;
+  } catch (err) {
+    emailSent = false;
+    emailError = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0628\u0631\u064A\u062F \u0627\u0644\u062A\u0641\u0639\u064A\u0644.";
+  }
   return {
-    id: user.id,
+    member: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: "staff",
+      admin_id: adminId,
+      display_name: user.display_name,
+      status: user.status,
+      phone: user.phone,
+      created_at: user.created_at
+    },
+    emailSent,
+    emailError,
+    rawToken
+  };
+}
+async function resendOfficeMemberActivation(adminId, memberId) {
+  const member = await findUserByIdOrUsername(memberId);
+  if (!member || member.role !== "staff" || member.admin_id !== adminId) {
+    throw new OfficeMemberNotFoundError();
+  }
+  if (member.status !== "pending_activation") {
+    throw new Error("\u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0641\u0639\u0644 \u0628\u0627\u0644\u0641\u0639\u0644 \u0648\u0644\u0627 \u064A\u062D\u062A\u0627\u062C \u0625\u0644\u0649 \u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.");
+  }
+  if (!member.email || !member.email.trim()) {
+    throw new Error("\u0644\u0627 \u064A\u0648\u062C\u062F \u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0633\u062C\u0644 \u0644\u0647\u0630\u0627 \u0627\u0644\u0639\u0636\u0648 \u0644\u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.");
+  }
+  const admin = await findUserByIdOrUsername(adminId);
+  if (admin && admin.status === "suspended") {
+    throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0631\u0633\u0627\u0644 \u0631\u0648\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u0644\u0623\u0646 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627\u064B.");
+  }
+  const rawToken = import_crypto2.default.randomBytes(32).toString("hex");
+  const tokenHash = import_crypto2.default.createHash("sha256").update(rawToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1e3);
+  clearFallbackActivationToken(memberId);
+  saveFallbackActivationToken(memberId, tokenHash, expiresAt);
+  await updateSupabaseUser(memberId, {
+    activation_token_hash: tokenHash,
+    activation_token_expires_at: expiresAt.toISOString()
+  });
+  let emailSent = false;
+  let emailError;
+  try {
+    const emailRes = await sendActivationEmail({
+      to: member.email.trim(),
+      memberName: member.display_name || member.username,
+      officeName: admin?.office_name,
+      token: rawToken
+    });
+    emailSent = emailRes.success;
+    emailError = emailRes.error;
+  } catch (err) {
+    emailSent = false;
+    emailError = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0628\u0631\u064A\u062F \u0627\u0644\u062A\u0641\u0639\u064A\u0644.";
+  }
+  return {
+    success: true,
+    emailSent,
+    emailError,
+    rawToken
+  };
+}
+async function findUserByActivationToken(rawToken) {
+  if (!rawToken || typeof rawToken !== "string" || rawToken.trim().length < 8) {
+    return {
+      valid: false,
+      reason: "invalid",
+      error: "\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D."
+    };
+  }
+  const cleanToken = rawToken.trim();
+  const tokenHash = import_crypto2.default.createHash("sha256").update(cleanToken).digest("hex");
+  const now = Date.now();
+  const fallback = getFallbackActivationTokenByHash(tokenHash);
+  if (fallback) {
+    const expiryTime = new Date(fallback.expiresAt).getTime();
+    if (expiryTime < now) {
+      return {
+        valid: false,
+        reason: "expired",
+        error: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0645\u0643\u062A\u0628\u0643 \u0644\u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u062C\u062F\u064A\u062F."
+      };
+    }
+    const user = await findUserByIdOrUsername(fallback.userId);
+    if (!user) {
+      return { valid: false, reason: "invalid", error: "\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u062A\u0645 \u062D\u0630\u0641\u0647." };
+    }
+    if (user.status !== "pending_activation") {
+      return {
+        valid: false,
+        reason: "already_active",
+        error: "\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0645\u0643\u0646\u0643 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0628\u0627\u0634\u0631\u0629."
+      };
+    }
+    let officeName = null;
+    if (user.admin_id) {
+      const officeAdmin = await findUserByIdOrUsername(user.admin_id);
+      officeName = officeAdmin?.office_name || null;
+    }
+    return {
+      valid: true,
+      user,
+      officeName
+    };
+  }
+  const client = getSupabaseClient();
+  if (client) {
+    const tableName = env.supabaseTableName;
+    const hasActivation = await checkHasActivationColumns(client);
+    if (hasActivation) {
+      const { data, error } = await client.from(tableName).select("*").eq("activation_token_hash", tokenHash).limit(1);
+      if (!error && data && data.length > 0) {
+        const row = data[0];
+        const expiryTime = row.activation_token_expires_at ? new Date(row.activation_token_expires_at).getTime() : 0;
+        if (expiryTime > 0 && expiryTime < now) {
+          return {
+            valid: false,
+            reason: "expired",
+            error: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0645\u0643\u062A\u0628\u0643 \u0644\u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u062C\u062F\u064A\u062F."
+          };
+        }
+        if (row.status !== "pending_activation") {
+          return {
+            valid: false,
+            reason: "already_active",
+            error: "\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0645\u0643\u0646\u0643 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0628\u0627\u0634\u0631\u0629."
+          };
+        }
+        const user = await findUserByIdOrUsername(row.id);
+        let officeName = null;
+        if (user?.admin_id) {
+          const officeAdmin = await findUserByIdOrUsername(user.admin_id);
+          officeName = officeAdmin?.office_name || null;
+        }
+        return {
+          valid: true,
+          user: user || row,
+          officeName
+        };
+      }
+    }
+    const allUsers = await listSupabaseUsers();
+    for (const u of allUsers) {
+      if (u.status === "pending_activation") {
+        const uWithHash = await findUserByIdOrUsername(u.id);
+        const storedHash = uWithHash?.activation_token_hash || u?.activation_token_hash;
+        if (storedHash) {
+          let matches = storedHash === tokenHash;
+          if (!matches && (storedHash.startsWith("$2a$") || storedHash.startsWith("$2b$"))) {
+            matches = await import_bcryptjs.default.compare(cleanToken, storedHash);
+          }
+          if (matches) {
+            const exp = u.activation_token_expires_at;
+            if (exp && new Date(exp).getTime() < now) {
+              return {
+                valid: false,
+                reason: "expired",
+                error: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0645\u0643\u062A\u0628\u0643 \u0644\u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u062C\u062F\u064A\u062F."
+              };
+            }
+            let officeName = null;
+            if (u.admin_id) {
+              const officeAdmin = await findUserByIdOrUsername(u.admin_id);
+              officeName = officeAdmin?.office_name || null;
+            }
+            return {
+              valid: true,
+              user: u,
+              officeName
+            };
+          }
+        }
+      }
+    }
+  }
+  return {
+    valid: false,
+    reason: "invalid",
+    error: "\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0645\u0633\u0628\u0642\u0627\u064B."
+  };
+}
+async function activateOfficeMember(rawToken, newPassword) {
+  const tokenValidation = await findUserByActivationToken(rawToken);
+  if (!tokenValidation.valid || !tokenValidation.user) {
+    throw new Error(tokenValidation.error || "\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  const user = tokenValidation.user;
+  const passwordValidation = validatePassword(newPassword, {
     username: user.username,
-    email: user.email,
-    role: "staff",
-    admin_id: adminId,
-    display_name: user.display_name,
-    status: user.status,
-    phone: user.phone,
-    created_at: user.created_at
+    email: user.email || void 0
+  });
+  if (!passwordValidation.isValid) {
+    throw new Error(passwordValidation.message);
+  }
+  const password_hash = await import_bcryptjs.default.hash(newPassword.trim(), 10);
+  const updated = await updateSupabaseUser(user.id, {
+    password_hash,
+    status: "active",
+    activation_token_hash: null,
+    activation_token_expires_at: null
+  });
+  clearFallbackActivationToken(user.id);
+  userAuthCache.delete(user.id);
+  userAuthCache.delete(user.username.toLowerCase());
+  return {
+    success: true,
+    user: updated
   };
 }
 async function updateOfficeMember(adminId, memberId, input) {
@@ -58176,16 +58584,24 @@ async function disconnectOfficeGoogleBinding(adminId) {
 }
 async function createSupabaseUser(input) {
   const username = input.username.trim().toLowerCase();
-  const password = input.password.trim();
   if (!username) {
     throw new Error("\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628.");
   }
-  const passwordValidation = validatePassword(password, {
-    username,
-    email: input.email
-  });
-  if (!passwordValidation.isValid) {
-    throw new Error(passwordValidation.message);
+  let password_hash;
+  if (input.password_hash) {
+    password_hash = input.password_hash;
+  } else if (input.password && input.password.trim()) {
+    const password = input.password.trim();
+    const passwordValidation = validatePassword(password, {
+      username,
+      email: input.email
+    });
+    if (!passwordValidation.isValid) {
+      throw new Error(passwordValidation.message);
+    }
+    password_hash = await import_bcryptjs.default.hash(password, 10);
+  } else {
+    throw new Error("\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0629.");
   }
   const role = input.role || "staff";
   const isSuper = role === "super_admin";
@@ -58201,7 +58617,6 @@ async function createSupabaseUser(input) {
       }
     }
   }
-  const password_hash = await import_bcryptjs.default.hash(password, 10);
   const status = input.status || "active";
   const subscription_end_date = isOfficeAdmin ? input.subscription_end_date || null : null;
   const subscription_notes = isOfficeAdmin ? input.subscription_notes?.trim() || null : null;
@@ -58236,6 +58651,8 @@ async function createSupabaseUser(input) {
       google_sheet_name: isOfficeAdmin ? input.google_sheet_name?.trim() || null : null,
       has_google_service: Boolean(encryptedGoogleJson),
       password_hash,
+      activation_token_hash: input.activation_token_hash || null,
+      activation_token_expires_at: input.activation_token_expires_at || null,
       created_at: (/* @__PURE__ */ new Date()).toISOString()
     };
     local.unshift(newUser);
@@ -58256,6 +58673,8 @@ async function createSupabaseUser(input) {
       billing_cycle: newUser.billing_cycle,
       ai_quota_limit: newUser.ai_quota_limit,
       ai_usage_count: newUser.ai_usage_count,
+      activation_token_hash: newUser.activation_token_hash,
+      activation_token_expires_at: newUser.activation_token_expires_at,
       has_google_service: newUser.has_google_service,
       google_spreadsheet_id: newUser.google_spreadsheet_id,
       google_sheet_name: newUser.google_sheet_name,
@@ -58268,6 +58687,7 @@ async function createSupabaseUser(input) {
     throw new Error(`\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 "${username}" \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B.`);
   }
   const hasPhone = await checkHasPhoneColumn(client);
+  const hasActivation = await checkHasActivationColumns(client);
   const newUserData = {
     username,
     email: input.email?.trim() || null,
@@ -58290,13 +58710,33 @@ async function createSupabaseUser(input) {
   if (hasPhone && input.phone !== void 0) {
     newUserData.phone = input.phone?.trim() || null;
   }
+  if (hasActivation) {
+    if (input.activation_token_hash !== void 0) {
+      newUserData.activation_token_hash = input.activation_token_hash;
+    }
+    if (input.activation_token_expires_at !== void 0) {
+      newUserData.activation_token_expires_at = input.activation_token_expires_at;
+    }
+  }
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
-  const { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
+  let { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
+  if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
+    logger.warn({ err: error.message }, "[createSupabaseUser] DB app_users_status_check rejected 'pending_activation'; inserting with 'suspended' in DB and tracking pending_activation in app layer until migration 004 is applied.");
+    newUserData.status = "suspended";
+    const retry = await client.from(tableName).insert([newUserData]).select(selectCols).single();
+    if (!retry.error && retry.data) {
+      data = retry.data;
+      error = null;
+    } else if (retry.error) {
+      error = retry.error;
+    }
+  }
   if (error) {
     logger.error({ error }, "Failed to insert user into Supabase");
     throw new Error(`\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
   }
   const row = data;
+  const isPending = input.status === "pending_activation" || newUserData.status === "pending_activation" || input.activation_token_hash && fallbackActivationTokens.has(input.activation_token_hash) || fallbackActivationTokens.has(`user:${row.id}`);
   return {
     id: row.id,
     username: row.username,
@@ -58305,7 +58745,7 @@ async function createSupabaseUser(input) {
     admin_id: row.admin_id || null,
     office_name: row.office_name || null,
     display_name: row.display_name,
-    status: row.status || "active",
+    status: isPending ? "pending_activation" : row.status || "active",
     phone: row.phone || null,
     subscription_end_date: row.subscription_end_date || null,
     subscription_notes: row.subscription_notes || null,
@@ -58406,7 +58846,9 @@ async function updateSupabaseUser(id, input) {
       throw new Error("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.");
     }
     const user = local[index];
-    if (input.password && input.password.trim()) {
+    if (input.password_hash) {
+      user.password_hash = input.password_hash;
+    } else if (input.password && input.password.trim()) {
       const passwordValidation = validatePassword(input.password, {
         username: user.username,
         email: input.email !== void 0 ? input.email : user.email
@@ -58423,6 +58865,8 @@ async function updateSupabaseUser(id, input) {
     if (input.email !== void 0) user.email = input.email.trim() || null;
     if (input.phone !== void 0) user.phone = input.phone ? input.phone.trim() : null;
     if (input.status !== void 0) user.status = input.status;
+    if (input.activation_token_hash !== void 0) user.activation_token_hash = input.activation_token_hash;
+    if (input.activation_token_expires_at !== void 0) user.activation_token_expires_at = input.activation_token_expires_at;
     if (input.subscription_end_date !== void 0) user.subscription_end_date = input.subscription_end_date;
     if (input.subscription_notes !== void 0) user.subscription_notes = input.subscription_notes;
     if (input.plan_tier !== void 0) user.plan_tier = input.plan_tier;
@@ -58473,7 +58917,9 @@ async function updateSupabaseUser(id, input) {
   }
   const tableName = env.supabaseTableName;
   const updates = {};
-  if (input.password && input.password.trim()) {
+  if (input.password_hash) {
+    updates.password_hash = input.password_hash;
+  } else if (input.password && input.password.trim()) {
     let existingUsername;
     let existingEmail;
     try {
@@ -58502,6 +58948,15 @@ async function updateSupabaseUser(id, input) {
   if (hasPhone && input.phone !== void 0) {
     updates.phone = input.phone ? input.phone.trim() : null;
   }
+  const hasActivation = await checkHasActivationColumns(client);
+  if (hasActivation) {
+    if (input.activation_token_hash !== void 0) {
+      updates.activation_token_hash = input.activation_token_hash;
+    }
+    if (input.activation_token_expires_at !== void 0) {
+      updates.activation_token_expires_at = input.activation_token_expires_at;
+    }
+  }
   if (input.status !== void 0) updates.status = input.status;
   if (input.subscription_end_date !== void 0) updates.subscription_end_date = input.subscription_end_date;
   if (input.subscription_notes !== void 0) updates.subscription_notes = input.subscription_notes?.trim() || null;
@@ -58526,6 +58981,10 @@ async function updateSupabaseUser(id, input) {
     updates.google_sheet_name = input.google_sheet_name ? input.google_sheet_name.trim() : null;
   }
   if (Object.keys(updates).length === 0) {
+    if (input.activation_token_hash !== void 0 || input.activation_token_expires_at !== void 0) {
+      const existing = await findUserByIdOrUsername(id);
+      if (existing) return existing;
+    }
     throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0639\u062F\u064A\u0644.");
   }
   invalidateUserGoogleCache(id);
@@ -58587,7 +59046,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_fs3, import_path3, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -58600,6 +59059,14 @@ var init_supabase_service = __esm({
     init_env();
     init_logger();
     init_encryption();
+    init_email_service();
+    UserPendingActivationError = class extends Error {
+      statusCode = 403;
+      constructor(message = "\u064A\u062C\u0628 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644\u0627\u064B \u0639\u0628\u0631 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0631\u0633\u0644 \u0625\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643.") {
+        super(message);
+        this.name = "UserPendingActivationError";
+      }
+    };
     _supabaseClient = null;
     _lastUrl = void 0;
     _lastKey = void 0;
@@ -58621,6 +59088,9 @@ var init_supabase_service = __esm({
     officeAiLocks = /* @__PURE__ */ new Map();
     hasPhoneColumnCache = null;
     lastPhoneCheck = 0;
+    hasActivationColumnsCache = null;
+    lastActivationCheck = 0;
+    fallbackActivationTokens = /* @__PURE__ */ new Map();
     OfficeMemberNotFoundError = class extends Error {
       statusCode = 404;
       constructor(message = "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.") {
@@ -830216,6 +830686,14 @@ function createSharedRateLimiter(options = {}) {
     next();
   };
 }
+function createRateLimiter(options) {
+  return createSharedRateLimiter({
+    windowMs: options.windowMs,
+    maxPerAccount: options.max,
+    maxPerIp: options.max,
+    message: options.message
+  });
+}
 var loginRateLimiter = createSharedRateLimiter({
   windowMs: env.rateLimitWindowMs,
   maxPerAccount: env.rateLimitLoginMaxPerAccount,
@@ -830227,6 +830705,11 @@ var adminLoginRateLimiter = createSharedRateLimiter({
   maxPerAccount: env.rateLimitLoginMaxPerAccount,
   maxPerIp: env.rateLimitLoginMaxPerIp,
   message: "\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A. \u062D\u0627\u0648\u0644 \u0628\u0639\u062F ${minutes} \u062F\u0642\u064A\u0642\u0629."
+});
+var activationRateLimiter = createRateLimiter({
+  windowMs: 6e4,
+  max: 20,
+  message: "\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062D\u062F \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0645\u0646 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A. \u062D\u0627\u0648\u0644 \u0645\u062C\u062F\u062F\u0627\u064B \u0628\u0639\u062F \u0642\u0644\u064A\u0644."
 });
 
 // src/routes/auth.ts
@@ -830253,6 +830736,13 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
       }
       verifiedUser = await verifySupabaseUser(username, password);
     } catch (err) {
+      if (err instanceof UserPendingActivationError || err?.statusCode === 403 || err?.message?.includes("\u064A\u062C\u0628 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644\u0627\u064B")) {
+        res.status(403).json({
+          error: "\u064A\u062C\u0628 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644\u0627\u064B \u0639\u0628\u0631 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0631\u0633\u0644 \u0625\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643.",
+          isPendingActivation: true
+        });
+        return;
+      }
       logger.error({ err }, "Account source unavailable during login");
       res.status(503).json({
         error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B."
@@ -830260,6 +830750,17 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
       return;
     }
     if (!verifiedUser) {
+      try {
+        const existing = await findUserByIdOrUsername(username);
+        if (existing && existing.status === "pending_activation") {
+          res.status(403).json({
+            error: "\u064A\u062C\u0628 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644\u0627\u064B \u0639\u0628\u0631 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0631\u0633\u0644 \u0625\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643.",
+            isPendingActivation: true
+          });
+          return;
+        }
+      } catch {
+      }
       res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
       return;
     }
@@ -830499,6 +831000,63 @@ router2.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to load current user." });
   }
 });
+router2.get("/auth/activate/:token", activationRateLimiter, async (req, res) => {
+  try {
+    const token = String(req.params.token || "").trim();
+    const result = await findUserByActivationToken(token);
+    if (!result.valid || !result.user) {
+      const statusCode = result.reason === "expired" ? 410 : 400;
+      res.status(statusCode).json({
+        error: result.error || "\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.",
+        reason: result.reason
+      });
+      return;
+    }
+    res.json({
+      valid: true,
+      username: result.user.username,
+      displayName: result.user.display_name || result.user.username,
+      email: result.user.email,
+      officeName: result.officeName || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629"
+    });
+  } catch (err) {
+    logger.error({ err, token: req.params.token }, "Error validating activation token");
+    res.status(400).json({ error: err.message || "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644." });
+  }
+});
+router2.post("/auth/activate", activationRateLimiter, async (req, res) => {
+  try {
+    const { token, password, password_confirmation } = req.body;
+    if (!token || typeof token !== "string" || !token.trim()) {
+      res.status(400).json({ error: "\u0631\u0645\u0632 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    if (!password || typeof password !== "string") {
+      res.status(400).json({ error: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0629." });
+      return;
+    }
+    if (!password_confirmation || typeof password_confirmation !== "string") {
+      res.status(400).json({ error: "\u062A\u0623\u0643\u064A\u062F \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    if (password !== password_confirmation) {
+      res.status(400).json({ error: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0648\u062A\u0623\u0643\u064A\u062F\u0647\u0627 \u063A\u064A\u0631 \u0645\u062A\u0637\u0627\u0628\u0642\u064A\u0646." });
+      return;
+    }
+    const result = await activateOfficeMember(token.trim(), password);
+    res.json({
+      success: true,
+      message: "\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643 \u0628\u0646\u062C\u0627\u062D! \u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0622\u0646 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644.",
+      user: {
+        username: result.user.username,
+        displayName: result.user.display_name
+      }
+    });
+  } catch (err) {
+    logger.error({ err }, "Error activating office member account");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628." });
+  }
+});
 var auth_default = router2;
 
 // src/routes/dashboard.ts
@@ -830631,12 +831189,16 @@ async function saveSessionReport2(id, report, userIdOrOfficeId) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
   return saveSessionReport(id, report, officeId);
 }
-async function getDashboardStats(userIdOrOfficeId) {
+async function getDashboardStats(userIdOrOfficeId, assignee) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
-  const [sessions, poas] = await Promise.all([
+  const [allSessions, poas] = await Promise.all([
     listSessions(officeId),
     listPoa(officeId)
   ]);
+  const sessions = assignee ? allSessions.filter((s2) => {
+    const text = `${s2.notes || ""} ${s2.plaintiff || ""}`.toLowerCase();
+    return text.includes(assignee.toLowerCase());
+  }) : allSessions;
   const uniqueCases = new Set(
     sessions.map((s2) => s2.caseNumber?.trim()).filter(Boolean)
   );
@@ -830664,7 +831226,9 @@ var router3 = (0, import_express3.Router)();
 router3.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
-    const stats = await getDashboardStats(officeId);
+    const isPersonal = req.query.scope === "personal";
+    const assignee = isPersonal ? req.authUser?.displayName || req.authUser?.username : void 0;
+    const stats = await getDashboardStats(officeId, assignee);
     const data = GetDashboardStatsResponse.parse(stats);
     res.json(data);
   } catch (err) {
@@ -847110,7 +847674,15 @@ router5.get("/sessions", async (req, res) => {
       res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
       return;
     }
-    const sessions = await listSessions2(parseResult.data.status, officeId);
+    let sessions = await listSessions2(parseResult.data.status, officeId);
+    if (req.query.scope === "personal") {
+      const username = (req.authUser?.username || "").toLowerCase();
+      const displayName = (req.authUser?.displayName || "").toLowerCase();
+      sessions = sessions.filter((s2) => {
+        const text = `${s2.notes || ""} ${s2.plaintiff || ""}`.toLowerCase();
+        return username && text.includes(username) || displayName && text.includes(displayName);
+      });
+    }
     const data = ListSessionsResponse.parse(sessions);
     res.json(data);
   } catch (err) {
@@ -848267,7 +848839,18 @@ function getOfficeId3(req) {
 router11.get("/tasks", async (req, res) => {
   const officeId = getOfficeId3(req);
   try {
-    const tasks3 = await listTasks(officeId);
+    let tasks3 = await listTasks(officeId);
+    if (req.query.scope === "personal") {
+      const username = (req.authUser?.username || "").toLowerCase();
+      const displayName = (req.authUser?.displayName || "").toLowerCase();
+      tasks3 = tasks3.filter((t2) => {
+        const a = (t2.assignee || "").toLowerCase();
+        return username && a.includes(username) || displayName && a.includes(displayName);
+      });
+    } else if (req.query.assignee && typeof req.query.assignee === "string") {
+      const q = req.query.assignee.toLowerCase();
+      tasks3 = tasks3.filter((t2) => (t2.assignee || "").toLowerCase().includes(q));
+    }
     res.json(tasks3);
   } catch (err) {
     const refId = generateRefId3();
@@ -848374,6 +848957,8 @@ init_supabase_service();
 init_env();
 init_logger();
 var router12 = (0, import_express12.Router)();
+var resendCooldowns = /* @__PURE__ */ new Map();
+var RESEND_COOLDOWN_MS = 6e4;
 router12.use("/users", attachAuthUser, requireAdmin);
 router12.get("/users", async (req, res) => {
   try {
@@ -848395,28 +848980,65 @@ router12.get("/users", async (req, res) => {
 router12.post("/users", async (req, res) => {
   try {
     const adminId = req.authUser.userId;
-    const { username, email, password, display_name, status, phone } = req.body;
-    if (!username || !password) {
-      res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
+    const { username, email, display_name, phone } = req.body;
+    if (!username || !username.trim()) {
+      res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628." });
       return;
     }
-    const passwordValidation = validatePassword(password, { username, email });
-    if (!passwordValidation.isValid) {
-      res.status(400).json({ error: passwordValidation.message, code: passwordValidation.reason });
+    if (!email || !email.trim()) {
+      res.status(400).json({ error: "\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0637\u0644\u0648\u0628 \u0644\u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628." });
       return;
     }
-    const newMember = await createOfficeMember(adminId, {
-      username,
-      email,
-      password,
-      display_name,
-      status: status || "active",
+    const emailRegex2 = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex2.test(email.trim())) {
+      res.status(400).json({ error: "\u0635\u064A\u063A\u0629 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629." });
+      return;
+    }
+    const result = await createOfficeMember(adminId, {
+      username: username.trim(),
+      email: email.trim(),
+      display_name: display_name?.trim() || username.trim(),
       phone: phone?.trim() || null
     });
-    res.status(201).json(newMember);
+    res.status(201).json({
+      ...result.member,
+      emailSent: result.emailSent,
+      emailError: result.emailError
+    });
   } catch (err) {
     logger.error({ err }, "Failed to create office member");
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u062D\u0633\u0627\u0628 \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+router12.post("/users/:id/resend-activation", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const memberId = String(req.params.id);
+    const now = Date.now();
+    const lastSent = resendCooldowns.get(memberId) || 0;
+    if (now - lastSent < RESEND_COOLDOWN_MS) {
+      const waitSeconds = Math.ceil((RESEND_COOLDOWN_MS - (now - lastSent)) / 1e3);
+      res.status(429).json({
+        error: `\u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 ${waitSeconds} \u062B\u0627\u0646\u064A\u0629 \u0642\u0628\u0644 \u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.`,
+        retryAfterSeconds: waitSeconds
+      });
+      return;
+    }
+    const result = await resendOfficeMemberActivation(adminId, memberId);
+    resendCooldowns.set(memberId, now);
+    res.json({
+      success: true,
+      emailSent: result.emailSent,
+      emailError: result.emailError,
+      message: result.emailSent ? "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062C\u062F\u064A\u062F \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A." : `\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0628\u0631\u064A\u062F: ${result.emailError || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}`
+    });
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to resend activation link");
+    if (err instanceof OfficeMemberNotFoundError || err?.statusCode === 404 || err?.message?.includes("\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")) {
+      res.status(404).json({ error: "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644." });
   }
 });
 router12.patch("/users/:id", async (req, res) => {

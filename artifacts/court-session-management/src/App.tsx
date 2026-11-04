@@ -17,9 +17,12 @@ import { useGetCurrentUser } from '@workspace/api-client-react';
 const NotFound = React.lazy(() => import('@/pages/not-found'));
 const LoginPage = React.lazy(() => import('@/pages/login'));
 const AdminLoginPage = React.lazy(() => import('@/pages/admin-login'));
+const ActivatePage = React.lazy(() => import('@/pages/activate'));
 const SuperAdminPage = React.lazy(() => import('@/pages/super-admin'));
 const OfficeMembersPage = React.lazy(() => import('@/pages/users'));
 const DashboardPage = React.lazy(() => import('@/pages/dashboard'));
+const DashboardAdminPage = React.lazy(() => import('@/pages/dashboard-admin'));
+const DashboardStaffPage = React.lazy(() => import('@/pages/dashboard-staff'));
 const ChatPage = React.lazy(() => import('@/pages/chat'));
 const SessionsPage = React.lazy(() => import('@/pages/sessions'));
 const SessionDetailPage = React.lazy(() => import('@/pages/session-detail'));
@@ -117,6 +120,13 @@ function Router() {
         </Suspense>
       </Route>
 
+      {/* Public Member Activation Flow */}
+      <Route path="/activate">
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+          <ActivatePage />
+        </Suspense>
+      </Route>
+
       {/* Super Admin Portal (Platform Management) */}
       <Route path="/super-admin">
         <SuperAdminGuard>
@@ -149,6 +159,20 @@ function Router() {
             <DashboardPage />
           </AppShell>
         </AuthGuard>
+      </Route>
+      <Route path="/dashboard-admin">
+        <RequireRole roles={['admin']}>
+          <AppShell>
+            <DashboardAdminPage />
+          </AppShell>
+        </RequireRole>
+      </Route>
+      <Route path="/dashboard-staff">
+        <RequireRole roles={['staff', 'admin']}>
+          <AppShell>
+            <DashboardStaffPage />
+          </AppShell>
+        </RequireRole>
       </Route>
       <Route path="/chat">
         <AuthGuard>

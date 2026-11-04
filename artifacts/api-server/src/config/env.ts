@@ -216,6 +216,19 @@ export const env = {
   get isProduction(): boolean {
     return process.env.NODE_ENV === "production";
   },
+
+  get resendApiKey(): string | undefined {
+    return readEnv("RESEND_API_KEY");
+  },
+
+  get emailFrom(): string {
+    return readEnv("EMAIL_FROM") || "onboarding@resend.dev";
+  },
+
+  get frontendUrl(): string {
+    const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || "http://localhost:5173";
+    return raw.replace(/\/+$/, "");
+  },
 };
 
 /** Returns true only if every env var Google Sheets access needs is present, without throwing. */

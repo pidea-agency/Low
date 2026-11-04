@@ -31,7 +31,18 @@ function getOfficeId(req: any): string {
 router.get("/tasks", async (req, res) => {
   const officeId = getOfficeId(req);
   try {
-    const tasks = await postgresService.listTasks(officeId);
+    let tasks = await postgresService.listTasks(officeId);
+    if (req.query.scope === "personal") {
+      const username = (req.authUser?.username || "").toLowerCase();
+      const displayName = ((req.authUser as any)?.displayName || "").toLowerCase();
+      tasks = tasks.filter((t) => {
+        const a = (t.assignee || "").toLowerCase();
+        return (username && a.includes(username)) || (displayName && a.includes(displayName));
+      });
+    } else if (req.query.assignee && typeof req.query.assignee === "string") {
+      const q = req.query.assignee.toLowerCase();
+      tasks = tasks.filter((t) => (t.assignee || "").toLowerCase().includes(q));
+    }
     res.json(tasks);
   } catch (err: any) {
     const refId = generateRefId();

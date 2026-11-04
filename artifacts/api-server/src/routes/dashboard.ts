@@ -10,7 +10,9 @@ const router: IRouter = Router();
 router.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
-    const stats = await getDashboardStats(officeId);
+    const isPersonal = req.query.scope === "personal";
+    const assignee = isPersonal ? (req.authUser?.displayName || req.authUser?.username) : undefined;
+    const stats = await getDashboardStats(officeId, assignee);
     const data = GetDashboardStatsResponse.parse(stats);
     res.json(data);
   } catch (err: any) {

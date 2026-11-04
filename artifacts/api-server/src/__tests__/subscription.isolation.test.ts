@@ -60,19 +60,17 @@ describe("Office Subscription & Usage Allocation Isolation", { timeout: 35000 },
     const cB = loginAdminB.headers["set-cookie"];
     cookieAdminB = Array.isArray(cB) ? cB.join("; ") : cB;
 
-    // 3. Admin A creates Staff A
+    // 3. Admin A creates Staff A (created & activated)
     const unameStaffA = `sub_staff_a_${Date.now()}`;
-    const createStaffARes = await request(app)
-      .post("/api/users")
-      .set("Cookie", cookieAdminA)
-      .send({
-        username: unameStaffA,
-        password: "StaffPass123!",
-        display_name: "محامي مكتب أ",
-        email: `${unameStaffA}@law.local`,
-      });
-    expect(createStaffARes.status).toBe(201);
-    staffA = createStaffARes.body;
+    staffA = await supabaseService.createSupabaseUser({
+      username: unameStaffA,
+      password: "StaffPass123!",
+      display_name: "محامي مكتب أ",
+      email: `${unameStaffA}@law.local`,
+      role: "staff",
+      admin_id: adminA.id,
+      status: "active",
+    });
 
     const loginStaffA = await request(app)
       .post("/api/auth/login")
@@ -81,19 +79,17 @@ describe("Office Subscription & Usage Allocation Isolation", { timeout: 35000 },
     const cStaffA = loginStaffA.headers["set-cookie"];
     cookieStaffA = Array.isArray(cStaffA) ? cStaffA.join("; ") : cStaffA;
 
-    // 4. Admin B creates Staff B
+    // 4. Admin B creates Staff B (created & activated)
     const unameStaffB = `sub_staff_b_${Date.now()}`;
-    const createStaffBRes = await request(app)
-      .post("/api/users")
-      .set("Cookie", cookieAdminB)
-      .send({
-        username: unameStaffB,
-        password: "StaffPass123!",
-        display_name: "محامي مكتب ب",
-        email: `${unameStaffB}@law.local`,
-      });
-    expect(createStaffBRes.status).toBe(201);
-    staffB = createStaffBRes.body;
+    staffB = await supabaseService.createSupabaseUser({
+      username: unameStaffB,
+      password: "StaffPass123!",
+      display_name: "محامي مكتب ب",
+      email: `${unameStaffB}@law.local`,
+      role: "staff",
+      admin_id: adminB.id,
+      status: "active",
+    });
 
     const loginStaffB = await request(app)
       .post("/api/auth/login")

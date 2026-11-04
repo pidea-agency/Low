@@ -393,3 +393,10 @@ export const adminLoginRateLimiter = createSharedRateLimiter({
   maxPerIp: env.rateLimitLoginMaxPerIp,
   message: "تم تجاوز عدد المحاولات. حاول بعد ${minutes} دقيقة.",
 });
+
+/** Rate limiter for public activation endpoints (to prevent token guessing / brute-force) */
+export const activationRateLimiter = createRateLimiter({
+  windowMs: 60_000,
+  max: 20,
+  message: "تم تجاوز الحد المسموح من المحاولات. حاول مجدداً بعد قليل.",
+});
