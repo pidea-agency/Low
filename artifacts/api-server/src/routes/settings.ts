@@ -63,6 +63,153 @@ router.get("/settings/google-binding", async (req, res) => {
   }
 });
 
+export class GoogleVerificationError extends Error {
+  readonly statusCode: number;
+  readonly clientEmail?: string;
+  constructor(message: string, statusCode = 400, clientEmail?: string) {
+    super(message);
+    this.name = "GoogleVerificationError";
+    this.statusCode = statusCode;
+    this.clientEmail = clientEmail;
+  }
+}
+
+/**
+ * Validates service account JSON and performs live read/write permission check on Google Sheet.
+ * Throws GoogleVerificationError with specific HTTP status codes (400, 403, 404).
+ */
+export async function verifyGoogleSheetAccess(params: {
+  rawJson: string | object;
+  spreadsheetUrlOrId: string;
+  sheetName?: string;
+}): Promise<{
+  spreadsheetId: string;
+  sheetName: string;
+  clientEmail: string;
+  sheetTitle: string;
+}> {
+  const { rawJson, spreadsheetUrlOrId, sheetName } = params;
+
+  if (!rawJson) {
+    throw new GoogleVerificationError("يرجى تزويد ملف Service Account JSON لاختبار الاتصال.", 400);
+  }
+
+  if (!spreadsheetUrlOrId || !spreadsheetUrlOrId.trim()) {
+    throw new GoogleVerificationError("يرجى إدخال رابط جدول بيانات Google Sheet أو معرف الجدول (Spreadsheet ID).", 400);
+  }
+
+  const spreadsheetId = extractSpreadsheetId(spreadsheetUrlOrId);
+  if (!spreadsheetId || spreadsheetId.length < 10) {
+    throw new GoogleVerificationError("معرف جدول البيانات (Spreadsheet ID) غير صالح. تأكد من نسخ الرابط كاملاً.", 400);
+  }
+
+  const targetSheetName = (sheetName || "Sessions").trim();
+
+  // Parse and validate service account JSON structure
+  let parsedJson: any;
+  try {
+    parsedJson = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
+  } catch {
+    throw new GoogleVerificationError("صيغة ملف JSON غير صالحة. تأكد من صحة محتوى الملف.", 400);
+  }
+
+  if (!parsedJson || typeof parsedJson !== "object" || !parsedJson.client_email || !parsedJson.private_key) {
+    throw new GoogleVerificationError(
+      "ملف JSON ينقصه أحد الحقول الأساسية: client_email أو private_key. تأكد من تحميل مفتاح Service Account بصيغة JSON من Google Cloud Console.",
+      400,
+    );
+  }
+
+  // Initialize Google Sheets client
+  const privateKey = String(parsedJson.private_key).replace(/\\n/g, "\n");
+  const auth = new google.auth.JWT({
+    email: parsedJson.client_email,
+    key: privateKey,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
+  const sheets = google.sheets({ version: "v4", auth });
+
+  // 1. Test read access on spreadsheet metadata
+  let metadata: any;
+  try {
+    const metaRes = await sheets.spreadsheets.get({ spreadsheetId });
+    metadata = metaRes.data;
+  } catch (err: any) {
+    const status = err?.status || err?.code || 500;
+    const message = String(err?.message || "");
+
+    if (status === 403 || message.includes("permission") || message.includes("The caller does not have permission")) {
+      throw new GoogleVerificationError(
+        `تعذر الوصول لجدول البيانات (403): تأكد من فتح زر 'مشاركة' في Google Sheet ومشاركة الورقة مع البريد البرمجي (${parsedJson.client_email}) ومنحه صلاحية 'محرر' (Editor).`,
+        403,
+        parsedJson.client_email,
+      );
+    }
+    if (status === 404 || message.includes("Requested entity was not found")) {
+      throw new GoogleVerificationError(
+        `لم يتم العثور على جدول البيانات (404): تأكد من صحة رابط الـ Google Sheet أو الـ Spreadsheet ID (${spreadsheetId}).`,
+        404,
+      );
+    }
+    if (message.includes("SERVICE_DISABLED") || message.includes("has not used the Google Sheets API") || message.includes("API has not been used")) {
+      throw new GoogleVerificationError(
+        "واجهة Google Sheets API غير مفعّلة في مشروع Google Cloud. يرجى الدخول إلى Google Cloud Console وتفعيل Google Sheets API ثم إعادة المحاولة.",
+        400,
+      );
+    }
+    throw new GoogleVerificationError(
+      err.message || "فشل الاتصال بـ Google Sheets.",
+      status >= 400 && status < 600 ? status : 500,
+    );
+  }
+
+  // 2. Check if target sheet tab exists, if not create it with default columns
+  const sheetTabs = metadata.sheets?.map((s: any) => s.properties?.title) || [];
+  const tabExists = sheetTabs.includes(targetSheetName);
+
+  if (!tabExists) {
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: { title: targetSheetName },
+              },
+            },
+          ],
+        },
+      });
+      // Populate standard headers
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `'${targetSheetName}'!A1:Q1`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[...SHEET_COLUMNS]],
+        },
+      });
+    } catch (err) {
+      logger.warn({ err }, "Could not auto-create missing sheet tab during test, proceeding");
+    }
+  }
+
+  // 3. Test read ping
+  await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${targetSheetName}'!A1:B2`,
+  });
+
+  return {
+    spreadsheetId,
+    sheetName: targetSheetName,
+    clientEmail: parsedJson.client_email,
+    sheetTitle: metadata.properties?.title || "Google Sheet",
+  };
+}
+
 /**
  * POST /api/settings/google-test
  * Tests the Google Sheets connection (read & write ping) without persisting credentials.
@@ -91,138 +238,34 @@ router.post("/settings/google-test", async (req, res) => {
       }
     }
 
-    if (!rawJson) {
-      res.status(400).json({ error: "يرجى تزويد ملف Service Account JSON لاختبار الاتصال." });
-      return;
-    }
-
-    if (!spreadsheet_url_or_id || !spreadsheet_url_or_id.trim()) {
-      res.status(400).json({ error: "يرجى إدخال رابط جدول بيانات Google Sheet أو معرف الجدول (Spreadsheet ID)." });
-      return;
-    }
-
-    const spreadsheetId = extractSpreadsheetId(spreadsheet_url_or_id);
-    if (!spreadsheetId || spreadsheetId.length < 10) {
-      res.status(400).json({ error: "معرف جدول البيانات (Spreadsheet ID) غير صالح. تأكد من نسخ الرابط كاملاً." });
-      return;
-    }
-
-    const targetSheetName = (sheet_name || "Sessions").trim();
-
-    // Parse and validate service account JSON structure
-    let parsedJson: any;
-    try {
-      parsedJson = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
-    } catch {
-      res.status(400).json({ error: "صيغة ملف JSON غير صالحة. تأكد من صحة محتوى الملف." });
-      return;
-    }
-
-    if (!parsedJson.client_email || !parsedJson.private_key) {
-      res.status(400).json({
-        error: "ملف JSON ينقصه أحد الحقول الأساسية: client_email أو private_key. تأكد من تحميل مفتاح Service Account بصيغة JSON من Google Cloud Console.",
-      });
-      return;
-    }
-
-    // Initialize Google Sheets client
-    const privateKey = parsedJson.private_key.replace(/\\n/g, "\n");
-    const auth = new google.auth.JWT({
-      email: parsedJson.client_email,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-
-    const sheets = google.sheets({ version: "v4", auth });
-
-    // 1. Test read access on spreadsheet metadata
-    let metadata: any;
-    try {
-      const metaRes = await sheets.spreadsheets.get({ spreadsheetId });
-      metadata = metaRes.data;
-    } catch (err: any) {
-      const status = err?.status || err?.code || 500;
-      const message = String(err?.message || "");
-
-      if (status === 403 || message.includes("permission") || message.includes("The caller does not have permission")) {
-        res.status(403).json({
-          error: `تعذر الوصول لجدول البيانات (403): تأكد من فتح زر 'مشاركة' في Google Sheet ومشاركة الورقة مع البريد البرمجي (${parsedJson.client_email}) ومنحه صلاحية 'محرر' (Editor).`,
-          client_email: parsedJson.client_email,
-        });
-        return;
-      }
-      if (status === 404 || message.includes("Requested entity was not found")) {
-        res.status(404).json({
-          error: `لم يتم العثور على جدول البيانات (404): تأكد من صحة رابط الـ Google Sheet أو الـ Spreadsheet ID (${spreadsheetId}).`,
-        });
-        return;
-      }
-      if (message.includes("SERVICE_DISABLED") || message.includes("has not used the Google Sheets API") || message.includes("API has not been used")) {
-        res.status(400).json({
-          error: "واجهة Google Sheets API غير مفعّلة في مشروع Google Cloud. يرجى الدخول إلى Google Cloud Console وتفعيل Google Sheets API ثم إعادة المحاولة.",
-        });
-        return;
-      }
-      throw err;
-    }
-
-    // 2. Check if target sheet tab exists, if not create it with default columns
-    const sheetTabs = metadata.sheets?.map((s: any) => s.properties?.title) || [];
-    const tabExists = sheetTabs.includes(targetSheetName);
-
-    if (!tabExists) {
-      try {
-        await sheets.spreadsheets.batchUpdate({
-          spreadsheetId,
-          requestBody: {
-            requests: [
-              {
-                addSheet: {
-                  properties: { title: targetSheetName },
-                },
-              },
-            ],
-          },
-        });
-        // Populate standard headers
-        await sheets.spreadsheets.values.update({
-          spreadsheetId,
-          range: `'${targetSheetName}'!A1:Q1`,
-          valueInputOption: "RAW",
-          requestBody: {
-            values: [[...SHEET_COLUMNS]],
-          },
-        });
-      } catch (err) {
-        logger.warn({ err }, "Could not auto-create missing sheet tab during test, proceeding");
-      }
-    }
-
-    // 3. Test read ping
-    await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `'${targetSheetName}'!A1:B2`,
+    const verified = await verifyGoogleSheetAccess({
+      rawJson,
+      spreadsheetUrlOrId: spreadsheet_url_or_id,
+      sheetName: sheet_name,
     });
 
     res.json({
       success: true,
       message: "تم الاتصال بـ Google Sheets بنجاح وقراءة ورقة العمل بشكل سليم!",
-      spreadsheet_id: spreadsheetId,
-      sheet_name: targetSheetName,
-      client_email: parsedJson.client_email,
-      sheet_title: metadata.properties?.title || "Google Sheet",
+      spreadsheet_id: verified.spreadsheetId,
+      sheet_name: verified.sheetName,
+      client_email: verified.clientEmail,
+      sheet_title: verified.sheetTitle,
     });
   } catch (err: any) {
     logger.error({ err }, "Google test connection failed");
-    res.status(400).json({
+    const statusCode = err?.statusCode || 400;
+    res.status(statusCode).json({
       error: err.message || "فشل الاتصال بـ Google Sheets. يرجى مراجعة إعدادات المفتاح والرابط.",
+      client_email: err?.clientEmail,
     });
   }
 });
 
 /**
  * POST /api/settings/google-bind
- * Tests and securely binds Google Sheet credentials (encrypted via AES-256-GCM) to this Office Admin.
+ * Tests connection first and only securely binds Google Sheet credentials (encrypted via AES-256-GCM) on success.
+ * Never persists on failure.
  */
 router.post("/settings/google-bind", async (req, res) => {
   const adminId = req.authUser!.userId!;
@@ -234,29 +277,39 @@ router.post("/settings/google-bind", async (req, res) => {
       return;
     }
 
-    const spreadsheetId = extractSpreadsheetId(spreadsheet_url_or_id);
-    if (!spreadsheetId) {
+    if (!spreadsheet_url_or_id || !spreadsheet_url_or_id.trim()) {
       res.status(400).json({ error: "رابط جدول البيانات أو الـ Spreadsheet ID مطلوب." });
       return;
     }
 
-    const targetSheetName = (sheet_name || "Sessions").trim();
+    // 1. Live test credentials & spreadsheet access before persisting
+    const verified = await verifyGoogleSheetAccess({
+      rawJson: service_account_json,
+      spreadsheetUrlOrId: spreadsheet_url_or_id,
+      sheetName: sheet_name,
+    });
+
+    // 2. Save only after verification passes
     const jsonStr = typeof service_account_json === "string" ? service_account_json : JSON.stringify(service_account_json);
 
     const result = await saveOfficeGoogleBinding(adminId, {
       service_account_json: jsonStr,
-      spreadsheet_id: spreadsheetId,
-      sheet_name: targetSheetName,
+      spreadsheet_id: verified.spreadsheetId,
+      sheet_name: verified.sheetName,
     });
 
     res.json({
       ...result,
-      spreadsheet_id: spreadsheetId,
-      sheet_name: targetSheetName,
+      spreadsheet_id: verified.spreadsheetId,
+      sheet_name: verified.sheetName,
     });
   } catch (err: any) {
     logger.error({ err, adminId }, "Failed to bind Google Sheet to office");
-    res.status(400).json({ error: err.message || "فشل حفظ ربط Google Sheet للمكتب." });
+    const statusCode = err?.statusCode || 400;
+    res.status(statusCode).json({
+      error: err.message || "فشل حفظ ربط Google Sheet للمكتب.",
+      client_email: err?.clientEmail,
+    });
   }
 });
 

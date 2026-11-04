@@ -343,6 +343,9 @@ export async function assignOfficeToLegacyRow(id: number, targetOfficeId: string
   const cleanOfficeId = targetOfficeId.trim();
   if (!cleanOfficeId) throw new Error("targetOfficeId is required.");
   invalidateTaskCache();
+  if (!env.googleSpreadsheetId) {
+    throw new Error("GOOGLE_SPREADSHEET_ID is not configured for legacy migration.");
+  }
   const sheets = getClient();
   await sheets.spreadsheets.values.update({
     spreadsheetId: env.googleSpreadsheetId,

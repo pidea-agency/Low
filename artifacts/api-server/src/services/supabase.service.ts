@@ -1234,6 +1234,14 @@ export async function createOfficeMember(
   };
 }
 
+export class OfficeMemberNotFoundError extends Error {
+  readonly statusCode = 404;
+  constructor(message = "عضو المكتب غير موجود.") {
+    super(message);
+    this.name = "OfficeMemberNotFoundError";
+  }
+}
+
 export async function updateOfficeMember(
   adminId: string,
   memberId: string,
@@ -1247,7 +1255,7 @@ export async function updateOfficeMember(
 ): Promise<AppUser> {
   const member = await findUserByIdOrUsername(memberId);
   if (!member || member.role !== "staff" || member.admin_id !== adminId) {
-    throw new Error("عضو المكتب غير موجود أو لا ينتمي لهذا المكتب.");
+    throw new OfficeMemberNotFoundError();
   }
 
   const updated = await updateSupabaseUser(memberId, {
@@ -1274,7 +1282,7 @@ export async function updateOfficeMember(
 export async function deleteOfficeMember(adminId: string, memberId: string): Promise<void> {
   const member = await findUserByIdOrUsername(memberId);
   if (!member || member.role !== "staff" || member.admin_id !== adminId) {
-    throw new Error("عضو المكتب غير موجود أو لا ينتمي لهذا المكتب.");
+    throw new OfficeMemberNotFoundError();
   }
 
   await deleteSupabaseUser(memberId);
@@ -1287,7 +1295,7 @@ export async function toggleOfficeMemberStatus(
 ): Promise<AppUser> {
   const member = await findUserByIdOrUsername(memberId);
   if (!member || member.role !== "staff" || member.admin_id !== adminId) {
-    throw new Error("عضو المكتب غير موجود أو لا ينتمي لهذا المكتب.");
+    throw new OfficeMemberNotFoundError();
   }
 
   const newStatus = status || (member.status === "suspended" ? "active" : "suspended");

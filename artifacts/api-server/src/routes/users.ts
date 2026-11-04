@@ -7,6 +7,7 @@ import {
   updateOfficeMember,
   deleteOfficeMember,
   toggleOfficeMemberStatus,
+  OfficeMemberNotFoundError,
 } from "../services/supabase.service";
 import { isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
@@ -78,6 +79,7 @@ router.post("/users", async (req, res) => {
 /**
  * PATCH /api/users/:id
  * Updates an existing office member (must belong to this Office Admin).
+ * Returns 404 if member is not found or belongs to another office.
  */
 router.patch("/users/:id", async (req, res) => {
   try {
@@ -104,6 +106,10 @@ router.patch("/users/:id", async (req, res) => {
     res.json(updated);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to update office member");
+    if (err instanceof OfficeMemberNotFoundError || err?.statusCode === 404 || err?.message?.includes("غير موجود")) {
+      res.status(404).json({ error: "عضو المكتب غير موجود." });
+      return;
+    }
     res.status(400).json({ error: err.message || "فشل تعديل بيانات عضو المكتب." });
   }
 });
@@ -111,6 +117,7 @@ router.patch("/users/:id", async (req, res) => {
 /**
  * POST /api/users/:id/toggle-status
  * Suspends or reactivates an office member.
+ * Returns 404 if member is not found or belongs to another office.
  */
 router.post("/users/:id/toggle-status", async (req, res) => {
   try {
@@ -121,6 +128,10 @@ router.post("/users/:id/toggle-status", async (req, res) => {
     res.json(updated);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to toggle member status");
+    if (err instanceof OfficeMemberNotFoundError || err?.statusCode === 404 || err?.message?.includes("غير موجود")) {
+      res.status(404).json({ error: "عضو المكتب غير موجود." });
+      return;
+    }
     res.status(400).json({ error: err.message || "فشل تغيير حالة حساب العضو." });
   }
 });
@@ -128,6 +139,7 @@ router.post("/users/:id/toggle-status", async (req, res) => {
 /**
  * DELETE /api/users/:id
  * Deletes an office member belonging to this office.
+ * Returns 404 if member is not found or belongs to another office.
  */
 router.delete("/users/:id", async (req, res) => {
   try {
@@ -143,6 +155,10 @@ router.delete("/users/:id", async (req, res) => {
     res.status(204).send();
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to delete office member");
+    if (err instanceof OfficeMemberNotFoundError || err?.statusCode === 404 || err?.message?.includes("غير موجود")) {
+      res.status(404).json({ error: "عضو المكتب غير موجود." });
+      return;
+    }
     res.status(400).json({ error: err.message || "فشل حذف عضو المكتب." });
   }
 });

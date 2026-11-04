@@ -193,12 +193,12 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    if (!userId) {
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    if (!officeId) {
       res.status(401).json({ error: "غير مصرح." });
       return;
     }
-    const session = await getSessionById(id, userId);
+    const session = await getSessionById(id, officeId);
     if (!session) {
       res.status(404).json({ error: "الجلسة غير موجودة." });
       return;
@@ -206,7 +206,7 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
 
     const { listSupabaseUsers } = await import("../services/supabase.service");
     const users = await listSupabaseUsers();
-    const officeUser = users.find((u) => u.id === userId || u.username === userId);
+    const officeUser = users.find((u) => u.id === officeId || u.username === officeId || u.id === req.authUser?.userId);
     const recipientPhone = (req.body as any)?.recipientPhone?.trim() || officeUser?.phone?.trim();
     if (!recipientPhone) {
       res.status(400).json({ error: "لا يوجد رقم واتساب مسجل للمكتب لإرسال التذكير إليه." });
@@ -240,7 +240,7 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
 
     const channel = new WhatsappReminderChannel();
     await channel.send({
-      officeId: userId,
+      officeId,
       recipientPhone,
       sessionId: session.id,
       caseNumber: session.caseNumber,

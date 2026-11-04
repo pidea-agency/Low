@@ -15,7 +15,11 @@ function generateRefId(): string {
 router.use("/poa", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 
 function getOfficeId(req: any): string {
-  return req.authUser?.officeId || req.authUser?.userId || "default-office";
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("غير مصرح: معرف المكتب مفقود.");
+  }
+  return officeId;
 }
 
 function formatPoa(p: PoaRecord) {

@@ -56946,6 +56946,7 @@ var init_encryption = __esm({
 var supabase_service_exports = {};
 __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
+  OfficeMemberNotFoundError: () => OfficeMemberNotFoundError,
   checkAndIncrementOfficeAiUsage: () => checkAndIncrementOfficeAiUsage,
   clearUserAuthCache: () => clearUserAuthCache,
   countActiveAdmins: () => countActiveAdmins,
@@ -57893,7 +57894,7 @@ async function createOfficeMember(adminId, input) {
 async function updateOfficeMember(adminId, memberId, input) {
   const member = await findUserByIdOrUsername(memberId);
   if (!member || member.role !== "staff" || member.admin_id !== adminId) {
-    throw new Error("\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0627 \u064A\u0646\u062A\u0645\u064A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628.");
+    throw new OfficeMemberNotFoundError();
   }
   const updated = await updateSupabaseUser(memberId, {
     password: input.password,
@@ -57917,14 +57918,14 @@ async function updateOfficeMember(adminId, memberId, input) {
 async function deleteOfficeMember(adminId, memberId) {
   const member = await findUserByIdOrUsername(memberId);
   if (!member || member.role !== "staff" || member.admin_id !== adminId) {
-    throw new Error("\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0627 \u064A\u0646\u062A\u0645\u064A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628.");
+    throw new OfficeMemberNotFoundError();
   }
   await deleteSupabaseUser(memberId);
 }
 async function toggleOfficeMemberStatus(adminId, memberId, status) {
   const member = await findUserByIdOrUsername(memberId);
   if (!member || member.role !== "staff" || member.admin_id !== adminId) {
-    throw new Error("\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0627 \u064A\u0646\u062A\u0645\u064A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628.");
+    throw new OfficeMemberNotFoundError();
   }
   const newStatus = status || (member.status === "suspended" ? "active" : "suspended");
   return updateOfficeMember(adminId, memberId, { status: newStatus });
@@ -58394,7 +58395,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks;
+var import_bcryptjs, import_fs3, import_path3, import_crypto2, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, OfficeMemberNotFoundError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -58426,6 +58427,13 @@ var init_supabase_service = __esm({
     TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
     _localUsersCache = null;
     officeAiLocks = /* @__PURE__ */ new Map();
+    OfficeMemberNotFoundError = class extends Error {
+      statusCode = 404;
+      constructor(message = "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.") {
+        super(message);
+        this.name = "OfficeMemberNotFoundError";
+      }
+    };
   }
 });
 
@@ -847002,19 +847010,19 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
     return;
   }
   try {
-    const userId = req.authUser?.userId;
-    if (!userId) {
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    if (!officeId) {
       res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
       return;
     }
-    const session = await getSessionById2(id, userId);
+    const session = await getSessionById2(id, officeId);
     if (!session) {
       res.status(404).json({ error: "\u0627\u0644\u062C\u0644\u0633\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
     const { listSupabaseUsers: listSupabaseUsers2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
     const users = await listSupabaseUsers2();
-    const officeUser = users.find((u) => u.id === userId || u.username === userId);
+    const officeUser = users.find((u) => u.id === officeId || u.username === officeId || u.id === req.authUser?.userId);
     const recipientPhone = req.body?.recipientPhone?.trim() || officeUser?.phone?.trim();
     if (!recipientPhone) {
       res.status(400).json({ error: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0642\u0645 \u0648\u0627\u062A\u0633\u0627\u0628 \u0645\u0633\u062C\u0644 \u0644\u0644\u0645\u0643\u062A\u0628 \u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0625\u0644\u064A\u0647." });
@@ -847045,7 +847053,7 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
     }
     const channel = new WhatsappReminderChannel();
     await channel.send({
-      officeId: userId,
+      officeId,
       recipientPhone,
       sessionId: session.id,
       caseNumber: session.caseNumber,
@@ -847110,6 +847118,118 @@ router6.get("/settings/google-binding", async (req, res) => {
     res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u062D\u0627\u0644\u0629 \u0631\u0628\u0637 Google Sheet." });
   }
 });
+var GoogleVerificationError = class extends Error {
+  statusCode;
+  clientEmail;
+  constructor(message, statusCode = 400, clientEmail) {
+    super(message);
+    this.name = "GoogleVerificationError";
+    this.statusCode = statusCode;
+    this.clientEmail = clientEmail;
+  }
+};
+async function verifyGoogleSheetAccess(params) {
+  const { rawJson, spreadsheetUrlOrId, sheetName } = params;
+  if (!rawJson) {
+    throw new GoogleVerificationError("\u064A\u0631\u062C\u0649 \u062A\u0632\u0648\u064A\u062F \u0645\u0644\u0641 Service Account JSON \u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644.", 400);
+  }
+  if (!spreadsheetUrlOrId || !spreadsheetUrlOrId.trim()) {
+    throw new GoogleVerificationError("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0631\u0627\u0628\u0637 \u062C\u062F\u0648\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Google Sheet \u0623\u0648 \u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 (Spreadsheet ID).", 400);
+  }
+  const spreadsheetId = extractSpreadsheetId(spreadsheetUrlOrId);
+  if (!spreadsheetId || spreadsheetId.length < 10) {
+    throw new GoogleVerificationError("\u0645\u0639\u0631\u0641 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (Spreadsheet ID) \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u062A\u0623\u0643\u062F \u0645\u0646 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0643\u0627\u0645\u0644\u0627\u064B.", 400);
+  }
+  const targetSheetName = (sheetName || "Sessions").trim();
+  let parsedJson;
+  try {
+    parsedJson = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
+  } catch {
+    throw new GoogleVerificationError("\u0635\u064A\u063A\u0629 \u0645\u0644\u0641 JSON \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u062D\u0629 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0644\u0641.", 400);
+  }
+  if (!parsedJson || typeof parsedJson !== "object" || !parsedJson.client_email || !parsedJson.private_key) {
+    throw new GoogleVerificationError(
+      "\u0645\u0644\u0641 JSON \u064A\u0646\u0642\u0635\u0647 \u0623\u062D\u062F \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629: client_email \u0623\u0648 private_key. \u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u062D\u0645\u064A\u0644 \u0645\u0641\u062A\u0627\u062D Service Account \u0628\u0635\u064A\u063A\u0629 JSON \u0645\u0646 Google Cloud Console.",
+      400
+    );
+  }
+  const privateKey = String(parsedJson.private_key).replace(/\\n/g, "\n");
+  const auth = new import_googleapis2.google.auth.JWT({
+    email: parsedJson.client_email,
+    key: privateKey,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+  });
+  const sheets = import_googleapis2.google.sheets({ version: "v4", auth });
+  let metadata;
+  try {
+    const metaRes = await sheets.spreadsheets.get({ spreadsheetId });
+    metadata = metaRes.data;
+  } catch (err) {
+    const status = err?.status || err?.code || 500;
+    const message = String(err?.message || "");
+    if (status === 403 || message.includes("permission") || message.includes("The caller does not have permission")) {
+      throw new GoogleVerificationError(
+        `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (403): \u062A\u0623\u0643\u062F \u0645\u0646 \u0641\u062A\u062D \u0632\u0631 '\u0645\u0634\u0627\u0631\u0643\u0629' \u0641\u064A Google Sheet \u0648\u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0648\u0631\u0642\u0629 \u0645\u0639 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0628\u0631\u0645\u062C\u064A (${parsedJson.client_email}) \u0648\u0645\u0646\u062D\u0647 \u0635\u0644\u0627\u062D\u064A\u0629 '\u0645\u062D\u0631\u0631' (Editor).`,
+        403,
+        parsedJson.client_email
+      );
+    }
+    if (status === 404 || message.includes("Requested entity was not found")) {
+      throw new GoogleVerificationError(
+        `\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (404): \u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u062D\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u0640 Google Sheet \u0623\u0648 \u0627\u0644\u0640 Spreadsheet ID (${spreadsheetId}).`,
+        404
+      );
+    }
+    if (message.includes("SERVICE_DISABLED") || message.includes("has not used the Google Sheets API") || message.includes("API has not been used")) {
+      throw new GoogleVerificationError(
+        "\u0648\u0627\u062C\u0647\u0629 Google Sheets API \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644\u0629 \u0641\u064A \u0645\u0634\u0631\u0648\u0639 Google Cloud. \u064A\u0631\u062C\u0649 \u0627\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 Google Cloud Console \u0648\u062A\u0641\u0639\u064A\u0644 Google Sheets API \u062B\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.",
+        400
+      );
+    }
+    throw new GoogleVerificationError(
+      err.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets.",
+      status >= 400 && status < 600 ? status : 500
+    );
+  }
+  const sheetTabs = metadata.sheets?.map((s2) => s2.properties?.title) || [];
+  const tabExists = sheetTabs.includes(targetSheetName);
+  if (!tabExists) {
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: { title: targetSheetName }
+              }
+            }
+          ]
+        }
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `'${targetSheetName}'!A1:Q1`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[...SHEET_COLUMNS]]
+        }
+      });
+    } catch (err) {
+      logger.warn({ err }, "Could not auto-create missing sheet tab during test, proceeding");
+    }
+  }
+  await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${targetSheetName}'!A1:B2`
+  });
+  return {
+    spreadsheetId,
+    sheetName: targetSheetName,
+    clientEmail: parsedJson.client_email,
+    sheetTitle: metadata.properties?.title || "Google Sheet"
+  };
+}
 router6.post("/settings/google-test", async (req, res) => {
   const adminId = req.authUser.userId;
   const ip = req.ip || req.socket.remoteAddress || adminId;
@@ -847128,112 +847248,25 @@ router6.post("/settings/google-test", async (req, res) => {
         rawJson = existing.serviceAccountJson;
       }
     }
-    if (!rawJson) {
-      res.status(400).json({ error: "\u064A\u0631\u062C\u0649 \u062A\u0632\u0648\u064A\u062F \u0645\u0644\u0641 Service Account JSON \u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644." });
-      return;
-    }
-    if (!spreadsheet_url_or_id || !spreadsheet_url_or_id.trim()) {
-      res.status(400).json({ error: "\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0631\u0627\u0628\u0637 \u062C\u062F\u0648\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Google Sheet \u0623\u0648 \u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 (Spreadsheet ID)." });
-      return;
-    }
-    const spreadsheetId = extractSpreadsheetId(spreadsheet_url_or_id);
-    if (!spreadsheetId || spreadsheetId.length < 10) {
-      res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (Spreadsheet ID) \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u062A\u0623\u0643\u062F \u0645\u0646 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0643\u0627\u0645\u0644\u0627\u064B." });
-      return;
-    }
-    const targetSheetName = (sheet_name || "Sessions").trim();
-    let parsedJson;
-    try {
-      parsedJson = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
-    } catch {
-      res.status(400).json({ error: "\u0635\u064A\u063A\u0629 \u0645\u0644\u0641 JSON \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u062D\u0629 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0644\u0641." });
-      return;
-    }
-    if (!parsedJson.client_email || !parsedJson.private_key) {
-      res.status(400).json({
-        error: "\u0645\u0644\u0641 JSON \u064A\u0646\u0642\u0635\u0647 \u0623\u062D\u062F \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629: client_email \u0623\u0648 private_key. \u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u062D\u0645\u064A\u0644 \u0645\u0641\u062A\u0627\u062D Service Account \u0628\u0635\u064A\u063A\u0629 JSON \u0645\u0646 Google Cloud Console."
-      });
-      return;
-    }
-    const privateKey = parsedJson.private_key.replace(/\\n/g, "\n");
-    const auth = new import_googleapis2.google.auth.JWT({
-      email: parsedJson.client_email,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-    });
-    const sheets = import_googleapis2.google.sheets({ version: "v4", auth });
-    let metadata;
-    try {
-      const metaRes = await sheets.spreadsheets.get({ spreadsheetId });
-      metadata = metaRes.data;
-    } catch (err) {
-      const status = err?.status || err?.code || 500;
-      const message = String(err?.message || "");
-      if (status === 403 || message.includes("permission") || message.includes("The caller does not have permission")) {
-        res.status(403).json({
-          error: `\u062A\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (403): \u062A\u0623\u0643\u062F \u0645\u0646 \u0641\u062A\u062D \u0632\u0631 '\u0645\u0634\u0627\u0631\u0643\u0629' \u0641\u064A Google Sheet \u0648\u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0648\u0631\u0642\u0629 \u0645\u0639 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0628\u0631\u0645\u062C\u064A (${parsedJson.client_email}) \u0648\u0645\u0646\u062D\u0647 \u0635\u0644\u0627\u062D\u064A\u0629 '\u0645\u062D\u0631\u0631' (Editor).`,
-          client_email: parsedJson.client_email
-        });
-        return;
-      }
-      if (status === 404 || message.includes("Requested entity was not found")) {
-        res.status(404).json({
-          error: `\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (404): \u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u062D\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u0640 Google Sheet \u0623\u0648 \u0627\u0644\u0640 Spreadsheet ID (${spreadsheetId}).`
-        });
-        return;
-      }
-      if (message.includes("SERVICE_DISABLED") || message.includes("has not used the Google Sheets API") || message.includes("API has not been used")) {
-        res.status(400).json({
-          error: "\u0648\u0627\u062C\u0647\u0629 Google Sheets API \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644\u0629 \u0641\u064A \u0645\u0634\u0631\u0648\u0639 Google Cloud. \u064A\u0631\u062C\u0649 \u0627\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 Google Cloud Console \u0648\u062A\u0641\u0639\u064A\u0644 Google Sheets API \u062B\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629."
-        });
-        return;
-      }
-      throw err;
-    }
-    const sheetTabs = metadata.sheets?.map((s2) => s2.properties?.title) || [];
-    const tabExists = sheetTabs.includes(targetSheetName);
-    if (!tabExists) {
-      try {
-        await sheets.spreadsheets.batchUpdate({
-          spreadsheetId,
-          requestBody: {
-            requests: [
-              {
-                addSheet: {
-                  properties: { title: targetSheetName }
-                }
-              }
-            ]
-          }
-        });
-        await sheets.spreadsheets.values.update({
-          spreadsheetId,
-          range: `'${targetSheetName}'!A1:Q1`,
-          valueInputOption: "RAW",
-          requestBody: {
-            values: [[...SHEET_COLUMNS]]
-          }
-        });
-      } catch (err) {
-        logger.warn({ err }, "Could not auto-create missing sheet tab during test, proceeding");
-      }
-    }
-    await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `'${targetSheetName}'!A1:B2`
+    const verified = await verifyGoogleSheetAccess({
+      rawJson,
+      spreadsheetUrlOrId: spreadsheet_url_or_id,
+      sheetName: sheet_name
     });
     res.json({
       success: true,
       message: "\u062A\u0645 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets \u0628\u0646\u062C\u0627\u062D \u0648\u0642\u0631\u0627\u0621\u0629 \u0648\u0631\u0642\u0629 \u0627\u0644\u0639\u0645\u0644 \u0628\u0634\u0643\u0644 \u0633\u0644\u064A\u0645!",
-      spreadsheet_id: spreadsheetId,
-      sheet_name: targetSheetName,
-      client_email: parsedJson.client_email,
-      sheet_title: metadata.properties?.title || "Google Sheet"
+      spreadsheet_id: verified.spreadsheetId,
+      sheet_name: verified.sheetName,
+      client_email: verified.clientEmail,
+      sheet_title: verified.sheetTitle
     });
   } catch (err) {
     logger.error({ err }, "Google test connection failed");
-    res.status(400).json({
-      error: err.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0641\u062A\u0627\u062D \u0648\u0627\u0644\u0631\u0627\u0628\u0637."
+    const statusCode = err?.statusCode || 400;
+    res.status(statusCode).json({
+      error: err.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Sheets. \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0641\u062A\u0627\u062D \u0648\u0627\u0644\u0631\u0627\u0628\u0637.",
+      client_email: err?.clientEmail
     });
   }
 });
@@ -847245,26 +847278,33 @@ router6.post("/settings/google-bind", async (req, res) => {
       res.status(400).json({ error: "\u0645\u0644\u0641 Service Account JSON \u0645\u0637\u0644\u0648\u0628." });
       return;
     }
-    const spreadsheetId = extractSpreadsheetId(spreadsheet_url_or_id);
-    if (!spreadsheetId) {
+    if (!spreadsheet_url_or_id || !spreadsheet_url_or_id.trim()) {
       res.status(400).json({ error: "\u0631\u0627\u0628\u0637 \u062C\u062F\u0648\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0623\u0648 \u0627\u0644\u0640 Spreadsheet ID \u0645\u0637\u0644\u0648\u0628." });
       return;
     }
-    const targetSheetName = (sheet_name || "Sessions").trim();
+    const verified = await verifyGoogleSheetAccess({
+      rawJson: service_account_json,
+      spreadsheetUrlOrId: spreadsheet_url_or_id,
+      sheetName: sheet_name
+    });
     const jsonStr = typeof service_account_json === "string" ? service_account_json : JSON.stringify(service_account_json);
     const result = await saveOfficeGoogleBinding(adminId, {
       service_account_json: jsonStr,
-      spreadsheet_id: spreadsheetId,
-      sheet_name: targetSheetName
+      spreadsheet_id: verified.spreadsheetId,
+      sheet_name: verified.sheetName
     });
     res.json({
       ...result,
-      spreadsheet_id: spreadsheetId,
-      sheet_name: targetSheetName
+      spreadsheet_id: verified.spreadsheetId,
+      sheet_name: verified.sheetName
     });
   } catch (err) {
     logger.error({ err, adminId }, "Failed to bind Google Sheet to office");
-    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0631\u0628\u0637 Google Sheet \u0644\u0644\u0645\u0643\u062A\u0628." });
+    const statusCode = err?.statusCode || 400;
+    res.status(statusCode).json({
+      error: err.message || "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0631\u0628\u0637 Google Sheet \u0644\u0644\u0645\u0643\u062A\u0628.",
+      client_email: err?.clientEmail
+    });
   }
 });
 router6.post("/settings/google-disconnect", async (req, res) => {
@@ -847757,7 +847797,11 @@ function generateRefId() {
 }
 router9.use("/poa", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function getOfficeId(req) {
-  return req.authUser?.officeId || req.authUser?.userId || "default-office";
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
 }
 function formatPoa(p) {
   return {
@@ -847869,7 +847913,11 @@ function generateRefId2() {
 }
 router10.use("/judgments", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function getOfficeId2(req) {
-  return req.authUser?.officeId || req.authUser?.userId || "default-office";
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
 }
 router10.get("/judgments", async (req, res) => {
   const officeId = getOfficeId2(req);
@@ -848001,7 +848049,11 @@ function generateRefId3() {
 }
 router11.use("/tasks", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function getOfficeId3(req) {
-  return req.authUser?.officeId || req.authUser?.userId || "default-office";
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
 }
 router11.get("/tasks", async (req, res) => {
   const officeId = getOfficeId3(req);
@@ -848180,6 +848232,10 @@ router12.patch("/users/:id", async (req, res) => {
     res.json(updated);
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to update office member");
+    if (err instanceof OfficeMemberNotFoundError || err?.statusCode === 404 || err?.message?.includes("\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")) {
+      res.status(404).json({ error: "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628." });
   }
 });
@@ -848192,6 +848248,10 @@ router12.post("/users/:id/toggle-status", async (req, res) => {
     res.json(updated);
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to toggle member status");
+    if (err instanceof OfficeMemberNotFoundError || err?.statusCode === 404 || err?.message?.includes("\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")) {
+      res.status(404).json({ error: "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u063A\u064A\u064A\u0631 \u062D\u0627\u0644\u0629 \u062D\u0633\u0627\u0628 \u0627\u0644\u0639\u0636\u0648." });
   }
 });
@@ -848207,6 +848267,10 @@ router12.delete("/users/:id", async (req, res) => {
     res.status(204).send();
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to delete office member");
+    if (err instanceof OfficeMemberNotFoundError || err?.statusCode === 404 || err?.message?.includes("\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")) {
+      res.status(404).json({ error: "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628." });
   }
 });
