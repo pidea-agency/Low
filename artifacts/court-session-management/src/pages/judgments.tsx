@@ -10,6 +10,7 @@ import { useGetCurrentUser } from '@workspace/api-client-react';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
+import { TablePagination } from '@/components/ui/table-pagination';
 import {
   Dialog,
   DialogContent,
@@ -67,6 +68,8 @@ export default function JudgmentsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterResult, setFilterResult] = useState<'all' | 'نهائي' | 'ابتدائي'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isOpen, setIsOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<JudgmentRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JudgmentRecord | null>(null);
@@ -316,6 +319,10 @@ export default function JudgmentsPage() {
     return matchesSearch && matchesFilter;
   });
 
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const favorableCount = records.filter((r) => r.isFavorable === 'نهائي' || r.isFavorable === 'نعم').length;
   const unfavorableCount = records.filter((r) => r.isFavorable === 'ابتدائي' || r.isFavorable === 'لا').length;
 
@@ -405,7 +412,10 @@ export default function JudgmentsPage() {
           <Input
             placeholder="البحث برقم القضية، رقم الصك، المحكمة، المدعي، المدعى عليه..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="pr-9 h-10 bg-card border-border text-sm"
             data-testid="input-search-judgments"
           />
@@ -413,7 +423,10 @@ export default function JudgmentsPage() {
 
         <div className="flex items-center gap-1.5 p-1 bg-muted rounded-xl border border-border shrink-0">
           <button
-            onClick={() => setFilterResult('all')}
+            onClick={() => {
+              setFilterResult('all');
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               filterResult === 'all'
                 ? 'bg-card text-foreground shadow-sm border border-border'
@@ -423,7 +436,10 @@ export default function JudgmentsPage() {
             الكل ({records.length})
           </button>
           <button
-            onClick={() => setFilterResult('نهائي')}
+            onClick={() => {
+              setFilterResult('نهائي');
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               filterResult === 'نهائي'
                 ? 'bg-emerald-600 text-white shadow-sm'
@@ -433,7 +449,10 @@ export default function JudgmentsPage() {
             أحكام نهائية ({favorableCount})
           </button>
           <button
-            onClick={() => setFilterResult('ابتدائي')}
+            onClick={() => {
+              setFilterResult('ابتدائي');
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               filterResult === 'ابتدائي'
                 ? 'bg-blue-600 text-white shadow-sm'
@@ -456,9 +475,10 @@ export default function JudgmentsPage() {
             </div>
           ))}
         </div>
-      ) : filteredRecords.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 fade-in-up fade-in-up-delay-2">
-          {filteredRecords.map((rec) => {
+      ) : totalItems > 0 ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 fade-in-up fade-in-up-delay-2">
+            {paginatedRecords.map((rec) => {
             const isFinal = rec.isFavorable === 'نهائي' || rec.isFavorable === 'نعم';
             const dayName = getArabicDayName({ sessionDateHijri: rec.judgmentDate });
 
@@ -614,6 +634,19 @@ export default function JudgmentsPage() {
             );
           })}
         </div>
+
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center fade-in-up">
           <div className="w-16 h-16 rounded-2xl bg-muted mx-auto mb-4 flex items-center justify-center">

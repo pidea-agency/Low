@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
+import { TablePagination } from '@/components/ui/table-pagination';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -125,6 +126,8 @@ type SessionItem = {
 export default function SessionsPage() {
   const [statusFilter, setStatusFilter] = useState<SessionStatus | 'all'>('all');
   const [sortBy, setSortBy] = useState<SortOption>('nearest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data: currentUser } = useGetCurrentUser();
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
@@ -145,6 +148,12 @@ export default function SessionsPage() {
   );
 
   const sortedSessions = Array.isArray(sessions) ? sortSessions(sessions, sortBy) : [];
+  const totalItems = sortedSessions.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedSessions = sortedSessions.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const deleteMutation = useDeleteSession();
   const updateMutation = useUpdateSession();
@@ -236,7 +245,10 @@ export default function SessionsPage() {
           {statusOptions.map((option) => (
             <button
               key={option.value}
-              onClick={() => setStatusFilter(option.value)}
+              onClick={() => {
+                setStatusFilter(option.value);
+                setCurrentPage(1);
+              }}
               data-testid={`filter-${option.value}`}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                 statusFilter === option.value
@@ -251,7 +263,13 @@ export default function SessionsPage() {
 
         {/* Sort Select */}
         <div className="flex items-center gap-2">
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+          <Select
+            value={sortBy}
+            onValueChange={(v) => {
+              setSortBy(v as SortOption);
+              setCurrentPage(1);
+            }}
+          >
             <SelectTrigger className="h-9 text-xs gap-1.5 bg-card border-border min-w-[170px]" data-testid="select-sort-sessions">
               <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <SelectValue placeholder="الترتيب" />
@@ -303,9 +321,9 @@ export default function SessionsPage() {
             إعادة محاولة التحميل
           </Button>
         </div>
-      ) : sortedSessions.length > 0 ? (
+      ) : totalItems > 0 ? (
         <div className="space-y-3 fade-in-up fade-in-up-delay-2">
-          {sortedSessions.map((session, i) => {
+          {paginatedSessions.map((session, i) => {
             const effectiveStatus = deriveEffectiveStatus(session.status, session.hearingAt);
             const style = statusStyleMap[effectiveStatus];
             return (
@@ -426,6 +444,18 @@ export default function SessionsPage() {
               </div>
             );
           })}
+
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       ) : (
         <div className="fade-in-up fade-in-up-delay-2 rounded-xl border border-dashed border-border bg-card/50 p-12 text-center">

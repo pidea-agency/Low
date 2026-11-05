@@ -263,17 +263,17 @@ export default function DashboardStaffPage() {
       {/* Staff Welcome Header */}
       <div className="fade-in-up flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent shadow-sm">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <div className="w-2.5 h-6 rounded-full bg-primary" />
-            <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2 flex-wrap">
               <span>مرحباً بك، {currentUser?.displayName || currentUser?.username} ⚖️</span>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
-                محامي المكتب
-              </span>
             </h1>
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/30">
+              محامٍ لدى {(currentUser as any)?.officeName || (currentUser as any)?.office_name || 'مكتب المحاماة'}
+            </span>
           </div>
           <p className="text-muted-foreground text-sm mr-4">
-            مساحة العمل الرقمية الخاصة بك لمتابعة الجلسات الموكلة، المهام، وتحليل رسائل المحاكم
+            مساحة العمل الخاصة بك لمتابعة الجلسات الموكلة، الوكالات، والمهام لدى <strong className="text-foreground">{(currentUser as any)?.officeName || (currentUser as any)?.office_name || 'مكتب المحاماة'}</strong>
           </p>
         </div>
         <div className="flex items-center gap-2 mr-4 md:mr-0">

@@ -28,6 +28,7 @@ import { useGetCurrentUser } from '@workspace/api-client-react';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
+import { TablePagination } from '@/components/ui/table-pagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -240,7 +241,7 @@ function TaskCard({ task, onEdit, onDelete, onView, onReminder, onSendWhatsapp, 
           <RemainingBadge dueDate={task.dueDate} status={task.status} />
         </div>
         <div className="flex items-center justify-between text-xs" style={{ color: 'var(--muted-foreground)' }}>
-          <span className="flex items-center gap-1"><User className="w-3 h-3" />{task.assignee || '—'}</span>
+          <span className="flex items-center gap-1 font-medium"><User className="w-3 h-3 text-[#C9A449]" />المحامي المعين: {task.assignee || 'غير محدد'}</span>
           <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(task.dueDate)}</span>
         </div>
       </div>
@@ -482,6 +483,8 @@ export default function TasksPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | TaskStatus>('all');
   const [filterPriority, setFilterPriority] = useState<'all' | Priority>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewTask, setViewTask] = useState<Task | null>(null);
@@ -669,9 +672,13 @@ export default function TasksPage() {
     return true;
   });
 
-  const currentTasks = filtered.filter(t => classifyTask(t) === 'current');
-  const upcomingTasks = filtered.filter(t => classifyTask(t) === 'upcoming');
-  const pastTasks = filtered.filter(t => classifyTask(t) === 'past');
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedTasks = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const currentTasks = paginatedTasks.filter(t => classifyTask(t) === 'current');
+  const upcomingTasks = paginatedTasks.filter(t => classifyTask(t) === 'upcoming');
+  const pastTasks = paginatedTasks.filter(t => classifyTask(t) === 'past');
 
   const cp = (task: Task) => ({
     task,
@@ -731,9 +738,23 @@ export default function TasksPage() {
       <div className="flex flex-wrap items-center gap-2 mb-6">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="بحث في المهام..." value={search} onChange={e => setSearch(e.target.value)} className="pr-9" />
+          <Input
+            placeholder="بحث في المهام..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="pr-9"
+          />
         </div>
-        <Select value={filterStatus} onValueChange={v => setFilterStatus(v as typeof filterStatus)}>
+        <Select
+          value={filterStatus}
+          onValueChange={(v) => {
+            setFilterStatus(v as typeof filterStatus);
+            setCurrentPage(1);
+          }}
+        >
           <SelectTrigger className="w-36"><SelectValue placeholder="الحالة" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">جميع الحالات</SelectItem>
@@ -743,7 +764,13 @@ export default function TasksPage() {
             <SelectItem value="معلقة">معلقة</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterPriority} onValueChange={v => setFilterPriority(v as typeof filterPriority)}>
+        <Select
+          value={filterPriority}
+          onValueChange={(v) => {
+            setFilterPriority(v as typeof filterPriority);
+            setCurrentPage(1);
+          }}
+        >
           <SelectTrigger className="w-32"><SelectValue placeholder="الأولوية" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">جميع الأولويات</SelectItem>
@@ -795,6 +822,18 @@ export default function TasksPage() {
               {pastTasks.map(t => <TaskCard key={t.id} {...cp(t)} />)}
             </Section>
           )}
+
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
         </>
       )}
 

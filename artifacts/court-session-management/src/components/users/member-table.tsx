@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { TablePagination } from '@/components/ui/table-pagination';
 
 export interface OfficeMember {
   id: string;
@@ -50,6 +51,9 @@ export function MemberTable({
   resendingId,
   cooldowns,
 }: MemberTableProps) {
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
+
   const filtered = members.filter((m) => {
     const q = searchQuery.toLowerCase();
     return (
@@ -60,6 +64,15 @@ export function MemberTable({
     );
   });
 
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedMembers = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleSearch = (q: string) => {
+    onSearchChange(q);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="space-y-4">
       {/* Search Header */}
@@ -69,7 +82,7 @@ export function MemberTable({
           <Input
             placeholder="بحث بالاسم أو اسم المستخدم أو الهاتف..."
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pr-9 text-xs h-9"
           />
         </div>
@@ -101,14 +114,14 @@ export function MemberTable({
                     جارٍ تحميل قائمة الأعضاء...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : totalItems === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center p-8 text-muted-foreground">
                     لا يوجد أعضاء مسجلون في المكتب حالياً. يمكنك إضافة محامٍ جديد عبر الزر أعلاه.
                   </td>
                 </tr>
               ) : (
-                filtered.map((member) => {
+                paginatedMembers.map((member) => {
                   const isPending = member.status === 'pending_activation';
                   const isSuspended = member.status === 'suspended';
                   const cd = cooldowns[member.id] || 0;
@@ -223,6 +236,18 @@ export function MemberTable({
           </table>
         </div>
       </div>
+
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
+      />
     </div>
   );
 }

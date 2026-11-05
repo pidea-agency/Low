@@ -9,6 +9,7 @@ import { useGetCurrentUser } from '@workspace/api-client-react';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
+import { TablePagination } from '@/components/ui/table-pagination';
 import {
   getStoredPoaRecords,
   setStoredPoaRecords,
@@ -149,6 +150,8 @@ export default function PowerOfAttorneyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
   const [isOpen, setIsOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PowerOfAttorney | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PowerOfAttorney | null>(null);
@@ -574,6 +577,10 @@ export default function PowerOfAttorneyPage() {
       (r.notes && r.notes.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -803,7 +810,10 @@ export default function PowerOfAttorneyPage() {
         <Input
           placeholder="بحث باسم العميل، رقم الوكالة أو الملاحظات..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
           className="pr-9"
         />
       </div>
@@ -820,22 +830,23 @@ export default function PowerOfAttorneyPage() {
             </div>
           ))}
         </div>
-      ) : filteredRecords.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRecords.map((record) => {
-            const isExpired = record.daysRemaining <= 0;
-            const isExpiringSoon = record.daysRemaining > 0 && record.daysRemaining <= 7;
-            const isWarning = record.daysRemaining > 7 && record.daysRemaining <= 30;
+      ) : totalItems > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedRecords.map((record) => {
+              const isExpired = record.daysRemaining <= 0;
+              const isExpiringSoon = record.daysRemaining > 0 && record.daysRemaining <= 7;
+              const isWarning = record.daysRemaining > 7 && record.daysRemaining <= 30;
 
-            return (
-              <div
-                key={record.id}
-                className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden ${
-                  record.isPending
-                    ? 'border-amber-500/50 bg-amber-500/5'
-                    : 'border-border bg-card'
-                }`}
-              >
+              return (
+                <div
+                  key={record.id}
+                  className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden ${
+                    record.isPending
+                      ? 'border-amber-500/50 bg-amber-500/5'
+                      : 'border-border bg-card'
+                  }`}
+                >
                 {/* Status bar */}
                 <div
                   className={`absolute top-0 right-0 left-0 h-1 ${
@@ -959,6 +970,14 @@ export default function PowerOfAttorneyPage() {
                   </div>
                 </div>
 
+                {/* Lawyer Assignment */}
+                {(record.assignedLawyer || record.assigned_lawyer) && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-md">
+                    <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>المحامي المعين: <strong className="text-foreground">{record.assignedLawyer || record.assigned_lawyer}</strong></span>
+                  </div>
+                )}
+
                 {/* Notes */}
                 {record.notes && (
                   <p className="text-xs text-muted-foreground/90 bg-muted/30 p-2 rounded-md line-clamp-2 border border-border/30">
@@ -969,6 +988,19 @@ export default function PowerOfAttorneyPage() {
             );
           })}
         </div>
+
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+        />
+      </>
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 mx-auto mb-4 flex items-center justify-center">

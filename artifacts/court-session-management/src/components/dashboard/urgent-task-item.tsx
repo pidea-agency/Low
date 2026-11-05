@@ -35,8 +35,8 @@ export function UrgentTaskItem({ task }: UrgentTaskItemProps) {
         </div>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1">
-            <User className="w-3 h-3 text-muted-foreground/70" />
-            <span>المكلف: {task.assignee || 'غير محدد'}</span>
+            <User className="w-3 h-3 text-[#C9A449]" />
+            <span className="font-medium">المحامي المعين: {task.assignee || 'غير محدد'}</span>
           </span>
           {task.dueDate && (
             <span className="flex items-center gap-1 font-mono text-[10px]">

@@ -47,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
+import { TablePagination } from '@/components/ui/table-pagination';
 
 interface Client {
   id: string;
@@ -74,6 +75,8 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
@@ -307,6 +310,10 @@ export default function ClientsPage() {
     return c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q));
   });
 
+  const totalItems = filteredClients.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedClients = filteredClients.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const getModuleBadge = (mod: LegacyRecord['module']) => {
     switch (mod) {
       case 'sessions':
@@ -392,7 +399,10 @@ export default function ClientsPage() {
               <Input
                 placeholder="بحث بالاسم أو رقم الجوال..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="pr-9 h-9 text-xs md:text-sm bg-background"
               />
             </div>
@@ -425,13 +435,14 @@ export default function ClientsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredClients.map((client) => (
-                <Card
-                  key={client.id}
-                  className="hover:border-primary/50 transition-all hover:shadow-md cursor-pointer border-border/80 group"
-                  onClick={() => setLocation(`/clients/${client.id}`)}
-                >
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedClients.map((client) => (
+                  <Card
+                    key={client.id}
+                    className="hover:border-primary/50 transition-all hover:shadow-md cursor-pointer border-border/80 group"
+                    onClick={() => setLocation(`/clients/${client.id}`)}
+                  >
                   <CardContent className="p-4 flex flex-col justify-between h-full space-y-4">
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -494,7 +505,20 @@ export default function ClientsPage() {
                 </Card>
               ))}
             </div>
-          )}
+
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+            />
+          </>
+        )}
         </TabsContent>
 
         {/* Tab 2: Admin Triage */}

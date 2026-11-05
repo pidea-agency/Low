@@ -121,6 +121,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.48.0
         version: 2.112.3
+      '@types/formidable':
+        specifier: ^3.5.1
+        version: 3.5.1
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
@@ -148,6 +151,9 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      formidable:
+        specifier: ^3.5.4
+        version: 3.5.4
       moment:
         specifier: ^2.30.1
         version: 2.30.1
@@ -2169,6 +2175,9 @@ packages:
 
   '@types/express@5.0.6':
     resolution: {integrity: sha512-sKYVuV7Sv9fbPIt/442koC7+IIwK5olP1KWeD88e/idgoJqDm3JV/YUiPwkoKK92ylff2MGxSz1CSjsXelx0YA==}
+
+  '@types/formidable@3.5.1':
+    resolution: {integrity: sha512-aFQijSGbD8JCeEST2LEbwR7faHynbt43lojLIcTM/QhB2U06h41ZVRFVEql+Z1xdL+aKGIzm69V/P/uSW9N6XA==}
 
   '@types/hast@3.0.5':
     resolution: {integrity: sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g==}
@@ -5811,6 +5820,10 @@ snapshots:
       '@types/body-parser': 1.19.6
       '@types/express-serve-static-core': 5.1.2
       '@types/serve-static': 2.2.0
+
+  '@types/formidable@3.5.1':
+    dependencies:
+      '@types/node': 22.20.1
 
   '@types/hast@3.0.5':
     dependencies:

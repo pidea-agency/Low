@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   useGetDashboardStats,
@@ -128,7 +128,28 @@ export default function DashboardAdminPage() {
   const [selectedLawyerFilter, setSelectedLawyerFilter] = useState<string>('all');
   const [sessionStatusFilter, setSessionStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeOversightTab, setActiveOversightTab] = useState<'sessions' | 'tasks'>('sessions');
+  const [activeOversightTab, setActiveOversightTab] = useState<'sessions' | 'tasks' | 'poas'>('sessions');
+
+  const lawyerNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    officeMembers.forEach((m) => {
+      map[m.id] = m.displayName || m.username;
+    });
+    return map;
+  }, [officeMembers]);
+
+  const getLawyerName = useCallback(
+    (record: any): string | null => {
+      if (!record) return null;
+      const id = record.assignedLawyerId || record.assigned_lawyer_id;
+      if (id && lawyerNameMap[id]) return lawyerNameMap[id];
+      if (record.assignedLawyer) return record.assignedLawyer;
+      if (record.assigned_lawyer) return record.assigned_lawyer;
+      if (record.assignee) return record.assignee;
+      return null;
+    },
+    [lawyerNameMap]
+  );
 
   // Load office members
   useEffect(() => {
@@ -195,38 +216,58 @@ export default function DashboardAdminPage() {
         const eff = deriveEffectiveStatus(s.status, s.hearingAt);
         if (eff !== sessionStatusFilter) return false;
       }
+      const lawyer = getLawyerName(s) || '';
       // 2. Lawyer filter
       if (selectedLawyerFilter !== 'all') {
-        const text = `${s.notes || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.courtCircuit || ''}`.toLowerCase();
+        const text = `${s.notes || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.courtCircuit || ''} ${lawyer}`.toLowerCase();
         if (!text.includes(selectedLawyerFilter.toLowerCase())) return false;
       }
       // 3. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const text = `${s.caseNumber || ''} ${s.court || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.notes || ''}`.toLowerCase();
+        const text = `${s.caseNumber || ''} ${s.court || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.notes || ''} ${lawyer}`.toLowerCase();
         if (!text.includes(q)) return false;
       }
       return true;
     });
-  }, [allSessions, sessionStatusFilter, selectedLawyerFilter, searchQuery]);
+  }, [allSessions, sessionStatusFilter, selectedLawyerFilter, searchQuery, getLawyerName]);
 
   // Computed: Filtered Office Tasks
   const filteredOfficeTasks = useMemo(() => {
     return (allOfficeTasks || []).filter((t: OfficeTask) => {
+      const lawyer = getLawyerName(t) || t.assignee || '';
       // 1. Lawyer filter
       if (selectedLawyerFilter !== 'all') {
-        const a = (t.assignee || '').toLowerCase();
-        if (!a.includes(selectedLawyerFilter.toLowerCase())) return false;
+        if (!lawyer.toLowerCase().includes(selectedLawyerFilter.toLowerCase())) return false;
       }
       // 2. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const text = `${t.title || ''} ${t.assignee || ''} ${t.notes || ''}`.toLowerCase();
+        const text = `${t.title || ''} ${lawyer} ${t.notes || ''}`.toLowerCase();
         if (!text.includes(q)) return false;
       }
       return true;
     });
-  }, [allOfficeTasks, selectedLawyerFilter, searchQuery]);
+  }, [allOfficeTasks, selectedLawyerFilter, searchQuery, getLawyerName]);
+
+  // Computed: Filtered Office POAs (وكالات المكتب)
+  const filteredOfficePoas = useMemo(() => {
+    if (!Array.isArray(poas)) return [];
+    return poas.filter((p: any) => {
+      const lawyer = getLawyerName(p) || p.assignedLawyer || p.assigned_lawyer || '';
+      // 1. Lawyer filter
+      if (selectedLawyerFilter !== 'all') {
+        if (!lawyer.toLowerCase().includes(selectedLawyerFilter.toLowerCase())) return false;
+      }
+      // 2. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const text = `${p.clientName || ''} ${p.poaNumber || ''} ${p.notes || ''} ${lawyer}`.toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [poas, selectedLawyerFilter, searchQuery, getLawyerName]);
 
   // Filter today and upcoming sessions, sorted chronologically
   const upcomingSessions = (allSessions || [])
@@ -290,17 +331,17 @@ export default function DashboardAdminPage() {
       {/* Admin Header with Office Status */}
       <div className="fade-in-up flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent shadow-sm">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2.5 h-6 rounded-full bg-primary" />
-            <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-              <span>لوحة الإدارة والمكتب</span>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
-                مشرف المكتب
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <div className="w-2.5 h-6 rounded-full bg-[#C9A449]" />
+            <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2 flex-wrap">
+              <span>{(currentUser as any)?.officeName || (currentUser as any)?.office_name || currentUser?.displayName || 'مكتب المحاماة'}</span>
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/30">
+                لوحة الإدارة والمكتب
               </span>
             </h1>
           </div>
           <p className="text-muted-foreground text-sm mr-4">
-            نظرة شاملة وموحدة على أداء مكتب المحاماة، الجلسات، الفريق وحصص الذكاء الاصطناعي
+            نظرة شاملة وموحدة على أداء فريق العمل، الجلسات، الوكالات، المهام وحصص الذكاء الاصطناعي
           </p>
         </div>
         <div className="flex items-center gap-2 mr-4 md:mr-0 flex-wrap">
@@ -555,7 +596,11 @@ export default function DashboardAdminPage() {
           ) : upcomingSessions.length > 0 ? (
             <div className="space-y-3">
               {upcomingSessions.map((session: Session) => (
-                <SessionListItem key={session.id} session={session} />
+                <SessionListItem
+                  key={session.id}
+                  session={session}
+                  lawyerName={getLawyerName(session) || undefined}
+                />
               ))}
             </div>
           ) : (
@@ -624,7 +669,7 @@ export default function DashboardAdminPage() {
           </div>
 
           {/* Tab Switcher Pills */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border/60 self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border/60 self-start sm:self-auto flex-wrap">
             <button
               onClick={() => setActiveOversightTab('sessions')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
@@ -647,6 +692,17 @@ export default function DashboardAdminPage() {
               <CheckSquare className="w-3.5 h-3.5 text-[#C9A449]" />
               <span>مهام المحامين ({filteredOfficeTasks.length})</span>
             </button>
+            <button
+              onClick={() => setActiveOversightTab('poas')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                activeOversightTab === 'poas'
+                  ? 'bg-card text-foreground shadow-xs border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileKey className="w-3.5 h-3.5 text-emerald-500" />
+              <span>وكالات المكتب ({filteredOfficePoas.length})</span>
+            </button>
           </div>
         </div>
 
@@ -657,7 +713,13 @@ export default function DashboardAdminPage() {
             <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder={activeOversightTab === 'sessions' ? "بحث برقم القضية، المحكمة، الموكل..." : "بحث بعنوان المهمة، التفاصيل..."}
+              placeholder={
+                activeOversightTab === 'sessions'
+                  ? 'بحث برقم القضية، المحكمة، الموكل...'
+                  : activeOversightTab === 'tasks'
+                  ? 'بحث بعنوان المهمة، التفاصيل...'
+                  : 'بحث باسم العميل، رقم الوكالة...'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pr-10 h-10 text-xs rounded-xl bg-card border-border"
@@ -680,7 +742,7 @@ export default function DashboardAdminPage() {
             </select>
           </div>
 
-          {/* Sessions Status Filter (visible if sessions tab) */}
+          {/* Sessions Status Filter / Quick Links */}
           {activeOversightTab === 'sessions' ? (
             <div>
               <select
@@ -694,7 +756,7 @@ export default function DashboardAdminPage() {
                 <option value="Finished">جلسات منتهية</option>
               </select>
             </div>
-          ) : (
+          ) : activeOversightTab === 'tasks' ? (
             <div className="flex items-center justify-end">
               <Link
                 href="/tasks"
@@ -704,10 +766,20 @@ export default function DashboardAdminPage() {
                 <span>فتح صفحة المهام الكاملة</span>
               </Link>
             </div>
+          ) : (
+            <div className="flex items-center justify-end">
+              <Link
+                href="/poa"
+                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
+              >
+                <FileKey className="w-3.5 h-3.5" />
+                <span>فتح صفحة الوكالات الكاملة</span>
+              </Link>
+            </div>
           )}
         </div>
 
-        {/* Content View: Sessions or Tasks */}
+        {/* Content View: Sessions, Tasks or POAs */}
         {activeOversightTab === 'sessions' ? (
           <div className="space-y-3">
             {isLoadingSessions ? (
@@ -722,7 +794,11 @@ export default function DashboardAdminPage() {
             ) : filteredOfficeSessions.length > 0 ? (
               <div className="space-y-2.5">
                 {filteredOfficeSessions.slice(0, 10).map((session: Session) => (
-                  <SessionListItem key={session.id} session={session} />
+                  <SessionListItem
+                    key={session.id}
+                    session={session}
+                    lawyerName={getLawyerName(session) || undefined}
+                  />
                 ))}
                 {filteredOfficeSessions.length > 10 && (
                   <div className="text-center pt-2">
@@ -743,7 +819,7 @@ export default function DashboardAdminPage() {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeOversightTab === 'tasks' ? (
           <div className="space-y-3">
             {filteredOfficeTasks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -776,7 +852,7 @@ export default function DashboardAdminPage() {
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <User className="w-3.5 h-3.5 text-primary" />
                         <span className="font-semibold text-foreground">
-                          {task.assignee ? task.assignee : 'غير محدد'}
+                          المحامي المعين: {getLawyerName(task) || task.assignee || 'غير محدد'}
                         </span>
                       </div>
                       {task.dueDate && (
@@ -792,6 +868,90 @@ export default function DashboardAdminPage() {
               <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center space-y-2">
                 <CheckSquare className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
                 <p className="text-xs text-muted-foreground font-medium">لا توجد مهام تطابق خيارات التصفية المحددة.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {isLoadingPoas ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className="rounded-xl border border-border bg-card p-4 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredOfficePoas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredOfficePoas.slice(0, 9).map((poa: any) => {
+                  const days = poa.daysRemaining ?? 0;
+                  const isExpired = days <= 0;
+                  const isExpiringSoon = days > 0 && days <= 7;
+                  const lawyer = getLawyerName(poa) || poa.assignedLawyer || poa.assigned_lawyer;
+
+                  return (
+                    <div
+                      key={poa.id}
+                      className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-xs flex flex-col justify-between gap-3 relative overflow-hidden"
+                    >
+                      <div
+                        className={`absolute top-0 right-0 left-0 h-1 ${
+                          isExpired
+                            ? 'bg-rose-500'
+                            : isExpiringSoon
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                      />
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-1.5 pt-1">
+                          <span className="font-bold text-xs text-foreground line-clamp-1">{poa.clientName}</span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              isExpired
+                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                : isExpiringSoon
+                                ? 'bg-[#C9A449]/20 text-[#C9A449]'
+                                : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {isExpired ? 'منتهية' : `${days} يوم متبقٍ`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+                          <FileKey className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span>رقم الوكالة: {poa.poaNumber}</span>
+                        </div>
+                        {poa.expiryDateHijri && (
+                          <div className="text-[10px] text-muted-foreground/80 mt-1">
+                            الانتهاء (هجري): <span className="font-mono font-medium">{poa.expiryDateHijri}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] pt-2 border-t border-border/60">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="font-semibold text-foreground">
+                            المحامي المعين: {lawyer || 'غير محدد'}
+                          </span>
+                        </div>
+                        <Link
+                          href="/poa"
+                          className="text-[10px] text-primary hover:underline font-semibold"
+                        >
+                          تفاصيل الوكالة
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center space-y-2">
+                <FileKey className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
+                <p className="text-xs text-muted-foreground font-medium">لا توجد وكالات تطابق خيارات التصفية المحددة.</p>
               </div>
             )}
           </div>

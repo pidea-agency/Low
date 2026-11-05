@@ -48,6 +48,8 @@ const queryClient = new QueryClient({
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: currentUser } = useGetCurrentUser();
+  const officeName = (currentUser as any)?.officeName || (currentUser as any)?.office_name || 'إدارة الجلسات';
 
   return (
     <div className="flex h-[100dvh] overflow-hidden flex-col md:flex-row" dir="rtl">
@@ -78,7 +80,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <Scale className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-xs truncate">إدارة الجلسات</span>
+            <span className="font-bold text-xs truncate max-w-[120px]">{officeName}</span>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Moon, Sun, LogOut, Scale } from 'lucide-react';
+import { Moon, Sun, LogOut, Scale, Building2 } from 'lucide-react';
 import { useTheme } from './theme-provider';
 import { useLogout, useGetCurrentUser } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,6 +21,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const logoutMutation = useLogout();
   const { data: currentUser } = useGetCurrentUser();
   const user = currentUser as any;
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isAdmin = currentUser?.role === 'admin';
+  const isStaff = currentUser?.role === 'staff';
+  const officeName = user?.officeName || user?.office_name || (isAdmin ? 'مكتب المحاماة' : 'المكتب');
 
   const handleLogout = () => {
     onNavigate?.();
@@ -77,19 +81,35 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                 boxShadow: '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
               }}
             >
-              <Scale className="w-4 h-4 text-white" />
+              {isAdmin ? (
+                <Building2 className="w-4 h-4 text-white" />
+              ) : (
+                <Scale className="w-4 h-4 text-white" />
+              )}
             </div>
             <div className="min-w-0">
-              <h1 className="text-xs font-bold text-white leading-tight truncate">
-                إدارة جلسات المحكمة
+              <h1 className="text-xs font-bold text-white leading-tight truncate" title={isSuperAdmin ? 'إدارة المنظومة' : officeName}>
+                {isSuperAdmin ? 'إدارة المنظومة' : officeName}
               </h1>
-              <p className="text-[10px] mt-0.5" style={{ color: '#C9A449' }}>
-                بوابة المحامي
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: '#C9A449' }}>
+                {isSuperAdmin
+                  ? 'بوابة المشرف العام'
+                  : isAdmin
+                  ? 'لوحة إدارة المكتب'
+                  : 'بوابة المحامي'}
               </p>
             </div>
           </div>
           <NotificationsDropdown />
         </div>
+
+        {/* Lawyer office badge */}
+        {isStaff && (
+          <div className="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white/90 flex items-center gap-1.5 shadow-xs">
+            <Building2 className="w-3.5 h-3.5 text-[#C9A449] shrink-0" />
+            <span className="truncate">محامٍ لدى: <span className="text-[#C9A449] font-bold">{officeName}</span></span>
+          </div>
+        )}
 
         {/* Global Search Button */}
         <GlobalSearch />

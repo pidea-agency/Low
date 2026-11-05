@@ -832370,6 +832370,19 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
     });
     const effectiveUserId = verifiedUser.id || verifiedUser.username;
     const effectiveOfficeId = verifiedUser.admin_id || effectiveUserId;
+    let officeName = verifiedUser.office_name || null;
+    if (verifiedUser.role === "admin") {
+      officeName = verifiedUser.office_name || verifiedUser.display_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629";
+    } else if (verifiedUser.role === "staff" && verifiedUser.admin_id) {
+      try {
+        const users = await listSupabaseUsers();
+        const officeAdmin = users.find((u) => u.id === verifiedUser.admin_id);
+        if (officeAdmin) {
+          officeName = officeAdmin.office_name || officeAdmin.display_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629";
+        }
+      } catch {
+      }
+    }
     res.json({
       id: effectiveUserId,
       userId: effectiveUserId,
@@ -832377,7 +832390,7 @@ router2.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =
       username: verifiedUser.username,
       role: verifiedUser.role,
       adminId: verifiedUser.admin_id || null,
-      officeName: verifiedUser.office_name || null,
+      officeName: officeName || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629",
       displayName: verifiedUser.display_name,
       status: verifiedUser.status || "active",
       subscription_end_date: verifiedUser.role === "admin" ? verifiedUser.subscription_end_date : null,
@@ -832469,7 +832482,9 @@ router2.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
         if (user.role === "super_admin") {
           plan_tier = "pro";
           ai_quota_limit = -1;
+          officeName = "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629";
         } else if (user.role === "admin") {
+          officeName = user.office_name || user.display_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629";
           plan_tier = user.plan_tier || "plus";
           billing_cycle = user.billing_cycle || "annual";
           ai_quota_limit = user.ai_quota_limit !== void 0 ? user.ai_quota_limit : plan_tier === "pro" ? 300 : 100;
@@ -832488,12 +832503,15 @@ router2.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
           if (user.admin_id) {
             const officeAdmin = users.find((u) => u.id === user.admin_id);
             if (officeAdmin) {
-              officeName = officeAdmin.office_name || officeAdmin.display_name || null;
+              officeName = officeAdmin.office_name || officeAdmin.display_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629";
               isSuspended = officeAdmin.status === "suspended";
               if (officeAdmin.subscription_end_date) {
                 isExpired = new Date(officeAdmin.subscription_end_date).getTime() < Date.now();
               }
             }
+          }
+          if (!officeName) {
+            officeName = user.office_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629";
           }
         }
       }

@@ -180,6 +180,19 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
     const effectiveUserId = verifiedUser.id || verifiedUser.username;
     const effectiveOfficeId = verifiedUser.admin_id || effectiveUserId;
 
+    let officeName = verifiedUser.office_name || null;
+    if (verifiedUser.role === "admin") {
+      officeName = verifiedUser.office_name || verifiedUser.display_name || "مكتب المحاماة";
+    } else if (verifiedUser.role === "staff" && verifiedUser.admin_id) {
+      try {
+        const users = await listSupabaseUsers();
+        const officeAdmin = users.find((u) => u.id === verifiedUser.admin_id);
+        if (officeAdmin) {
+          officeName = officeAdmin.office_name || officeAdmin.display_name || "مكتب المحاماة";
+        }
+      } catch {}
+    }
+
     res.json({
       id: effectiveUserId,
       userId: effectiveUserId,
@@ -187,7 +200,7 @@ router.post("/auth/login", loginRateLimiter, attachAuthUser, async (req, res) =>
       username: verifiedUser.username,
       role: verifiedUser.role,
       adminId: verifiedUser.admin_id || null,
-      officeName: verifiedUser.office_name || null,
+      officeName: officeName || "مكتب المحاماة",
       displayName: verifiedUser.display_name,
       status: verifiedUser.status || "active",
       subscription_end_date: verifiedUser.role === "admin" ? verifiedUser.subscription_end_date : null,
@@ -298,7 +311,9 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
         if (user.role === "super_admin") {
           plan_tier = "pro";
           ai_quota_limit = -1;
+          officeName = "إدارة المنظومة";
         } else if (user.role === "admin") {
+          officeName = user.office_name || user.display_name || "مكتب المحاماة";
           plan_tier = user.plan_tier || "plus";
           billing_cycle = user.billing_cycle || "annual";
           ai_quota_limit = user.ai_quota_limit !== undefined ? user.ai_quota_limit : (plan_tier === "pro" ? 300 : 100);
@@ -319,12 +334,15 @@ router.get("/auth/me", attachAuthUser, requireAuth, async (req, res) => {
           if (user.admin_id) {
             const officeAdmin = users.find((u) => u.id === user.admin_id);
             if (officeAdmin) {
-              officeName = officeAdmin.office_name || officeAdmin.display_name || null;
+              officeName = officeAdmin.office_name || officeAdmin.display_name || "مكتب المحاماة";
               isSuspended = officeAdmin.status === "suspended";
               if (officeAdmin.subscription_end_date) {
                 isExpired = new Date(officeAdmin.subscription_end_date).getTime() < Date.now();
               }
             }
+          }
+          if (!officeName) {
+            officeName = user.office_name || "مكتب المحاماة";
           }
         }
       }
