@@ -823,8 +823,9 @@ export default function PowerOfAttorneyPage() {
       ) : filteredRecords.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredRecords.map((record) => {
-            const isWarning = record.daysRemaining <= 30 && record.daysRemaining > 0;
             const isExpired = record.daysRemaining <= 0;
+            const isExpiringSoon = record.daysRemaining > 0 && record.daysRemaining <= 7;
+            const isWarning = record.daysRemaining > 7 && record.daysRemaining <= 30;
 
             return (
               <div
@@ -927,17 +928,19 @@ export default function PowerOfAttorneyPage() {
                     <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
                     المتبقي (آلي):
                   </span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-xs ${
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
                     isExpired
-                      ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                      : isExpiringSoon
+                      ? 'bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/40 shadow-sm animate-pulse'
                       : isWarning
                       ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-[#3F4A2C]/10 text-[#3F4A2C] dark:text-[#A4B580] border border-[#3F4A2C]/20'
                   }`}>
                     {isExpired ? (
                       <><AlertTriangle className="w-3 h-3" /> منتهية</>
-                    ) : isWarning ? (
-                      <><Clock className="w-3 h-3" /> {record.daysRemaining} يوم (قريباً)</>
+                    ) : isExpiringSoon ? (
+                      <><AlertCircle className="w-3 h-3 text-[#C9A449]" /> {record.daysRemaining} يوم (تنتهي قريباً)</>
                     ) : (
                       <><CheckCircle2 className="w-3 h-3" /> {record.daysRemaining} يوم</>
                     )}

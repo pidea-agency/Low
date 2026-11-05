@@ -12,6 +12,7 @@ import { Route, Switch, Redirect, Router as WouterRouter } from 'wouter';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Scale } from 'lucide-react';
 import { GlobalSearch } from '@/components/global-search';
+import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 
 const NotFound = React.lazy(() => import('@/pages/not-found'));
@@ -81,8 +82,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div className="w-36 sm:w-48">
-          <GlobalSearch className="bg-muted text-foreground border-border hover:bg-accent" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-32 sm:w-48">
+            <GlobalSearch className="bg-muted text-foreground border-border hover:bg-accent" />
+          </div>
+          <NotificationsDropdown buttonClassName="text-foreground hover:bg-accent border border-border" />
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { env, isGoogleSheetsConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { runReminderSweep } from "../scheduler/reminderScheduler";
+import { runPoaExpirySweep } from "../services/reminder/poa-expiry.service";
 
 const router: IRouter = Router();
 
@@ -69,5 +70,48 @@ router.get("/cron/reminders", async (req, res) => {
     res.status(500).json({ ok: false, error: "Reminder sweep failed." });
   }
 });
+
+/**
+ * GET/POST /api/cron/poa-expiry
+ *
+ * Daily POA expiry tracking sweep endpoint.
+ * Scans POAs expiring within threshold (7 days) and creates scoped notifications.
+ * Protected by CRON_SECRET Bearer token.
+ */
+async function handlePoaExpiryCron(req: any, res: any) {
+  const secret = env.cronSecret;
+  if (!secret || !secret.trim()) {
+    logger.error("Cron POA expiry endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+
+  const authHeader = req.headers["authorization"] ?? "";
+  const provided = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : null;
+
+  if (!provided || !safeCompare(provided, secret.trim())) {
+    logger.warn({ ip: req.ip }, "Cron POA expiry endpoint: unauthorized request rejected");
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const startedAt = Date.now();
+  try {
+    const targetOfficeId = (req.query.officeId as string) || (req.body?.officeId as string);
+    const result = await runPoaExpirySweep(targetOfficeId);
+    const durationMs = Date.now() - startedAt;
+    logger.info({ durationMs, officesCount: result.officesProcessed, notificationsCreated: result.notificationsCreated }, "Cron POA expiry sweep completed successfully");
+    res.json({ ok: true, durationMs, result });
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    logger.error({ err, durationMs }, "Cron POA expiry sweep failed");
+    res.status(500).json({ ok: false, error: "POA expiry sweep failed." });
+  }
+}
+
+router.get("/cron/poa-expiry", handlePoaExpiryCron);
+router.post("/cron/poa-expiry", handlePoaExpiryCron);
 
 export default router;

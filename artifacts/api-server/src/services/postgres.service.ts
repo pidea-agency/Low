@@ -145,6 +145,19 @@ export interface ReportRecord {
   updatedAt: string;
 }
 
+export interface NotificationRecord {
+  id: string;
+  officeId: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  relatedRecordType?: string | null;
+  relatedRecordId?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 // ============================================================================
 // In-Memory Fallback Store (Used during tests or if Supabase is offline)
 // ============================================================================
@@ -155,6 +168,7 @@ const memoryTasks = new Map<string, TaskRecord[]>();
 const memoryPoa = new Map<string, PoaRecord[]>();
 const memoryJudgments = new Map<string, JudgmentRecord[]>();
 const memoryReports = new Map<string, ReportRecord[]>();
+const memoryNotifications = new Map<string, NotificationRecord[]>();
 
 let _nextId = 1000;
 function nextId(): number {
@@ -168,13 +182,15 @@ export function resetInMemoryStore(): void {
   memoryPoa.clear();
   memoryJudgments.clear();
   memoryReports.clear();
+  memoryNotifications.clear();
 }
 
 // Helper: Hijri Remaining Days Calculation
-function calcDaysFromHijri(hijriDateStr: string): number {
+export function calcDaysFromHijri(hijriDateStr: string): number {
   if (!hijriDateStr?.trim()) return 0;
   try {
-    const parts = hijriDateStr.trim().split(/[\/\.-]/);
+    const normalized = hijriDateStr.trim().replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632));
+    const parts = normalized.split(/[\/\.-]/);
     if (parts.length === 3) {
       let day: number, month: number, year: number;
       if (parts[0].length === 4) {
@@ -1751,4 +1767,256 @@ export async function exportOfficeDataToGoogleSheets(
     };
   }
 }
+
+// ============================================================================
+// 7. NOTIFICATIONS
+// ============================================================================
+
+function formatNotification(r: any): NotificationRecord {
+  return {
+    id: String(r.id),
+    officeId: r.officeId ?? r.office_id,
+    userId: r.userId ?? r.user_id,
+    type: r.type,
+    title: r.title,
+    body: r.body,
+    relatedRecordType: r.relatedRecordType ?? r.related_record_type ?? null,
+    relatedRecordId: r.relatedRecordId ? String(r.relatedRecordId) : (r.related_record_id ? String(r.related_record_id) : null),
+    isRead: Boolean(r.isRead ?? r.is_read),
+    createdAt: r.createdAt ?? r.created_at ?? new Date().toISOString(),
+  };
+}
+
+export async function listNotifications(
+  officeId: string,
+  userId: string,
+  options?: { page?: number; limit?: number },
+): Promise<{ notifications: NotificationRecord[]; unreadCount: number; total: number }> {
+  const page = Math.max(1, options?.page ?? 1);
+  const limit = Math.max(1, Math.min(100, options?.limit ?? 20));
+  const offset = (page - 1) * limit;
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { count: totalCount } = await client
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("office_id", officeId)
+        .eq("user_id", userId);
+
+      const { count: unreadCount } = await client
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("office_id", officeId)
+        .eq("user_id", userId)
+        .eq("is_read", false);
+
+      const { data, error } = await client
+        .from("notifications")
+        .select("*")
+        .eq("office_id", officeId)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (!error && data) {
+        return {
+          notifications: data.map(formatNotification),
+          unreadCount: unreadCount ?? 0,
+          total: totalCount ?? data.length,
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listNotifications failed, falling back to memory");
+    }
+  }
+
+  const officeList = memoryNotifications.get(officeId) || [];
+  const userList = officeList.filter((n) => n.userId === userId);
+  const unreadCount = userList.filter((n) => !n.isRead).length;
+  const paginated = userList.slice(offset, offset + limit);
+
+  return {
+    notifications: paginated.map(formatNotification),
+    unreadCount,
+    total: userList.length,
+  };
+}
+
+export async function createNotification(data: {
+  officeId: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  relatedRecordType?: string | null;
+  relatedRecordId?: string | null;
+}): Promise<NotificationRecord> {
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const newRecord: NotificationRecord = {
+    id,
+    officeId: data.officeId,
+    userId: data.userId,
+    type: data.type,
+    title: data.title,
+    body: data.body,
+    relatedRecordType: data.relatedRecordType ?? null,
+    relatedRecordId: data.relatedRecordId ? String(data.relatedRecordId) : null,
+    isRead: false,
+    createdAt: now,
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client
+        .from("notifications")
+        .insert([
+          {
+            id: newRecord.id,
+            office_id: newRecord.officeId,
+            user_id: newRecord.userId,
+            type: newRecord.type,
+            title: newRecord.title,
+            body: newRecord.body,
+            related_record_type: newRecord.relatedRecordType,
+            related_record_id: newRecord.relatedRecordId,
+            is_read: false,
+            created_at: newRecord.createdAt,
+          },
+        ])
+        .select()
+        .single();
+
+      if (!error && inserted) {
+        const formatted = formatNotification(inserted);
+        const officeList = memoryNotifications.get(data.officeId) || [];
+        officeList.unshift(formatted);
+        memoryNotifications.set(data.officeId, officeList);
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createNotification failed, falling back to memory");
+    }
+  }
+
+  const officeList = memoryNotifications.get(data.officeId) || [];
+  officeList.unshift(newRecord);
+  memoryNotifications.set(data.officeId, officeList);
+  return formatNotification(newRecord);
+}
+
+export async function markNotificationRead(
+  id: string,
+  officeId: string,
+  userId: string,
+): Promise<boolean> {
+  let dbSuccess = false;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", id)
+        .eq("office_id", officeId)
+        .eq("user_id", userId)
+        .select("id");
+
+      if (!error && data && data.length > 0) {
+        dbSuccess = true;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase markNotificationRead failed");
+    }
+  }
+
+  const officeList = memoryNotifications.get(officeId) || [];
+  const item = officeList.find((n) => n.id === id && n.userId === userId);
+  if (item) {
+    item.isRead = true;
+    return true;
+  }
+
+  return dbSuccess;
+}
+
+export async function markAllNotificationsRead(
+  officeId: string,
+  userId: string,
+): Promise<number> {
+  let countUpdated = 0;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("office_id", officeId)
+        .eq("user_id", userId)
+        .eq("is_read", false)
+        .select("id");
+
+      if (!error && data) {
+        countUpdated = data.length;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase markAllNotificationsRead failed");
+    }
+  }
+
+  const officeList = memoryNotifications.get(officeId) || [];
+  let memCount = 0;
+  for (const item of officeList) {
+    if (item.userId === userId && !item.isRead) {
+      item.isRead = true;
+      memCount++;
+    }
+  }
+
+  return countUpdated || memCount;
+}
+
+export async function hasRecentNotification(
+  officeId: string,
+  type: string,
+  relatedRecordType: string,
+  relatedRecordId: string,
+  withinHours: number = 24,
+): Promise<boolean> {
+  const cutoff = new Date(Date.now() - withinHours * 3600 * 1000).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("notifications")
+        .select("id")
+        .eq("office_id", officeId)
+        .eq("type", type)
+        .eq("related_record_type", relatedRecordType)
+        .eq("related_record_id", String(relatedRecordId))
+        .gte("created_at", cutoff)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        return true;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase hasRecentNotification failed, checking memory");
+    }
+  }
+
+  const officeList = memoryNotifications.get(officeId) || [];
+  const cutoffTime = Date.now() - withinHours * 3600 * 1000;
+  return officeList.some(
+    (n) =>
+      n.type === type &&
+      n.relatedRecordType === relatedRecordType &&
+      String(n.relatedRecordId) === String(relatedRecordId) &&
+      new Date(n.createdAt).getTime() >= cutoffTime,
+  );
+}
+
 

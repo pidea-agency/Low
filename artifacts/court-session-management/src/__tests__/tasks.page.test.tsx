@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TasksPage from '../pages/tasks';
 
 // Mock useToast hook
@@ -10,6 +11,15 @@ vi.mock('@/hooks/use-toast', () => ({
     toast: mockToast,
   }),
 }));
+
+function renderWithClient(ui: React.ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 describe('TasksPage Save & Error Reference Handling', () => {
   beforeEach(() => {
@@ -41,7 +51,7 @@ describe('TasksPage Save & Error Reference Handling', () => {
       return Promise.resolve({ ok: true, status: 200, json: async () => [] });
     });
 
-    render(<TasksPage />);
+    renderWithClient(<TasksPage />);
 
     // Click "إضافة مهمة"
     const addButton = await screen.findByRole('button', { name: /إضافة مهمة/i });
@@ -101,7 +111,7 @@ describe('TasksPage Save & Error Reference Handling', () => {
       return Promise.resolve({ ok: true, status: 200, json: async () => [] });
     });
 
-    render(<TasksPage />);
+    renderWithClient(<TasksPage />);
 
     const addButton = await screen.findByRole('button', { name: /إضافة مهمة/i });
     fireEvent.click(addButton);

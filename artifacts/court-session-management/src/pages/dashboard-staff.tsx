@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   useGetCurrentUser,
   useListSessions,
@@ -14,6 +15,7 @@ import {
   Gavel,
   CheckSquare,
   AlertTriangle,
+  AlertCircle,
   Timer,
   Scale,
   BarChart3,
@@ -68,6 +70,23 @@ export default function DashboardStaffPage() {
 
   const [chartsData, setChartsData] = useState<DashboardChartsData | null>(null);
   const [isLoadingCharts, setIsLoadingCharts] = useState(true);
+
+  const { data: poas = [], isLoading: isLoadingPoas } = useQuery<any[]>({
+    queryKey: ['/api/poa'],
+    queryFn: async () => {
+      const res = await fetch('/api/poa', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const expiringPoasCount = useMemo(() => {
+    if (!Array.isArray(poas)) return 0;
+    return poas.filter((p) => {
+      const days = p.daysRemaining ?? 0;
+      return days > 0 && days <= 7;
+    }).length;
+  }, [poas]);
 
   // Load personal dashboard charts
   useEffect(() => {
@@ -285,8 +304,32 @@ export default function DashboardStaffPage() {
         />
       )}
 
+      {/* Expiring POAs Staff Alert */}
+      {expiringPoasCount > 0 && (
+        <div className="flex items-center justify-between p-4 rounded-xl border border-[#C9A449]/40 bg-[#C9A449]/10 text-foreground">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#C9A449]/20 flex items-center justify-center text-[#C9A449] shrink-0">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-bold text-xs">
+                لديك {expiringPoasCount} وكالة موكلة إليك تنتهي صلاحيتها خلال 7 أيام
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                يرجى مراجعة الموكلين وتجديد الوكالة قبل انتهاء المهلة المحددة.
+              </p>
+            </div>
+          </div>
+          <Link href="/poa">
+            <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#C9A449] text-white hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-1 shrink-0">
+              متابعة وكالاتي
+            </span>
+          </Link>
+        </div>
+      )}
+
       {/* Staff Personal Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         <StatCard
           label="جلساتي اليوم"
           value={sessionCounts.today}
@@ -337,6 +380,19 @@ export default function DashboardStaffPage() {
           isLoading={isLoadingSessions}
           isUnavailable={Boolean(sessionsError)}
           dataTestId="stat-staff-totalCases"
+        />
+
+        <StatCard
+          label="وكالاتي الموشكة على الانتهاء"
+          value={expiringPoasCount}
+          icon={AlertCircle}
+          iconBg={expiringPoasCount > 0 ? "bg-[#C9A449]/20" : "bg-muted"}
+          iconColor={expiringPoasCount > 0 ? "text-[#C9A449]" : "text-muted-foreground"}
+          dotColor={expiringPoasCount > 0 ? "bg-[#C9A449]" : "bg-muted-foreground"}
+          href="/poa"
+          isLoading={isLoadingPoas}
+          subtext="خلال 7 أيام"
+          dataTestId="stat-staff-expiringPoas"
         />
       </div>
 

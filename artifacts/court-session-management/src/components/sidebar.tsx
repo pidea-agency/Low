@@ -7,6 +7,7 @@ import { clearUserPoaStorage, hasPendingPoaRecords } from '@/lib/poa-storage';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalSearch } from './global-search';
 import { getNavItemsForRole } from '@/config/navigation';
+import { NotificationsDropdown } from './notifications/notifications-dropdown';
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -66,25 +67,28 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         className="p-4 space-y-3"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <div className="flex items-center gap-2.5">
-          {/* Icon badge */}
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{
-              background: '#C9A449',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
-            }}
-          >
-            <Scale className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Icon badge */}
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{
+                background: '#C9A449',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+              }}
+            >
+              <Scale className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-bold text-white leading-tight truncate">
+                إدارة جلسات المحكمة
+              </h1>
+              <p className="text-[10px] mt-0.5" style={{ color: '#C9A449' }}>
+                بوابة المحامي
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-xs font-bold text-white leading-tight truncate">
-              إدارة جلسات المحكمة
-            </h1>
-            <p className="text-[10px] mt-0.5" style={{ color: '#C9A449' }}>
-              بوابة المحامي
-            </p>
-          </div>
+          <NotificationsDropdown />
         </div>
 
         {/* Global Search Button */}

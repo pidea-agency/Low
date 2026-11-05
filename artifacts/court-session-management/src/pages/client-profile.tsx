@@ -645,9 +645,21 @@ export default function ClientProfilePage() {
                       <h4 className="font-bold text-sm font-mono text-foreground">رقم الوكالة: {p.poaNumber}</h4>
                       <p className="text-xs text-muted-foreground">{p.clientName}</p>
                     </div>
-                    <Badge variant={p.daysRemaining > 0 ? 'default' : 'destructive'} className="text-xs">
-                      {p.daysRemaining > 0 ? `${p.daysRemaining} يوم متبقٍ` : 'منتهية'}
-                    </Badge>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
+                        p.daysRemaining <= 0
+                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                          : p.daysRemaining <= 7
+                          ? 'bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/40'
+                          : 'bg-[#3F4A2C]/10 text-[#3F4A2C] dark:text-[#A4B580] border border-[#3F4A2C]/20'
+                      }`}
+                    >
+                      {p.daysRemaining <= 0
+                        ? 'منتهية'
+                        : p.daysRemaining <= 7
+                        ? `${p.daysRemaining} يوم (تنتهي قريباً)`
+                        : `${p.daysRemaining} يوم`}
+                    </span>
                   </div>
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     {p.issueDateHijri && <p>تاريخ الإصدار: {p.issueDateHijri}</p>}

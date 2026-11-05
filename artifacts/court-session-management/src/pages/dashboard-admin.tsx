@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   useGetDashboardStats,
   useGetCurrentUser,
@@ -17,6 +18,7 @@ import {
   XCircle,
   CheckSquare,
   AlertTriangle,
+  AlertCircle,
   Users,
   Settings,
   CreditCard,
@@ -78,6 +80,23 @@ export default function DashboardAdminPage() {
 
   const [chartsData, setChartsData] = useState<DashboardChartsData | null>(null);
   const [isLoadingCharts, setIsLoadingCharts] = useState(true);
+
+  const { data: poas = [], isLoading: isLoadingPoas } = useQuery<any[]>({
+    queryKey: ['/api/poa'],
+    queryFn: async () => {
+      const res = await fetch('/api/poa', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const expiringPoasCount = useMemo(() => {
+    if (!Array.isArray(poas)) return 0;
+    return poas.filter((p) => {
+      const days = p.daysRemaining ?? 0;
+      return days > 0 && days <= 7;
+    }).length;
+  }, [poas]);
 
   // Load office dashboard charts
   useEffect(() => {
@@ -330,6 +349,30 @@ export default function DashboardAdminPage() {
         />
       )}
 
+      {/* Expiring POAs Office Alert */}
+      {expiringPoasCount > 0 && (
+        <div className="flex items-center justify-between p-4 rounded-xl border border-[#C9A449]/40 bg-[#C9A449]/10 text-foreground">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#C9A449]/20 flex items-center justify-center text-[#C9A449] shrink-0">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-bold text-xs">
+                يوجد {expiringPoasCount} وكالة بالمكتب تنتهي صلاحيتها خلال 7 أيام
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                يرجى مراجعة المحامين المعنيين والموكلين لتجديد الوكالات في موعدها.
+              </p>
+            </div>
+          </div>
+          <Link href="/poa">
+            <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#C9A449] text-white hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-1 shrink-0">
+              متابعة الوكالات
+            </span>
+          </Link>
+        </div>
+      )}
+
       {/* Office-wide Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
         <StatCard
@@ -394,6 +437,19 @@ export default function DashboardAdminPage() {
           href="/poa"
           isLoading={isLoadingStats}
           dataTestId="stat-totalPoas"
+        />
+
+        <StatCard
+          label="وكالات توشك على الانتهاء"
+          value={expiringPoasCount}
+          icon={AlertCircle}
+          iconBg={expiringPoasCount > 0 ? "bg-[#C9A449]/20" : "bg-muted"}
+          iconColor={expiringPoasCount > 0 ? "text-[#C9A449]" : "text-muted-foreground"}
+          dotColor={expiringPoasCount > 0 ? "bg-[#C9A449]" : "bg-muted-foreground"}
+          href="/poa"
+          isLoading={isLoadingPoas}
+          subtext="خلال 7 أيام بالمكتب"
+          dataTestId="stat-expiringPoas"
         />
 
         <StatCard

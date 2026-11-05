@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import JudgmentsPage from '../pages/judgments';
 
 const mockToast = vi.fn();
@@ -9,6 +10,15 @@ vi.mock('@/hooks/use-toast', () => ({
     toast: mockToast,
   }),
 }));
+
+function renderWithClient(ui: React.ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 describe('JudgmentsPage Save Lifecycle & State Tests', () => {
   beforeEach(() => {
@@ -38,7 +48,7 @@ describe('JudgmentsPage Save Lifecycle & State Tests', () => {
       return Promise.resolve({ ok: true, status: 200, json: async () => [] });
     });
 
-    render(<JudgmentsPage />);
+    renderWithClient(<JudgmentsPage />);
 
     // Open Create Modal
     const addButton = await screen.findByRole('button', { name: /إضافة حكم جديد/i });
@@ -116,7 +126,7 @@ describe('JudgmentsPage Save Lifecycle & State Tests', () => {
       return Promise.resolve({ ok: true, status: 200, json: async () => [] });
     });
 
-    render(<JudgmentsPage />);
+    renderWithClient(<JudgmentsPage />);
 
     const addButton = await screen.findByRole('button', { name: /إضافة حكم جديد/i });
     fireEvent.click(addButton);

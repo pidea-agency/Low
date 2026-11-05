@@ -1,10 +1,20 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from '../pages/dashboard';
 import DashboardAdminPage from '../pages/dashboard-admin';
 import DashboardStaffPage from '../pages/dashboard-staff';
 import * as apiClient from '@workspace/api-client-react';
+
+function renderWithClient(ui: React.ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 vi.mock('@workspace/api-client-react', async () => {
   const actual = await vi.importActual<any>('@workspace/api-client-react');
@@ -63,7 +73,7 @@ describe('Dashboard Role-based Component Tests', () => {
       isLoading: false,
     });
 
-    render(<DashboardPage />);
+    renderWithClient(<DashboardPage />);
 
     expect(await screen.findByTestId('admin-dashboard-page')).toBeTruthy();
     expect(screen.getByText('لوحة الإدارة والمكتب')).toBeTruthy();
@@ -85,7 +95,7 @@ describe('Dashboard Role-based Component Tests', () => {
       isLoading: false,
     });
 
-    render(<DashboardPage />);
+    renderWithClient(<DashboardPage />);
 
     expect(await screen.findByTestId('staff-dashboard-page')).toBeTruthy();
     expect(screen.getByText(/مرحباً بك، علي المحامي/)).toBeTruthy();

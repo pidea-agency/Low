@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router17;
+    module2.exports = Router18;
     module2.exports.Route = Route;
-    function Router17(options) {
-      if (!(this instanceof Router17)) {
-        return new Router17(options);
+    function Router18(options) {
+      if (!(this instanceof Router18)) {
+        return new Router18(options);
       }
       const opts = options || {};
-      function router17(req, res, next) {
-        router17.handle(req, res, next);
+      function router18(req, res, next) {
+        router18.handle(req, res, next);
       }
-      Object.setPrototypeOf(router17, this);
-      router17.caseSensitive = opts.caseSensitive;
-      router17.mergeParams = opts.mergeParams;
-      router17.params = {};
-      router17.strict = opts.strict;
-      router17.stack = [];
-      return router17;
+      Object.setPrototypeOf(router18, this);
+      router18.caseSensitive = opts.caseSensitive;
+      router18.mergeParams = opts.mergeParams;
+      router18.params = {};
+      router18.strict = opts.strict;
+      router18.stack = [];
+      return router18;
     }
-    Router17.prototype = function() {
+    Router18.prototype = function() {
     };
-    Router17.prototype.param = function param(name, fn) {
+    Router18.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router17.prototype.handle = function handle(req, res, callback) {
+    Router18.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router17.prototype.use = function use(handler2) {
+    Router18.prototype.use = function use(handler2) {
       let offset = 0;
       let path4 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router17.prototype.route = function route(path4) {
+    Router18.prototype.route = function route(path4) {
       const route2 = new Route(path4);
       const layer = new Layer(path4, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router17.prototype[method] = function(path4) {
+      Router18.prototype[method] = function(path4) {
         const route = this.route(path4);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve4 = require("node:path").resolve;
     var once = require_once();
-    var Router17 = require_router();
+    var Router18 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router17 = null;
+      var router18 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router17 === null) {
-            router17 = new Router17({
+          if (router18 === null) {
+            router18 = new Router18({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router17;
+          return router18;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router17 = this.router;
+      var router18 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router17.use(path4, fn2);
+          return router18.use(path4, fn2);
         }
         debug(".use app under %s", path4);
         fn2.mountpath = path4;
         fn2.parent = this;
-        router17.use(path4, function mounted_app(req, res, next) {
+        router18.use(path4, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router17 = require_router();
+    var Router18 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router17.Route;
-    exports2.Router = Router17;
+    exports2.Route = Router18.Route;
+    exports2.Router = Router18;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -830245,8 +830245,10 @@ var init_googleSheets_service = __esm({
 // src/services/postgres.service.ts
 var postgres_service_exports = {};
 __export(postgres_service_exports, {
+  calcDaysFromHijri: () => calcDaysFromHijri,
   createClient: () => createClient2,
   createJudgment: () => createJudgment,
+  createNotification: () => createNotification,
   createPoa: () => createPoa,
   createSession: () => createSession,
   createTask: () => createTask,
@@ -830262,11 +830264,15 @@ __export(postgres_service_exports, {
   getSessionById: () => getSessionById,
   getSessionReport: () => getSessionReport,
   getTaskById: () => getTaskById,
+  hasRecentNotification: () => hasRecentNotification,
   listClients: () => listClients,
   listJudgments: () => listJudgments,
+  listNotifications: () => listNotifications,
   listPoa: () => listPoa,
   listSessions: () => listSessions,
   listTasks: () => listTasks,
+  markAllNotificationsRead: () => markAllNotificationsRead,
+  markNotificationRead: () => markNotificationRead,
   reassignJudgment: () => reassignJudgment,
   reassignPoa: () => reassignPoa,
   reassignSession: () => reassignSession,
@@ -830289,11 +830295,13 @@ function resetInMemoryStore() {
   memoryPoa.clear();
   memoryJudgments.clear();
   memoryReports.clear();
+  memoryNotifications.clear();
 }
 function calcDaysFromHijri(hijriDateStr) {
   if (!hijriDateStr?.trim()) return 0;
   try {
-    const parts = hijriDateStr.trim().split(/[\/\.-]/);
+    const normalized = hijriDateStr.trim().replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632));
+    const parts = normalized.split(/[\/\.-]/);
     if (parts.length === 3) {
       let day, month, year;
       if (parts[0].length === 4) {
@@ -831500,7 +831508,163 @@ async function exportOfficeDataToGoogleSheets(officeId) {
     };
   }
 }
-var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, _nextId;
+function formatNotification(r2) {
+  return {
+    id: String(r2.id),
+    officeId: r2.officeId ?? r2.office_id,
+    userId: r2.userId ?? r2.user_id,
+    type: r2.type,
+    title: r2.title,
+    body: r2.body,
+    relatedRecordType: r2.relatedRecordType ?? r2.related_record_type ?? null,
+    relatedRecordId: r2.relatedRecordId ? String(r2.relatedRecordId) : r2.related_record_id ? String(r2.related_record_id) : null,
+    isRead: Boolean(r2.isRead ?? r2.is_read),
+    createdAt: r2.createdAt ?? r2.created_at ?? (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+async function listNotifications(officeId, userId, options) {
+  const page = Math.max(1, options?.page ?? 1);
+  const limit = Math.max(1, Math.min(100, options?.limit ?? 20));
+  const offset = (page - 1) * limit;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { count: totalCount } = await client.from("notifications").select("id", { count: "exact", head: true }).eq("office_id", officeId).eq("user_id", userId);
+      const { count: unreadCount2 } = await client.from("notifications").select("id", { count: "exact", head: true }).eq("office_id", officeId).eq("user_id", userId).eq("is_read", false);
+      const { data, error } = await client.from("notifications").select("*").eq("office_id", officeId).eq("user_id", userId).order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+      if (!error && data) {
+        return {
+          notifications: data.map(formatNotification),
+          unreadCount: unreadCount2 ?? 0,
+          total: totalCount ?? data.length
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listNotifications failed, falling back to memory");
+    }
+  }
+  const officeList = memoryNotifications.get(officeId) || [];
+  const userList = officeList.filter((n) => n.userId === userId);
+  const unreadCount = userList.filter((n) => !n.isRead).length;
+  const paginated = userList.slice(offset, offset + limit);
+  return {
+    notifications: paginated.map(formatNotification),
+    unreadCount,
+    total: userList.length
+  };
+}
+async function createNotification(data) {
+  const id = import_crypto4.default.randomUUID();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const newRecord = {
+    id,
+    officeId: data.officeId,
+    userId: data.userId,
+    type: data.type,
+    title: data.title,
+    body: data.body,
+    relatedRecordType: data.relatedRecordType ?? null,
+    relatedRecordId: data.relatedRecordId ? String(data.relatedRecordId) : null,
+    isRead: false,
+    createdAt: now
+  };
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client.from("notifications").insert([
+        {
+          id: newRecord.id,
+          office_id: newRecord.officeId,
+          user_id: newRecord.userId,
+          type: newRecord.type,
+          title: newRecord.title,
+          body: newRecord.body,
+          related_record_type: newRecord.relatedRecordType,
+          related_record_id: newRecord.relatedRecordId,
+          is_read: false,
+          created_at: newRecord.createdAt
+        }
+      ]).select().single();
+      if (!error && inserted) {
+        const formatted = formatNotification(inserted);
+        const officeList2 = memoryNotifications.get(data.officeId) || [];
+        officeList2.unshift(formatted);
+        memoryNotifications.set(data.officeId, officeList2);
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createNotification failed, falling back to memory");
+    }
+  }
+  const officeList = memoryNotifications.get(data.officeId) || [];
+  officeList.unshift(newRecord);
+  memoryNotifications.set(data.officeId, officeList);
+  return formatNotification(newRecord);
+}
+async function markNotificationRead(id, officeId, userId) {
+  let dbSuccess = false;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("notifications").update({ is_read: true }).eq("id", id).eq("office_id", officeId).eq("user_id", userId).select("id");
+      if (!error && data && data.length > 0) {
+        dbSuccess = true;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase markNotificationRead failed");
+    }
+  }
+  const officeList = memoryNotifications.get(officeId) || [];
+  const item = officeList.find((n) => n.id === id && n.userId === userId);
+  if (item) {
+    item.isRead = true;
+    return true;
+  }
+  return dbSuccess;
+}
+async function markAllNotificationsRead(officeId, userId) {
+  let countUpdated = 0;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("notifications").update({ is_read: true }).eq("office_id", officeId).eq("user_id", userId).eq("is_read", false).select("id");
+      if (!error && data) {
+        countUpdated = data.length;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase markAllNotificationsRead failed");
+    }
+  }
+  const officeList = memoryNotifications.get(officeId) || [];
+  let memCount = 0;
+  for (const item of officeList) {
+    if (item.userId === userId && !item.isRead) {
+      item.isRead = true;
+      memCount++;
+    }
+  }
+  return countUpdated || memCount;
+}
+async function hasRecentNotification(officeId, type, relatedRecordType, relatedRecordId, withinHours = 24) {
+  const cutoff = new Date(Date.now() - withinHours * 3600 * 1e3).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("notifications").select("id").eq("office_id", officeId).eq("type", type).eq("related_record_type", relatedRecordType).eq("related_record_id", String(relatedRecordId)).gte("created_at", cutoff).limit(1);
+      if (!error && data && data.length > 0) {
+        return true;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase hasRecentNotification failed, checking memory");
+    }
+  }
+  const officeList = memoryNotifications.get(officeId) || [];
+  const cutoffTime = Date.now() - withinHours * 3600 * 1e3;
+  return officeList.some(
+    (n) => n.type === type && n.relatedRecordType === relatedRecordType && String(n.relatedRecordId) === String(relatedRecordId) && new Date(n.createdAt).getTime() >= cutoffTime
+  );
+}
+var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, _nextId;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -831515,6 +831679,7 @@ var init_postgres_service = __esm({
     memoryPoa = /* @__PURE__ */ new Map();
     memoryJudgments = /* @__PURE__ */ new Map();
     memoryReports = /* @__PURE__ */ new Map();
+    memoryNotifications = /* @__PURE__ */ new Map();
     _nextId = 1e3;
   }
 });
@@ -831527,7 +831692,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express17 = __toESM(require_express2(), 1);
+var import_express18 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -831536,7 +831701,7 @@ var import_fs4 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express16 = __toESM(require_express2(), 1);
+var import_express17 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -850280,6 +850445,140 @@ async function notify(payload, officeId) {
   );
 }
 
+// src/services/reminder/poa-expiry.service.ts
+init_logger();
+init_supabase_service();
+init_postgres_service();
+var POA_EXPIRY_THRESHOLD_DAYS = 7;
+async function runPoaExpirySweep(targetOfficeId) {
+  const officeResults = [];
+  let totalPoasChecked = 0;
+  let totalNotificationsCreated = 0;
+  let allUsers = [];
+  try {
+    allUsers = await listSupabaseUsers();
+  } catch (err) {
+    logger.error({ err }, "runPoaExpirySweep: failed to fetch users list");
+  }
+  const officeIdsSet = /* @__PURE__ */ new Set();
+  if (targetOfficeId && targetOfficeId.trim()) {
+    officeIdsSet.add(targetOfficeId.trim());
+  } else {
+    for (const u of allUsers) {
+      if (u.status === "suspended") continue;
+      if (u.role === "admin") {
+        officeIdsSet.add(u.id);
+      } else if (u.admin_id) {
+        officeIdsSet.add(u.admin_id);
+      }
+    }
+  }
+  for (const officeId of officeIdsSet) {
+    const officeUsers = allUsers.filter(
+      (u) => u.id === officeId || u.admin_id === officeId
+    );
+    const adminUser = officeUsers.find((u) => u.role === "admin" && u.id === officeId) || officeUsers.find((u) => u.role === "admin") || officeUsers.find((u) => u.id === officeId) || null;
+    let poas = [];
+    try {
+      poas = await listPoa(officeId);
+    } catch (err) {
+      logger.error({ err, officeId }, "runPoaExpirySweep: failed to list POAs for office");
+      continue;
+    }
+    let poasChecked = 0;
+    let expiringFound = 0;
+    let notificationsCreated = 0;
+    let skippedDuplicate = 0;
+    for (const poa of poas) {
+      poasChecked++;
+      const expiryHijri = poa.expiryDateHijri || poa.expiry_date_hijri;
+      if (!expiryHijri) continue;
+      const daysRemaining = calcDaysFromHijri(expiryHijri);
+      if (daysRemaining > 0 && daysRemaining <= POA_EXPIRY_THRESHOLD_DAYS) {
+        expiringFound++;
+        const poaIdStr = String(poa.id);
+        const alreadyNotified = await hasRecentNotification(
+          officeId,
+          "poa_expiring",
+          "poa",
+          poaIdStr,
+          24
+        );
+        if (alreadyNotified) {
+          skippedDuplicate++;
+          continue;
+        }
+        const clientName = poa.clientName || poa.client_name || "\u0628\u062F\u0648\u0646 \u0627\u0633\u0645";
+        const poaNumber = poa.poaNumber || poa.poa_number || "---";
+        const assignedLawyerId = poa.assignedLawyerId || poa.assigned_lawyer_id;
+        if (assignedLawyerId) {
+          const lawyer = officeUsers.find((u) => u.id === assignedLawyerId);
+          const lawyerName = lawyer?.display_name || lawyer?.username || "\u0645\u062D\u0627\u0645\u064D";
+          await createNotification({
+            officeId,
+            userId: assignedLawyerId,
+            type: "poa_expiring",
+            title: `\u0627\u0642\u062A\u0631\u0627\u0628 \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0648\u0643\u0627\u0644\u0629: ${clientName}`,
+            body: `\u062A\u0646\u062A\u0647\u064A \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0631\u0642\u0645 ${poaNumber} \u0644\u0644\u0645\u0648\u0643\u0644 "${clientName}" \u062E\u0644\u0627\u0644 ${daysRemaining} \u064A\u0648\u0645 (\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621: ${expiryHijri}).`,
+            relatedRecordType: "poa",
+            relatedRecordId: poaIdStr
+          });
+          notificationsCreated++;
+          if (adminUser && adminUser.id !== assignedLawyerId) {
+            await createNotification({
+              officeId,
+              userId: adminUser.id,
+              type: "poa_expiring",
+              title: `\u0627\u0642\u062A\u0631\u0627\u0628 \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0648\u0643\u0627\u0644\u0629: ${clientName}`,
+              body: `\u062A\u0646\u062A\u0647\u064A \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0631\u0642\u0645 ${poaNumber} \u0644\u0644\u0645\u0648\u0643\u0644 "${clientName}" (\u0627\u0644\u0645\u0639\u064A\u0646 \u0644\u0647\u0627: ${lawyerName}) \u062E\u0644\u0627\u0644 ${daysRemaining} \u064A\u0648\u0645 (\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621: ${expiryHijri}).`,
+              relatedRecordType: "poa",
+              relatedRecordId: poaIdStr
+            });
+            notificationsCreated++;
+          }
+        } else {
+          if (adminUser) {
+            await createNotification({
+              officeId,
+              userId: adminUser.id,
+              type: "poa_expiring",
+              title: `\u0627\u0642\u062A\u0631\u0627\u0628 \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 (\u063A\u064A\u0631 \u0645\u0639\u064A\u0646\u0629): ${clientName}`,
+              body: `\u062A\u0646\u062A\u0647\u064A \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0631\u0642\u0645 ${poaNumber} \u0644\u0644\u0645\u0648\u0643\u0644 "${clientName}" \u062E\u0644\u0627\u0644 ${daysRemaining} \u064A\u0648\u0645 (\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621: ${expiryHijri}) \u0648\u0647\u064A \u063A\u064A\u0631 \u0645\u0639\u064A\u0646\u0629 \u0644\u0645\u062D\u0627\u0645\u064D \u0628\u0639\u062F.`,
+              relatedRecordType: "poa",
+              relatedRecordId: poaIdStr
+            });
+            notificationsCreated++;
+          }
+        }
+      }
+    }
+    totalPoasChecked += poasChecked;
+    totalNotificationsCreated += notificationsCreated;
+    officeResults.push({
+      officeId,
+      poasChecked,
+      expiringFound,
+      notificationsCreated,
+      skippedDuplicate
+    });
+  }
+  logger.info(
+    {
+      officesCount: officeResults.length,
+      totalPoasChecked,
+      totalNotificationsCreated
+    },
+    "POA expiry sweep completed successfully"
+  );
+  return {
+    ok: true,
+    officesProcessed: officeResults.length,
+    poasChecked: totalPoasChecked,
+    notificationsCreated: totalNotificationsCreated,
+    offices: officeResults
+  };
+}
+
 // src/scheduler/reminderScheduler.ts
 init_hijri();
 init_supabase_service();
@@ -850500,6 +850799,35 @@ router8.get("/cron/reminders", async (req, res) => {
     res.status(500).json({ ok: false, error: "Reminder sweep failed." });
   }
 });
+async function handlePoaExpiryCron(req, res) {
+  const secret = env.cronSecret;
+  if (!secret || !secret.trim()) {
+    logger.error("Cron POA expiry endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+  const authHeader = req.headers["authorization"] ?? "";
+  const provided = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!provided || !safeCompare(provided, secret.trim())) {
+    logger.warn({ ip: req.ip }, "Cron POA expiry endpoint: unauthorized request rejected");
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const startedAt = Date.now();
+  try {
+    const targetOfficeId = req.query.officeId || req.body?.officeId;
+    const result = await runPoaExpirySweep(targetOfficeId);
+    const durationMs = Date.now() - startedAt;
+    logger.info({ durationMs, officesCount: result.officesProcessed, notificationsCreated: result.notificationsCreated }, "Cron POA expiry sweep completed successfully");
+    res.json({ ok: true, durationMs, result });
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    logger.error({ err, durationMs }, "Cron POA expiry sweep failed");
+    res.status(500).json({ ok: false, error: "POA expiry sweep failed." });
+  }
+}
+router8.get("/cron/poa-expiry", handlePoaExpiryCron);
+router8.post("/cron/poa-expiry", handlePoaExpiryCron);
 var cron_default = router8;
 
 // src/routes/poa.ts
@@ -852125,24 +852453,97 @@ router15.get("/clients/:id/timeline", async (req, res) => {
 });
 var clients_default = router15;
 
-// src/routes/index.ts
+// src/routes/notifications.ts
+var import_express16 = __toESM(require_express2(), 1);
+init_logger();
+init_postgres_service();
 var router16 = (0, import_express16.Router)();
-router16.use(health_default);
-router16.use(auth_default);
-router16.use(dashboard_default);
-router16.use(ai_default);
-router16.use(sessions_default);
-router16.use(settings_default);
-router16.use(reports_default);
-router16.use(cron_default);
-router16.use(poa_default);
-router16.use(judgments_default);
-router16.use(tasks_default);
-router16.use(users_default);
-router16.use(super_admin_default);
-router16.use(subscription_default);
-router16.use(clients_default);
-var routes_default = router16;
+function getOfficeId6(req) {
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
+}
+function getUserId(req) {
+  const userId = req.authUser?.userId || req.authUser?.username;
+  if (!userId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return userId;
+}
+router16.use("/notifications", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData);
+router16.get("/notifications", async (req, res) => {
+  try {
+    const officeId = getOfficeId6(req);
+    const userId = getUserId(req);
+    const page = parseInt(String(req.query.page || "1"), 10) || 1;
+    const limit = parseInt(String(req.query.limit || "20"), 10) || 20;
+    const result = await listNotifications(officeId, userId, { page, limit });
+    res.json({
+      notifications: result.notifications,
+      unreadCount: result.unreadCount,
+      total: result.total,
+      page,
+      limit
+    });
+  } catch (err) {
+    logger.error({ err, userId: req.authUser?.userId }, "Failed to list notifications");
+    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A." });
+  }
+});
+router16.post("/notifications/:id/read", async (req, res) => {
+  try {
+    const officeId = getOfficeId6(req);
+    const userId = getUserId(req);
+    const notificationId = req.params.id;
+    if (!notificationId) {
+      res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    const updated = await markNotificationRead(notificationId, officeId, userId);
+    if (!updated) {
+      res.status(404).json({ error: "\u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0627 \u062A\u0645\u0644\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u064A\u0647." });
+      return;
+    }
+    res.json({ ok: true, id: notificationId });
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to mark notification as read");
+    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631." });
+  }
+});
+router16.post("/notifications/read-all", async (req, res) => {
+  try {
+    const officeId = getOfficeId6(req);
+    const userId = getUserId(req);
+    const count = await markAllNotificationsRead(officeId, userId);
+    res.json({ ok: true, count });
+  } catch (err) {
+    logger.error({ err, userId: req.authUser?.userId }, "Failed to mark all notifications as read");
+    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A." });
+  }
+});
+var notifications_default = router16;
+
+// src/routes/index.ts
+var router17 = (0, import_express17.Router)();
+router17.use(health_default);
+router17.use(auth_default);
+router17.use(dashboard_default);
+router17.use(ai_default);
+router17.use(sessions_default);
+router17.use(settings_default);
+router17.use(reports_default);
+router17.use(cron_default);
+router17.use(poa_default);
+router17.use(judgments_default);
+router17.use(tasks_default);
+router17.use(users_default);
+router17.use(super_admin_default);
+router17.use(subscription_default);
+router17.use(clients_default);
+router17.use(notifications_default);
+var routes_default = router17;
 
 // src/app.ts
 init_logger();
@@ -852150,7 +852551,7 @@ init_env();
 var import_meta = {};
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path5.default.dirname(currentFilename);
-var app = (0, import_express17.default)();
+var app = (0, import_express18.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -852183,8 +852584,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express17.default.json());
-app.use(import_express17.default.urlencoded({ extended: true }));
+app.use(import_express18.default.json());
+app.use(import_express18.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -852204,7 +852605,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express17.default.static(distPath));
+  app.use(import_express18.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path5.default.join(distPath, "index.html"));

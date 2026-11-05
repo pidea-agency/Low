@@ -3,6 +3,7 @@ import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { listSessions, markReminderSent } from "../services/session.service";
 import { notify } from "../services/reminder/reminder.service";
+import { runPoaExpirySweep } from "../services/reminder/poa-expiry.service";
 import { computeHearingDateTime } from "../utils/hijri";
 import { listSupabaseUsers, type AppUser } from "../services/supabase.service";
 import { GoogleBindingMissingError } from "../services/googleSheets.service";
@@ -267,6 +268,13 @@ export function startReminderScheduler(): void {
   cron.schedule(env.reminderCronExpression, () => {
     runReminderSweep().catch((err) => {
       logger.error({ err }, "Reminder sweep failed");
+    });
+  });
+
+  // Daily POA expiry sweep
+  cron.schedule("0 2 * * *", () => {
+    runPoaExpirySweep().catch((err) => {
+      logger.error({ err }, "Daily POA expiry sweep failed");
     });
   });
   logger.info(
