@@ -72,6 +72,79 @@ const ARABIC_DAYS = [
   "السبت",
 ];
 
+function cell(row: string[], name: string): string {
+  const index = COLUMN_INDEX[name];
+  if (index === undefined) return "";
+  return row[index] ?? "";
+}
+
+function nullableString(value: string | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseStatus(raw: string): SessionStatus {
+  const normalized = raw.trim();
+  if (normalized === "Upcoming" || normalized === "قادمة") return "Upcoming";
+  if (normalized === "Today" || normalized === "اليوم") return "Today";
+  if (normalized === "Finished" || normalized === "منتهية") return "Finished";
+  if (normalized === "Cancelled" || normalized === "ملغاة") return "Cancelled";
+  return "Upcoming";
+}
+
+export function rowToSession(id: number, row: string[]): Session {
+  const sessionDateHijri = nullableString(cell(row, "Session Date Hijri"));
+  const sessionTime = nullableString(cell(row, "Session Time"));
+  const hearingDate = computeHearingDateTime(sessionDateHijri, sessionTime);
+  const rawSessionDay = nullableString(cell(row, "Session Day"));
+  const sessionDay = rawSessionDay || computeSessionDayStr(sessionDateHijri, sessionTime);
+  return {
+    id,
+    caseNumber: nullableString(cell(row, "Case Number")),
+    plaintiff: nullableString(cell(row, "Plaintiff")),
+    defendant: nullableString(cell(row, "Defendant")),
+    court: nullableString(cell(row, "Court")),
+    courtCircuit: nullableString(cell(row, "Court Circuit")),
+    caseSubject: nullableString(cell(row, "Case Subject")),
+    sessionType: nullableString(cell(row, "Session Type")),
+    sessionDateHijri,
+    sessionDay: sessionDay && sessionDay !== "—" ? sessionDay : null,
+    sessionTime,
+    notes: nullableString(cell(row, "Notes")),
+    status: parseStatus(cell(row, "Status")),
+    reminder24: cell(row, "Reminder24") === "true",
+    reminder6: cell(row, "Reminder6") === "true",
+    createdAt: cell(row, "Created At") || new Date().toISOString(),
+    hearingAt: hearingDate ? hearingDate.toISOString() : null,
+  };
+}
+
+export function sessionInputToRow(input: SessionInput, createdAt: string): string[] {
+  const daysRemaining = computeDaysRemainingStr(input.sessionDateHijri, input.sessionTime);
+  const sessionDay = computeSessionDayStr(input.sessionDateHijri, input.sessionTime);
+  const anyInput = input as any;
+  return [
+    input.caseNumber ?? "",
+    input.plaintiff ?? "",
+    input.defendant ?? "",
+    input.court ?? "",
+    input.courtCircuit ?? "",
+    input.caseSubject ?? "",
+    input.sessionType ?? "",
+    input.sessionDateHijri ?? "",
+    sessionDay,
+    input.sessionTime ?? "",
+    daysRemaining,
+    input.notes ?? "",
+    anyInput.status ?? "Upcoming",
+    anyInput.reminder24 ? "true" : "false",
+    anyInput.reminder6 ? "true" : "false",
+    createdAt,
+    "",
+  ];
+}
+
 export function computeSessionDayStr(
   sessionDateHijri: string | null | undefined,
   sessionTime: string | null | undefined,
@@ -205,7 +278,33 @@ export async function markReminderSent(
 
 export async function listSessions(status?: string, userIdOrOfficeId?: string): Promise<Session[]> {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
-  const sessions = await postgresService.listSessions(officeId, status);
+  let sessions = await postgresService.listSessions(officeId, status);
+
+  // Fallback: If database returned 0 sessions, check if the office has rows in Google Sheets
+  if (sessions.length === 0) {
+    try {
+      const { getUserGoogleCredentials } = await import("./supabase.service");
+      const creds = await getUserGoogleCredentials(officeId);
+      if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+        const { listRows, ensureSheetReady } = await import("./googleSheets.service");
+        await ensureSheetReady(officeId);
+        const rows = await listRows(officeId);
+        if (rows && rows.length > 0) {
+          const sheetSessions = rows.map(({ id, values }) => rowToSession(id, values));
+          const filtered = status && status !== "All"
+            ? sheetSessions.filter((s) => s.status === status)
+            : sheetSessions;
+          return filtered.map((s) => ({
+            ...s,
+            status: deriveEffectiveStatus(s),
+          }));
+        }
+      }
+    } catch (err) {
+      logger.debug({ err, officeId }, "Google Sheets fallback check skipped");
+    }
+  }
+
   return sessions.map((s) => ({
     ...s,
     status: deriveEffectiveStatus(s),
@@ -215,16 +314,56 @@ export async function listSessions(status?: string, userIdOrOfficeId?: string): 
 export async function getSessionById(id: number, userIdOrOfficeId?: string): Promise<Session | null> {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
   const session = await postgresService.getSessionById(id, officeId);
-  if (!session) return null;
-  return {
-    ...session,
-    status: deriveEffectiveStatus(session),
-  };
+  if (session) {
+    return {
+      ...session,
+      status: deriveEffectiveStatus(session),
+    };
+  }
+
+  // Fallback: check Google Sheets for this row
+  try {
+    const { getUserGoogleCredentials } = await import("./supabase.service");
+    const creds = await getUserGoogleCredentials(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { listRows } = await import("./googleSheets.service");
+      const rows = await listRows(officeId);
+      const match = rows.find((r) => r.id === id);
+      if (match) {
+        const s = rowToSession(match.id, match.values);
+        return {
+          ...s,
+          status: deriveEffectiveStatus(s),
+        };
+      }
+    }
+  } catch (err) {
+    logger.debug({ err, id, officeId }, "Google Sheets getSessionById fallback skipped");
+  }
+
+  return null;
 }
 
 export async function createSession(data: SessionInput, userIdOrOfficeId?: string): Promise<Session> {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
   const session = await postgresService.createSession(data, officeId);
+
+  // Sync to office Google Sheet if connected
+  try {
+    const { getUserGoogleCredentials } = await import("./supabase.service");
+    const creds = await getUserGoogleCredentials(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { appendRow, ensureSheetReady } = await import("./googleSheets.service");
+      await ensureSheetReady(officeId).catch(() => {});
+      const row = sessionInputToRow(data, session.createdAt || new Date().toISOString());
+      await appendRow(row, officeId).catch((err) => {
+        logger.warn({ err, officeId }, "Failed to append session to Google Sheets");
+      });
+    }
+  } catch (err) {
+    logger.debug({ err, officeId }, "Google Sheets sync skipped on createSession");
+  }
+
   return {
     ...session,
     status: deriveEffectiveStatus(session),
@@ -235,6 +374,43 @@ export async function updateSession(id: number, data: SessionUpdate, userIdOrOff
   const officeId = await resolveOfficeId(userIdOrOfficeId);
   const session = await postgresService.updateSession(id, data, officeId);
   if (!session) return null;
+
+  // Sync update to office Google Sheet if connected
+  try {
+    const { getUserGoogleCredentials } = await import("./supabase.service");
+    const creds = await getUserGoogleCredentials(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { updateRowCells } = await import("./googleSheets.service");
+      const rowUpdates: Record<number, string> = {};
+      if (data.caseNumber !== undefined) rowUpdates[COLUMN_INDEX["Case Number"]] = data.caseNumber || "";
+      if (data.plaintiff !== undefined) rowUpdates[COLUMN_INDEX["Plaintiff"]] = data.plaintiff || "";
+      if (data.defendant !== undefined) rowUpdates[COLUMN_INDEX["Defendant"]] = data.defendant || "";
+      if (data.court !== undefined) rowUpdates[COLUMN_INDEX["Court"]] = data.court || "";
+      if (data.courtCircuit !== undefined) rowUpdates[COLUMN_INDEX["Court Circuit"]] = data.courtCircuit || "";
+      if (data.caseSubject !== undefined) rowUpdates[COLUMN_INDEX["Case Subject"]] = data.caseSubject || "";
+      if (data.sessionType !== undefined) rowUpdates[COLUMN_INDEX["Session Type"]] = data.sessionType || "";
+      if (data.sessionDateHijri !== undefined) {
+        rowUpdates[COLUMN_INDEX["Session Date Hijri"]] = data.sessionDateHijri || "";
+        rowUpdates[COLUMN_INDEX["Session Day"]] = computeSessionDayStr(data.sessionDateHijri, data.sessionTime || session.sessionTime);
+        rowUpdates[COLUMN_INDEX["Days Remaining"]] = computeDaysRemainingStr(data.sessionDateHijri, data.sessionTime || session.sessionTime);
+      }
+      if (data.sessionTime !== undefined) {
+        rowUpdates[COLUMN_INDEX["Session Time"]] = data.sessionTime || "";
+      }
+      if (data.notes !== undefined) rowUpdates[COLUMN_INDEX["Notes"]] = data.notes || "";
+      if (data.status !== undefined) rowUpdates[COLUMN_INDEX["Status"]] = data.status || "Upcoming";
+      const anyData = data as any;
+      if (anyData.reminder24 !== undefined) rowUpdates[COLUMN_INDEX["Reminder24"]] = anyData.reminder24 ? "true" : "false";
+      if (anyData.reminder6 !== undefined) rowUpdates[COLUMN_INDEX["Reminder6"]] = anyData.reminder6 ? "true" : "false";
+
+      await updateRowCells(id, rowUpdates, officeId).catch((err) => {
+        logger.warn({ err, id, officeId }, "Failed to sync session update to Google Sheets");
+      });
+    }
+  } catch (err) {
+    logger.debug({ err, id, officeId }, "Google Sheets update sync skipped");
+  }
+
   return {
     ...session,
     status: deriveEffectiveStatus(session),
@@ -243,7 +419,23 @@ export async function updateSession(id: number, data: SessionUpdate, userIdOrOff
 
 export async function deleteSession(id: number, userIdOrOfficeId?: string): Promise<boolean> {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
-  return postgresService.deleteSession(id, officeId);
+  const deleted = await postgresService.deleteSession(id, officeId);
+
+  // Sync deletion to office Google Sheet if connected
+  try {
+    const { getUserGoogleCredentials } = await import("./supabase.service");
+    const creds = await getUserGoogleCredentials(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { deleteRow } = await import("./googleSheets.service");
+      await deleteRow(id, officeId).catch((err) => {
+        logger.warn({ err, id, officeId }, "Failed to sync session deletion to Google Sheets");
+      });
+    }
+  } catch (err) {
+    logger.debug({ err, id, officeId }, "Google Sheets delete sync skipped");
+  }
+
+  return deleted;
 }
 
 export async function getSessionReport(id: number, userIdOrOfficeId?: string): Promise<{ session: Session; report: string | null } | null> {

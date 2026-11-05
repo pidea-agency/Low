@@ -725,10 +725,15 @@ export async function getUserGoogleCredentials(userId?: string): Promise<UserGoo
 
   let targetAdminId: string;
   if (user.role === "staff") {
-    if (!user.admin_id) {
+    if (user.admin_id) {
+      targetAdminId = user.admin_id;
+    } else if (user.google_spreadsheet_id || user.google_service_account_json) {
+      targetAdminId = user.id;
+    } else if (user.office_id) {
+      targetAdminId = user.office_id;
+    } else {
       return null; // Staff without office admin
     }
-    targetAdminId = user.admin_id;
   } else {
     targetAdminId = user.id;
   }
