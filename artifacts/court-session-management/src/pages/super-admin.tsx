@@ -21,6 +21,13 @@ import {
   Link2,
   Clock,
   Sparkles,
+  Layers,
+  Plus,
+  FileSpreadsheet,
+  MessageSquare,
+  Bot,
+  BarChart3,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +40,28 @@ import { useGetCurrentUser, useLogout } from '@workspace/api-client-react';
 import { validatePassword, PASSWORD_POLICY } from '@workspace/api-zod';
 import { useQueryClient } from '@tanstack/react-query';
 
+export interface SubscriptionPlanFeatures {
+  google_sheets_export?: boolean;
+  whatsapp_reminders?: boolean;
+  max_members?: number;
+  custom_branding?: boolean;
+  ai_assistant?: boolean;
+  court_session_analytics?: boolean;
+  [key: string]: any;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: string;
+  ai_quota_limit: number;
+  price?: string;
+  features: SubscriptionPlanFeatures;
+  office_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface OfficeAdmin {
   id: string;
   username: string;
@@ -44,7 +73,10 @@ export interface OfficeAdmin {
   phone?: string | null;
   subscription_end_date?: string | null;
   subscription_notes?: string | null;
-  plan_tier?: 'plus' | 'pro';
+  plan_tier?: 'plus' | 'pro' | string;
+  plan_id?: string | null;
+  ai_quota_limit_override?: number | null;
+  plan?: SubscriptionPlan | null;
   billing_cycle?: 'monthly' | 'annual';
   ai_quota_limit?: number;
   ai_usage_count?: number;
@@ -160,19 +192,26 @@ export default function SuperAdminPage() {
   const { data: currentUser } = useGetCurrentUser();
   const logoutMutation = useLogout();
 
-  const [activeTab, setActiveTab] = useState<'admins' | 'unlinked'>('admins');
+  const [activeTab, setActiveTab] = useState<'admins' | 'plans' | 'unlinked'>('admins');
   const [admins, setAdmins] = useState<OfficeAdmin[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [unlinkedMembers, setUnlinkedMembers] = useState<UnlinkedMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'expiring'>('all');
 
-  // Modals
+  // Modals for Office Admins
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<OfficeAdmin | null>(null);
 
-  // Form states
+  // Modals for Plans
+  const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
+  const [isEditPlanModalOpen, setIsEditPlanModalOpen] = useState(false);
+  const [selectedPlanForEdit, setSelectedPlanForEdit] = useState<SubscriptionPlan | null>(null);
+
+  // Office Form state
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -180,15 +219,50 @@ export default function SuperAdminPage() {
     display_name: '',
     email: '',
     phone: '',
-    plan_tier: 'plus' as 'plus' | 'pro',
+    plan_id: '',
+    plan_tier: 'plus' as 'plus' | 'pro' | string,
     billing_cycle: 'annual' as 'monthly' | 'annual',
     subscription_end_date: '',
     subscription_notes: '',
+    isCustomQuota: false,
+    ai_quota_limit_override: '' as string | number,
     ai_quota_limit: 100,
+  });
+
+  // Plan Form state
+  const [planFormData, setPlanFormData] = useState({
+    name: '',
+    slug: '',
+    ai_quota_limit: 100,
+    price: '',
+    features: {
+      google_sheets_export: true,
+      whatsapp_reminders: false,
+      max_members: 10,
+      custom_branding: false,
+      ai_assistant: true,
+      court_session_analytics: false,
+    } as SubscriptionPlanFeatures,
   });
 
   // Linking state
   const [linkingState, setLinkingState] = useState<{ [memberId: string]: string }>({});
+
+  const fetchPlans = async () => {
+    setIsLoadingPlans(true);
+    try {
+      const res = await fetch('/api/super-admin/plans');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.plans) {
+          setPlans(data.plans);
+        }
+      }
+    } catch {}
+    finally {
+      setIsLoadingPlans(false);
+    }
+  };
 
   const fetchAdmins = async () => {
     setIsLoading(true);
@@ -225,6 +299,7 @@ export default function SuperAdminPage() {
 
   useEffect(() => {
     fetchAdmins();
+    fetchPlans();
     fetchUnlinked();
   }, []);
 
@@ -236,6 +311,30 @@ export default function SuperAdminPage() {
     } catch {
       navigate('/admin/login');
     }
+  };
+
+  const handlePlanChange = (selectedPlanId: string) => {
+    const selected = plans.find((p) => p.id === selectedPlanId);
+    setFormData((prev) => ({
+      ...prev,
+      plan_id: selectedPlanId,
+      plan_tier: selected?.slug || 'plus',
+      ai_quota_limit: prev.isCustomQuota && prev.ai_quota_limit_override !== ''
+        ? Number(prev.ai_quota_limit_override)
+        : (selected?.ai_quota_limit ?? 100),
+    }));
+  };
+
+  const handleCustomQuotaToggle = (checked: boolean) => {
+    const selected = plans.find((p) => p.id === formData.plan_id) || plans[0];
+    setFormData((prev) => ({
+      ...prev,
+      isCustomQuota: checked,
+      ai_quota_limit_override: checked ? (prev.ai_quota_limit_override || (selected?.ai_quota_limit ?? 100)) : '',
+      ai_quota_limit: checked && prev.ai_quota_limit_override !== ''
+        ? Number(prev.ai_quota_limit_override)
+        : (selected?.ai_quota_limit ?? 100),
+    }));
   };
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
@@ -260,10 +359,28 @@ export default function SuperAdminPage() {
     }
 
     try {
+      const selectedPlan = plans.find((p) => p.id === formData.plan_id);
+      const payload: any = {
+        username: formData.username.trim(),
+        password: formData.password.trim(),
+        office_name: formData.office_name.trim(),
+        display_name: formData.display_name.trim() || formData.office_name.trim(),
+        email: formData.email.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
+        plan_id: formData.plan_id || undefined,
+        plan_tier: selectedPlan?.slug || formData.plan_tier || 'plus',
+        billing_cycle: formData.billing_cycle,
+        subscription_end_date: formData.subscription_end_date,
+        subscription_notes: formData.subscription_notes.trim() || undefined,
+        ai_quota_limit_override: formData.isCustomQuota && formData.ai_quota_limit_override !== ''
+          ? Number(formData.ai_quota_limit_override)
+          : null,
+      };
+
       const res = await fetch('/api/super-admin/admins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -277,6 +394,7 @@ export default function SuperAdminPage() {
       setIsAddModalOpen(false);
       resetForm();
       fetchAdmins();
+      fetchPlans();
     } catch (err: any) {
       toast({
         title: 'خطأ',
@@ -303,16 +421,20 @@ export default function SuperAdminPage() {
     }
 
     try {
+      const selectedPlan = plans.find((p) => p.id === formData.plan_id);
       const payload: any = {
         office_name: formData.office_name,
         display_name: formData.display_name,
         email: formData.email,
         phone: formData.phone,
-        plan_tier: formData.plan_tier,
+        plan_id: formData.plan_id || undefined,
+        plan_tier: selectedPlan?.slug || formData.plan_tier || 'plus',
         billing_cycle: formData.billing_cycle,
         subscription_end_date: formData.subscription_end_date || null,
         subscription_notes: formData.subscription_notes,
-        ai_quota_limit: formData.ai_quota_limit,
+        ai_quota_limit_override: formData.isCustomQuota && formData.ai_quota_limit_override !== ''
+          ? Number(formData.ai_quota_limit_override)
+          : null,
       };
       if (formData.password.trim()) {
         payload.password = formData.password.trim();
@@ -334,6 +456,7 @@ export default function SuperAdminPage() {
       });
       setIsEditModalOpen(false);
       fetchAdmins();
+      fetchPlans();
     } catch (err: any) {
       toast({
         title: 'خطأ',
@@ -341,6 +464,160 @@ export default function SuperAdminPage() {
         variant: 'destructive',
       });
     }
+  };
+
+  // Plan CRUD Handlers
+  const handleCreatePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!planFormData.name.trim() || !planFormData.slug.trim()) {
+      toast({
+        title: 'تنبيه',
+        description: 'اسم الباقة ومعرّف الباقة (slug) مطلوبان.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/super-admin/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: planFormData.name.trim(),
+          slug: planFormData.slug.trim().toLowerCase(),
+          ai_quota_limit: Number(planFormData.ai_quota_limit) || 100,
+          price: planFormData.price.trim(),
+          features: planFormData.features,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'فشل إنشاء الباقة.');
+      }
+
+      toast({
+        title: 'تم بنجاح',
+        description: `تم إنشاء باقة "${planFormData.name}" بنجاح!`,
+      });
+      setIsAddPlanModalOpen(false);
+      resetPlanForm();
+      fetchPlans();
+    } catch (err: any) {
+      toast({
+        title: 'خطأ',
+        description: err.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdatePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlanForEdit) return;
+
+    try {
+      const res = await fetch(`/api/super-admin/plans/${selectedPlanForEdit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: planFormData.name.trim(),
+          ai_quota_limit: Number(planFormData.ai_quota_limit) || 100,
+          price: planFormData.price.trim(),
+          features: planFormData.features,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'فشل تحديث الباقة.');
+      }
+
+      toast({
+        title: 'تم بنجاح',
+        description: `تم تحديث بيانات باقة "${planFormData.name}" بنجاح!`,
+      });
+      setIsEditPlanModalOpen(false);
+      fetchPlans();
+      fetchAdmins();
+    } catch (err: any) {
+      toast({
+        title: 'خطأ',
+        description: err.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeletePlan = async (plan: SubscriptionPlan) => {
+    if (plan.office_count && plan.office_count > 0) {
+      toast({
+        title: 'لا يمكن حذف الباقة',
+        description: `لا يمكن حذف باقة "${plan.name}" لوجود ${plan.office_count} مكتب مشترك بها حالياً.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!window.confirm(`هل أنت متأكد من حذف باقة "${plan.name}"؟`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/super-admin/plans/${plan.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'فشل حذف الباقة.');
+      }
+
+      toast({
+        title: 'تم الحذف',
+        description: `تم حذف باقة "${plan.name}" بنجاح.`,
+      });
+      fetchPlans();
+    } catch (err: any) {
+      toast({
+        title: 'خطأ',
+        description: err.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openEditPlanModal = (plan: SubscriptionPlan) => {
+    setSelectedPlanForEdit(plan);
+    setPlanFormData({
+      name: plan.name,
+      slug: plan.slug,
+      ai_quota_limit: plan.ai_quota_limit,
+      price: plan.price || '',
+      features: {
+        google_sheets_export: plan.features?.google_sheets_export ?? true,
+        whatsapp_reminders: plan.features?.whatsapp_reminders ?? false,
+        max_members: plan.features?.max_members ?? 10,
+        custom_branding: plan.features?.custom_branding ?? false,
+        ai_assistant: plan.features?.ai_assistant ?? true,
+        court_session_analytics: plan.features?.court_session_analytics ?? false,
+      },
+    });
+    setIsEditPlanModalOpen(true);
+  };
+
+  const resetPlanForm = () => {
+    setPlanFormData({
+      name: '',
+      slug: '',
+      ai_quota_limit: 100,
+      price: '',
+      features: {
+        google_sheets_export: true,
+        whatsapp_reminders: false,
+        max_members: 10,
+        custom_branding: false,
+        ai_assistant: true,
+        court_session_analytics: false,
+      },
+    });
   };
 
   const handleQuickExtend = async (adminId: string, period: '1m' | '1y') => {
@@ -472,6 +749,9 @@ export default function SuperAdminPage() {
 
   const openEditModal = (admin: OfficeAdmin) => {
     setSelectedAdmin(admin);
+    const matchedPlan = plans.find((p) => p.id === admin.plan_id || p.slug === admin.plan_tier) || plans[0];
+    const hasOverride = admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== undefined;
+
     setFormData({
       username: admin.username,
       password: '',
@@ -479,11 +759,14 @@ export default function SuperAdminPage() {
       display_name: admin.display_name || '',
       email: admin.email || '',
       phone: admin.phone || '',
-      plan_tier: admin.plan_tier || 'plus',
+      plan_id: admin.plan_id || matchedPlan?.id || '',
+      plan_tier: admin.plan_tier || matchedPlan?.slug || 'plus',
       billing_cycle: admin.billing_cycle || 'annual',
       subscription_end_date: normalizeDateForInput(admin.subscription_end_date),
       subscription_notes: admin.subscription_notes || '',
-      ai_quota_limit: admin.ai_quota_limit ?? 100,
+      isCustomQuota: hasOverride,
+      ai_quota_limit_override: hasOverride ? Number(admin.ai_quota_limit_override) : '',
+      ai_quota_limit: admin.ai_quota_limit ?? (matchedPlan?.ai_quota_limit ?? 100),
     });
     setIsEditModalOpen(true);
   };
@@ -491,6 +774,8 @@ export default function SuperAdminPage() {
   const resetForm = () => {
     const nextYear = new Date();
     nextYear.setFullYear(nextYear.getFullYear() + 1);
+    const defaultPlan = plans.find((p) => p.slug === 'plus') || plans[0];
+
     setFormData({
       username: '',
       password: '',
@@ -498,11 +783,14 @@ export default function SuperAdminPage() {
       display_name: '',
       email: '',
       phone: '',
-      plan_tier: 'plus',
+      plan_id: defaultPlan?.id || 'plan-plus',
+      plan_tier: defaultPlan?.slug || 'plus',
       billing_cycle: 'annual',
       subscription_end_date: nextYear.toISOString().split('T')[0],
       subscription_notes: '',
-      ai_quota_limit: 100,
+      isCustomQuota: false,
+      ai_quota_limit_override: '',
+      ai_quota_limit: defaultPlan?.ai_quota_limit ?? 100,
     });
   };
 
@@ -557,7 +845,7 @@ export default function SuperAdminPage() {
         </div>
 
         {/* Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <Building2 className="w-5 h-5" />
@@ -582,17 +870,27 @@ export default function SuperAdminPage() {
 
           <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-semibold">باقات الاشتراك المتاحة</p>
+              <p className="text-xl font-black text-amber-600">{plans.length}</p>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center">
               <Users className="w-5 h-5" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-semibold">أعضاء غير مرتبطين بمكتب</p>
-              <p className="text-xl font-black text-amber-600">{unlinkedMembers.length}</p>
+              <p className="text-xl font-black text-rose-600">{unlinkedMembers.length}</p>
             </div>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-border pb-2">
+        <div className="flex items-center gap-2 border-b border-border pb-2 flex-wrap">
           <button
             onClick={() => setActiveTab('admins')}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
@@ -603,6 +901,18 @@ export default function SuperAdminPage() {
           >
             <Building2 className="w-4 h-4" />
             <span>مكاتب المحاماة والاشتراكات ({admins.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('plans')}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
+              activeTab === 'plans'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>باقات الاشتراك وميزاتها ({plans.length})</span>
           </button>
 
           <button
@@ -741,19 +1051,28 @@ export default function SuperAdminPage() {
                             </td>
 
                             <td className="p-3.5">
-                              <div className="flex items-center gap-1.5">
-                                <Badge
-                                  className={
-                                    admin.plan_tier === 'pro'
-                                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
-                                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30'
-                                  }
-                                >
-                                  {admin.plan_tier === 'pro' ? 'احترافية (Pro)' : 'بلس (Plus)'}
-                                </Badge>
-                                <span className="text-[10px] text-muted-foreground font-semibold">
-                                  {admin.billing_cycle === 'monthly' ? 'شهري' : 'سنوي'}
-                                </span>
+                              <div className="flex flex-col gap-1 items-start">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <Badge
+                                    className={
+                                      (admin.plan?.slug || admin.plan_tier) === 'pro'
+                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                                        : (admin.plan?.slug || admin.plan_tier) === 'basic'
+                                        ? 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30'
+                                        : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30'
+                                    }
+                                  >
+                                    {admin.plan?.name || (admin.plan_tier === 'pro' ? 'احترافية (Pro)' : admin.plan_tier === 'basic' ? 'الأساسية' : 'بلس (Plus)')}
+                                  </Badge>
+                                  <span className="text-[10px] text-muted-foreground font-semibold">
+                                    {admin.billing_cycle === 'monthly' ? 'شهري' : 'سنوي'}
+                                  </span>
+                                </div>
+                                {admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== undefined && (
+                                  <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-mono">
+                                    حصة مخصصة: {admin.ai_quota_limit_override}
+                                  </Badge>
+                                )}
                               </div>
                             </td>
 
@@ -879,7 +1198,170 @@ export default function SuperAdminPage() {
           </div>
         )}
 
-        {/* Tab 2: Unlinked Members */}
+        {/* Tab 2: Subscription Plans */}
+        {activeTab === 'plans' && (
+          <div className="space-y-4">
+            {/* Action Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card border border-border p-3.5 rounded-xl shadow-sm">
+              <div>
+                <h2 className="text-sm font-bold text-foreground">باقات الاشتراك وميزات المنظومة</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  التحكم في الباقات المتاحة لمكاتب المحاماة، حصص التحليل الافتراضية، وتفعيل ميزات كل باقة
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  resetPlanForm();
+                  setIsAddPlanModalOpen(true);
+                }}
+                className="gap-2 text-xs font-bold shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                إضافة باقة جديدة
+              </Button>
+            </div>
+
+            {/* Plans Table */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-muted/50 border-b border-border font-bold text-muted-foreground">
+                    <tr>
+                      <th className="p-3.5">اسم الباقة والمعرّف</th>
+                      <th className="p-3.5">سعر العرض</th>
+                      <th className="p-3.5">حصة الـ AI الافتراضية</th>
+                      <th className="p-3.5">الميزات المشمولة</th>
+                      <th className="p-3.5 text-center">المكاتب المشتركة</th>
+                      <th className="p-3.5 text-center">الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border font-medium">
+                    {isLoadingPlans ? (
+                      <tr>
+                        <td colSpan={6} className="text-center p-8 text-muted-foreground">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2" />
+                          جارٍ تحميل قائمة الباقات...
+                        </td>
+                      </tr>
+                    ) : plans.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center p-8 text-muted-foreground">
+                          لا توجد باقات اشتراك مضافة حتى الآن.
+                        </td>
+                      </tr>
+                    ) : (
+                      plans.map((plan) => {
+                        const officeCount = plan.office_count ?? 0;
+                        const isInUse = officeCount > 0;
+                        return (
+                          <tr key={plan.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-3.5">
+                              <div className="font-bold text-sm text-foreground">{plan.name}</div>
+                              <div className="font-mono text-[11px] text-muted-foreground mt-0.5 bg-muted px-1.5 py-0.5 rounded inline-block">
+                                slug: {plan.slug}
+                              </div>
+                            </td>
+
+                            <td className="p-3.5">
+                              <span className="font-bold text-foreground">{plan.price || '—'}</span>
+                            </td>
+
+                            <td className="p-3.5">
+                              <div className="flex items-center gap-1.5 font-mono">
+                                <Zap className="w-3.5 h-3.5 text-amber-600" />
+                                <span className="font-bold text-foreground">{plan.ai_quota_limit}</span>
+                                <span className="text-muted-foreground text-[11px]">تحليل / شهر</span>
+                              </div>
+                            </td>
+
+                            <td className="p-3.5">
+                              <div className="flex flex-wrap gap-1 max-w-md">
+                                {plan.features?.google_sheets_export && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                                    <FileSpreadsheet className="w-2.5 h-2.5" /> Google Sheets
+                                  </Badge>
+                                )}
+                                {plan.features?.whatsapp_reminders && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30">
+                                    <MessageSquare className="w-2.5 h-2.5" /> تذكيرات واتساب
+                                  </Badge>
+                                )}
+                                {plan.features?.ai_assistant && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                                    <Bot className="w-2.5 h-2.5" /> مساعد ذكي
+                                  </Badge>
+                                )}
+                                {plan.features?.court_session_analytics && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                    <BarChart3 className="w-2.5 h-2.5" /> إحصائيات الجلسات
+                                  </Badge>
+                                )}
+                                {plan.features?.custom_branding && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30">
+                                    <Sparkles className="w-2.5 h-2.5" /> تخصيص الهوية
+                                  </Badge>
+                                )}
+                                {plan.features?.max_members !== undefined && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 bg-muted text-muted-foreground border-border">
+                                    <Users className="w-2.5 h-2.5" /> حتى {plan.features.max_members} محامين
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+
+                            <td className="p-3.5 text-center">
+                              <Badge variant="outline" className="font-bold gap-1">
+                                <Building2 className="w-3 h-3 text-muted-foreground" />
+                                {officeCount} {officeCount === 1 ? 'مكتب' : 'مكاتب'}
+                              </Badge>
+                            </td>
+
+                            <td className="p-3.5 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="تعديل الباقة"
+                                  onClick={() => openEditPlanModal(plan)}
+                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </Button>
+
+                                <div className="relative group inline-block">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={isInUse}
+                                    onClick={() => handleDeletePlan(plan)}
+                                    className={`h-7 w-7 p-0 ${
+                                      isInUse
+                                        ? 'opacity-40 cursor-not-allowed text-muted-foreground'
+                                        : 'text-muted-foreground hover:text-destructive'
+                                    }`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                  {isInUse && (
+                                    <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 w-44 p-1.5 bg-popover border border-border text-[10px] text-popover-foreground text-center rounded shadow-md pointer-events-none">
+                                      لا يمكن حذف الباقة لأن هناك {officeCount} مكتب مشترك بها حالياً.
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Unlinked Members */}
         {activeTab === 'unlinked' && (
           <div className="space-y-4">
             <div className="bg-amber-500/10 border border-amber-500/25 p-4 rounded-xl flex items-start gap-3 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
@@ -1049,14 +1531,17 @@ export default function SuperAdminPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">باقة الاشتراك</Label>
+                  <Label className="text-xs">باقة الاشتراك *</Label>
                   <select
-                    value={formData.plan_tier}
-                    onChange={(e) => setFormData({ ...formData, plan_tier: e.target.value as any })}
-                    className="w-full text-xs border border-border rounded-lg bg-background p-2"
+                    value={formData.plan_id}
+                    onChange={(e) => handlePlanChange(e.target.value)}
+                    className="w-full text-xs border border-border rounded-lg bg-background p-2 focus:ring-1 focus:ring-primary"
                   >
-                    <option value="plus">باقة بلس (Plus - 100 تحليل)</option>
-                    <option value="pro">باقة برو (Pro - 300 تحليل)</option>
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.price ? `${p.price} - ` : ''}{p.ai_quota_limit} تحليل)
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1065,7 +1550,7 @@ export default function SuperAdminPage() {
                   <select
                     value={formData.billing_cycle}
                     onChange={(e) => setFormData({ ...formData, billing_cycle: e.target.value as any })}
-                    className="w-full text-xs border border-border rounded-lg bg-background p-2"
+                    className="w-full text-xs border border-border rounded-lg bg-background p-2 focus:ring-1 focus:ring-primary"
                   >
                     <option value="annual">سنوي</option>
                     <option value="monthly">شهري</option>
@@ -1086,13 +1571,40 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">حصة تحليلات الذكاء الاصطناعي</Label>
-                  <Input
-                    type="number"
-                    value={formData.ai_quota_limit}
-                    onChange={(e) => setFormData({ ...formData, ai_quota_limit: Number(e.target.value) })}
-                    className="text-xs h-9 font-mono"
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">حصة تحليلات الذكاء الاصطناعي</Label>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={formData.isCustomQuota}
+                        onChange={(e) => handleCustomQuotaToggle(e.target.checked)}
+                        className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
+                      />
+                      <span>تخصيص الحصة للمكتب</span>
+                    </label>
+                  </div>
+                  {formData.isCustomQuota ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="أدخل الحصة المخصصة"
+                      value={formData.ai_quota_limit_override}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({
+                          ...formData,
+                          ai_quota_limit_override: val === '' ? '' : Number(val),
+                          ai_quota_limit: val === '' ? 0 : Number(val),
+                        });
+                      }}
+                      className="text-xs h-9 font-mono border-amber-500/50 bg-amber-500/5"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between px-3 h-9 rounded-md border border-border bg-muted/40 text-xs text-muted-foreground font-mono">
+                      <span>افتراضي الباقة: {plans.find((p) => p.id === formData.plan_id)?.ai_quota_limit ?? 100} تحليلاً</span>
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground">تلقائي</Badge>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1203,12 +1715,15 @@ export default function SuperAdminPage() {
                 <div className="space-y-1">
                   <Label className="text-xs">باقة الاشتراك</Label>
                   <select
-                    value={formData.plan_tier}
-                    onChange={(e) => setFormData({ ...formData, plan_tier: e.target.value as any })}
-                    className="w-full text-xs border border-border rounded-lg bg-background p-2"
+                    value={formData.plan_id}
+                    onChange={(e) => handlePlanChange(e.target.value)}
+                    className="w-full text-xs border border-border rounded-lg bg-background p-2 focus:ring-1 focus:ring-primary"
                   >
-                    <option value="plus">باقة بلس (Plus - 100 تحليل)</option>
-                    <option value="pro">باقة برو (Pro - 300 تحليل)</option>
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.price ? `${p.price} - ` : ''}{p.ai_quota_limit} تحليل)
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1217,7 +1732,7 @@ export default function SuperAdminPage() {
                   <select
                     value={formData.billing_cycle}
                     onChange={(e) => setFormData({ ...formData, billing_cycle: e.target.value as any })}
-                    className="w-full text-xs border border-border rounded-lg bg-background p-2"
+                    className="w-full text-xs border border-border rounded-lg bg-background p-2 focus:ring-1 focus:ring-primary"
                   >
                     <option value="annual">سنوي</option>
                     <option value="monthly">شهري</option>
@@ -1237,13 +1752,40 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">حصة تحليلات الذكاء الاصطناعي</Label>
-                  <Input
-                    type="number"
-                    value={formData.ai_quota_limit}
-                    onChange={(e) => setFormData({ ...formData, ai_quota_limit: Number(e.target.value) })}
-                    className="text-xs h-9 font-mono"
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">حصة تحليلات الذكاء الاصطناعي</Label>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={formData.isCustomQuota}
+                        onChange={(e) => handleCustomQuotaToggle(e.target.checked)}
+                        className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
+                      />
+                      <span>تخصيص الحصة للمكتب</span>
+                    </label>
+                  </div>
+                  {formData.isCustomQuota ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="أدخل الحصة المخصصة"
+                      value={formData.ai_quota_limit_override}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({
+                          ...formData,
+                          ai_quota_limit_override: val === '' ? '' : Number(val),
+                          ai_quota_limit: val === '' ? 0 : Number(val),
+                        });
+                      }}
+                      className="text-xs h-9 font-mono border-amber-500/50 bg-amber-500/5"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between px-3 h-9 rounded-md border border-border bg-muted/40 text-xs text-muted-foreground font-mono">
+                      <span>افتراضي الباقة: {plans.find((p) => p.id === formData.plan_id)?.ai_quota_limit ?? 100} تحليلاً</span>
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground">تلقائي</Badge>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1261,6 +1803,372 @@ export default function SuperAdminPage() {
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditModalOpen(false)}
+                  className="text-xs"
+                >
+                  إلغاء
+                </Button>
+                <Button type="submit" className="text-xs font-bold gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  حفظ التعديلات
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Subscription Plan Modal */}
+      {isAddPlanModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-primary" />
+                <h3 className="text-base font-bold text-foreground">إضافة باقة اشتراك جديدة</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddPlanModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePlan} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">اسم الباقة بالعربية *</Label>
+                  <Input
+                    required
+                    placeholder="مثال: الباقة الذهبية"
+                    value={planFormData.name}
+                    onChange={(e) => setPlanFormData({ ...planFormData, name: e.target.value })}
+                    className="text-xs h-9"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">معرّف الباقة (Slug) *</Label>
+                  <Input
+                    required
+                    placeholder="مثال: gold"
+                    value={planFormData.slug}
+                    onChange={(e) => setPlanFormData({ ...planFormData, slug: e.target.value })}
+                    className="text-xs h-9 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">سعر العرض (للعرض فقط)</Label>
+                  <Input
+                    placeholder="مثال: 399 ر.س / شهرياً"
+                    value={planFormData.price}
+                    onChange={(e) => setPlanFormData({ ...planFormData, price: e.target.value })}
+                    className="text-xs h-9"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">حصة الـ AI الافتراضية *</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    required
+                    placeholder="100"
+                    value={planFormData.ai_quota_limit}
+                    onChange={(e) => setPlanFormData({ ...planFormData, ai_quota_limit: Number(e.target.value) })}
+                    className="text-xs h-9 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label className="text-xs font-bold text-foreground">ميزات وصلاحيات الباقة</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.google_sheets_export ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, google_sheets_export: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">تصدير جداول Google Sheets</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.whatsapp_reminders ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, whatsapp_reminders: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">تذكيرات ورسائل واتساب</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.ai_assistant ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, ai_assistant: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">المساعد القانوني الذكي</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.court_session_analytics ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, court_session_analytics: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">إحصائيات وتحليلات الجلسات</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.custom_branding ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, custom_branding: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">تخصيص الهوية والشعار</span>
+                  </label>
+
+                  <div className="space-y-1 p-2 rounded-lg border border-border bg-muted/20">
+                    <Label className="text-[11px] font-medium">الحد الأقصى للمستخدمين</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="10"
+                      value={planFormData.features.max_members ?? 10}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, max_members: Number(e.target.value) },
+                        })
+                      }
+                      className="text-xs h-7 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddPlanModalOpen(false)}
+                  className="text-xs"
+                >
+                  إلغاء
+                </Button>
+                <Button type="submit" className="text-xs font-bold gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  حفظ وإنشاء الباقة
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Subscription Plan Modal */}
+      {isEditPlanModalOpen && selectedPlanForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-primary" />
+                <h3 className="text-base font-bold text-foreground">
+                  تعديل باقة: {selectedPlanForEdit.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditPlanModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePlan} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">اسم الباقة بالعربية *</Label>
+                  <Input
+                    required
+                    value={planFormData.name}
+                    onChange={(e) => setPlanFormData({ ...planFormData, name: e.target.value })}
+                    className="text-xs h-9"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">معرّف الباقة (للقراءة فقط)</Label>
+                  <Input
+                    disabled
+                    value={planFormData.slug}
+                    className="text-xs h-9 font-mono bg-muted"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">سعر العرض (للعرض فقط)</Label>
+                  <Input
+                    placeholder="مثال: 399 ر.س / شهرياً"
+                    value={planFormData.price}
+                    onChange={(e) => setPlanFormData({ ...planFormData, price: e.target.value })}
+                    className="text-xs h-9"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">حصة الـ AI الافتراضية *</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    required
+                    value={planFormData.ai_quota_limit}
+                    onChange={(e) => setPlanFormData({ ...planFormData, ai_quota_limit: Number(e.target.value) })}
+                    className="text-xs h-9 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label className="text-xs font-bold text-foreground">ميزات وصلاحيات الباقة</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.google_sheets_export ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, google_sheets_export: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">تصدير جداول Google Sheets</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.whatsapp_reminders ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, whatsapp_reminders: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">تذكيرات ورسائل واتساب</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.ai_assistant ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, ai_assistant: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">المساعد القانوني الذكي</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.court_session_analytics ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, court_session_analytics: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">إحصائيات وتحليلات الجلسات</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={planFormData.features.custom_branding ?? false}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, custom_branding: e.target.checked },
+                        })
+                      }
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <span className="text-[11px] font-medium">تخصيص الهوية والشعار</span>
+                  </label>
+
+                  <div className="space-y-1 p-2 rounded-lg border border-border bg-muted/20">
+                    <Label className="text-[11px] font-medium">الحد الأقصى للمستخدمين</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="10"
+                      value={planFormData.features.max_members ?? 10}
+                      onChange={(e) =>
+                        setPlanFormData({
+                          ...planFormData,
+                          features: { ...planFormData.features, max_members: Number(e.target.value) },
+                        })
+                      }
+                      className="text-xs h-7 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditPlanModalOpen(false)}
                   className="text-xs"
                 >
                   إلغاء

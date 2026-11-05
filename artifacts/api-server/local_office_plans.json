@@ -1,0 +1,34 @@
+{
+  "73510d2b-5a1a-4118-9c7a-cacb942052cb": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "law_off_mw3bvf4z": {
+    "plan_id": "plan-test-plan-mw3bvf4z-mw3bvgxx",
+    "ai_quota_limit_override": null
+  },
+  "3eb0398e-8614-45ad-be7b-d32b0adf15a8": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "legacy_mw3bvf4z": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "26b07aa5-2f10-40ee-8e42-952e05db0907": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "law_off_mw3c87rh": {
+    "plan_id": "plan-test-plan-mw3c87rh-mw3c89k3",
+    "ai_quota_limit_override": null
+  },
+  "951da3c7-d197-4bb9-ba99-9adb1be1f9d1": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "legacy_mw3c87rh": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  }
+}

@@ -1,0 +1,53 @@
+[
+  {
+    "id": "plan-basic",
+    "name": "الأساسية",
+    "slug": "basic",
+    "ai_quota_limit": 50,
+    "price": "99 ر.س / شهرياً",
+    "features": {
+      "google_sheets_export": true,
+      "whatsapp_reminders": false,
+      "max_members": 3,
+      "custom_branding": false,
+      "ai_assistant": true,
+      "court_session_analytics": false
+    },
+    "created_at": "2026-01-01T00:00:00.000Z",
+    "updated_at": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "plan-plus",
+    "name": "بلس (Plus)",
+    "slug": "plus",
+    "ai_quota_limit": 150,
+    "price": "249 ر.س / شهرياً",
+    "features": {
+      "google_sheets_export": true,
+      "whatsapp_reminders": true,
+      "max_members": 10,
+      "custom_branding": false,
+      "ai_assistant": true,
+      "court_session_analytics": true
+    },
+    "created_at": "2026-01-01T00:00:00.000Z",
+    "updated_at": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "plan-pro",
+    "name": "برو الاحترافية (Pro)",
+    "slug": "pro",
+    "ai_quota_limit": 500,
+    "price": "499 ر.س / شهرياً",
+    "features": {
+      "google_sheets_export": true,
+      "whatsapp_reminders": true,
+      "max_members": 30,
+      "custom_branding": true,
+      "ai_assistant": true,
+      "court_session_analytics": true
+    },
+    "created_at": "2026-01-01T00:00:00.000Z",
+    "updated_at": "2026-01-01T00:00:00.000Z"
+  }
+]

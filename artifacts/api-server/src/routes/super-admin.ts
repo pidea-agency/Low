@@ -11,6 +11,11 @@ import {
   listUnlinkedMembers,
   linkMemberToAdmin,
   setupFirstSuperAdmin,
+  listSubscriptionPlans,
+  createSubscriptionPlan,
+  updateSubscriptionPlan,
+  deleteSubscriptionPlan,
+  getOfficeFeatures,
 } from "../services/supabase.service";
 import { isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
@@ -45,6 +50,105 @@ router.post("/super-admin/setup-first", async (req, res) => {
 router.use("/super-admin", attachAuthUser, requireSuperAdmin);
 
 /**
+ * GET /api/super-admin/plans
+ * Returns all subscription plans with office counts.
+ */
+router.get("/super-admin/plans", async (_req, res) => {
+  try {
+    const plans = await listSubscriptionPlans();
+    res.json({ plans });
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch subscription plans");
+    res.status(500).json({ error: err.message || "فشل جلب باقات الاشتراك." });
+  }
+});
+
+/**
+ * POST /api/super-admin/plans
+ * Creates a new subscription plan with feature flags and default quota.
+ */
+router.post("/super-admin/plans", async (req, res) => {
+  try {
+    const { name, slug, ai_quota_limit, price, features } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      res.status(400).json({ error: "اسم الباقة مطلوب." });
+      return;
+    }
+    if (!slug || typeof slug !== "string" || !slug.trim()) {
+      res.status(400).json({ error: "معرف الباقة (Slug) مطلوب." });
+      return;
+    }
+
+    const plan = await createSubscriptionPlan({
+      name: name.trim(),
+      slug: slug.trim().toLowerCase(),
+      ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : 100,
+      price: typeof price === "string" ? price.trim() : "",
+      features: typeof features === "object" && features !== null ? features : {},
+    });
+
+    res.status(201).json(plan);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to create subscription plan");
+    res.status(400).json({ error: err.message || "فشل إنشاء باقة الاشتراك." });
+  }
+});
+
+/**
+ * PATCH /api/super-admin/plans/:id
+ * Updates an existing subscription plan.
+ */
+router.patch("/super-admin/plans/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { name, slug, ai_quota_limit, price, features } = req.body;
+
+    const plan = await updateSubscriptionPlan(id, {
+      name,
+      slug,
+      ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : undefined,
+      price,
+      features,
+    });
+
+    res.json(plan);
+  } catch (err: any) {
+    logger.error({ err, id: req.params.id }, "Failed to update subscription plan");
+    res.status(400).json({ error: err.message || "فشل تعديل باقة الاشتراك." });
+  }
+});
+
+/**
+ * DELETE /api/super-admin/plans/:id
+ * Deletes a plan only if no office is currently assigned to it.
+ */
+router.delete("/super-admin/plans/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    await deleteSubscriptionPlan(id);
+    res.status(200).json({ success: true, message: "تم حذف باقة الاشتراك بنجاح." });
+  } catch (err: any) {
+    logger.error({ err, id: req.params.id }, "Failed to delete subscription plan");
+    res.status(400).json({ error: err.message || "فشل حذف باقة الاشتراك." });
+  }
+});
+
+/**
+ * GET /api/super-admin/office-features/:officeId
+ * Resolves the effective plan, features, and quotas for a given office.
+ */
+router.get("/super-admin/office-features/:officeId", async (req, res) => {
+  try {
+    const officeId = String(req.params.officeId);
+    const resolved = await getOfficeFeatures(officeId);
+    res.json(resolved);
+  } catch (err: any) {
+    logger.error({ err, officeId: req.params.officeId }, "Failed to resolve office features");
+    res.status(500).json({ error: err.message || "فشل جلب ميزات المكتب." });
+  }
+});
+
+/**
  * GET /api/super-admin/admins
  * Returns all office admins with their subscription details and member counts.
  */
@@ -77,11 +181,13 @@ router.post("/super-admin/admins", async (req, res) => {
       email,
       display_name,
       phone,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
       ai_quota_limit,
+      ai_quota_limit_override,
     } = req.body;
 
     if (!username || !password || !office_name) {
@@ -102,11 +208,16 @@ router.post("/super-admin/admins", async (req, res) => {
       email,
       display_name,
       phone,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
       ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : undefined,
+      ai_quota_limit_override:
+        ai_quota_limit_override !== undefined && ai_quota_limit_override !== null
+          ? Number(ai_quota_limit_override)
+          : undefined,
     });
 
     res.status(201).json(newAdmin);
@@ -130,11 +241,13 @@ router.patch("/super-admin/admins/:id", async (req, res) => {
       email,
       phone,
       status,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
       ai_quota_limit,
+      ai_quota_limit_override,
       ai_usage_count,
     } = req.body;
 
@@ -153,11 +266,18 @@ router.patch("/super-admin/admins/:id", async (req, res) => {
       email,
       phone,
       status,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
       ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : undefined,
+      ai_quota_limit_override:
+        ai_quota_limit_override !== undefined
+          ? ai_quota_limit_override === null
+            ? null
+            : Number(ai_quota_limit_override)
+          : undefined,
       ai_usage_count: ai_usage_count !== undefined ? Number(ai_usage_count) : undefined,
     });
 

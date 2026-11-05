@@ -9,6 +9,39 @@ import { logger } from "../lib/logger";
 import { encryptSecret, decryptSecret, isEncrypted } from "../lib/encryption";
 import { sendActivationEmail } from "./email.service";
 
+export interface SubscriptionPlanFeatures {
+  google_sheets_export: boolean;
+  whatsapp_reminders: boolean;
+  max_members: number;
+  custom_branding: boolean;
+  ai_assistant: boolean;
+  court_session_analytics?: boolean;
+  [key: string]: boolean | number | string | undefined;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: string;
+  ai_quota_limit: number;
+  price?: string | null;
+  features: SubscriptionPlanFeatures;
+  office_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OfficeFeaturesResolved {
+  officeId: string;
+  planId: string | null;
+  planName: string;
+  planSlug: string;
+  aiQuotaLimit: number;
+  aiQuotaLimitOverride: number | null;
+  isOverride: boolean;
+  features: SubscriptionPlanFeatures;
+}
+
 export interface AppUser {
   id: string;
   username: string;
@@ -22,7 +55,10 @@ export interface AppUser {
   phone?: string | null;
   subscription_end_date?: string | null;
   subscription_notes?: string | null;
-  plan_tier?: "plus" | "pro";
+  plan_tier?: "plus" | "pro" | string;
+  plan_id?: string | null;
+  ai_quota_limit_override?: number | null;
+  plan?: SubscriptionPlan | null;
   billing_cycle?: "monthly" | "annual";
   ai_quota_limit?: number | null;
   ai_usage_count?: number;
@@ -146,6 +182,8 @@ export function loadLocalUsers(): AppUserWithHash[] {
             const isOfficeAdmin = role === "admin";
             const isSuper = role === "super_admin";
             const planTier = u.plan_tier || (isSuper ? "pro" : isOfficeAdmin ? "plus" : undefined);
+            const planId = u.plan_id || (isOfficeAdmin ? (planTier === "pro" ? "plan-pro" : (planTier === "basic" ? "plan-basic" : "plan-plus")) : null);
+            const quotaOverride = u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null;
             const quota = u.ai_quota_limit !== undefined
               ? u.ai_quota_limit
               : (isSuper ? -1 : isOfficeAdmin ? (planTier === "pro" ? 300 : 100) : undefined);
@@ -156,6 +194,8 @@ export function loadLocalUsers(): AppUserWithHash[] {
               admin_id: u.admin_id || null,
               office_name: u.office_name || (isOfficeAdmin ? "مكتب المحاماة الرئيسي" : null),
               plan_tier: isSuper || isOfficeAdmin ? planTier : undefined,
+              plan_id: isOfficeAdmin ? planId : null,
+              ai_quota_limit_override: isOfficeAdmin ? quotaOverride : null,
               billing_cycle: isSuper || isOfficeAdmin ? (u.billing_cycle || "annual") : undefined,
               ai_quota_limit: isSuper || isOfficeAdmin ? quota : undefined,
               ai_usage_count: isSuper || isOfficeAdmin ? (u.ai_usage_count || 0) : undefined,
@@ -273,6 +313,147 @@ export function saveLocalUsers(users: AppUserWithHash[]): void {
   }
 }
 
+// ============================================================================
+// Subscription Plans Local & Fallback Store
+// ============================================================================
+
+export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: "plan-basic",
+    name: "الأساسية",
+    slug: "basic",
+    ai_quota_limit: 50,
+    price: "99 ر.س / شهرياً",
+    features: {
+      google_sheets_export: true,
+      whatsapp_reminders: false,
+      max_members: 3,
+      custom_branding: false,
+      ai_assistant: true,
+      court_session_analytics: false,
+    },
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "plan-plus",
+    name: "بلس (Plus)",
+    slug: "plus",
+    ai_quota_limit: 150,
+    price: "249 ر.س / شهرياً",
+    features: {
+      google_sheets_export: true,
+      whatsapp_reminders: true,
+      max_members: 10,
+      custom_branding: false,
+      ai_assistant: true,
+      court_session_analytics: true,
+    },
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "plan-pro",
+    name: "برو الاحترافية (Pro)",
+    slug: "pro",
+    ai_quota_limit: 500,
+    price: "499 ر.س / شهرياً",
+    features: {
+      google_sheets_export: true,
+      whatsapp_reminders: true,
+      max_members: 30,
+      custom_branding: true,
+      ai_assistant: true,
+      court_session_analytics: true,
+    },
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+];
+
+const LOCAL_PLANS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_plans.json");
+const ALT_LOCAL_PLANS_FILE = resolve(process.cwd(), "local_plans.json");
+const TMP_LOCAL_PLANS_FILE = "/tmp/local_plans.json";
+
+let _localPlansCache: SubscriptionPlan[] | null = null;
+
+export function loadLocalPlans(): SubscriptionPlan[] {
+  if (_localPlansCache) {
+    return _localPlansCache;
+  }
+  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      if (existsSync(p)) {
+        const raw = readFileSync(p, "utf-8");
+        const list = JSON.parse(raw);
+        if (Array.isArray(list) && list.length > 0) {
+          _localPlansCache = list;
+          return list;
+        }
+      }
+    } catch {}
+  }
+
+  _localPlansCache = [...DEFAULT_SUBSCRIPTION_PLANS];
+  saveLocalPlans(_localPlansCache);
+  return _localPlansCache;
+}
+
+export function saveLocalPlans(plans: SubscriptionPlan[]): void {
+  _localPlansCache = plans;
+  const content = JSON.stringify(plans, null, 2);
+  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      writeFileSync(p, content, "utf-8");
+    } catch {}
+  }
+}
+
+interface OfficePlanOverride {
+  plan_id: string | null;
+  ai_quota_limit_override: number | null;
+}
+
+const LOCAL_OFFICE_PLANS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_office_plans.json");
+const ALT_LOCAL_OFFICE_PLANS_FILE = resolve(process.cwd(), "local_office_plans.json");
+const TMP_LOCAL_OFFICE_PLANS_FILE = "/tmp/local_office_plans.json";
+
+let _localOfficePlansCache: Record<string, OfficePlanOverride> | null = null;
+
+export function loadLocalOfficePlans(): Record<string, OfficePlanOverride> {
+  if (_localOfficePlansCache) {
+    return _localOfficePlansCache;
+  }
+  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      if (existsSync(p)) {
+        const raw = readFileSync(p, "utf-8");
+        const data = JSON.parse(raw);
+        if (typeof data === "object" && data !== null) {
+          _localOfficePlansCache = data;
+          return data;
+        }
+      }
+    } catch {}
+  }
+  _localOfficePlansCache = {};
+  return _localOfficePlansCache;
+}
+
+export function saveLocalOfficePlans(data: Record<string, OfficePlanOverride>): void {
+  _localOfficePlansCache = data;
+  const content = JSON.stringify(data, null, 2);
+  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      writeFileSync(p, content, "utf-8");
+    } catch {}
+  }
+}
+
 export function getSupabaseClient(): SupabaseClient | null {
   if (!isSupabaseConfigured()) {
     return null;
@@ -310,16 +491,15 @@ export async function ensureDefaultAdmin(): Promise<void> {
 
   try {
     const tableName = env.supabaseTableName;
-    const { count, error } = await client
+
+    // 1. Ensure default super admin (123456) exists in Supabase
+    const { data: existingSuperAdmin } = await client
       .from(tableName)
-      .select("*", { count: "exact", head: true });
+      .select("id")
+      .eq("username", "123456")
+      .limit(1);
 
-    if (error) {
-      logger.warn({ error }, `Error checking ${tableName} in Supabase (table might not exist yet)`);
-      return;
-    }
-
-    if (count === 0) {
+    if (!existingSuperAdmin || existingSuperAdmin.length === 0) {
       const defaultUsername = "123456";
       const defaultPassword = "123456";
       const password_hash = await bcrypt.hash(defaultPassword, 10);
@@ -342,19 +522,21 @@ export async function ensureDefaultAdmin(): Promise<void> {
       }
     }
 
-    // Ensure default office admin (admin1) exists in Supabase
+    // 2. Ensure default office admin (admin1) exists in Supabase
     const { data: existingAdmin1 } = await client
       .from(tableName)
       .select("id")
       .eq("username", "admin1")
       .limit(1);
 
+    let admin1Id: string | null = existingAdmin1?.[0]?.id || null;
+
     if (!existingAdmin1 || existingAdmin1.length === 0) {
       const officeAdminHash = await bcrypt.hash("admin123", 10);
       const oneYearFromNow = new Date();
       oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
-      const { error: admin1Err } = await client.from(tableName).insert([
+      const { data: newAdmin1, error: admin1Err } = await client.from(tableName).insert([
         {
           username: "admin1",
           email: "office.admin@law.local",
@@ -370,12 +552,38 @@ export async function ensureDefaultAdmin(): Promise<void> {
           ai_usage_count: 0,
           password_hash: officeAdminHash,
         },
-      ]);
+      ]).select("id").single();
 
       if (admin1Err) {
         logger.warn({ admin1Err }, "Failed to auto-seed admin1 in Supabase (may already exist or schema pending)");
       } else {
+        admin1Id = newAdmin1?.id || null;
         logger.info("Auto-seeded default office admin (admin1) in Supabase");
+      }
+    }
+
+    // 3. Ensure default lawyer staff (12345) exists in Supabase linked to admin1
+    const { data: existingStaff } = await client
+      .from(tableName)
+      .select("id")
+      .eq("username", "12345")
+      .limit(1);
+
+    if (!existingStaff || existingStaff.length === 0) {
+      const staffHash = await bcrypt.hash("12345", 10);
+      const { error: staffErr } = await client.from(tableName).insert([
+        {
+          username: "12345",
+          email: "lawyer.default@law.local",
+          role: "staff",
+          display_name: "محامي المكتب الافتراضي",
+          status: "active",
+          admin_id: admin1Id,
+          password_hash: staffHash,
+        },
+      ]);
+      if (!staffErr) {
+        logger.info("Auto-seeded default lawyer staff (12345) in Supabase");
       }
     }
   } catch (err) {
@@ -652,11 +860,19 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
 
   try {
     const tableName = env.supabaseTableName;
-    const { data, error } = await client
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
+
+    let query = client
       .from(tableName)
-      .select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at")
-      .or(`id.eq.${identifier},username.ilike.${clean}`)
-      .limit(1);
+      .select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at");
+
+    if (isUuid) {
+      query = query.or(`id.eq.${identifier},username.ilike.${clean}`);
+    } else {
+      query = query.ilike("username", clean);
+    }
+
+    const { data, error } = await query.limit(1);
 
     if (error) {
       logger.error({ error, identifier }, "Supabase query error in findUserByIdOrUsername");
@@ -1038,6 +1254,53 @@ export async function checkHasActivationColumns(client: any): Promise<boolean> {
   }
 }
 
+let hasPlanColumnsCache: boolean | null = null;
+let lastPlanCheck = 0;
+
+export async function checkHasPlanColumns(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasPlanColumnsCache !== null && now - lastPlanCheck < 60_000) {
+    return hasPlanColumnsCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client.from(tableName).select("*").limit(1);
+    if (!error && Array.isArray(data) && data.length > 0) {
+      hasPlanColumnsCache = "plan_id" in data[0];
+      lastPlanCheck = now;
+      return hasPlanColumnsCache;
+    }
+    const testRes = await client.from(tableName).select("plan_id").limit(1);
+    hasPlanColumnsCache = !testRes.error;
+    lastPlanCheck = now;
+    return hasPlanColumnsCache;
+  } catch {
+    hasPlanColumnsCache = false;
+    lastPlanCheck = now;
+    return false;
+  }
+}
+
+let hasSubscriptionPlansTableCache: boolean | null = null;
+let lastSubscriptionPlansTableCheck = 0;
+
+export async function checkHasSubscriptionPlansTable(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasSubscriptionPlansTableCache !== null && now - lastSubscriptionPlansTableCheck < 60_000) {
+    return hasSubscriptionPlansTableCache;
+  }
+  try {
+    const testRes = await client.from("subscription_plans").select("id").limit(1);
+    hasSubscriptionPlansTableCache = !testRes.error;
+    lastSubscriptionPlansTableCheck = now;
+    return hasSubscriptionPlansTableCache;
+  } catch {
+    hasSubscriptionPlansTableCache = false;
+    lastSubscriptionPlansTableCheck = now;
+    return false;
+  }
+}
+
 export interface FallbackActivationRecord {
   userId: string;
   tokenHash: string;
@@ -1088,6 +1351,8 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier,
+      plan_id: u.plan_id || null,
+      ai_quota_limit_override: u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null,
       billing_cycle: u.billing_cycle,
       ai_quota_limit: u.ai_quota_limit,
       ai_usage_count: u.ai_usage_count || 0,
@@ -1100,7 +1365,8 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
 
   const tableName = env.supabaseTableName;
   const hasPhone = await checkHasPhoneColumn(client);
-  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
+  const hasPlan = await checkHasPlanColumns(client);
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
   const { data, error } = await client
     .from(tableName)
     .select(selectCols)
@@ -1122,6 +1388,8 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier,
+      plan_id: u.plan_id || null,
+      ai_quota_limit_override: u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null,
       billing_cycle: u.billing_cycle,
       ai_quota_limit: u.ai_quota_limit,
       ai_usage_count: u.ai_usage_count || 0,
@@ -1145,6 +1413,8 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
     subscription_end_date: u.subscription_end_date || null,
     subscription_notes: u.subscription_notes || null,
     plan_tier: u.plan_tier,
+    plan_id: u.plan_id || null,
+    ai_quota_limit_override: u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null,
     billing_cycle: u.billing_cycle,
     ai_quota_limit: u.ai_quota_limit,
     ai_usage_count: u.ai_usage_count || 0,
@@ -1156,19 +1426,372 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
 }
 
 // ============================================================================
+// Subscription Plans Operations (Super Admin)
+// ============================================================================
+
+export async function listSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+  const client = getSupabaseClient();
+  let plans: SubscriptionPlan[] = [];
+
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        const { data, error } = await client
+          .from("subscription_plans")
+          .select("*")
+          .order("ai_quota_limit", { ascending: true });
+        if (!error && Array.isArray(data) && data.length > 0) {
+          plans = data.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            slug: row.slug,
+            ai_quota_limit: Number(row.ai_quota_limit),
+            price: row.price || "",
+            features: typeof row.features === "object" && row.features !== null ? row.features : {},
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+          }));
+        } else if (!error && Array.isArray(data) && data.length === 0) {
+          // Table exists but is empty, seed defaults
+          for (const dp of DEFAULT_SUBSCRIPTION_PLANS) {
+            try {
+              await client.from("subscription_plans").insert([{
+                id: dp.id,
+                name: dp.name,
+                slug: dp.slug,
+                ai_quota_limit: dp.ai_quota_limit,
+                price: dp.price,
+                features: dp.features,
+              }]);
+            } catch {}
+          }
+          plans = [...DEFAULT_SUBSCRIPTION_PLANS];
+        } else {
+          plans = loadLocalPlans();
+        }
+      } else {
+        plans = loadLocalPlans();
+      }
+    } catch {
+      plans = loadLocalPlans();
+    }
+  } else {
+    plans = loadLocalPlans();
+  }
+
+  // Calculate office_count for each plan
+  try {
+    const allUsers = await listSupabaseUsers();
+    const officeAdmins = allUsers.filter((u) => u.role === "admin");
+    return plans.map((p) => {
+      const officeCount = officeAdmins.filter(
+        (a) => a.plan_id === p.id || a.plan_tier === p.slug,
+      ).length;
+      return {
+        ...p,
+        office_count: officeCount,
+      };
+    });
+  } catch {
+    return plans.map((p) => ({ ...p, office_count: 0 }));
+  }
+}
+
+export async function getSubscriptionPlanById(id: string): Promise<SubscriptionPlan | null> {
+  const plans = await listSubscriptionPlans();
+  return plans.find((p) => p.id === id || p.slug === id) || null;
+}
+
+export async function createSubscriptionPlan(input: {
+  name: string;
+  slug: string;
+  ai_quota_limit: number;
+  price?: string;
+  features?: SubscriptionPlanFeatures;
+}): Promise<SubscriptionPlan> {
+  const name = input.name.trim();
+  const slug = input.slug.trim().toLowerCase();
+  if (!name) throw new Error("اسم الباقة مطلوب.");
+  if (!slug) throw new Error("معرف الباقة (Slug) مطلوب.");
+
+  const existingPlans = await listSubscriptionPlans();
+  if (existingPlans.some((p) => p.slug === slug)) {
+    throw new Error(`معرف الباقة (Slug) "${slug}" مسجل مسبقاً. يرجى اختيار معرف آخر.`);
+  }
+
+  const now = new Date().toISOString();
+  const id = `plan-${slug}-${Date.now().toString(36)}`;
+  const quotaLimit = Number(input.ai_quota_limit) >= 0 ? Number(input.ai_quota_limit) : 100;
+  const price = input.price?.trim() || "";
+  const features: SubscriptionPlanFeatures = {
+    google_sheets_export: Boolean(input.features?.google_sheets_export ?? true),
+    whatsapp_reminders: Boolean(input.features?.whatsapp_reminders ?? false),
+    max_members: Number(input.features?.max_members) || 5,
+    custom_branding: Boolean(input.features?.custom_branding ?? false),
+    ai_assistant: Boolean(input.features?.ai_assistant ?? true),
+    court_session_analytics: Boolean(input.features?.court_session_analytics ?? false),
+    ...(input.features || {}),
+  };
+
+  const newPlan: SubscriptionPlan = {
+    id,
+    name,
+    slug,
+    ai_quota_limit: quotaLimit,
+    price,
+    features,
+    office_count: 0,
+    created_at: now,
+    updated_at: now,
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        const { data, error } = await client
+          .from("subscription_plans")
+          .insert([{
+            id,
+            name,
+            slug,
+            ai_quota_limit: quotaLimit,
+            price,
+            features,
+            created_at: now,
+            updated_at: now,
+          }])
+          .select()
+          .single();
+        if (!error && data) {
+          const local = loadLocalPlans();
+          saveLocalPlans([...local, newPlan]);
+          return {
+            ...newPlan,
+            id: data.id || id,
+          };
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase insert into subscription_plans failed, using local");
+    }
+  }
+
+  const local = loadLocalPlans();
+  saveLocalPlans([...local, newPlan]);
+  return newPlan;
+}
+
+export async function updateSubscriptionPlan(
+  id: string,
+  input: {
+    name?: string;
+    slug?: string;
+    ai_quota_limit?: number;
+    price?: string;
+    features?: SubscriptionPlanFeatures;
+  },
+): Promise<SubscriptionPlan> {
+  const existingPlans = await listSubscriptionPlans();
+  const plan = existingPlans.find((p) => p.id === id);
+  if (!plan) {
+    throw new Error("الباقة غير موجودة.");
+  }
+
+  if (input.slug && input.slug.trim().toLowerCase() !== plan.slug) {
+    const newSlug = input.slug.trim().toLowerCase();
+    if (existingPlans.some((p) => p.slug === newSlug && p.id !== id)) {
+      throw new Error(`معرف الباقة "${newSlug}" مسجل مسبقاً لباقة أخرى.`);
+    }
+    plan.slug = newSlug;
+  }
+
+  if (input.name !== undefined && input.name.trim()) {
+    plan.name = input.name.trim();
+  }
+  if (input.ai_quota_limit !== undefined) {
+    plan.ai_quota_limit = Number(input.ai_quota_limit);
+  }
+  if (input.price !== undefined) {
+    plan.price = input.price.trim();
+  }
+  if (input.features !== undefined && typeof input.features === "object") {
+    plan.features = {
+      ...plan.features,
+      ...input.features,
+    };
+  }
+  plan.updated_at = new Date().toISOString();
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        await client
+          .from("subscription_plans")
+          .update({
+            name: plan.name,
+            slug: plan.slug,
+            ai_quota_limit: plan.ai_quota_limit,
+            price: plan.price,
+            features: plan.features,
+            updated_at: plan.updated_at,
+          })
+          .eq("id", id);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase update subscription_plans failed, updating local");
+    }
+  }
+
+  const local = loadLocalPlans();
+  const idx = local.findIndex((p) => p.id === id);
+  if (idx !== -1) {
+    local[idx] = { ...plan };
+  } else {
+    local.push(plan);
+  }
+  saveLocalPlans(local);
+  return plan;
+}
+
+export async function deleteSubscriptionPlan(id: string): Promise<void> {
+  const existingPlans = await listSubscriptionPlans();
+  const plan = existingPlans.find((p) => p.id === id);
+  if (!plan) {
+    throw new Error("الباقة غير موجودة.");
+  }
+
+  const allAdmins = await listSupabaseAdmins();
+  const assignedOffices = allAdmins.filter(
+    (u) => u.plan_id === id || (u.plan && u.plan.id === id) || u.plan_tier === plan.slug,
+  );
+
+  if (assignedOffices.length > 0) {
+    throw new Error(
+      `لا يمكن حذف باقة "${plan.name}" لوجود ${assignedOffices.length} مكتب مشترك بها حالياً. يرجى نقل المكاتب إلى باقة أخرى أولاً.`,
+    );
+  }
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        await client.from("subscription_plans").delete().eq("id", id);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase delete subscription_plans failed");
+    }
+  }
+
+  const local = loadLocalPlans();
+  const filtered = local.filter((p) => p.id !== id);
+  saveLocalPlans(filtered);
+}
+
+export async function getOfficeFeatures(officeId: string): Promise<OfficeFeaturesResolved> {
+  const user = await findUserByIdOrUsername(officeId);
+  let admin: AppUser | null = null;
+
+  if (user) {
+    if (user.role === "admin") {
+      admin = user;
+    } else if (user.role === "staff" && user.admin_id) {
+      admin = await findUserByIdOrUsername(user.admin_id);
+    }
+  }
+
+  if (!admin) {
+    const defaultPlan = DEFAULT_SUBSCRIPTION_PLANS[1]; // Plus plan default
+    return {
+      officeId,
+      planId: defaultPlan.id,
+      planName: defaultPlan.name,
+      planSlug: defaultPlan.slug,
+      aiQuotaLimit: defaultPlan.ai_quota_limit,
+      aiQuotaLimitOverride: null,
+      isOverride: false,
+      features: { ...defaultPlan.features },
+    };
+  }
+
+  const officePlans = loadLocalOfficePlans();
+  const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
+  const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
+  const resolvedOverride =
+    admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== undefined
+      ? admin.ai_quota_limit_override
+      : (fallbackAssignment?.ai_quota_limit_override ?? null);
+
+  const plans = await listSubscriptionPlans();
+  let plan = plans.find((p) => p.id === resolvedPlanId) || null;
+  if (!plan && admin.plan_tier) {
+    plan = plans.find((p) => p.slug === admin.plan_tier || p.id === `plan-${admin.plan_tier}`) || null;
+  }
+  if (!plan) {
+    plan = plans.find((p) => p.slug === "plus") || DEFAULT_SUBSCRIPTION_PLANS[1];
+  }
+
+  const isOverride = resolvedOverride !== null && resolvedOverride !== undefined;
+  const effectiveQuota = isOverride
+    ? Number(resolvedOverride)
+    : (admin.ai_quota_limit ?? plan.ai_quota_limit);
+
+  return {
+    officeId: admin.id,
+    planId: plan.id,
+    planName: plan.name,
+    planSlug: plan.slug,
+    aiQuotaLimit: effectiveQuota,
+    aiQuotaLimitOverride: isOverride ? Number(resolvedOverride) : null,
+    isOverride,
+    features: {
+      ...plan.features,
+    },
+  };
+}
+
+// ============================================================================
 // Super Admin Operations (Managing Office Admins & Subscriptions)
 // ============================================================================
 
 export async function listSupabaseAdmins(): Promise<AppUser[]> {
-  const allUsers = await listSupabaseUsers();
+  const [allUsers, plans] = await Promise.all([
+    listSupabaseUsers(),
+    listSubscriptionPlans(),
+  ]);
   const officeAdmins = allUsers.filter((u) => u.role === "admin");
   const staffUsers = allUsers.filter((u) => u.role === "staff");
+  const officePlans = loadLocalOfficePlans();
 
-  // Calculate member_count per office admin
   return officeAdmins.map((admin) => {
     const memberCount = staffUsers.filter((s) => s.admin_id === admin.id).length;
+    const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
+    const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
+    const resolvedOverride =
+      admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== undefined
+        ? admin.ai_quota_limit_override
+        : (fallbackAssignment?.ai_quota_limit_override ?? null);
+
+    let plan = plans.find((p) => p.id === resolvedPlanId) || null;
+    if (!plan && admin.plan_tier) {
+      plan = plans.find((p) => p.slug === admin.plan_tier || p.id === `plan-${admin.plan_tier}`) || null;
+    }
+    const isOverride = resolvedOverride !== null && resolvedOverride !== undefined;
+    const effectiveQuota = isOverride
+      ? Number(resolvedOverride)
+      : (admin.ai_quota_limit ?? (plan?.ai_quota_limit ?? 100));
+
     return {
       ...admin,
+      plan_id: resolvedPlanId || plan?.id || null,
+      ai_quota_limit_override: resolvedOverride,
+      ai_quota_limit: effectiveQuota,
+      plan: plan,
       member_count: memberCount,
     };
   });
@@ -1181,11 +1804,13 @@ export async function createSupabaseAdmin(input: {
   email?: string;
   display_name?: string;
   phone?: string;
-  plan_tier?: "plus" | "pro";
+  plan_id?: string;
+  plan_tier?: string;
   billing_cycle?: "monthly" | "annual";
   subscription_end_date?: string;
   subscription_notes?: string;
   ai_quota_limit?: number;
+  ai_quota_limit_override?: number | null;
 }): Promise<AppUser> {
   const username = input.username.trim().toLowerCase();
   const officeName = input.office_name.trim();
@@ -1194,10 +1819,42 @@ export async function createSupabaseAdmin(input: {
     throw new Error("اسم مكتب المحاماة مطلوب.");
   }
 
-  const planTier = input.plan_tier || "plus";
-  const quota = input.ai_quota_limit !== undefined ? Number(input.ai_quota_limit) : (planTier === "pro" ? 300 : 100);
+  const plans = await listSubscriptionPlans();
+  let selectedPlan: SubscriptionPlan | null = null;
 
-  return createSupabaseUser({
+  if (input.plan_id) {
+    selectedPlan = plans.find((p) => p.id === input.plan_id || p.slug === input.plan_id) || null;
+    if (!selectedPlan) {
+      throw new Error("باقة الاشتراك المحددة غير موجودة.");
+    }
+  } else if (input.plan_tier) {
+    selectedPlan = plans.find((p) => p.slug === input.plan_tier || p.id === `plan-${input.plan_tier}`) || null;
+  }
+
+  if (!selectedPlan) {
+    selectedPlan = plans.find((p) => p.slug === "plus") || DEFAULT_SUBSCRIPTION_PLANS[1];
+  }
+
+  const planId = selectedPlan.id;
+  // Satisfy DB check constraint app_users_plan_tier_check (plus or pro)
+  const safePlanTier = selectedPlan.slug === "pro" ? "pro" : "plus";
+
+  let quota: number;
+  let quotaOverride: number | null = null;
+
+  if (input.ai_quota_limit_override !== undefined && input.ai_quota_limit_override !== null) {
+    quotaOverride = Number(input.ai_quota_limit_override);
+    quota = quotaOverride;
+  } else if (input.ai_quota_limit !== undefined && Number(input.ai_quota_limit) !== selectedPlan.ai_quota_limit) {
+    // Legacy override
+    quotaOverride = Number(input.ai_quota_limit);
+    quota = quotaOverride;
+  } else {
+    quota = selectedPlan.ai_quota_limit;
+    quotaOverride = null;
+  }
+
+  const createdUser = await createSupabaseUser({
     username,
     password: input.password,
     email: input.email,
@@ -1206,12 +1863,33 @@ export async function createSupabaseAdmin(input: {
     office_name: officeName,
     status: "active",
     phone: input.phone,
-    plan_tier: planTier,
+    plan_tier: safePlanTier,
+    plan_id: planId,
     billing_cycle: input.billing_cycle || "annual",
     subscription_end_date: input.subscription_end_date,
     subscription_notes: input.subscription_notes,
     ai_quota_limit: quota,
+    ai_quota_limit_override: quotaOverride,
   });
+
+  const officePlans = loadLocalOfficePlans();
+  officePlans[createdUser.id] = {
+    plan_id: planId,
+    ai_quota_limit_override: quotaOverride,
+  };
+  officePlans[username] = {
+    plan_id: planId,
+    ai_quota_limit_override: quotaOverride,
+  };
+  saveLocalOfficePlans(officePlans);
+
+  return {
+    ...createdUser,
+    plan_id: planId,
+    ai_quota_limit: quota,
+    ai_quota_limit_override: quotaOverride,
+    plan: selectedPlan,
+  };
 }
 
 export async function updateSupabaseAdmin(
@@ -1223,15 +1901,105 @@ export async function updateSupabaseAdmin(
     email?: string;
     phone?: string | null;
     status?: "active" | "suspended";
-    plan_tier?: "plus" | "pro";
+    plan_id?: string;
+    plan_tier?: string;
     billing_cycle?: "monthly" | "annual";
     subscription_end_date?: string | null;
     subscription_notes?: string | null;
     ai_quota_limit?: number;
+    ai_quota_limit_override?: number | null;
     ai_usage_count?: number;
   },
 ): Promise<AppUser> {
-  return updateSupabaseUser(id, input as any);
+  const plans = await listSubscriptionPlans();
+  const officePlans = loadLocalOfficePlans();
+  const existingAssignment = officePlans[id];
+  let planId = input.plan_id ?? existingAssignment?.plan_id;
+  let planTier = input.plan_tier;
+  let quota = input.ai_quota_limit;
+  let quotaOverride = input.ai_quota_limit_override !== undefined ? input.ai_quota_limit_override : existingAssignment?.ai_quota_limit_override;
+  let selectedPlan: SubscriptionPlan | null = null;
+
+  if (input.plan_id) {
+    selectedPlan = plans.find((p) => p.id === input.plan_id || p.slug === input.plan_id) || null;
+    if (!selectedPlan) {
+      throw new Error("باقة الاشتراك المحددة غير موجودة.");
+    }
+    planId = selectedPlan.id;
+    planTier = selectedPlan.slug === "pro" ? "pro" : "plus";
+
+    if (input.ai_quota_limit_override !== undefined) {
+      if (input.ai_quota_limit_override === null) {
+        quotaOverride = null;
+        quota = selectedPlan.ai_quota_limit;
+      } else {
+        quotaOverride = Number(input.ai_quota_limit_override);
+        quota = quotaOverride;
+      }
+    } else if (input.ai_quota_limit !== undefined) {
+      if (Number(input.ai_quota_limit) === selectedPlan.ai_quota_limit) {
+        quotaOverride = null;
+        quota = selectedPlan.ai_quota_limit;
+      } else {
+        quotaOverride = Number(input.ai_quota_limit);
+        quota = quotaOverride;
+      }
+    } else {
+      const existingUser = await findUserByIdOrUsername(id);
+      if (existingUser && !existingUser.ai_quota_limit_override && existingAssignment?.ai_quota_limit_override === null) {
+        quota = selectedPlan.ai_quota_limit;
+      }
+    }
+  } else if (input.plan_tier) {
+    selectedPlan = plans.find((p) => p.slug === input.plan_tier || p.id === `plan-${input.plan_tier}`) || null;
+    if (selectedPlan) {
+      planId = selectedPlan.id;
+      planTier = selectedPlan.slug === "pro" ? "pro" : "plus";
+      if (quota === undefined && quotaOverride === undefined) {
+        quota = selectedPlan.ai_quota_limit;
+      }
+    } else {
+      planTier = input.plan_tier === "pro" ? "pro" : "plus";
+    }
+  } else if (input.ai_quota_limit_override !== undefined) {
+    const currentPlanId = planId || existingAssignment?.plan_id;
+    selectedPlan = plans.find((p) => p.id === currentPlanId) || DEFAULT_SUBSCRIPTION_PLANS[1];
+    if (input.ai_quota_limit_override === null) {
+      quotaOverride = null;
+      quota = selectedPlan.ai_quota_limit;
+    } else {
+      quotaOverride = Number(input.ai_quota_limit_override);
+      quota = quotaOverride;
+    }
+  }
+
+  const updatePayload: any = {
+    ...input,
+  };
+  if (planId !== undefined) updatePayload.plan_id = planId;
+  if (planTier !== undefined) updatePayload.plan_tier = planTier;
+  if (quota !== undefined) updatePayload.ai_quota_limit = quota;
+  if (quotaOverride !== undefined) updatePayload.ai_quota_limit_override = quotaOverride;
+
+  const updatedUser = await updateSupabaseUser(id, updatePayload);
+
+  officePlans[id] = {
+    plan_id: planId ?? officePlans[id]?.plan_id ?? null,
+    ai_quota_limit_override: quotaOverride !== undefined ? quotaOverride : (officePlans[id]?.ai_quota_limit_override ?? null),
+  };
+  saveLocalOfficePlans(officePlans);
+
+  if (!selectedPlan) {
+    selectedPlan = plans.find((p) => p.id === (planId || officePlans[id]?.plan_id)) || null;
+  }
+
+  return {
+    ...updatedUser,
+    plan_id: planId || officePlans[id]?.plan_id || null,
+    ai_quota_limit: quota ?? updatedUser.ai_quota_limit,
+    ai_quota_limit_override: quotaOverride !== undefined ? quotaOverride : (officePlans[id]?.ai_quota_limit_override ?? null),
+    plan: selectedPlan,
+  };
 }
 
 export async function toggleAdminStatus(
@@ -1772,7 +2540,7 @@ export interface OfficeSubscriptionOverview {
     id: string;
     office_name: string;
     display_name: string;
-    plan_tier: "plus" | "pro";
+    plan_tier: "plus" | "pro" | string;
     billing_cycle: "monthly" | "annual";
     subscription_end_date: string | null;
     status: "active" | "suspended";
@@ -2087,7 +2855,9 @@ export async function createSupabaseUser(input: {
   phone?: string | null;
   subscription_end_date?: string;
   subscription_notes?: string;
-  plan_tier?: "plus" | "pro";
+  plan_tier?: "plus" | "pro" | string;
+  plan_id?: string | null;
+  ai_quota_limit_override?: number | null;
   billing_cycle?: "monthly" | "annual";
   ai_quota_limit?: number | null;
   activation_token_hash?: string | null;
@@ -2167,6 +2937,8 @@ export async function createSupabaseUser(input: {
       subscription_end_date,
       subscription_notes,
       plan_tier,
+      plan_id: isOfficeAdmin ? (input.plan_id || null) : null,
+      ai_quota_limit_override: isOfficeAdmin ? (input.ai_quota_limit_override !== undefined ? input.ai_quota_limit_override : null) : null,
       billing_cycle,
       ai_quota_limit,
       ai_usage_count,
@@ -2196,6 +2968,8 @@ export async function createSupabaseUser(input: {
       subscription_end_date: newUser.subscription_end_date,
       subscription_notes: newUser.subscription_notes,
       plan_tier: newUser.plan_tier,
+      plan_id: newUser.plan_id,
+      ai_quota_limit_override: newUser.ai_quota_limit_override,
       billing_cycle: newUser.billing_cycle,
       ai_quota_limit: newUser.ai_quota_limit,
       ai_usage_count: newUser.ai_usage_count,
@@ -2222,6 +2996,7 @@ export async function createSupabaseUser(input: {
 
   const hasPhone = await checkHasPhoneColumn(client);
   const hasActivation = await checkHasActivationColumns(client);
+  const hasPlan = await checkHasPlanColumns(client);
   const newUserData: Record<string, any> = {
     username,
     email: input.email?.trim() || null,
@@ -2252,8 +3027,12 @@ export async function createSupabaseUser(input: {
       newUserData.activation_token_expires_at = input.activation_token_expires_at;
     }
   }
+  if (hasPlan) {
+    if (input.plan_id !== undefined) newUserData.plan_id = input.plan_id || null;
+    if (input.ai_quota_limit_override !== undefined) newUserData.ai_quota_limit_override = input.ai_quota_limit_override;
+  }
 
-  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
 
   let { data, error } = await client
     .from(tableName)
@@ -2303,6 +3082,8 @@ export async function createSupabaseUser(input: {
     subscription_end_date: row.subscription_end_date || null,
     subscription_notes: row.subscription_notes || null,
     plan_tier: row.plan_tier,
+    plan_id: row.plan_id || input.plan_id || (input.plan_tier ? (input.plan_tier === "pro" ? "plan-pro" : input.plan_tier === "basic" ? "plan-basic" : "plan-plus") : null),
+    ai_quota_limit_override: row.ai_quota_limit_override !== undefined ? row.ai_quota_limit_override : (input.ai_quota_limit_override !== undefined ? input.ai_quota_limit_override : null),
     billing_cycle: row.billing_cycle,
     ai_quota_limit: row.ai_quota_limit,
     ai_usage_count: row.ai_usage_count ?? 0,
@@ -2398,7 +3179,9 @@ export async function updateSupabaseUser(
     phone?: string | null;
     subscription_end_date?: string | null;
     subscription_notes?: string | null;
-    plan_tier?: "plus" | "pro";
+    plan_tier?: "plus" | "pro" | string;
+    plan_id?: string | null;
+    ai_quota_limit_override?: number | null;
     billing_cycle?: "monthly" | "annual";
     ai_quota_limit?: number | null;
     ai_usage_count?: number;
@@ -2462,6 +3245,8 @@ export async function updateSupabaseUser(
     if (input.subscription_end_date !== undefined) user.subscription_end_date = input.subscription_end_date;
     if (input.subscription_notes !== undefined) user.subscription_notes = input.subscription_notes;
     if (input.plan_tier !== undefined) user.plan_tier = input.plan_tier;
+    if (input.plan_id !== undefined) user.plan_id = input.plan_id;
+    if (input.ai_quota_limit_override !== undefined) user.ai_quota_limit_override = input.ai_quota_limit_override;
     if (input.billing_cycle !== undefined) user.billing_cycle = input.billing_cycle;
     if (input.ai_quota_limit !== undefined) user.ai_quota_limit = input.ai_quota_limit;
     if (input.ai_usage_count !== undefined) user.ai_usage_count = input.ai_usage_count;
@@ -2500,6 +3285,8 @@ export async function updateSupabaseUser(
       subscription_end_date: user.subscription_end_date,
       subscription_notes: user.subscription_notes,
       plan_tier: user.plan_tier,
+      plan_id: user.plan_id || null,
+      ai_quota_limit_override: user.ai_quota_limit_override !== undefined ? user.ai_quota_limit_override : null,
       billing_cycle: user.billing_cycle,
       ai_quota_limit: user.ai_quota_limit,
       ai_usage_count: user.ai_usage_count,
@@ -2554,6 +3341,11 @@ export async function updateSupabaseUser(
       updates.activation_token_expires_at = input.activation_token_expires_at;
     }
   }
+  const hasPlan = await checkHasPlanColumns(client);
+  if (hasPlan) {
+    if (input.plan_id !== undefined) updates.plan_id = input.plan_id;
+    if (input.ai_quota_limit_override !== undefined) updates.ai_quota_limit_override = input.ai_quota_limit_override;
+  }
   if (input.status !== undefined) updates.status = input.status;
   if (input.subscription_end_date !== undefined) updates.subscription_end_date = input.subscription_end_date;
   if (input.subscription_notes !== undefined) updates.subscription_notes = input.subscription_notes?.trim() || null;
@@ -2591,7 +3383,7 @@ export async function updateSupabaseUser(
 
   invalidateUserGoogleCache(id);
 
-  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
 
   const { data, error } = await client
     .from(tableName)
@@ -2624,6 +3416,8 @@ export async function updateSupabaseUser(
     subscription_end_date: row.subscription_end_date || null,
     subscription_notes: row.subscription_notes || null,
     plan_tier: row.plan_tier,
+    plan_id: row.plan_id || input.plan_id || (input.plan_tier ? (input.plan_tier === "pro" ? "plan-pro" : input.plan_tier === "basic" ? "plan-basic" : "plan-plus") : null),
+    ai_quota_limit_override: row.ai_quota_limit_override !== undefined ? row.ai_quota_limit_override : (input.ai_quota_limit_override !== undefined ? input.ai_quota_limit_override : null),
     billing_cycle: row.billing_cycle,
     ai_quota_limit: row.ai_quota_limit,
     ai_usage_count: row.ai_usage_count ?? 0,
