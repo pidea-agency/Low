@@ -30,5 +30,77 @@
   "legacy_mw3c87rh": {
     "plan_id": "plan-pro",
     "ai_quota_limit_override": null
+  },
+  "0cd7d251-aa66-46f2-95f9-7e366324bdc0": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "law_off_mw3cmem1": {
+    "plan_id": "plan-test-plan-mw3cmem1-mw3cmjga",
+    "ai_quota_limit_override": null
+  },
+  "0bf611b4-ef0a-4864-9569-722050dd6967": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "legacy_mw3cmem1": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "9548d9e7-2ad3-45fc-9150-2f96456c83af": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "law_off_mw3cmyzo": {
+    "plan_id": "plan-test-plan-mw3cmyzo-mw3cn05o",
+    "ai_quota_limit_override": null
+  },
+  "7c5f1091-7e75-4137-86b8-43d81deb9fec": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "legacy_mw3cmyzo": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "1b964f3a-d03b-40c0-9e7e-0afd2bad7c99": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "audit_office_mw3co84a": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "e1e40579-efe7-469c-887b-0ec981045961": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "audit_office_mw3cp76b": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "dc51daab-c6f8-4635-a677-2ed1179afd7f": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "audit_office_mw3d1h57": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "89677913-8429-4643-964e-dd1e930530d2": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "law_off_mw3d1fko": {
+    "plan_id": "plan-test-plan-mw3d1fko-mw3d1h5e",
+    "ai_quota_limit_override": null
+  },
+  "2bfc7281-fdaa-4711-b775-0077682a2d85": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "legacy_mw3d1fko": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
   }
 }

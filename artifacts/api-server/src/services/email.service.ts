@@ -6,6 +6,7 @@ export interface SendActivationEmailParams {
   memberName: string;
   officeName?: string | null;
   token: string;
+  expiryHours?: number;
 }
 
 export interface EmailSendResult {
@@ -100,7 +101,7 @@ export async function sendActivationEmail(
       <div class="btn-container">
         <a href="${activationUrl}" class="btn" target="_blank">تفعيل الحساب وتعيين كلمة المرور</a>
       </div>
-      <p><strong>ملاحظة هامة:</strong> هذا الرابط صالح للاستخدام مرة واحدة ولمدة 48 ساعة فقط.</p>
+      <p><strong>ملاحظة هامة:</strong> هذا الرابط صالح للاستخدام مرة واحدة ولمدة ${params.expiryHours || 48} ساعة فقط.</p>
       <p>إذا لم يعمل الزر معك، يمكنك نسخ الرابط التالي ولصقه في متصفحك مباشرة:</p>
       <div class="link-box">${activationUrl}</div>
     </div>

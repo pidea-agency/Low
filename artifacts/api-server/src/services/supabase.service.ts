@@ -454,6 +454,116 @@ export function saveLocalOfficePlans(data: Record<string, OfficePlanOverride>): 
   }
 }
 
+// ============================================================================
+// Super Admin Platform Governance (Audit Log & Platform Settings)
+// ============================================================================
+
+export interface AuditLogEntry {
+  id: string;
+  actor_id: string;
+  actor_username?: string | null;
+  action: string;
+  target_office_id?: string | null;
+  details?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface PlatformSettings {
+  activation_link_expiry_hours: number;
+  new_office_registration_enabled: boolean;
+  support_contact_email: string;
+  support_contact_phone: string;
+  updated_at?: string;
+}
+
+export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
+  activation_link_expiry_hours: 48,
+  new_office_registration_enabled: true,
+  support_contact_email: "support@law.local",
+  support_contact_phone: "+966500000000",
+};
+
+const LOCAL_AUDIT_LOG_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_audit_log.json");
+const ALT_LOCAL_AUDIT_LOG_FILE = resolve(process.cwd(), "local_audit_log.json");
+const TMP_LOCAL_AUDIT_LOG_FILE = "/tmp/local_audit_log.json";
+
+let _localAuditLogCache: AuditLogEntry[] | null = null;
+
+export function loadLocalAuditLogs(): AuditLogEntry[] {
+  if (_localAuditLogCache) {
+    return _localAuditLogCache;
+  }
+  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
+  for (const p of paths) {
+    try {
+      if (existsSync(p)) {
+        const raw = readFileSync(p, "utf-8");
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          _localAuditLogCache = list;
+          return list;
+        }
+      }
+    } catch {}
+  }
+  _localAuditLogCache = [];
+  return _localAuditLogCache;
+}
+
+export function saveLocalAuditLogs(logs: AuditLogEntry[]): void {
+  _localAuditLogCache = logs;
+  const content = JSON.stringify(logs, null, 2);
+  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
+  for (const p of paths) {
+    try {
+      writeFileSync(p, content, "utf-8");
+    } catch {}
+  }
+}
+
+const LOCAL_PLATFORM_SETTINGS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_platform_settings.json");
+const ALT_LOCAL_PLATFORM_SETTINGS_FILE = resolve(process.cwd(), "local_platform_settings.json");
+const TMP_LOCAL_PLATFORM_SETTINGS_FILE = "/tmp/local_platform_settings.json";
+
+let _localPlatformSettingsCache: PlatformSettings | null = null;
+
+export function loadLocalPlatformSettings(): PlatformSettings {
+  if (_localPlatformSettingsCache) {
+    return _localPlatformSettingsCache;
+  }
+  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
+  for (const p of paths) {
+    try {
+      if (existsSync(p)) {
+        const raw = readFileSync(p, "utf-8");
+        const data = JSON.parse(raw);
+        if (typeof data === "object" && data !== null) {
+          const loaded: PlatformSettings = {
+            ...DEFAULT_PLATFORM_SETTINGS,
+            ...data,
+          };
+          _localPlatformSettingsCache = loaded;
+          return loaded;
+        }
+      }
+    } catch {}
+  }
+  const fallback: PlatformSettings = { ...DEFAULT_PLATFORM_SETTINGS };
+  _localPlatformSettingsCache = fallback;
+  return fallback;
+}
+
+export function saveLocalPlatformSettings(settings: PlatformSettings): void {
+  _localPlatformSettingsCache = settings;
+  const content = JSON.stringify(settings, null, 2);
+  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
+  for (const p of paths) {
+    try {
+      writeFileSync(p, content, "utf-8");
+    } catch {}
+  }
+}
+
 export function getSupabaseClient(): SupabaseClient | null {
   if (!isSupabaseConfigured()) {
     return null;
@@ -1301,6 +1411,46 @@ export async function checkHasSubscriptionPlansTable(client: any): Promise<boole
   }
 }
 
+let hasAuditLogTableCache: boolean | null = null;
+let lastAuditLogTableCheck = 0;
+
+export async function checkHasAuditLogTable(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasAuditLogTableCache !== null && now - lastAuditLogTableCheck < 60_000) {
+    return hasAuditLogTableCache;
+  }
+  try {
+    const testRes = await client.from("audit_log").select("id").limit(1);
+    hasAuditLogTableCache = !testRes.error;
+    lastAuditLogTableCheck = now;
+    return hasAuditLogTableCache;
+  } catch {
+    hasAuditLogTableCache = false;
+    lastAuditLogTableCheck = now;
+    return false;
+  }
+}
+
+let hasPlatformSettingsTableCache: boolean | null = null;
+let lastPlatformSettingsTableCheck = 0;
+
+export async function checkHasPlatformSettingsTable(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasPlatformSettingsTableCache !== null && now - lastPlatformSettingsTableCheck < 60_000) {
+    return hasPlatformSettingsTableCache;
+  }
+  try {
+    const testRes = await client.from("platform_settings").select("key").limit(1);
+    hasPlatformSettingsTableCache = !testRes.error;
+    lastPlatformSettingsTableCheck = now;
+    return hasPlatformSettingsTableCache;
+  } catch {
+    hasPlatformSettingsTableCache = false;
+    lastPlatformSettingsTableCheck = now;
+    return false;
+  }
+}
+
 export interface FallbackActivationRecord {
   userId: string;
   tokenHash: string;
@@ -2088,6 +2238,312 @@ export async function setupFirstSuperAdmin(input: {
   });
 }
 
+/**
+ * Super Admin Overview: aggregates office counts, subscription statuses, AI usage,
+ * and the 5 offices with subscriptions expiring soonest.
+ */
+export async function getSuperAdminOverview(): Promise<{
+  stats: {
+    total_offices: number;
+    active_subscriptions: number;
+    expiring_soon_count: number;
+    suspended_count: number;
+    total_ai_usage: number;
+    total_ai_quota: number;
+  };
+  expiring_soonest: Array<{
+    id: string;
+    office_name: string;
+    username: string;
+    display_name?: string | null;
+    status: string;
+    plan_tier?: string;
+    plan_name?: string;
+    subscription_end_date: string | null;
+    days_left: number | null;
+  }>;
+}> {
+  const admins = await listSupabaseAdmins();
+  const now = new Date();
+  const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+  let activeCount = 0;
+  let expiringSoonCount = 0;
+  let suspendedCount = 0;
+  let totalAiUsage = 0;
+  let totalAiQuota = 0;
+
+  const enrichedAdmins = admins.map((admin) => {
+    totalAiUsage += Number(admin.ai_usage_count) || 0;
+    if (admin.ai_quota_limit && admin.ai_quota_limit > 0) {
+      totalAiQuota += Number(admin.ai_quota_limit);
+    }
+
+    const isSuspended = admin.status === "suspended";
+    if (isSuspended) {
+      suspendedCount++;
+    }
+
+    let daysLeft: number | null = null;
+    let isExpiringSoon = false;
+    let isExpired = false;
+
+    if (admin.subscription_end_date) {
+      const end = new Date(admin.subscription_end_date);
+      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+      daysLeft = Math.ceil((endDay - nowDay) / (1000 * 60 * 60 * 24));
+      if (daysLeft < 0) {
+        isExpired = true;
+      } else if (daysLeft <= 7) {
+        isExpiringSoon = true;
+        expiringSoonCount++;
+      }
+    }
+
+    if (!isSuspended && !isExpired) {
+      activeCount++;
+    }
+
+    return {
+      id: admin.id,
+      office_name: admin.office_name || admin.display_name || admin.username,
+      username: admin.username,
+      display_name: admin.display_name,
+      status: admin.status || "active",
+      plan_tier: admin.plan_tier,
+      plan_name: admin.plan?.name || (admin.plan_tier === "pro" ? "برو الاحترافية (Pro)" : "بلس (Plus)"),
+      subscription_end_date: admin.subscription_end_date || null,
+      days_left: daysLeft,
+      sortScore: daysLeft !== null ? daysLeft : 999999,
+    };
+  });
+
+  const expiringSoonest = enrichedAdmins
+    .filter((a) => a.subscription_end_date !== null)
+    .sort((a, b) => (a.sortScore ?? 999999) - (b.sortScore ?? 999999))
+    .slice(0, 5)
+    .map(({ sortScore, ...rest }) => rest);
+
+  return {
+    totalOffices: admins.length,
+    activeSubscriptions: activeCount,
+    expiringIn7Days: expiringSoonCount,
+    totalAiUsage: totalAiUsage,
+    expiringSoonest: expiringSoonest,
+    stats: {
+      total_offices: admins.length,
+      active_subscriptions: activeCount,
+      expiring_soon_count: expiringSoonCount,
+      suspended_count: suspendedCount,
+      total_ai_usage: totalAiUsage,
+      total_ai_quota: totalAiQuota,
+    },
+    expiring_soonest: expiringSoonest,
+  };
+}
+
+/**
+ * Record a super-admin governance audit log entry.
+ */
+export async function recordAuditLog(entry: {
+  actor_id: string;
+  actor_username?: string;
+  action: string;
+  target_office_id?: string | null;
+  details?: Record<string, any>;
+}): Promise<void> {
+  const newLog: AuditLogEntry = {
+    id: `audit-${crypto.randomUUID()}`,
+    actor_id: entry.actor_id,
+    actor_username: entry.actor_username || "مشرف المنصة",
+    action: entry.action,
+    target_office_id: entry.target_office_id || null,
+    details: entry.details || {},
+    created_at: new Date().toISOString(),
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasAuditLogTable(client);
+      if (hasTable) {
+        await client.from("audit_log").insert([
+          {
+            actor_id: newLog.actor_id,
+            actor_username: newLog.actor_username,
+            action: newLog.action,
+            target_office_id: newLog.target_office_id,
+            details: newLog.details,
+          },
+        ]);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase audit_log insert failed, persisting locally");
+    }
+  }
+
+  const localLogs = loadLocalAuditLogs();
+  localLogs.unshift(newLog);
+  if (localLogs.length > 1000) {
+    localLogs.length = 1000;
+  }
+  saveLocalAuditLogs(localLogs);
+}
+
+/**
+ * List paginated audit logs, optionally filterable by target office id.
+ */
+export async function listAuditLogs(options?: {
+  office_id?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  logs: AuditLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}> {
+  const page = Math.max(1, Number(options?.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(options?.limit) || 20));
+  const offset = (page - 1) * limit;
+  const officeId = options?.office_id?.trim();
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasAuditLogTable(client);
+      if (hasTable) {
+        let query = client.from("audit_log").select("*", { count: "exact" });
+        if (officeId) {
+          query = query.eq("target_office_id", officeId);
+        }
+        const { data, count, error } = await query
+          .order("created_at", { ascending: false })
+          .range(offset, offset + limit - 1);
+
+        if (!error && Array.isArray(data)) {
+          const total = count ?? data.length;
+          return {
+            logs: data,
+            total,
+            page,
+            limit,
+            total_pages: Math.ceil(total / limit) || 1,
+          };
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listAuditLogs failed, reading from local");
+    }
+  }
+
+  const local = loadLocalAuditLogs();
+  const filtered = officeId
+    ? local.filter((l) => l.target_office_id === officeId)
+    : local;
+
+  const total = filtered.length;
+  const sliced = filtered.slice(offset, offset + limit);
+
+  return {
+    logs: sliced,
+    total,
+    page,
+    limit,
+    total_pages: Math.ceil(total / limit) || 1,
+  };
+}
+
+/**
+ * Get platform governance settings.
+ */
+export async function getPlatformSettings(): Promise<PlatformSettings> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPlatformSettingsTable(client);
+      if (hasTable) {
+        const { data, error } = await client
+          .from("platform_settings")
+          .select("value, updated_at")
+          .eq("key", "general")
+          .single();
+
+        if (!error && data?.value) {
+          return {
+            ...DEFAULT_PLATFORM_SETTINGS,
+            ...data.value,
+            updated_at: data.updated_at,
+          };
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getPlatformSettings failed, reading local");
+    }
+  }
+
+  const local = loadLocalPlatformSettings();
+  return {
+    ...DEFAULT_PLATFORM_SETTINGS,
+    ...local,
+  };
+}
+
+/**
+ * Update platform governance settings.
+ */
+export async function updatePlatformSettings(
+  updates: Partial<PlatformSettings>,
+): Promise<PlatformSettings> {
+  const current = await getPlatformSettings();
+  const merged: PlatformSettings = {
+    ...current,
+    ...updates,
+    activation_link_expiry_hours:
+      updates.activation_link_expiry_hours !== undefined
+        ? Math.max(1, Number(updates.activation_link_expiry_hours))
+        : current.activation_link_expiry_hours,
+    new_office_registration_enabled:
+      updates.new_office_registration_enabled !== undefined
+        ? Boolean(updates.new_office_registration_enabled)
+        : current.new_office_registration_enabled,
+    support_contact_email:
+      updates.support_contact_email !== undefined
+        ? updates.support_contact_email.trim()
+        : current.support_contact_email,
+    support_contact_phone:
+      updates.support_contact_phone !== undefined
+        ? updates.support_contact_phone.trim()
+        : current.support_contact_phone,
+    updated_at: new Date().toISOString(),
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPlatformSettingsTable(client);
+      if (hasTable) {
+        await client.from("platform_settings").upsert({
+          key: "general",
+          value: {
+            activation_link_expiry_hours: merged.activation_link_expiry_hours,
+            new_office_registration_enabled: merged.new_office_registration_enabled,
+            support_contact_email: merged.support_contact_email,
+            support_contact_phone: merged.support_contact_phone,
+          },
+          updated_at: merged.updated_at,
+        });
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase update platform_settings failed, persisting locally");
+    }
+  }
+
+  saveLocalPlatformSettings(merged);
+  return merged;
+}
+
 // ============================================================================
 // Office Member Management Operations (For Office Admin Only)
 // ============================================================================
@@ -2145,10 +2601,21 @@ export async function createOfficeMember(
     throw new Error("البريد الإلكتروني مطلوب لإرسال رابط التفعيل.");
   }
 
+  // Read dynamic expiry hours from platform settings
+  let expiryHours = 48;
+  try {
+    const settings = await getPlatformSettings();
+    if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
+      expiryHours = settings.activation_link_expiry_hours;
+    }
+  } catch {
+    expiryHours = 48;
+  }
+
   // Generate random 32-byte (64-char hex) activation token
   const rawToken = crypto.randomBytes(32).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+  const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
 
   // Create member with role staff and status pending_activation
   // Locked password_hash prevents login until activated
@@ -2177,6 +2644,7 @@ export async function createOfficeMember(
       memberName: input.display_name || input.username,
       officeName: admin.office_name,
       token: rawToken,
+      expiryHours,
     });
     emailSent = emailRes.success;
     emailError = emailRes.error;
@@ -2230,10 +2698,21 @@ export async function resendOfficeMemberActivation(
     throw new Error("لا يمكن إرسال روابط تفعيل لأن اشتراك المكتب موقوف مؤقتاً.");
   }
 
+  // Read dynamic expiry hours from platform settings
+  let expiryHours = 48;
+  try {
+    const settings = await getPlatformSettings();
+    if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
+      expiryHours = settings.activation_link_expiry_hours;
+    }
+  } catch {
+    expiryHours = 48;
+  }
+
   // Generate new token and invalidate old one
   const rawToken = crypto.randomBytes(32).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
 
   // Clear previous token
   clearFallbackActivationToken(memberId);
@@ -2253,6 +2732,7 @@ export async function resendOfficeMemberActivation(
       memberName: member.display_name || member.username,
       officeName: admin?.office_name,
       token: rawToken,
+      expiryHours,
     });
     emailSent = emailRes.success;
     emailError = emailRes.error;

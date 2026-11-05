@@ -16,6 +16,11 @@ import {
   updateSubscriptionPlan,
   deleteSubscriptionPlan,
   getOfficeFeatures,
+  getSuperAdminOverview,
+  recordAuditLog,
+  listAuditLogs,
+  getPlatformSettings,
+  updatePlatformSettings,
 } from "../services/supabase.service";
 import { isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
@@ -48,6 +53,97 @@ router.post("/super-admin/setup-first", async (req, res) => {
 
 // Protect all following routes with Super Admin middleware
 router.use("/super-admin", attachAuthUser, requireSuperAdmin);
+
+/**
+ * GET /api/super-admin/overview
+ * Returns system-wide aggregates for offices, subscriptions, and AI usage.
+ */
+router.get("/super-admin/overview", async (_req, res) => {
+  try {
+    const overview = await getSuperAdminOverview();
+    res.json(overview);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch super admin overview");
+    res.status(500).json({ error: err.message || "فشل جلب النظرة العامة." });
+  }
+});
+
+/**
+ * GET /api/super-admin/audit-log
+ * Paginated list of audit events, optionally filtered by office_id.
+ */
+router.get("/super-admin/audit-log", async (req, res) => {
+  try {
+    const office_id = typeof req.query.office_id === "string" ? req.query.office_id : undefined;
+    const page = typeof req.query.page === "string" ? parseInt(req.query.page, 10) : undefined;
+    const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : undefined;
+
+    const result = await listAuditLogs({ office_id, page, limit });
+    res.json(result);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch audit log");
+    res.status(500).json({ error: err.message || "فشل جلب سجل الأحداث." });
+  }
+});
+
+/**
+ * GET /api/super-admin/settings
+ * Returns global platform configuration.
+ */
+router.get("/super-admin/settings", async (_req, res) => {
+  try {
+    const settings = await getPlatformSettings();
+    res.json(settings);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch platform settings");
+    res.status(500).json({ error: err.message || "فشل جلب إعدادات المنصة." });
+  }
+});
+
+/**
+ * PATCH /api/super-admin/settings
+ * Updates global platform configuration.
+ */
+router.patch("/super-admin/settings", async (req, res) => {
+  try {
+    const {
+      activation_link_expiry_hours,
+      new_office_registration_enabled,
+      support_contact_email,
+      support_contact_phone,
+    } = req.body;
+
+    const updated = await updatePlatformSettings({
+      activation_link_expiry_hours:
+        activation_link_expiry_hours !== undefined
+          ? Math.max(1, Number(activation_link_expiry_hours))
+          : undefined,
+      new_office_registration_enabled:
+        new_office_registration_enabled !== undefined
+          ? Boolean(new_office_registration_enabled)
+          : undefined,
+      support_contact_email:
+        support_contact_email !== undefined ? String(support_contact_email).trim() : undefined,
+      support_contact_phone:
+        support_contact_phone !== undefined ? String(support_contact_phone).trim() : undefined,
+    });
+
+    // Record audit log
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "updated_platform_settings",
+      details: {
+        changes: req.body,
+      },
+    });
+
+    res.json(updated);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to update platform settings");
+    res.status(400).json({ error: err.message || "فشل تحديث إعدادات المنصة." });
+  }
+});
 
 /**
  * GET /api/super-admin/plans
@@ -87,6 +183,17 @@ router.post("/super-admin/plans", async (req, res) => {
       features: typeof features === "object" && features !== null ? features : {},
     });
 
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "created_plan",
+      details: {
+        plan_id: plan.id,
+        name: plan.name,
+        slug: plan.slug,
+      },
+    });
+
     res.status(201).json(plan);
   } catch (err: any) {
     logger.error({ err }, "Failed to create subscription plan");
@@ -111,6 +218,16 @@ router.patch("/super-admin/plans/:id", async (req, res) => {
       features,
     });
 
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "updated_plan",
+      details: {
+        plan_id: id,
+        changes: req.body,
+      },
+    });
+
     res.json(plan);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to update subscription plan");
@@ -126,6 +243,16 @@ router.delete("/super-admin/plans/:id", async (req, res) => {
   try {
     const id = String(req.params.id);
     await deleteSubscriptionPlan(id);
+
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "deleted_plan",
+      details: {
+        plan_id: id,
+      },
+    });
+
     res.status(200).json({ success: true, message: "تم حذف باقة الاشتراك بنجاح." });
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to delete subscription plan");
@@ -220,6 +347,19 @@ router.post("/super-admin/admins", async (req, res) => {
           : undefined,
     });
 
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "created_office",
+      target_office_id: newAdmin.id,
+      details: {
+        office_name: newAdmin.office_name,
+        username: newAdmin.username,
+        plan_tier: newAdmin.plan_tier,
+        plan_id: newAdmin.plan_id,
+      },
+    });
+
     res.status(201).json(newAdmin);
   } catch (err: any) {
     logger.error({ err }, "Failed to create office admin");
@@ -281,6 +421,17 @@ router.patch("/super-admin/admins/:id", async (req, res) => {
       ai_usage_count: ai_usage_count !== undefined ? Number(ai_usage_count) : undefined,
     });
 
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "updated_office",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name,
+        changes: req.body,
+      },
+    });
+
     res.json(updated);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to update office admin");
@@ -326,6 +477,18 @@ router.post("/super-admin/admins/:id/extend", async (req, res) => {
       status: "active", // Automatically reactivate if suspended
     });
 
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "extended_subscription",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name,
+        period,
+        subscription_end_date: updated.subscription_end_date,
+      },
+    });
+
     res.json(updated);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to extend subscription");
@@ -342,6 +505,18 @@ router.post("/super-admin/admins/:id/toggle-status", async (req, res) => {
     const id = String(req.params.id);
     const { status } = req.body;
     const updated = await toggleAdminStatus(id, status);
+
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: status === "suspended" ? "suspended_office" : "activated_office",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name,
+        new_status: status,
+      },
+    });
+
     res.json(updated);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to toggle office admin status");
@@ -357,6 +532,17 @@ router.post("/super-admin/admins/:id/reset-ai-usage", async (req, res) => {
   try {
     const id = String(req.params.id);
     const updated = await resetAdminAiUsage(id);
+
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "reset_ai_usage",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name,
+      },
+    });
+
     res.json(updated);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to reset office AI usage");
@@ -372,6 +558,17 @@ router.delete("/super-admin/admins/:id", async (req, res) => {
   try {
     const id = String(req.params.id);
     await deleteSupabaseAdmin(id);
+
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "deleted_office",
+      target_office_id: id,
+      details: {
+        office_id: id,
+      },
+    });
+
     res.status(204).send();
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to delete office admin");
@@ -405,6 +602,18 @@ router.post("/super-admin/link-member", async (req, res) => {
       return;
     }
     const linked = await linkMemberToAdmin(memberId, adminId);
+
+    await recordAuditLog({
+      actor_id: (req as any).user?.id,
+      actor_username: (req as any).user?.username,
+      action: "linked_member",
+      target_office_id: adminId,
+      details: {
+        member_id: memberId,
+        admin_id: adminId,
+      },
+    });
+
     res.json({ success: true, member: linked });
   } catch (err: any) {
     logger.error({ err }, "Failed to link member to admin");
