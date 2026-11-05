@@ -18978,14 +18978,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto6 = require("crypto");
+    var crypto7 = require("crypto");
     var Stats = require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto6.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto7.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router16;
+    module2.exports = Router17;
     module2.exports.Route = Route;
-    function Router16(options) {
-      if (!(this instanceof Router16)) {
-        return new Router16(options);
+    function Router17(options) {
+      if (!(this instanceof Router17)) {
+        return new Router17(options);
       }
       const opts = options || {};
-      function router16(req, res, next) {
-        router16.handle(req, res, next);
+      function router17(req, res, next) {
+        router17.handle(req, res, next);
       }
-      Object.setPrototypeOf(router16, this);
-      router16.caseSensitive = opts.caseSensitive;
-      router16.mergeParams = opts.mergeParams;
-      router16.params = {};
-      router16.strict = opts.strict;
-      router16.stack = [];
-      return router16;
+      Object.setPrototypeOf(router17, this);
+      router17.caseSensitive = opts.caseSensitive;
+      router17.mergeParams = opts.mergeParams;
+      router17.params = {};
+      router17.strict = opts.strict;
+      router17.stack = [];
+      return router17;
     }
-    Router16.prototype = function() {
+    Router17.prototype = function() {
     };
-    Router16.prototype.param = function param(name, fn) {
+    Router17.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router16.prototype.handle = function handle(req, res, callback) {
+    Router17.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router16.prototype.use = function use(handler2) {
+    Router17.prototype.use = function use(handler2) {
       let offset = 0;
       let path4 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router16.prototype.route = function route(path4) {
+    Router17.prototype.route = function route(path4) {
       const route2 = new Route(path4);
       const layer = new Layer(path4, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router16.prototype[method] = function(path4) {
+      Router17.prototype[method] = function(path4) {
         const route = this.route(path4);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve4 = require("node:path").resolve;
     var once = require_once();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router16 = null;
+      var router17 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router16 === null) {
-            router16 = new Router16({
+          if (router17 === null) {
+            router17 = new Router17({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router16;
+          return router17;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router16 = this.router;
+      var router17 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router16.use(path4, fn2);
+          return router17.use(path4, fn2);
         }
         debug(".use app under %s", path4);
         fn2.mountpath = path4;
         fn2.parent = this;
-        router16.use(path4, function mounted_app(req, res, next) {
+        router17.use(path4, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22472,17 +22472,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto6 = require("crypto");
+    var crypto7 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto7.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports2.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto6.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto7.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router16.Route;
-    exports2.Router = Router16;
+    exports2.Route = Router17.Route;
+    exports2.Router = Router17;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -24112,11 +24112,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto6 = require("crypto");
+    var crypto7 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto7.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -24125,7 +24125,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto6.createHash("sha1").update(str).digest("hex");
+      return crypto7.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -57006,7 +57006,7 @@ async function sendActivationEmail(params) {
       <div class="btn-container">
         <a href="${activationUrl}" class="btn" target="_blank">\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628 \u0648\u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631</a>
       </div>
-      <p><strong>\u0645\u0644\u0627\u062D\u0638\u0629 \u0647\u0627\u0645\u0629:</strong> \u0647\u0630\u0627 \u0627\u0644\u0631\u0627\u0628\u0637 \u0635\u0627\u0644\u062D \u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0648\u0644\u0645\u062F\u0629 48 \u0633\u0627\u0639\u0629 \u0641\u0642\u0637.</p>
+      <p><strong>\u0645\u0644\u0627\u062D\u0638\u0629 \u0647\u0627\u0645\u0629:</strong> \u0647\u0630\u0627 \u0627\u0644\u0631\u0627\u0628\u0637 \u0635\u0627\u0644\u062D \u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0648\u0644\u0645\u062F\u0629 ${params.expiryHours || 48} \u0633\u0627\u0639\u0629 \u0641\u0642\u0637.</p>
       <p>\u0625\u0630\u0627 \u0644\u0645 \u064A\u0639\u0645\u0644 \u0627\u0644\u0632\u0631 \u0645\u0639\u0643\u060C \u064A\u0645\u0643\u0646\u0643 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0645\u062A\u0635\u0641\u062D\u0643 \u0645\u0628\u0627\u0634\u0631\u0629:</p>
       <div class="link-box">${activationUrl}</div>
     </div>
@@ -57070,20 +57070,28 @@ var init_email_service = __esm({
 var supabase_service_exports = {};
 __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
+  DEFAULT_PLATFORM_SETTINGS: () => DEFAULT_PLATFORM_SETTINGS,
+  DEFAULT_SUBSCRIPTION_PLANS: () => DEFAULT_SUBSCRIPTION_PLANS,
   OfficeMemberNotFoundError: () => OfficeMemberNotFoundError,
   QuotaExceededError: () => QuotaExceededError,
   UserPendingActivationError: () => UserPendingActivationError,
   activateOfficeMember: () => activateOfficeMember,
   checkAndIncrementOfficeAiUsage: () => checkAndIncrementOfficeAiUsage,
   checkHasActivationColumns: () => checkHasActivationColumns,
+  checkHasAuditLogTable: () => checkHasAuditLogTable,
   checkHasPhoneColumn: () => checkHasPhoneColumn,
+  checkHasPlanColumns: () => checkHasPlanColumns,
+  checkHasPlatformSettingsTable: () => checkHasPlatformSettingsTable,
+  checkHasSubscriptionPlansTable: () => checkHasSubscriptionPlansTable,
   clearFallbackActivationToken: () => clearFallbackActivationToken,
   clearUserAuthCache: () => clearUserAuthCache,
   countActiveAdmins: () => countActiveAdmins,
   createOfficeMember: () => createOfficeMember,
+  createSubscriptionPlan: () => createSubscriptionPlan,
   createSupabaseAdmin: () => createSupabaseAdmin,
   createSupabaseUser: () => createSupabaseUser,
   deleteOfficeMember: () => deleteOfficeMember,
+  deleteSubscriptionPlan: () => deleteSubscriptionPlan,
   deleteSupabaseAdmin: () => deleteSupabaseAdmin,
   deleteSupabaseUser: () => deleteSupabaseUser,
   disconnectOfficeGoogleBinding: () => disconnectOfficeGoogleBinding,
@@ -57091,24 +57099,39 @@ __export(supabase_service_exports, {
   findUserByActivationToken: () => findUserByActivationToken,
   findUserByIdOrUsername: () => findUserByIdOrUsername,
   getFallbackActivationTokenByHash: () => getFallbackActivationTokenByHash,
+  getOfficeFeatures: () => getOfficeFeatures,
   getOfficeGoogleBinding: () => getOfficeGoogleBinding,
   getOfficeSubscriptionOverview: () => getOfficeSubscriptionOverview,
+  getPlatformSettings: () => getPlatformSettings,
+  getSubscriptionPlanById: () => getSubscriptionPlanById,
   getSupabaseClient: () => getSupabaseClient,
+  getSuperAdminOverview: () => getSuperAdminOverview,
   getUserGoogleCredentials: () => getUserGoogleCredentials,
   getUserSessionVersion: () => getUserSessionVersion,
   incrementUserAiUsage: () => incrementUserAiUsage,
   invalidateUserGoogleCache: () => invalidateUserGoogleCache,
   linkMemberToAdmin: () => linkMemberToAdmin,
+  listAuditLogs: () => listAuditLogs,
   listOfficeMembers: () => listOfficeMembers,
+  listSubscriptionPlans: () => listSubscriptionPlans,
   listSupabaseAdmins: () => listSupabaseAdmins,
   listSupabaseUsers: () => listSupabaseUsers,
   listUnlinkedMembers: () => listUnlinkedMembers,
+  loadLocalAuditLogs: () => loadLocalAuditLogs,
+  loadLocalOfficePlans: () => loadLocalOfficePlans,
+  loadLocalPlans: () => loadLocalPlans,
+  loadLocalPlatformSettings: () => loadLocalPlatformSettings,
   loadLocalUsers: () => loadLocalUsers,
+  recordAuditLog: () => recordAuditLog,
   resendOfficeMemberActivation: () => resendOfficeMemberActivation,
   resetAdminAiUsage: () => resetAdminAiUsage,
   resetUserAiUsage: () => resetUserAiUsage,
   revokeUserSessions: () => revokeUserSessions,
   saveFallbackActivationToken: () => saveFallbackActivationToken,
+  saveLocalAuditLogs: () => saveLocalAuditLogs,
+  saveLocalOfficePlans: () => saveLocalOfficePlans,
+  saveLocalPlans: () => saveLocalPlans,
+  saveLocalPlatformSettings: () => saveLocalPlatformSettings,
   saveLocalUsers: () => saveLocalUsers,
   saveOfficeGoogleBinding: () => saveOfficeGoogleBinding,
   setupFirstSuperAdmin: () => setupFirstSuperAdmin,
@@ -57117,6 +57140,8 @@ __export(supabase_service_exports, {
   toggleUserStatus: () => toggleUserStatus,
   updateOfficeMember: () => updateOfficeMember,
   updateOfficeMemberQuota: () => updateOfficeMemberQuota,
+  updatePlatformSettings: () => updatePlatformSettings,
+  updateSubscriptionPlan: () => updateSubscriptionPlan,
   updateSupabaseAdmin: () => updateSupabaseAdmin,
   updateSupabaseUser: () => updateSupabaseUser,
   verifySupabaseUser: () => verifySupabaseUser
@@ -57175,6 +57200,8 @@ function loadLocalUsers() {
             const isOfficeAdmin = role === "admin";
             const isSuper = role === "super_admin";
             const planTier = u.plan_tier || (isSuper ? "pro" : isOfficeAdmin ? "plus" : void 0);
+            const planId = u.plan_id || (isOfficeAdmin ? planTier === "pro" ? "plan-pro" : planTier === "basic" ? "plan-basic" : "plan-plus" : null);
+            const quotaOverride = u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null;
             const quota = u.ai_quota_limit !== void 0 ? u.ai_quota_limit : isSuper ? -1 : isOfficeAdmin ? planTier === "pro" ? 300 : 100 : void 0;
             return {
               ...u,
@@ -57182,6 +57209,8 @@ function loadLocalUsers() {
               admin_id: u.admin_id || null,
               office_name: u.office_name || (isOfficeAdmin ? "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A" : null),
               plan_tier: isSuper || isOfficeAdmin ? planTier : void 0,
+              plan_id: isOfficeAdmin ? planId : null,
+              ai_quota_limit_override: isOfficeAdmin ? quotaOverride : null,
               billing_cycle: isSuper || isOfficeAdmin ? u.billing_cycle || "annual" : void 0,
               ai_quota_limit: isSuper || isOfficeAdmin ? quota : void 0,
               ai_usage_count: isSuper || isOfficeAdmin ? u.ai_usage_count || 0 : void 0
@@ -57290,6 +57319,140 @@ function saveLocalUsers(users) {
     }
   }
 }
+function loadLocalPlans() {
+  if (_localPlansCache) {
+    return _localPlansCache;
+  }
+  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      if ((0, import_fs3.existsSync)(p)) {
+        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+        const list = JSON.parse(raw);
+        if (Array.isArray(list) && list.length > 0) {
+          _localPlansCache = list;
+          return list;
+        }
+      }
+    } catch {
+    }
+  }
+  _localPlansCache = [...DEFAULT_SUBSCRIPTION_PLANS];
+  saveLocalPlans(_localPlansCache);
+  return _localPlansCache;
+}
+function saveLocalPlans(plans) {
+  _localPlansCache = plans;
+  const content = JSON.stringify(plans, null, 2);
+  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+    } catch {
+    }
+  }
+}
+function loadLocalOfficePlans() {
+  if (_localOfficePlansCache) {
+    return _localOfficePlansCache;
+  }
+  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      if ((0, import_fs3.existsSync)(p)) {
+        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+        const data = JSON.parse(raw);
+        if (typeof data === "object" && data !== null) {
+          _localOfficePlansCache = data;
+          return data;
+        }
+      }
+    } catch {
+    }
+  }
+  _localOfficePlansCache = {};
+  return _localOfficePlansCache;
+}
+function saveLocalOfficePlans(data) {
+  _localOfficePlansCache = data;
+  const content = JSON.stringify(data, null, 2);
+  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
+  for (const p of paths) {
+    try {
+      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+    } catch {
+    }
+  }
+}
+function loadLocalAuditLogs() {
+  if (_localAuditLogCache) {
+    return _localAuditLogCache;
+  }
+  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
+  for (const p of paths) {
+    try {
+      if ((0, import_fs3.existsSync)(p)) {
+        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          _localAuditLogCache = list;
+          return list;
+        }
+      }
+    } catch {
+    }
+  }
+  _localAuditLogCache = [];
+  return _localAuditLogCache;
+}
+function saveLocalAuditLogs(logs) {
+  _localAuditLogCache = logs;
+  const content = JSON.stringify(logs, null, 2);
+  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
+  for (const p of paths) {
+    try {
+      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+    } catch {
+    }
+  }
+}
+function loadLocalPlatformSettings() {
+  if (_localPlatformSettingsCache) {
+    return _localPlatformSettingsCache;
+  }
+  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
+  for (const p of paths) {
+    try {
+      if ((0, import_fs3.existsSync)(p)) {
+        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+        const data = JSON.parse(raw);
+        if (typeof data === "object" && data !== null) {
+          const loaded = {
+            ...DEFAULT_PLATFORM_SETTINGS,
+            ...data
+          };
+          _localPlatformSettingsCache = loaded;
+          return loaded;
+        }
+      }
+    } catch {
+    }
+  }
+  const fallback = { ...DEFAULT_PLATFORM_SETTINGS };
+  _localPlatformSettingsCache = fallback;
+  return fallback;
+}
+function saveLocalPlatformSettings(settings) {
+  _localPlatformSettingsCache = settings;
+  const content = JSON.stringify(settings, null, 2);
+  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
+  for (const p of paths) {
+    try {
+      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+    } catch {
+    }
+  }
+}
 function getSupabaseClient() {
   if (!isSupabaseConfigured()) {
     return null;
@@ -57319,12 +57482,8 @@ async function ensureDefaultAdmin() {
   if (!client) return;
   try {
     const tableName = env.supabaseTableName;
-    const { count, error } = await client.from(tableName).select("*", { count: "exact", head: true });
-    if (error) {
-      logger.warn({ error }, `Error checking ${tableName} in Supabase (table might not exist yet)`);
-      return;
-    }
-    if (count === 0) {
+    const { data: existingSuperAdmin } = await client.from(tableName).select("id").eq("username", "123456").limit(1);
+    if (!existingSuperAdmin || existingSuperAdmin.length === 0) {
       const defaultUsername = "123456";
       const defaultPassword = "123456";
       const password_hash = await import_bcryptjs.default.hash(defaultPassword, 10);
@@ -57345,11 +57504,12 @@ async function ensureDefaultAdmin() {
       }
     }
     const { data: existingAdmin1 } = await client.from(tableName).select("id").eq("username", "admin1").limit(1);
+    let admin1Id = existingAdmin1?.[0]?.id || null;
     if (!existingAdmin1 || existingAdmin1.length === 0) {
       const officeAdminHash = await import_bcryptjs.default.hash("admin123", 10);
       const oneYearFromNow = /* @__PURE__ */ new Date();
       oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-      const { error: admin1Err } = await client.from(tableName).insert([
+      const { data: newAdmin1, error: admin1Err } = await client.from(tableName).insert([
         {
           username: "admin1",
           email: "office.admin@law.local",
@@ -57365,11 +57525,30 @@ async function ensureDefaultAdmin() {
           ai_usage_count: 0,
           password_hash: officeAdminHash
         }
-      ]);
+      ]).select("id").single();
       if (admin1Err) {
         logger.warn({ admin1Err }, "Failed to auto-seed admin1 in Supabase (may already exist or schema pending)");
       } else {
+        admin1Id = newAdmin1?.id || null;
         logger.info("Auto-seeded default office admin (admin1) in Supabase");
+      }
+    }
+    const { data: existingStaff } = await client.from(tableName).select("id").eq("username", "12345").limit(1);
+    if (!existingStaff || existingStaff.length === 0) {
+      const staffHash = await import_bcryptjs.default.hash("12345", 10);
+      const { error: staffErr } = await client.from(tableName).insert([
+        {
+          username: "12345",
+          email: "lawyer.default@law.local",
+          role: "staff",
+          display_name: "\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u0643\u062A\u0628 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
+          status: "active",
+          admin_id: admin1Id,
+          password_hash: staffHash
+        }
+      ]);
+      if (!staffErr) {
+        logger.info("Auto-seeded default lawyer staff (12345) in Supabase");
       }
     }
   } catch (err) {
@@ -57588,7 +57767,14 @@ async function findUserByIdOrUsername(identifier) {
   }
   try {
     const tableName = env.supabaseTableName;
-    const { data, error } = await client.from(tableName).select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at").or(`id.eq.${identifier},username.ilike.${clean}`).limit(1);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
+    let query = client.from(tableName).select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at");
+    if (isUuid) {
+      query = query.or(`id.eq.${identifier},username.ilike.${clean}`);
+    } else {
+      query = query.ilike("username", clean);
+    }
+    const { data, error } = await query.limit(1);
     if (error) {
       logger.error({ error, identifier }, "Supabase query error in findUserByIdOrUsername");
       throw new AccountSourceUnavailableError(`Account database error: ${error.message}`);
@@ -57641,10 +57827,15 @@ async function getUserGoogleCredentials(userId) {
   }
   let targetAdminId;
   if (user.role === "staff") {
-    if (!user.admin_id) {
+    if (user.admin_id) {
+      targetAdminId = user.admin_id;
+    } else if (user.google_spreadsheet_id || user.google_service_account_json) {
+      targetAdminId = user.id;
+    } else if (user.office_id) {
+      targetAdminId = user.office_id;
+    } else {
       return null;
     }
-    targetAdminId = user.admin_id;
   } else {
     targetAdminId = user.id;
   }
@@ -57882,6 +58073,77 @@ async function checkHasActivationColumns(client) {
     return false;
   }
 }
+async function checkHasPlanColumns(client) {
+  const now = Date.now();
+  if (hasPlanColumnsCache !== null && now - lastPlanCheck < 6e4) {
+    return hasPlanColumnsCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const { data, error } = await client.from(tableName).select("*").limit(1);
+    if (!error && Array.isArray(data) && data.length > 0) {
+      hasPlanColumnsCache = "plan_id" in data[0];
+      lastPlanCheck = now;
+      return hasPlanColumnsCache;
+    }
+    const testRes = await client.from(tableName).select("plan_id").limit(1);
+    hasPlanColumnsCache = !testRes.error;
+    lastPlanCheck = now;
+    return hasPlanColumnsCache;
+  } catch {
+    hasPlanColumnsCache = false;
+    lastPlanCheck = now;
+    return false;
+  }
+}
+async function checkHasSubscriptionPlansTable(client) {
+  const now = Date.now();
+  if (hasSubscriptionPlansTableCache !== null && now - lastSubscriptionPlansTableCheck < 6e4) {
+    return hasSubscriptionPlansTableCache;
+  }
+  try {
+    const testRes = await client.from("subscription_plans").select("id").limit(1);
+    hasSubscriptionPlansTableCache = !testRes.error;
+    lastSubscriptionPlansTableCheck = now;
+    return hasSubscriptionPlansTableCache;
+  } catch {
+    hasSubscriptionPlansTableCache = false;
+    lastSubscriptionPlansTableCheck = now;
+    return false;
+  }
+}
+async function checkHasAuditLogTable(client) {
+  const now = Date.now();
+  if (hasAuditLogTableCache !== null && now - lastAuditLogTableCheck < 6e4) {
+    return hasAuditLogTableCache;
+  }
+  try {
+    const testRes = await client.from("audit_log").select("id").limit(1);
+    hasAuditLogTableCache = !testRes.error;
+    lastAuditLogTableCheck = now;
+    return hasAuditLogTableCache;
+  } catch {
+    hasAuditLogTableCache = false;
+    lastAuditLogTableCheck = now;
+    return false;
+  }
+}
+async function checkHasPlatformSettingsTable(client) {
+  const now = Date.now();
+  if (hasPlatformSettingsTableCache !== null && now - lastPlatformSettingsTableCheck < 6e4) {
+    return hasPlatformSettingsTableCache;
+  }
+  try {
+    const testRes = await client.from("platform_settings").select("key").limit(1);
+    hasPlatformSettingsTableCache = !testRes.error;
+    lastPlatformSettingsTableCheck = now;
+    return hasPlatformSettingsTableCache;
+  } catch {
+    hasPlatformSettingsTableCache = false;
+    lastPlatformSettingsTableCheck = now;
+    return false;
+  }
+}
 function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
   const record = {
     userId,
@@ -57918,6 +58180,8 @@ async function listSupabaseUsers() {
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier,
+      plan_id: u.plan_id || null,
+      ai_quota_limit_override: u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null,
       billing_cycle: u.billing_cycle,
       ai_quota_limit: u.ai_quota_limit,
       ai_usage_count: u.ai_usage_count || 0,
@@ -57929,7 +58193,8 @@ async function listSupabaseUsers() {
   }
   const tableName = env.supabaseTableName;
   const hasPhone = await checkHasPhoneColumn(client);
-  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
+  const hasPlan = await checkHasPlanColumns(client);
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
   const { data, error } = await client.from(tableName).select(selectCols).order("created_at", { ascending: false });
   if (error) {
     logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
@@ -57947,6 +58212,8 @@ async function listSupabaseUsers() {
       subscription_end_date: u.subscription_end_date || null,
       subscription_notes: u.subscription_notes || null,
       plan_tier: u.plan_tier,
+      plan_id: u.plan_id || null,
+      ai_quota_limit_override: u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null,
       billing_cycle: u.billing_cycle,
       ai_quota_limit: u.ai_quota_limit,
       ai_usage_count: u.ai_usage_count || 0,
@@ -57969,6 +58236,8 @@ async function listSupabaseUsers() {
     subscription_end_date: u.subscription_end_date || null,
     subscription_notes: u.subscription_notes || null,
     plan_tier: u.plan_tier,
+    plan_id: u.plan_id || null,
+    ai_quota_limit_override: u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null,
     billing_cycle: u.billing_cycle,
     ai_quota_limit: u.ai_quota_limit,
     ai_usage_count: u.ai_usage_count || 0,
@@ -57978,14 +58247,299 @@ async function listSupabaseUsers() {
     created_at: u.created_at
   }));
 }
+async function listSubscriptionPlans() {
+  const client = getSupabaseClient();
+  let plans = [];
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        const { data, error } = await client.from("subscription_plans").select("*").order("ai_quota_limit", { ascending: true });
+        if (!error && Array.isArray(data) && data.length > 0) {
+          plans = data.map((row) => ({
+            id: row.id,
+            name: row.name,
+            slug: row.slug,
+            ai_quota_limit: Number(row.ai_quota_limit),
+            price: row.price || "",
+            features: typeof row.features === "object" && row.features !== null ? row.features : {},
+            created_at: row.created_at,
+            updated_at: row.updated_at
+          }));
+        } else if (!error && Array.isArray(data) && data.length === 0) {
+          for (const dp of DEFAULT_SUBSCRIPTION_PLANS) {
+            try {
+              await client.from("subscription_plans").insert([{
+                id: dp.id,
+                name: dp.name,
+                slug: dp.slug,
+                ai_quota_limit: dp.ai_quota_limit,
+                price: dp.price,
+                features: dp.features
+              }]);
+            } catch {
+            }
+          }
+          plans = [...DEFAULT_SUBSCRIPTION_PLANS];
+        } else {
+          plans = loadLocalPlans();
+        }
+      } else {
+        plans = loadLocalPlans();
+      }
+    } catch {
+      plans = loadLocalPlans();
+    }
+  } else {
+    plans = loadLocalPlans();
+  }
+  try {
+    const allUsers = await listSupabaseUsers();
+    const officeAdmins = allUsers.filter((u) => u.role === "admin");
+    return plans.map((p) => {
+      const officeCount = officeAdmins.filter(
+        (a) => a.plan_id === p.id || a.plan_tier === p.slug
+      ).length;
+      return {
+        ...p,
+        office_count: officeCount
+      };
+    });
+  } catch {
+    return plans.map((p) => ({ ...p, office_count: 0 }));
+  }
+}
+async function getSubscriptionPlanById(id) {
+  const plans = await listSubscriptionPlans();
+  return plans.find((p) => p.id === id || p.slug === id) || null;
+}
+async function createSubscriptionPlan(input) {
+  const name = input.name.trim();
+  const slug = input.slug.trim().toLowerCase();
+  if (!name) throw new Error("\u0627\u0633\u0645 \u0627\u0644\u0628\u0627\u0642\u0629 \u0645\u0637\u0644\u0648\u0628.");
+  if (!slug) throw new Error("\u0645\u0639\u0631\u0641 \u0627\u0644\u0628\u0627\u0642\u0629 (Slug) \u0645\u0637\u0644\u0648\u0628.");
+  const existingPlans = await listSubscriptionPlans();
+  if (existingPlans.some((p) => p.slug === slug)) {
+    throw new Error(`\u0645\u0639\u0631\u0641 \u0627\u0644\u0628\u0627\u0642\u0629 (Slug) "${slug}" \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0639\u0631\u0641 \u0622\u062E\u0631.`);
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const id = `plan-${slug}-${Date.now().toString(36)}`;
+  const quotaLimit = Number(input.ai_quota_limit) >= 0 ? Number(input.ai_quota_limit) : 100;
+  const price = input.price?.trim() || "";
+  const features = {
+    google_sheets_export: Boolean(input.features?.google_sheets_export ?? true),
+    whatsapp_reminders: Boolean(input.features?.whatsapp_reminders ?? false),
+    max_members: Number(input.features?.max_members) || 5,
+    custom_branding: Boolean(input.features?.custom_branding ?? false),
+    ai_assistant: Boolean(input.features?.ai_assistant ?? true),
+    court_session_analytics: Boolean(input.features?.court_session_analytics ?? false),
+    ...input.features || {}
+  };
+  const newPlan = {
+    id,
+    name,
+    slug,
+    ai_quota_limit: quotaLimit,
+    price,
+    features,
+    office_count: 0,
+    created_at: now,
+    updated_at: now
+  };
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        const { data, error } = await client.from("subscription_plans").insert([{
+          id,
+          name,
+          slug,
+          ai_quota_limit: quotaLimit,
+          price,
+          features,
+          created_at: now,
+          updated_at: now
+        }]).select().single();
+        if (!error && data) {
+          const local2 = loadLocalPlans();
+          saveLocalPlans([...local2, newPlan]);
+          return {
+            ...newPlan,
+            id: data.id || id
+          };
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase insert into subscription_plans failed, using local");
+    }
+  }
+  const local = loadLocalPlans();
+  saveLocalPlans([...local, newPlan]);
+  return newPlan;
+}
+async function updateSubscriptionPlan(id, input) {
+  const existingPlans = await listSubscriptionPlans();
+  const plan = existingPlans.find((p) => p.id === id);
+  if (!plan) {
+    throw new Error("\u0627\u0644\u0628\u0627\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629.");
+  }
+  if (input.slug && input.slug.trim().toLowerCase() !== plan.slug) {
+    const newSlug = input.slug.trim().toLowerCase();
+    if (existingPlans.some((p) => p.slug === newSlug && p.id !== id)) {
+      throw new Error(`\u0645\u0639\u0631\u0641 \u0627\u0644\u0628\u0627\u0642\u0629 "${newSlug}" \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B \u0644\u0628\u0627\u0642\u0629 \u0623\u062E\u0631\u0649.`);
+    }
+    plan.slug = newSlug;
+  }
+  if (input.name !== void 0 && input.name.trim()) {
+    plan.name = input.name.trim();
+  }
+  if (input.ai_quota_limit !== void 0) {
+    plan.ai_quota_limit = Number(input.ai_quota_limit);
+  }
+  if (input.price !== void 0) {
+    plan.price = input.price.trim();
+  }
+  if (input.features !== void 0 && typeof input.features === "object") {
+    plan.features = {
+      ...plan.features,
+      ...input.features
+    };
+  }
+  plan.updated_at = (/* @__PURE__ */ new Date()).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        await client.from("subscription_plans").update({
+          name: plan.name,
+          slug: plan.slug,
+          ai_quota_limit: plan.ai_quota_limit,
+          price: plan.price,
+          features: plan.features,
+          updated_at: plan.updated_at
+        }).eq("id", id);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase update subscription_plans failed, updating local");
+    }
+  }
+  const local = loadLocalPlans();
+  const idx = local.findIndex((p) => p.id === id);
+  if (idx !== -1) {
+    local[idx] = { ...plan };
+  } else {
+    local.push(plan);
+  }
+  saveLocalPlans(local);
+  return plan;
+}
+async function deleteSubscriptionPlan(id) {
+  const existingPlans = await listSubscriptionPlans();
+  const plan = existingPlans.find((p) => p.id === id);
+  if (!plan) {
+    throw new Error("\u0627\u0644\u0628\u0627\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629.");
+  }
+  const allAdmins = await listSupabaseAdmins();
+  const assignedOffices = allAdmins.filter(
+    (u) => u.plan_id === id || u.plan && u.plan.id === id || u.plan_tier === plan.slug
+  );
+  if (assignedOffices.length > 0) {
+    throw new Error(
+      `\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0628\u0627\u0642\u0629 "${plan.name}" \u0644\u0648\u062C\u0648\u062F ${assignedOffices.length} \u0645\u0643\u062A\u0628 \u0645\u0634\u062A\u0631\u0643 \u0628\u0647\u0627 \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0646\u0642\u0644 \u0627\u0644\u0645\u0643\u0627\u062A\u0628 \u0625\u0644\u0649 \u0628\u0627\u0642\u0629 \u0623\u062E\u0631\u0649 \u0623\u0648\u0644\u0627\u064B.`
+    );
+  }
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasSubscriptionPlansTable(client);
+      if (hasTable) {
+        await client.from("subscription_plans").delete().eq("id", id);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase delete subscription_plans failed");
+    }
+  }
+  const local = loadLocalPlans();
+  const filtered = local.filter((p) => p.id !== id);
+  saveLocalPlans(filtered);
+}
+async function getOfficeFeatures(officeId) {
+  const user = await findUserByIdOrUsername(officeId);
+  let admin = null;
+  if (user) {
+    if (user.role === "admin") {
+      admin = user;
+    } else if (user.role === "staff" && user.admin_id) {
+      admin = await findUserByIdOrUsername(user.admin_id);
+    }
+  }
+  if (!admin) {
+    const defaultPlan = DEFAULT_SUBSCRIPTION_PLANS[1];
+    return {
+      officeId,
+      planId: defaultPlan.id,
+      planName: defaultPlan.name,
+      planSlug: defaultPlan.slug,
+      aiQuotaLimit: defaultPlan.ai_quota_limit,
+      aiQuotaLimitOverride: null,
+      isOverride: false,
+      features: { ...defaultPlan.features }
+    };
+  }
+  const officePlans = loadLocalOfficePlans();
+  const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
+  const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
+  const resolvedOverride = admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== void 0 ? admin.ai_quota_limit_override : fallbackAssignment?.ai_quota_limit_override ?? null;
+  const plans = await listSubscriptionPlans();
+  let plan = plans.find((p) => p.id === resolvedPlanId) || null;
+  if (!plan && admin.plan_tier) {
+    plan = plans.find((p) => p.slug === admin.plan_tier || p.id === `plan-${admin.plan_tier}`) || null;
+  }
+  if (!plan) {
+    plan = plans.find((p) => p.slug === "plus") || DEFAULT_SUBSCRIPTION_PLANS[1];
+  }
+  const isOverride = resolvedOverride !== null && resolvedOverride !== void 0;
+  const effectiveQuota = isOverride ? Number(resolvedOverride) : admin.ai_quota_limit ?? plan.ai_quota_limit;
+  return {
+    officeId: admin.id,
+    planId: plan.id,
+    planName: plan.name,
+    planSlug: plan.slug,
+    aiQuotaLimit: effectiveQuota,
+    aiQuotaLimitOverride: isOverride ? Number(resolvedOverride) : null,
+    isOverride,
+    features: {
+      ...plan.features
+    }
+  };
+}
 async function listSupabaseAdmins() {
-  const allUsers = await listSupabaseUsers();
+  const [allUsers, plans] = await Promise.all([
+    listSupabaseUsers(),
+    listSubscriptionPlans()
+  ]);
   const officeAdmins = allUsers.filter((u) => u.role === "admin");
   const staffUsers = allUsers.filter((u) => u.role === "staff");
+  const officePlans = loadLocalOfficePlans();
   return officeAdmins.map((admin) => {
     const memberCount = staffUsers.filter((s2) => s2.admin_id === admin.id).length;
+    const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
+    const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
+    const resolvedOverride = admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== void 0 ? admin.ai_quota_limit_override : fallbackAssignment?.ai_quota_limit_override ?? null;
+    let plan = plans.find((p) => p.id === resolvedPlanId) || null;
+    if (!plan && admin.plan_tier) {
+      plan = plans.find((p) => p.slug === admin.plan_tier || p.id === `plan-${admin.plan_tier}`) || null;
+    }
+    const isOverride = resolvedOverride !== null && resolvedOverride !== void 0;
+    const effectiveQuota = isOverride ? Number(resolvedOverride) : admin.ai_quota_limit ?? (plan?.ai_quota_limit ?? 100);
     return {
       ...admin,
+      plan_id: resolvedPlanId || plan?.id || null,
+      ai_quota_limit_override: resolvedOverride,
+      ai_quota_limit: effectiveQuota,
+      plan,
       member_count: memberCount
     };
   });
@@ -57996,9 +58550,34 @@ async function createSupabaseAdmin(input) {
   if (!officeName) {
     throw new Error("\u0627\u0633\u0645 \u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0645\u0637\u0644\u0648\u0628.");
   }
-  const planTier = input.plan_tier || "plus";
-  const quota = input.ai_quota_limit !== void 0 ? Number(input.ai_quota_limit) : planTier === "pro" ? 300 : 100;
-  return createSupabaseUser({
+  const plans = await listSubscriptionPlans();
+  let selectedPlan = null;
+  if (input.plan_id) {
+    selectedPlan = plans.find((p) => p.id === input.plan_id || p.slug === input.plan_id) || null;
+    if (!selectedPlan) {
+      throw new Error("\u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u062D\u062F\u062F\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629.");
+    }
+  } else if (input.plan_tier) {
+    selectedPlan = plans.find((p) => p.slug === input.plan_tier || p.id === `plan-${input.plan_tier}`) || null;
+  }
+  if (!selectedPlan) {
+    selectedPlan = plans.find((p) => p.slug === "plus") || DEFAULT_SUBSCRIPTION_PLANS[1];
+  }
+  const planId = selectedPlan.id;
+  const safePlanTier = selectedPlan.slug === "pro" ? "pro" : "plus";
+  let quota;
+  let quotaOverride = null;
+  if (input.ai_quota_limit_override !== void 0 && input.ai_quota_limit_override !== null) {
+    quotaOverride = Number(input.ai_quota_limit_override);
+    quota = quotaOverride;
+  } else if (input.ai_quota_limit !== void 0 && Number(input.ai_quota_limit) !== selectedPlan.ai_quota_limit) {
+    quotaOverride = Number(input.ai_quota_limit);
+    quota = quotaOverride;
+  } else {
+    quota = selectedPlan.ai_quota_limit;
+    quotaOverride = null;
+  }
+  const createdUser = await createSupabaseUser({
     username,
     password: input.password,
     email: input.email,
@@ -58007,15 +58586,115 @@ async function createSupabaseAdmin(input) {
     office_name: officeName,
     status: "active",
     phone: input.phone,
-    plan_tier: planTier,
+    plan_tier: safePlanTier,
+    plan_id: planId,
     billing_cycle: input.billing_cycle || "annual",
     subscription_end_date: input.subscription_end_date,
     subscription_notes: input.subscription_notes,
-    ai_quota_limit: quota
+    ai_quota_limit: quota,
+    ai_quota_limit_override: quotaOverride
   });
+  const officePlans = loadLocalOfficePlans();
+  officePlans[createdUser.id] = {
+    plan_id: planId,
+    ai_quota_limit_override: quotaOverride
+  };
+  officePlans[username] = {
+    plan_id: planId,
+    ai_quota_limit_override: quotaOverride
+  };
+  saveLocalOfficePlans(officePlans);
+  return {
+    ...createdUser,
+    plan_id: planId,
+    ai_quota_limit: quota,
+    ai_quota_limit_override: quotaOverride,
+    plan: selectedPlan
+  };
 }
 async function updateSupabaseAdmin(id, input) {
-  return updateSupabaseUser(id, input);
+  const plans = await listSubscriptionPlans();
+  const officePlans = loadLocalOfficePlans();
+  const existingAssignment = officePlans[id];
+  let planId = input.plan_id ?? existingAssignment?.plan_id;
+  let planTier = input.plan_tier;
+  let quota = input.ai_quota_limit;
+  let quotaOverride = input.ai_quota_limit_override !== void 0 ? input.ai_quota_limit_override : existingAssignment?.ai_quota_limit_override;
+  let selectedPlan = null;
+  if (input.plan_id) {
+    selectedPlan = plans.find((p) => p.id === input.plan_id || p.slug === input.plan_id) || null;
+    if (!selectedPlan) {
+      throw new Error("\u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u062D\u062F\u062F\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629.");
+    }
+    planId = selectedPlan.id;
+    planTier = selectedPlan.slug === "pro" ? "pro" : "plus";
+    if (input.ai_quota_limit_override !== void 0) {
+      if (input.ai_quota_limit_override === null) {
+        quotaOverride = null;
+        quota = selectedPlan.ai_quota_limit;
+      } else {
+        quotaOverride = Number(input.ai_quota_limit_override);
+        quota = quotaOverride;
+      }
+    } else if (input.ai_quota_limit !== void 0) {
+      if (Number(input.ai_quota_limit) === selectedPlan.ai_quota_limit) {
+        quotaOverride = null;
+        quota = selectedPlan.ai_quota_limit;
+      } else {
+        quotaOverride = Number(input.ai_quota_limit);
+        quota = quotaOverride;
+      }
+    } else {
+      const existingUser = await findUserByIdOrUsername(id);
+      if (existingUser && !existingUser.ai_quota_limit_override && existingAssignment?.ai_quota_limit_override === null) {
+        quota = selectedPlan.ai_quota_limit;
+      }
+    }
+  } else if (input.plan_tier) {
+    selectedPlan = plans.find((p) => p.slug === input.plan_tier || p.id === `plan-${input.plan_tier}`) || null;
+    if (selectedPlan) {
+      planId = selectedPlan.id;
+      planTier = selectedPlan.slug === "pro" ? "pro" : "plus";
+      if (quota === void 0 && quotaOverride === void 0) {
+        quota = selectedPlan.ai_quota_limit;
+      }
+    } else {
+      planTier = input.plan_tier === "pro" ? "pro" : "plus";
+    }
+  } else if (input.ai_quota_limit_override !== void 0) {
+    const currentPlanId = planId || existingAssignment?.plan_id;
+    selectedPlan = plans.find((p) => p.id === currentPlanId) || DEFAULT_SUBSCRIPTION_PLANS[1];
+    if (input.ai_quota_limit_override === null) {
+      quotaOverride = null;
+      quota = selectedPlan.ai_quota_limit;
+    } else {
+      quotaOverride = Number(input.ai_quota_limit_override);
+      quota = quotaOverride;
+    }
+  }
+  const updatePayload = {
+    ...input
+  };
+  if (planId !== void 0) updatePayload.plan_id = planId;
+  if (planTier !== void 0) updatePayload.plan_tier = planTier;
+  if (quota !== void 0) updatePayload.ai_quota_limit = quota;
+  if (quotaOverride !== void 0) updatePayload.ai_quota_limit_override = quotaOverride;
+  const updatedUser = await updateSupabaseUser(id, updatePayload);
+  officePlans[id] = {
+    plan_id: planId ?? officePlans[id]?.plan_id ?? null,
+    ai_quota_limit_override: quotaOverride !== void 0 ? quotaOverride : officePlans[id]?.ai_quota_limit_override ?? null
+  };
+  saveLocalOfficePlans(officePlans);
+  if (!selectedPlan) {
+    selectedPlan = plans.find((p) => p.id === (planId || officePlans[id]?.plan_id)) || null;
+  }
+  return {
+    ...updatedUser,
+    plan_id: planId || officePlans[id]?.plan_id || null,
+    ai_quota_limit: quota ?? updatedUser.ai_quota_limit,
+    ai_quota_limit_override: quotaOverride !== void 0 ? quotaOverride : officePlans[id]?.ai_quota_limit_override ?? null,
+    plan: selectedPlan
+  };
 }
 async function toggleAdminStatus(id, status) {
   const updated = await toggleUserStatus(id, status);
@@ -58083,6 +58762,209 @@ async function setupFirstSuperAdmin(input) {
     status: "active"
   });
 }
+async function getSuperAdminOverview() {
+  const admins = await listSupabaseAdmins();
+  const now = /* @__PURE__ */ new Date();
+  const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  let activeCount = 0;
+  let expiringSoonCount = 0;
+  let suspendedCount = 0;
+  let totalAiUsage = 0;
+  let totalAiQuota = 0;
+  const enrichedAdmins = admins.map((admin) => {
+    totalAiUsage += Number(admin.ai_usage_count) || 0;
+    if (admin.ai_quota_limit && admin.ai_quota_limit > 0) {
+      totalAiQuota += Number(admin.ai_quota_limit);
+    }
+    const isSuspended = admin.status === "suspended";
+    if (isSuspended) {
+      suspendedCount++;
+    }
+    let daysLeft = null;
+    let isExpiringSoon = false;
+    let isExpired = false;
+    if (admin.subscription_end_date) {
+      const end = new Date(admin.subscription_end_date);
+      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+      daysLeft = Math.ceil((endDay - nowDay) / (1e3 * 60 * 60 * 24));
+      if (daysLeft < 0) {
+        isExpired = true;
+      } else if (daysLeft <= 7) {
+        isExpiringSoon = true;
+        expiringSoonCount++;
+      }
+    }
+    if (!isSuspended && !isExpired) {
+      activeCount++;
+    }
+    return {
+      id: admin.id,
+      office_name: admin.office_name || admin.display_name || admin.username,
+      username: admin.username,
+      display_name: admin.display_name,
+      status: admin.status || "active",
+      plan_tier: admin.plan_tier,
+      plan_name: admin.plan?.name || (admin.plan_tier === "pro" ? "\u0628\u0631\u0648 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629 (Pro)" : "\u0628\u0644\u0633 (Plus)"),
+      subscription_end_date: admin.subscription_end_date || null,
+      days_left: daysLeft,
+      sortScore: daysLeft !== null ? daysLeft : 999999
+    };
+  });
+  const expiringSoonest = enrichedAdmins.filter((a) => a.subscription_end_date !== null).sort((a, b) => (a.sortScore ?? 999999) - (b.sortScore ?? 999999)).slice(0, 5).map(({ sortScore, ...rest }) => rest);
+  return {
+    totalOffices: admins.length,
+    activeSubscriptions: activeCount,
+    expiringIn7Days: expiringSoonCount,
+    totalAiUsage,
+    expiringSoonest,
+    stats: {
+      total_offices: admins.length,
+      active_subscriptions: activeCount,
+      expiring_soon_count: expiringSoonCount,
+      suspended_count: suspendedCount,
+      total_ai_usage: totalAiUsage,
+      total_ai_quota: totalAiQuota
+    },
+    expiring_soonest: expiringSoonest
+  };
+}
+async function recordAuditLog(entry) {
+  const newLog = {
+    id: `audit-${import_crypto2.default.randomUUID()}`,
+    actor_id: entry.actor_id,
+    actor_username: entry.actor_username || "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629",
+    action: entry.action,
+    target_office_id: entry.target_office_id || null,
+    details: entry.details || {},
+    created_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasAuditLogTable(client);
+      if (hasTable) {
+        await client.from("audit_log").insert([
+          {
+            actor_id: newLog.actor_id,
+            actor_username: newLog.actor_username,
+            action: newLog.action,
+            target_office_id: newLog.target_office_id,
+            details: newLog.details
+          }
+        ]);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase audit_log insert failed, persisting locally");
+    }
+  }
+  const localLogs = loadLocalAuditLogs();
+  localLogs.unshift(newLog);
+  if (localLogs.length > 1e3) {
+    localLogs.length = 1e3;
+  }
+  saveLocalAuditLogs(localLogs);
+}
+async function listAuditLogs(options) {
+  const page = Math.max(1, Number(options?.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(options?.limit) || 20));
+  const offset = (page - 1) * limit;
+  const officeId = options?.office_id?.trim();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasAuditLogTable(client);
+      if (hasTable) {
+        let query = client.from("audit_log").select("*", { count: "exact" });
+        if (officeId) {
+          query = query.eq("target_office_id", officeId);
+        }
+        const { data, count, error } = await query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+        if (!error && Array.isArray(data)) {
+          const total2 = count ?? data.length;
+          return {
+            logs: data,
+            total: total2,
+            page,
+            limit,
+            total_pages: Math.ceil(total2 / limit) || 1
+          };
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listAuditLogs failed, reading from local");
+    }
+  }
+  const local = loadLocalAuditLogs();
+  const filtered = officeId ? local.filter((l) => l.target_office_id === officeId) : local;
+  const total = filtered.length;
+  const sliced = filtered.slice(offset, offset + limit);
+  return {
+    logs: sliced,
+    total,
+    page,
+    limit,
+    total_pages: Math.ceil(total / limit) || 1
+  };
+}
+async function getPlatformSettings() {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPlatformSettingsTable(client);
+      if (hasTable) {
+        const { data, error } = await client.from("platform_settings").select("value, updated_at").eq("key", "general").single();
+        if (!error && data?.value) {
+          return {
+            ...DEFAULT_PLATFORM_SETTINGS,
+            ...data.value,
+            updated_at: data.updated_at
+          };
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getPlatformSettings failed, reading local");
+    }
+  }
+  const local = loadLocalPlatformSettings();
+  return {
+    ...DEFAULT_PLATFORM_SETTINGS,
+    ...local
+  };
+}
+async function updatePlatformSettings(updates) {
+  const current = await getPlatformSettings();
+  const merged = {
+    ...current,
+    ...updates,
+    activation_link_expiry_hours: updates.activation_link_expiry_hours !== void 0 ? Math.max(1, Number(updates.activation_link_expiry_hours)) : current.activation_link_expiry_hours,
+    new_office_registration_enabled: updates.new_office_registration_enabled !== void 0 ? Boolean(updates.new_office_registration_enabled) : current.new_office_registration_enabled,
+    support_contact_email: updates.support_contact_email !== void 0 ? updates.support_contact_email.trim() : current.support_contact_email,
+    support_contact_phone: updates.support_contact_phone !== void 0 ? updates.support_contact_phone.trim() : current.support_contact_phone,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPlatformSettingsTable(client);
+      if (hasTable) {
+        await client.from("platform_settings").upsert({
+          key: "general",
+          value: {
+            activation_link_expiry_hours: merged.activation_link_expiry_hours,
+            new_office_registration_enabled: merged.new_office_registration_enabled,
+            support_contact_email: merged.support_contact_email,
+            support_contact_phone: merged.support_contact_phone
+          },
+          updated_at: merged.updated_at
+        });
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase update platform_settings failed, persisting locally");
+    }
+  }
+  saveLocalPlatformSettings(merged);
+  return merged;
+}
 async function listOfficeMembers(adminId) {
   const allUsers = await listSupabaseUsers();
   return allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId).map((u) => {
@@ -58111,9 +58993,18 @@ async function createOfficeMember(adminId, input) {
   if (!input.email || !input.email.trim()) {
     throw new Error("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0637\u0644\u0648\u0628 \u0644\u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.");
   }
+  let expiryHours = 48;
+  try {
+    const settings = await getPlatformSettings();
+    if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
+      expiryHours = settings.activation_link_expiry_hours;
+    }
+  } catch {
+    expiryHours = 48;
+  }
   const rawToken = import_crypto2.default.randomBytes(32).toString("hex");
   const tokenHash = import_crypto2.default.createHash("sha256").update(rawToken).digest("hex");
-  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1e3);
+  const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1e3);
   const user = await createSupabaseUser({
     username: input.username,
     password_hash: "!LOCKED:pending_activation!",
@@ -58134,7 +59025,8 @@ async function createOfficeMember(adminId, input) {
       to: input.email.trim(),
       memberName: input.display_name || input.username,
       officeName: admin.office_name,
-      token: rawToken
+      token: rawToken,
+      expiryHours
     });
     emailSent = emailRes.success;
     emailError = emailRes.error;
@@ -58174,9 +59066,18 @@ async function resendOfficeMemberActivation(adminId, memberId) {
   if (admin && admin.status === "suspended") {
     throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0631\u0633\u0627\u0644 \u0631\u0648\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u0644\u0623\u0646 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627\u064B.");
   }
+  let expiryHours = 48;
+  try {
+    const settings = await getPlatformSettings();
+    if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
+      expiryHours = settings.activation_link_expiry_hours;
+    }
+  } catch {
+    expiryHours = 48;
+  }
   const rawToken = import_crypto2.default.randomBytes(32).toString("hex");
   const tokenHash = import_crypto2.default.createHash("sha256").update(rawToken).digest("hex");
-  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1e3);
+  const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1e3);
   clearFallbackActivationToken(memberId);
   saveFallbackActivationToken(memberId, tokenHash, expiresAt);
   await updateSupabaseUser(memberId, {
@@ -58190,7 +59091,8 @@ async function resendOfficeMemberActivation(adminId, memberId) {
       to: member.email.trim(),
       memberName: member.display_name || member.username,
       officeName: admin?.office_name,
-      token: rawToken
+      token: rawToken,
+      expiryHours
     });
     emailSent = emailRes.success;
     emailError = emailRes.error;
@@ -58643,6 +59545,8 @@ async function createSupabaseUser(input) {
       subscription_end_date,
       subscription_notes,
       plan_tier,
+      plan_id: isOfficeAdmin ? input.plan_id || null : null,
+      ai_quota_limit_override: isOfficeAdmin ? input.ai_quota_limit_override !== void 0 ? input.ai_quota_limit_override : null : null,
       billing_cycle,
       ai_quota_limit,
       ai_usage_count,
@@ -58670,6 +59574,8 @@ async function createSupabaseUser(input) {
       subscription_end_date: newUser.subscription_end_date,
       subscription_notes: newUser.subscription_notes,
       plan_tier: newUser.plan_tier,
+      plan_id: newUser.plan_id,
+      ai_quota_limit_override: newUser.ai_quota_limit_override,
       billing_cycle: newUser.billing_cycle,
       ai_quota_limit: newUser.ai_quota_limit,
       ai_usage_count: newUser.ai_usage_count,
@@ -58688,6 +59594,7 @@ async function createSupabaseUser(input) {
   }
   const hasPhone = await checkHasPhoneColumn(client);
   const hasActivation = await checkHasActivationColumns(client);
+  const hasPlan = await checkHasPlanColumns(client);
   const newUserData = {
     username,
     email: input.email?.trim() || null,
@@ -58718,7 +59625,11 @@ async function createSupabaseUser(input) {
       newUserData.activation_token_expires_at = input.activation_token_expires_at;
     }
   }
-  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
+  if (hasPlan) {
+    if (input.plan_id !== void 0) newUserData.plan_id = input.plan_id || null;
+    if (input.ai_quota_limit_override !== void 0) newUserData.ai_quota_limit_override = input.ai_quota_limit_override;
+  }
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
   let { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
   if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
     logger.warn({ err: error.message }, "[createSupabaseUser] DB app_users_status_check rejected 'pending_activation'; inserting with 'suspended' in DB and tracking pending_activation in app layer until migration 004 is applied.");
@@ -58750,6 +59661,8 @@ async function createSupabaseUser(input) {
     subscription_end_date: row.subscription_end_date || null,
     subscription_notes: row.subscription_notes || null,
     plan_tier: row.plan_tier,
+    plan_id: row.plan_id || input.plan_id || (input.plan_tier ? input.plan_tier === "pro" ? "plan-pro" : input.plan_tier === "basic" ? "plan-basic" : "plan-plus" : null),
+    ai_quota_limit_override: row.ai_quota_limit_override !== void 0 ? row.ai_quota_limit_override : input.ai_quota_limit_override !== void 0 ? input.ai_quota_limit_override : null,
     billing_cycle: row.billing_cycle,
     ai_quota_limit: row.ai_quota_limit,
     ai_usage_count: row.ai_usage_count ?? 0,
@@ -58870,6 +59783,8 @@ async function updateSupabaseUser(id, input) {
     if (input.subscription_end_date !== void 0) user.subscription_end_date = input.subscription_end_date;
     if (input.subscription_notes !== void 0) user.subscription_notes = input.subscription_notes;
     if (input.plan_tier !== void 0) user.plan_tier = input.plan_tier;
+    if (input.plan_id !== void 0) user.plan_id = input.plan_id;
+    if (input.ai_quota_limit_override !== void 0) user.ai_quota_limit_override = input.ai_quota_limit_override;
     if (input.billing_cycle !== void 0) user.billing_cycle = input.billing_cycle;
     if (input.ai_quota_limit !== void 0) user.ai_quota_limit = input.ai_quota_limit;
     if (input.ai_usage_count !== void 0) user.ai_usage_count = input.ai_usage_count;
@@ -58906,6 +59821,8 @@ async function updateSupabaseUser(id, input) {
       subscription_end_date: user.subscription_end_date,
       subscription_notes: user.subscription_notes,
       plan_tier: user.plan_tier,
+      plan_id: user.plan_id || null,
+      ai_quota_limit_override: user.ai_quota_limit_override !== void 0 ? user.ai_quota_limit_override : null,
       billing_cycle: user.billing_cycle,
       ai_quota_limit: user.ai_quota_limit,
       ai_usage_count: user.ai_usage_count,
@@ -58957,6 +59874,11 @@ async function updateSupabaseUser(id, input) {
       updates.activation_token_expires_at = input.activation_token_expires_at;
     }
   }
+  const hasPlan = await checkHasPlanColumns(client);
+  if (hasPlan) {
+    if (input.plan_id !== void 0) updates.plan_id = input.plan_id;
+    if (input.ai_quota_limit_override !== void 0) updates.ai_quota_limit_override = input.ai_quota_limit_override;
+  }
   if (input.status !== void 0) updates.status = input.status;
   if (input.subscription_end_date !== void 0) updates.subscription_end_date = input.subscription_end_date;
   if (input.subscription_notes !== void 0) updates.subscription_notes = input.subscription_notes?.trim() || null;
@@ -58988,7 +59910,7 @@ async function updateSupabaseUser(id, input) {
     throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0639\u062F\u064A\u0644.");
   }
   invalidateUserGoogleCache(id);
-  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
+  const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
   const { data, error } = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
   if (error) {
     logger.error({ error, id }, "Failed to update user in Supabase");
@@ -59012,6 +59934,8 @@ async function updateSupabaseUser(id, input) {
     subscription_end_date: row.subscription_end_date || null,
     subscription_notes: row.subscription_notes || null,
     plan_tier: row.plan_tier,
+    plan_id: row.plan_id || input.plan_id || (input.plan_tier ? input.plan_tier === "pro" ? "plan-pro" : input.plan_tier === "basic" ? "plan-basic" : "plan-plus" : null),
+    ai_quota_limit_override: row.ai_quota_limit_override !== void 0 ? row.ai_quota_limit_override : input.ai_quota_limit_override !== void 0 ? input.ai_quota_limit_override : null,
     billing_cycle: row.billing_cycle,
     ai_quota_limit: row.ai_quota_limit,
     ai_usage_count: row.ai_usage_count ?? 0,
@@ -59046,7 +59970,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_fs3, import_path3, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, DEFAULT_SUBSCRIPTION_PLANS, LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE, _localPlansCache, LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE, _localOfficePlansCache, DEFAULT_PLATFORM_SETTINGS, LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE, _localAuditLogCache, LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE, _localPlatformSettingsCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -59085,11 +60009,94 @@ var init_supabase_service = __esm({
     ALT_LOCAL_USERS_FILE = (0, import_path3.resolve)(process.cwd(), "local_users.json");
     TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
     _localUsersCache = null;
+    DEFAULT_SUBSCRIPTION_PLANS = [
+      {
+        id: "plan-basic",
+        name: "\u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629",
+        slug: "basic",
+        ai_quota_limit: 50,
+        price: "99 \u0631.\u0633 / \u0634\u0647\u0631\u064A\u0627\u064B",
+        features: {
+          google_sheets_export: true,
+          whatsapp_reminders: false,
+          max_members: 3,
+          custom_branding: false,
+          ai_assistant: true,
+          court_session_analytics: false
+        },
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-01T00:00:00.000Z"
+      },
+      {
+        id: "plan-plus",
+        name: "\u0628\u0644\u0633 (Plus)",
+        slug: "plus",
+        ai_quota_limit: 150,
+        price: "249 \u0631.\u0633 / \u0634\u0647\u0631\u064A\u0627\u064B",
+        features: {
+          google_sheets_export: true,
+          whatsapp_reminders: true,
+          max_members: 10,
+          custom_branding: false,
+          ai_assistant: true,
+          court_session_analytics: true
+        },
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-01T00:00:00.000Z"
+      },
+      {
+        id: "plan-pro",
+        name: "\u0628\u0631\u0648 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629 (Pro)",
+        slug: "pro",
+        ai_quota_limit: 500,
+        price: "499 \u0631.\u0633 / \u0634\u0647\u0631\u064A\u0627\u064B",
+        features: {
+          google_sheets_export: true,
+          whatsapp_reminders: true,
+          max_members: 30,
+          custom_branding: true,
+          ai_assistant: true,
+          court_session_analytics: true
+        },
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-01T00:00:00.000Z"
+      }
+    ];
+    LOCAL_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_plans.json");
+    ALT_LOCAL_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "local_plans.json");
+    TMP_LOCAL_PLANS_FILE = "/tmp/local_plans.json";
+    _localPlansCache = null;
+    LOCAL_OFFICE_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_office_plans.json");
+    ALT_LOCAL_OFFICE_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "local_office_plans.json");
+    TMP_LOCAL_OFFICE_PLANS_FILE = "/tmp/local_office_plans.json";
+    _localOfficePlansCache = null;
+    DEFAULT_PLATFORM_SETTINGS = {
+      activation_link_expiry_hours: 48,
+      new_office_registration_enabled: true,
+      support_contact_email: "support@law.local",
+      support_contact_phone: "+966500000000"
+    };
+    LOCAL_AUDIT_LOG_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_audit_log.json");
+    ALT_LOCAL_AUDIT_LOG_FILE = (0, import_path3.resolve)(process.cwd(), "local_audit_log.json");
+    TMP_LOCAL_AUDIT_LOG_FILE = "/tmp/local_audit_log.json";
+    _localAuditLogCache = null;
+    LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_platform_settings.json");
+    ALT_LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path3.resolve)(process.cwd(), "local_platform_settings.json");
+    TMP_LOCAL_PLATFORM_SETTINGS_FILE = "/tmp/local_platform_settings.json";
+    _localPlatformSettingsCache = null;
     officeAiLocks = /* @__PURE__ */ new Map();
     hasPhoneColumnCache = null;
     lastPhoneCheck = 0;
     hasActivationColumnsCache = null;
     lastActivationCheck = 0;
+    hasPlanColumnsCache = null;
+    lastPlanCheck = 0;
+    hasSubscriptionPlansTableCache = null;
+    lastSubscriptionPlansTableCheck = 0;
+    hasAuditLogTableCache = null;
+    lastAuditLogTableCheck = 0;
+    hasPlatformSettingsTableCache = null;
+    lastPlatformSettingsTableCheck = 0;
     fallbackActivationTokens = /* @__PURE__ */ new Map();
     OfficeMemberNotFoundError = class extends Error {
       statusCode = 404;
@@ -76560,22 +77567,22 @@ var require_crypto2 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto6 = require("crypto");
+    var crypto7 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto6.createHash("sha256").update(str).digest("base64");
+        return crypto7.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto6.randomBytes(count).toString("base64");
+        return crypto7.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto6.createVerify("RSA-SHA256");
+        const verifier = crypto7.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto6.createSign("RSA-SHA256");
+        const signer = crypto7.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -76593,7 +77600,7 @@ var require_crypto2 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto6.createHash("sha256").update(str).digest("hex");
+        return crypto7.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -76605,7 +77612,7 @@ var require_crypto2 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto6.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto7.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -77511,10 +78518,10 @@ var require_oauth2client = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto6 = (0, crypto_1.createCrypto)();
-        const randomString = crypto6.randomBytesBase64(96);
+        const crypto7 = (0, crypto_1.createCrypto)();
+        const randomString = crypto7.randomBytesBase64(96);
         const codeVerifier = randomString.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto6.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto7.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -77955,7 +78962,7 @@ var require_oauth2client = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto6 = (0, crypto_1.createCrypto)();
+        const crypto7 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -77968,7 +78975,7 @@ var require_oauth2client = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto6.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto7.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -77979,7 +78986,7 @@ var require_oauth2client = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto6.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto7.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -77996,7 +79003,7 @@ var require_oauth2client = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto6.verify(cert, signed, signature);
+        const verified = await crypto7.verify(cert, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt);
         }
@@ -78371,14 +79378,14 @@ var require_buffer_equal_constant_time = __commonJS({
 var require_jwa = __commonJS({
   "../../node_modules/.pnpm/jwa@2.0.1/node_modules/jwa/index.js"(exports2, module2) {
     var Buffer4 = require_safe_buffer().Buffer;
-    var crypto6 = require("crypto");
+    var crypto7 = require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util2 = require("util");
     var MSG_INVALID_ALGORITHM = '"%s" is not a valid algorithm.\n  Supported algorithms are:\n  "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512" and "none".';
     var MSG_INVALID_SECRET = "secret must be a string or buffer";
     var MSG_INVALID_VERIFIER_KEY = "key must be a string or a buffer";
     var MSG_INVALID_SIGNER_KEY = "key must be a string, a buffer or an object";
-    var supportsKeyObjects = typeof crypto6.createPublicKey === "function";
+    var supportsKeyObjects = typeof crypto7.createPublicKey === "function";
     if (supportsKeyObjects) {
       MSG_INVALID_VERIFIER_KEY += " or a KeyObject";
       MSG_INVALID_SECRET += "or a KeyObject";
@@ -78468,17 +79475,17 @@ var require_jwa = __commonJS({
       return function sign(thing, secret) {
         checkIsSecretKey(secret);
         thing = normalizeInput(thing);
-        var hmac = crypto6.createHmac("sha" + bits, secret);
+        var hmac = crypto7.createHmac("sha" + bits, secret);
         var sig = (hmac.update(thing), hmac.digest("base64"));
         return fromBase64(sig);
       };
     }
     var bufferEqual;
-    var timingSafeEqual = "timingSafeEqual" in crypto6 ? function timingSafeEqual2(a, b) {
+    var timingSafeEqual = "timingSafeEqual" in crypto7 ? function timingSafeEqual2(a, b) {
       if (a.byteLength !== b.byteLength) {
         return false;
       }
-      return crypto6.timingSafeEqual(a, b);
+      return crypto7.timingSafeEqual(a, b);
     } : function timingSafeEqual2(a, b) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
@@ -78495,7 +79502,7 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto6.createSign("RSA-SHA" + bits);
+        var signer = crypto7.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign(privateKey, "base64"));
         return fromBase64(sig);
       };
@@ -78505,7 +79512,7 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto6.createVerify("RSA-SHA" + bits);
+        var verifier = crypto7.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify(publicKey, signature, "base64");
       };
@@ -78514,11 +79521,11 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto6.createSign("RSA-SHA" + bits);
+        var signer = crypto7.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign({
           key: privateKey,
-          padding: crypto6.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto6.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto7.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto7.constants.RSA_PSS_SALTLEN_DIGEST
         }, "base64"));
         return fromBase64(sig);
       };
@@ -78528,12 +79535,12 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto6.createVerify("RSA-SHA" + bits);
+        var verifier = crypto7.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify({
           key: publicKey,
-          padding: crypto6.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto6.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto7.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto7.constants.RSA_PSS_SALTLEN_DIGEST
         }, signature, "base64");
       };
     }
@@ -81331,14 +82338,14 @@ var require_awsrequestsigner = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign(crypto6, key, msg) {
-      return await crypto6.signWithHmacSha256(key, msg);
+    async function sign(crypto7, key, msg) {
+      return await crypto7.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto6, key, dateStamp, region, serviceName) {
-      const kDate = await sign(crypto6, `AWS4${key}`, dateStamp);
-      const kRegion = await sign(crypto6, kDate, region);
-      const kService = await sign(crypto6, kRegion, serviceName);
-      const kSigning = await sign(crypto6, kService, "aws4_request");
+    async function getSigningKey(crypto7, key, dateStamp, region, serviceName) {
+      const kDate = await sign(crypto7, `AWS4${key}`, dateStamp);
+      const kRegion = await sign(crypto7, kDate, region);
+      const kService = await sign(crypto7, kRegion, serviceName);
+      const kSigning = await sign(crypto7, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -83052,24 +84059,24 @@ var require_googleauth = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto6 = (0, crypto_1.createCrypto)();
+        const crypto7 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign = await crypto6.sign(client.key, data);
+          const sign = await crypto7.sign(client.key, data);
           return sign;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto6, creds.client_email, data, endpoint);
+        return this.signBlob(crypto7, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto6, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto7, emailOrUniqueId, data, endpoint) {
         const url = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url.href,
           data: {
-            payload: crypto6.encodeBase64StringUtf8(data)
+            payload: crypto7.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -820276,22 +821283,22 @@ var require_crypto5 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto6 = require("crypto");
+    var crypto7 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto6.createHash("sha256").update(str).digest("base64");
+        return crypto7.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto6.randomBytes(count).toString("base64");
+        return crypto7.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto6.createVerify("RSA-SHA256");
+        const verifier = crypto7.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto6.createSign("RSA-SHA256");
+        const signer = crypto7.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -820309,7 +821316,7 @@ var require_crypto5 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto6.createHash("sha256").update(str).digest("hex");
+        return crypto7.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -820321,7 +821328,7 @@ var require_crypto5 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto6.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto7.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -821012,10 +822019,10 @@ var require_oauth2client2 = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto6 = (0, crypto_1.createCrypto)();
-        const randomString = crypto6.randomBytesBase64(96);
+        const crypto7 = (0, crypto_1.createCrypto)();
+        const randomString = crypto7.randomBytesBase64(96);
         const codeVerifier = randomString.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto6.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto7.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -821456,7 +822463,7 @@ var require_oauth2client2 = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto6 = (0, crypto_1.createCrypto)();
+        const crypto7 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -821469,7 +822476,7 @@ var require_oauth2client2 = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto6.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto7.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -821480,7 +822487,7 @@ var require_oauth2client2 = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto6.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto7.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -821497,7 +822504,7 @@ var require_oauth2client2 = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto6.verify(cert, signed, signature);
+        const verified = await crypto7.verify(cert, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt);
         }
@@ -824067,14 +825074,14 @@ var require_awsrequestsigner2 = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign(crypto6, key, msg) {
-      return await crypto6.signWithHmacSha256(key, msg);
+    async function sign(crypto7, key, msg) {
+      return await crypto7.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto6, key, dateStamp, region, serviceName) {
-      const kDate = await sign(crypto6, `AWS4${key}`, dateStamp);
-      const kRegion = await sign(crypto6, kDate, region);
-      const kService = await sign(crypto6, kRegion, serviceName);
-      const kSigning = await sign(crypto6, kService, "aws4_request");
+    async function getSigningKey(crypto7, key, dateStamp, region, serviceName) {
+      const kDate = await sign(crypto7, `AWS4${key}`, dateStamp);
+      const kRegion = await sign(crypto7, kDate, region);
+      const kService = await sign(crypto7, kRegion, serviceName);
+      const kSigning = await sign(crypto7, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -825040,7 +826047,7 @@ var require_gdchclient = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.GdchClient = exports2.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
-    var crypto6 = require("crypto");
+    var crypto7 = require("crypto");
     var fs4 = require("fs");
     var https2 = require("https");
     var oauth2client_1 = require_oauth2client2();
@@ -825231,7 +826238,7 @@ var require_gdchclient = __commonJS({
         const encodedHeader = this.base64UrlEncode(JSON.stringify(header));
         const encodedPayload = this.base64UrlEncode(JSON.stringify(payload));
         const signingInput = `${encodedHeader}.${encodedPayload}`;
-        const signature = crypto6.sign("sha256", Buffer.from(signingInput), {
+        const signature = crypto7.sign("sha256", Buffer.from(signingInput), {
           key: this.privateKey,
           dsaEncoding: "ieee-p1363"
         });
@@ -826092,24 +827099,24 @@ var require_googleauth2 = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto6 = (0, crypto_1.createCrypto)();
+        const crypto7 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign = await crypto6.sign(client.key, data);
+          const sign = await crypto7.sign(client.key, data);
           return sign;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto6, creds.client_email, data, endpoint);
+        return this.signBlob(crypto7, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto6, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto7, emailOrUniqueId, data, endpoint) {
         const url = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url.href,
           data: {
-            payload: crypto6.encodeBase64StringUtf8(data)
+            payload: crypto7.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -828992,7 +829999,7 @@ async function listRows(userId) {
       range: `'${ctx.sheetName}'!A2:Q`
     });
     const rows = response.data.values ?? [];
-    return rows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell) => cell !== void 0 && cell !== ""));
+    return rows.map((row, index) => ({ id: index + 2, values: row })).filter((row) => row.values.some((cell2) => cell2 !== void 0 && cell2 !== ""));
   } catch (err) {
     throw classifyGoogleError(err, "listRows", { spreadsheetId: ctx.spreadsheetId, sheetName: ctx.sheetName, userId });
   }
@@ -829008,7 +830015,7 @@ async function appendRow(values, userId) {
     let emptyRowId = null;
     for (let i2 = 0; i2 < rawRows.length; i2++) {
       const r2 = rawRows[i2];
-      const isEmpty = !r2 || r2.length === 0 || r2.every((cell) => cell === void 0 || cell === null || String(cell).trim() === "");
+      const isEmpty = !r2 || r2.length === 0 || r2.every((cell2) => cell2 === void 0 || cell2 === null || String(cell2).trim() === "");
       if (isEmpty) {
         emptyRowId = i2 + 2;
         break;
@@ -829238,26 +830245,35 @@ var init_googleSheets_service = __esm({
 // src/services/postgres.service.ts
 var postgres_service_exports = {};
 __export(postgres_service_exports, {
+  createClient: () => createClient2,
   createJudgment: () => createJudgment,
   createPoa: () => createPoa,
   createSession: () => createSession,
   createTask: () => createTask,
+  deleteClient: () => deleteClient,
   deleteJudgment: () => deleteJudgment,
   deletePoa: () => deletePoa,
   deleteSession: () => deleteSession,
   deleteTask: () => deleteTask,
   exportOfficeDataToGoogleSheets: () => exportOfficeDataToGoogleSheets,
+  getClientById: () => getClientById,
   getJudgmentById: () => getJudgmentById,
   getPoaById: () => getPoaById,
   getSessionById: () => getSessionById,
   getSessionReport: () => getSessionReport,
   getTaskById: () => getTaskById,
+  listClients: () => listClients,
   listJudgments: () => listJudgments,
   listPoa: () => listPoa,
   listSessions: () => listSessions,
   listTasks: () => listTasks,
+  reassignJudgment: () => reassignJudgment,
+  reassignPoa: () => reassignPoa,
+  reassignSession: () => reassignSession,
+  reassignTask: () => reassignTask,
   resetInMemoryStore: () => resetInMemoryStore,
   saveSessionReport: () => saveSessionReport,
+  updateClient: () => updateClient,
   updateJudgment: () => updateJudgment,
   updatePoa: () => updatePoa,
   updateSession: () => updateSession,
@@ -829267,6 +830283,7 @@ function nextId() {
   return ++_nextId;
 }
 function resetInMemoryStore() {
+  memoryClients.clear();
   memorySessions.clear();
   memoryTasks.clear();
   memoryPoa.clear();
@@ -829329,10 +830346,166 @@ function formatSession(s2) {
     reminder24: Boolean(s2.reminder24 ?? s2.reminder_24),
     reminder6: Boolean(s2.reminder6 ?? s2.reminder_6),
     createdAt,
-    hearingAt
+    hearingAt,
+    clientId: s2.clientId ?? s2.client_id ?? null,
+    client_id: s2.clientId ?? s2.client_id ?? null,
+    assignedLawyerId: s2.assignedLawyerId ?? s2.assigned_lawyer_id ?? null,
+    assigned_lawyer_id: s2.assignedLawyerId ?? s2.assigned_lawyer_id ?? null,
+    clientRole: s2.clientRole ?? s2.client_role ?? null,
+    client_role: s2.clientRole ?? s2.client_role ?? null,
+    createdBy: s2.createdBy ?? s2.created_by ?? null,
+    created_by: s2.createdBy ?? s2.created_by ?? null
   };
 }
+async function listClients(officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("clients").select("*").eq("office_id", officeId).order("created_at", { ascending: false });
+      if (!error && data) {
+        return data.map((r2) => ({
+          id: r2.id,
+          officeId: r2.office_id,
+          name: r2.name,
+          phone: r2.phone || "",
+          notes: r2.notes || "",
+          createdAt: r2.created_at,
+          updatedAt: r2.updated_at
+        }));
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listClients failed, falling back to memory");
+    }
+  }
+  return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
+}
+async function getClientById(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("clients").select("*").eq("id", id).eq("office_id", officeId).single();
+      if (!error && data) {
+        return {
+          id: data.id,
+          officeId: data.office_id,
+          name: data.name,
+          phone: data.phone || "",
+          notes: data.notes || "",
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getClientById failed, falling back to memory");
+    }
+  }
+  const list = memoryClients.get(officeId) || [];
+  const found = list.find((c) => c.id === id);
+  return found ? { ...found } : null;
+}
+async function createClient2(data, officeId) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const id = import_crypto4.default.randomUUID();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client.from("clients").insert([
+        {
+          id,
+          office_id: officeId,
+          name: data.name,
+          phone: data.phone || "",
+          notes: data.notes || "",
+          created_at: now,
+          updated_at: now
+        }
+      ]).select().single();
+      if (!error && inserted) {
+        return {
+          id: inserted.id,
+          officeId: inserted.office_id,
+          name: inserted.name,
+          phone: inserted.phone || "",
+          notes: inserted.notes || "",
+          createdAt: inserted.created_at,
+          updatedAt: inserted.updated_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createClient failed, falling back to memory");
+    }
+  }
+  const record = {
+    id,
+    officeId,
+    name: data.name,
+    phone: data.phone || "",
+    notes: data.notes || "",
+    createdAt: now,
+    updatedAt: now
+  };
+  const list = memoryClients.get(officeId) || [];
+  list.unshift(record);
+  memoryClients.set(officeId, list);
+  return { ...record };
+}
+async function updateClient(id, data, officeId) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const payload = { updated_at: now };
+      if (data.name !== void 0) payload.name = data.name;
+      if (data.phone !== void 0) payload.phone = data.phone;
+      if (data.notes !== void 0) payload.notes = data.notes;
+      const { data: updated2, error } = await client.from("clients").update(payload).eq("id", id).eq("office_id", officeId).select().single();
+      if (!error && updated2) {
+        return {
+          id: updated2.id,
+          officeId: updated2.office_id,
+          name: updated2.name,
+          phone: updated2.phone || "",
+          notes: updated2.notes || "",
+          createdAt: updated2.created_at,
+          updatedAt: updated2.updated_at
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase updateClient failed, falling back to memory");
+    }
+  }
+  const list = memoryClients.get(officeId) || [];
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  const current = list[idx];
+  const updated = {
+    ...current,
+    name: data.name !== void 0 ? data.name : current.name,
+    phone: data.phone !== void 0 ? data.phone : current.phone,
+    notes: data.notes !== void 0 ? data.notes : current.notes,
+    updatedAt: now
+  };
+  list[idx] = updated;
+  return { ...updated };
+}
+async function deleteClient(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error, count } = await client.from("clients").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
+      if (!error && (count ?? 0) > 0) return true;
+    } catch (err) {
+      logger.warn({ err }, "Supabase deleteClient failed, falling back to memory");
+    }
+  }
+  const list = memoryClients.get(officeId) || [];
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
 async function listSessions(officeId, statusFilter) {
+  const memList = (memorySessions.get(officeId) || []).filter((s2) => !statusFilter || statusFilter === "All" || s2.status === statusFilter).map(formatSession);
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -829342,36 +830515,72 @@ async function listSessions(officeId, statusFilter) {
       }
       const { data, error } = await query.order("id", { ascending: false });
       if (!error && data) {
-        return data.map(formatSession);
+        const dbSessions = data.map((d) => {
+          const formatted = formatSession(d);
+          const fromMem = (memorySessions.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              client_id: fromMem.clientId || formatted.client_id,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              assigned_lawyer_id: fromMem.assignedLawyerId || formatted.assigned_lawyer_id,
+              clientRole: fromMem.clientRole || formatted.clientRole,
+              client_role: fromMem.clientRole || formatted.client_role,
+              createdBy: fromMem.createdBy || formatted.createdBy,
+              created_by: fromMem.createdBy || formatted.created_by
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbSessions.map((s2) => s2.id));
+        return [...dbSessions, ...memList.filter((m2) => !dbIds.has(m2.id))];
       }
     } catch (err) {
       logger.warn({ err }, "Supabase query failed in listSessions, falling back to memory");
     }
   }
-  const list = memorySessions.get(officeId) || [];
-  return list.filter((s2) => !statusFilter || statusFilter === "All" || s2.status === statusFilter).map(formatSession);
+  return memList;
 }
 async function getSessionById(id, officeId) {
+  const memList = memorySessions.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("sessions").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        return formatSession(data);
+        const formatted = formatSession(data);
+        if (fromMem) {
+          return {
+            ...formatted,
+            clientId: fromMem.clientId || formatted.clientId,
+            client_id: fromMem.clientId || formatted.client_id,
+            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+            assigned_lawyer_id: fromMem.assignedLawyerId || formatted.assigned_lawyer_id,
+            clientRole: fromMem.clientRole || formatted.clientRole,
+            client_role: fromMem.clientRole || formatted.client_role,
+            createdBy: fromMem.createdBy || formatted.createdBy,
+            created_by: fromMem.createdBy || formatted.created_by
+          };
+        }
+        return formatted;
       }
     } catch (err) {
       logger.warn({ err }, "Supabase query failed in getSessionById, falling back to memory");
     }
   }
-  const list = memorySessions.get(officeId) || [];
-  const s2 = list.find((item) => item.id === id);
-  if (!s2) return null;
-  return formatSession(s2);
+  if (!fromMem) return null;
+  return formatSession(fromMem);
 }
 async function createSession(data, officeId) {
   const hearingAtDate = computeHearingDateTime(data.sessionDateHijri ?? void 0, data.sessionTime ?? void 0);
   const hearingAt = hearingAtDate ? hearingAtDate.toISOString() : null;
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const clientId = data.clientId || data.client_id || null;
+  const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
+  const clientRole = data.clientRole || data.client_role || null;
+  const createdBy = data.createdBy || data.created_by || null;
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -829392,11 +830601,38 @@ async function createSession(data, officeId) {
           status: data.status || "Upcoming",
           reminder24: Boolean(data.reminder24),
           reminder6: Boolean(data.reminder6),
-          hearing_at: hearingAt
+          hearing_at: hearingAt,
+          client_id: clientId,
+          assigned_lawyer_id: assignedLawyerId,
+          client_role: clientRole,
+          created_by: createdBy
         }
       ]).select().single();
       if (!error && inserted) {
-        return formatSession(inserted);
+        const formatted = formatSession(inserted);
+        const memRecord = {
+          ...formatted,
+          id: inserted.id,
+          officeId,
+          clientId,
+          assignedLawyerId,
+          clientRole,
+          createdBy
+        };
+        const list2 = memorySessions.get(officeId) || [];
+        list2.unshift(memRecord);
+        memorySessions.set(officeId, list2);
+        return {
+          ...formatted,
+          clientId,
+          client_id: clientId,
+          assignedLawyerId,
+          assigned_lawyer_id: assignedLawyerId,
+          clientRole,
+          client_role: clientRole,
+          createdBy,
+          created_by: createdBy
+        };
       }
     } catch (err) {
       logger.warn({ err }, "Supabase insert failed in createSession, falling back to memory");
@@ -829421,6 +830657,10 @@ async function createSession(data, officeId) {
     reminder24: Boolean(data.reminder24),
     reminder6: Boolean(data.reminder6),
     hearingAt,
+    clientId,
+    assignedLawyerId,
+    clientRole,
+    createdBy,
     createdAt: now,
     updatedAt: now
   };
@@ -829448,6 +830688,12 @@ async function updateSession(id, data, officeId) {
       if (data.status !== void 0) updatePayload.status = data.status;
       if (data.reminder24 !== void 0) updatePayload.reminder24 = data.reminder24;
       if (data.reminder6 !== void 0) updatePayload.reminder6 = data.reminder6;
+      if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
+      if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
+      if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
+      if (data.clientRole !== void 0) updatePayload.client_role = data.clientRole;
+      if (data.client_role !== void 0) updatePayload.client_role = data.client_role;
       if (data.sessionDateHijri !== void 0 || data.sessionTime !== void 0) {
         const hearingAt = computeHearingDateTime(data.sessionDateHijri ?? void 0, data.sessionTime ?? void 0);
         updatePayload.hearing_at = hearingAt ? hearingAt.toISOString() : null;
@@ -829480,10 +830726,16 @@ async function updateSession(id, data, officeId) {
     status: data.status !== void 0 ? data.status : current.status,
     reminder24: data.reminder24 !== void 0 ? Boolean(data.reminder24) : current.reminder24,
     reminder6: data.reminder6 !== void 0 ? Boolean(data.reminder6) : current.reminder6,
+    clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
+    clientRole: data.clientRole !== void 0 ? data.clientRole : data.client_role !== void 0 ? data.client_role : current.clientRole,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   list[idx] = updated;
   return formatSession(updated);
+}
+async function reassignSession(id, assignedLawyerId, officeId) {
+  return updateSession(id, { assignedLawyerId }, officeId);
 }
 async function deleteSession(id, officeId) {
   const client = getSupabaseClient();
@@ -829562,61 +830814,87 @@ async function saveSessionReport(id, report, officeId) {
   memoryReports.set(officeId, reportsList);
   return { session, report };
 }
+function formatTask(r2) {
+  return {
+    id: r2.id,
+    officeId: r2.officeId ?? r2.office_id,
+    title: r2.title,
+    assignee: r2.assignee || "",
+    priority: r2.priority || "\u0639\u0627\u062F\u064A\u0629",
+    dueDate: r2.dueDate ?? r2.due_date ?? "",
+    remainingDays: r2.remainingDays ?? r2.remaining_days ?? calcRemainingDays(r2.dueDate || r2.due_date),
+    status: r2.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
+    notes: r2.notes || "",
+    clientId: r2.clientId ?? r2.client_id ?? null,
+    assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
+    createdBy: r2.createdBy ?? r2.created_by ?? null,
+    createdAt: r2.createdAt ?? r2.created_at,
+    updatedAt: r2.updatedAt ?? r2.updated_at,
+    ...r2.clientId || r2.client_id ? { client_id: r2.clientId ?? r2.client_id } : {},
+    ...r2.assignedLawyerId || r2.assigned_lawyer_id ? { assigned_lawyer_id: r2.assignedLawyerId ?? r2.assigned_lawyer_id } : {},
+    ...r2.createdBy || r2.created_by ? { created_by: r2.createdBy ?? r2.created_by } : {}
+  };
+}
 async function listTasks(officeId) {
+  const memList = (memoryTasks.get(officeId) || []).map(formatTask);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("tasks").select("*").eq("office_id", officeId).order("id", { ascending: false });
       if (!error && data) {
-        return data.map((r2) => ({
-          id: r2.id,
-          officeId: r2.office_id,
-          title: r2.title,
-          assignee: r2.assignee || "",
-          priority: r2.priority || "\u0639\u0627\u062F\u064A\u0629",
-          dueDate: r2.due_date || "",
-          remainingDays: r2.remaining_days || calcRemainingDays(r2.due_date),
-          status: r2.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
-          notes: r2.notes || "",
-          createdAt: r2.created_at
-        }));
+        const dbTasks = data.map((d) => {
+          const formatted = formatTask(d);
+          const fromMem = (memoryTasks.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              createdBy: fromMem.createdBy || formatted.createdBy
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbTasks.map((t2) => t2.id));
+        return [...dbTasks, ...memList.filter((m2) => !dbIds.has(m2.id))];
       }
     } catch (err) {
       logger.warn({ err }, "Supabase listTasks failed, falling back to memory");
     }
   }
-  return (memoryTasks.get(officeId) || []).map((t2) => ({ ...t2 }));
+  return memList;
 }
 async function getTaskById(id, officeId) {
+  const memList = memoryTasks.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("tasks").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        return {
-          id: data.id,
-          officeId: data.office_id,
-          title: data.title,
-          assignee: data.assignee || "",
-          priority: data.priority || "\u0639\u0627\u062F\u064A\u0629",
-          dueDate: data.due_date || "",
-          remainingDays: data.remaining_days || calcRemainingDays(data.due_date),
-          status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
-          notes: data.notes || "",
-          createdAt: data.created_at
-        };
+        const formatted = formatTask(data);
+        if (fromMem) {
+          return {
+            ...formatted,
+            clientId: fromMem.clientId || formatted.clientId,
+            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+            createdBy: fromMem.createdBy || formatted.createdBy
+          };
+        }
+        return formatted;
       }
     } catch (err) {
       logger.warn({ err }, "Supabase getTaskById failed, falling back to memory");
     }
   }
-  const list = memoryTasks.get(officeId) || [];
-  const t2 = list.find((item) => item.id === id);
-  return t2 ? { ...t2 } : null;
+  return fromMem ? formatTask(fromMem) : null;
 }
 async function createTask(data, officeId) {
   const remaining = calcRemainingDays(data.dueDate || "");
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const clientId = data.clientId || data.client_id || null;
+  const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
+  const createdBy = data.createdBy || data.created_by || null;
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -829629,22 +830907,26 @@ async function createTask(data, officeId) {
           due_date: data.dueDate || "",
           remaining_days: remaining,
           status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
-          notes: data.notes || ""
+          notes: data.notes || "",
+          client_id: clientId,
+          assigned_lawyer_id: assignedLawyerId,
+          created_by: createdBy
         }
       ]).select().single();
       if (!error && inserted) {
-        return {
+        const formatted = formatTask(inserted);
+        const memRecord = {
+          ...formatted,
           id: inserted.id,
-          officeId: inserted.office_id,
-          title: inserted.title,
-          assignee: inserted.assignee,
-          priority: inserted.priority,
-          dueDate: inserted.due_date,
-          remainingDays: inserted.remaining_days,
-          status: inserted.status,
-          notes: inserted.notes,
-          createdAt: inserted.created_at
+          officeId,
+          clientId,
+          assignedLawyerId,
+          createdBy
         };
+        const list2 = memoryTasks.get(officeId) || [];
+        list2.unshift(memRecord);
+        memoryTasks.set(officeId, list2);
+        return formatTask(memRecord);
       }
     } catch (err) {
       logger.warn({ err }, "Supabase createTask failed, falling back to memory");
@@ -829661,12 +830943,15 @@ async function createTask(data, officeId) {
     remainingDays: remaining,
     status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
     notes: data.notes || "",
+    clientId,
+    assignedLawyerId,
+    createdBy,
     createdAt: now
   };
   const list = memoryTasks.get(officeId) || [];
   list.unshift(record);
   memoryTasks.set(officeId, list);
-  return { ...record };
+  return formatTask(record);
 }
 async function updateTask(id, data, officeId) {
   const client = getSupabaseClient();
@@ -829682,20 +830967,13 @@ async function updateTask(id, data, officeId) {
       }
       if (data.status !== void 0) updatePayload.status = data.status;
       if (data.notes !== void 0) updatePayload.notes = data.notes;
+      if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
+      if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
+      if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       const { data: updated2, error } = await client.from("tasks").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated2) {
-        return {
-          id: updated2.id,
-          officeId: updated2.office_id,
-          title: updated2.title,
-          assignee: updated2.assignee,
-          priority: updated2.priority,
-          dueDate: updated2.due_date,
-          remainingDays: updated2.remaining_days,
-          status: updated2.status,
-          notes: updated2.notes,
-          createdAt: updated2.created_at
-        };
+        return formatTask(updated2);
       }
     } catch (err) {
       logger.warn({ err }, "Supabase updateTask failed, falling back to memory");
@@ -829713,10 +830991,18 @@ async function updateTask(id, data, officeId) {
     dueDate: data.dueDate !== void 0 ? data.dueDate : current.dueDate,
     remainingDays: data.dueDate !== void 0 ? calcRemainingDays(data.dueDate) : current.remainingDays,
     status: data.status !== void 0 ? data.status : current.status,
-    notes: data.notes !== void 0 ? data.notes : current.notes
+    notes: data.notes !== void 0 ? data.notes : current.notes,
+    clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   list[idx] = updated;
-  return { ...updated };
+  return formatTask(updated);
+}
+async function reassignTask(id, assignedLawyerId, officeId, lawyerName) {
+  const payload = { assignedLawyerId };
+  if (lawyerName !== void 0) payload.assignee = lawyerName;
+  return updateTask(id, payload, officeId);
 }
 async function deleteTask(id, officeId) {
   const client = getSupabaseClient();
@@ -829734,59 +831020,86 @@ async function deleteTask(id, officeId) {
   list.splice(idx, 1);
   return true;
 }
+function formatPoa(r2) {
+  return {
+    id: r2.id,
+    officeId: r2.officeId ?? r2.office_id,
+    clientName: r2.clientName ?? r2.client_name,
+    poaNumber: r2.poaNumber ?? r2.poa_number,
+    issueDateHijri: r2.issueDateHijri ?? r2.issue_date_hijri ?? "",
+    expiryDateHijri: r2.expiryDateHijri ?? r2.expiry_date_hijri ?? "",
+    daysRemaining: r2.daysRemaining ?? r2.days_remaining ?? calcDaysFromHijri(r2.expiryDateHijri || r2.expiry_date_hijri),
+    notes: r2.notes || "",
+    clientId: r2.clientId ?? r2.client_id ?? null,
+    assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
+    createdBy: r2.createdBy ?? r2.created_by ?? null,
+    createdAt: r2.createdAt ?? r2.created_at,
+    updatedAt: r2.updatedAt ?? r2.updated_at,
+    ...r2.clientId || r2.client_id ? { client_id: r2.clientId ?? r2.client_id } : {},
+    ...r2.assignedLawyerId || r2.assigned_lawyer_id ? { assigned_lawyer_id: r2.assignedLawyerId ?? r2.assigned_lawyer_id } : {},
+    ...r2.createdBy || r2.created_by ? { created_by: r2.createdBy ?? r2.created_by } : {}
+  };
+}
 async function listPoa(officeId) {
+  const memList = (memoryPoa.get(officeId) || []).map(formatPoa);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("poa").select("*").eq("office_id", officeId).order("id", { ascending: false });
       if (!error && data) {
-        return data.map((r2) => ({
-          id: r2.id,
-          officeId: r2.office_id,
-          clientName: r2.client_name,
-          poaNumber: r2.poa_number,
-          issueDateHijri: r2.issue_date_hijri || "",
-          expiryDateHijri: r2.expiry_date_hijri || "",
-          daysRemaining: r2.days_remaining ?? calcDaysFromHijri(r2.expiry_date_hijri),
-          notes: r2.notes || "",
-          createdAt: r2.created_at
-        }));
+        const dbPoa = data.map((d) => {
+          const formatted = formatPoa(d);
+          const fromMem = (memoryPoa.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              createdBy: fromMem.createdBy || formatted.createdBy
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbPoa.map((p) => p.id));
+        return [...dbPoa, ...memList.filter((m2) => !dbIds.has(m2.id))];
       }
     } catch (err) {
       logger.warn({ err }, "Supabase listPoa failed, falling back to memory");
     }
   }
-  return (memoryPoa.get(officeId) || []).map((p) => ({ ...p }));
+  return memList;
 }
 async function getPoaById(id, officeId) {
+  const memList = memoryPoa.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("poa").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        return {
-          id: data.id,
-          officeId: data.office_id,
-          clientName: data.client_name,
-          poaNumber: data.poa_number,
-          issueDateHijri: data.issue_date_hijri || "",
-          expiryDateHijri: data.expiry_date_hijri || "",
-          daysRemaining: data.days_remaining ?? calcDaysFromHijri(data.expiry_date_hijri),
-          notes: data.notes || "",
-          createdAt: data.created_at
-        };
+        const formatted = formatPoa(data);
+        if (fromMem) {
+          return {
+            ...formatted,
+            clientId: fromMem.clientId || formatted.clientId,
+            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+            createdBy: fromMem.createdBy || formatted.createdBy
+          };
+        }
+        return formatted;
       }
     } catch (err) {
       logger.warn({ err }, "Supabase getPoaById failed, falling back to memory");
     }
   }
-  const list = memoryPoa.get(officeId) || [];
-  const item = list.find((p) => p.id === id);
-  return item ? { ...item } : null;
+  return fromMem ? formatPoa(fromMem) : null;
 }
 async function createPoa(data, officeId) {
   const days = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri || "");
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const clientId = data.clientId || data.client_id || null;
+  const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
+  const createdBy = data.createdBy || data.created_by || null;
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -829798,21 +831111,26 @@ async function createPoa(data, officeId) {
           issue_date_hijri: data.issueDateHijri || "",
           expiry_date_hijri: data.expiryDateHijri || "",
           days_remaining: days,
-          notes: data.notes || ""
+          notes: data.notes || "",
+          client_id: clientId,
+          assigned_lawyer_id: assignedLawyerId,
+          created_by: createdBy
         }
       ]).select().single();
       if (!error && inserted) {
-        return {
+        const formatted = formatPoa(inserted);
+        const memRecord = {
+          ...formatted,
           id: inserted.id,
-          officeId: inserted.office_id,
-          clientName: inserted.client_name,
-          poaNumber: inserted.poa_number,
-          issueDateHijri: inserted.issue_date_hijri,
-          expiryDateHijri: inserted.expiry_date_hijri,
-          daysRemaining: inserted.days_remaining,
-          notes: inserted.notes,
-          createdAt: inserted.created_at
+          officeId,
+          clientId,
+          assignedLawyerId,
+          createdBy
         };
+        const list2 = memoryPoa.get(officeId) || [];
+        list2.unshift(memRecord);
+        memoryPoa.set(officeId, list2);
+        return formatPoa(memRecord);
       }
     } catch (err) {
       logger.warn({ err }, "Supabase createPoa failed, falling back to memory");
@@ -829828,12 +831146,15 @@ async function createPoa(data, officeId) {
     expiryDateHijri: data.expiryDateHijri || "",
     daysRemaining: days,
     notes: data.notes || "",
+    clientId,
+    assignedLawyerId,
+    createdBy,
     createdAt: now
   };
   const list = memoryPoa.get(officeId) || [];
   list.unshift(record);
   memoryPoa.set(officeId, list);
-  return { ...record };
+  return formatPoa(record);
 }
 async function updatePoa(id, data, officeId) {
   const client = getSupabaseClient();
@@ -829848,19 +831169,13 @@ async function updatePoa(id, data, officeId) {
         updatePayload.days_remaining = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri);
       }
       if (data.notes !== void 0) updatePayload.notes = data.notes;
+      if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
+      if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
+      if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       const { data: updated2, error } = await client.from("poa").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated2) {
-        return {
-          id: updated2.id,
-          officeId: updated2.office_id,
-          clientName: updated2.client_name,
-          poaNumber: updated2.poa_number,
-          issueDateHijri: updated2.issue_date_hijri,
-          expiryDateHijri: updated2.expiry_date_hijri,
-          daysRemaining: updated2.days_remaining,
-          notes: updated2.notes,
-          createdAt: updated2.created_at
-        };
+        return formatPoa(updated2);
       }
     } catch (err) {
       logger.warn({ err }, "Supabase updatePoa failed, falling back to memory");
@@ -829877,10 +831192,16 @@ async function updatePoa(id, data, officeId) {
     issueDateHijri: data.issueDateHijri !== void 0 ? data.issueDateHijri : current.issueDateHijri,
     expiryDateHijri: data.expiryDateHijri !== void 0 ? data.expiryDateHijri : current.expiryDateHijri,
     daysRemaining: data.daysRemaining !== void 0 ? data.daysRemaining : data.expiryDateHijri !== void 0 ? calcDaysFromHijri(data.expiryDateHijri) : current.daysRemaining,
-    notes: data.notes !== void 0 ? data.notes : current.notes
+    notes: data.notes !== void 0 ? data.notes : current.notes,
+    clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   list[idx] = updated;
-  return { ...updated };
+  return formatPoa(updated);
+}
+async function reassignPoa(id, assignedLawyerId, officeId) {
+  return updatePoa(id, { assignedLawyerId }, officeId);
 }
 async function deletePoa(id, officeId) {
   const client = getSupabaseClient();
@@ -829898,64 +831219,93 @@ async function deletePoa(id, officeId) {
   list.splice(idx, 1);
   return true;
 }
+function formatJudgment(r2) {
+  return {
+    id: r2.id,
+    officeId: r2.officeId ?? r2.office_id,
+    caseNumber: r2.caseNumber ?? r2.case_number ?? "",
+    court: r2.court || "",
+    plaintiff: r2.plaintiff || "",
+    defendant: r2.defendant || "",
+    assignedLawyer: r2.assignedLawyer ?? r2.assigned_lawyer ?? "",
+    judgmentNumber: r2.judgmentNumber ?? r2.judgment_number ?? "",
+    judgmentDate: r2.judgmentDate ?? r2.judgment_date ?? "",
+    summary: r2.summary || "",
+    isFavorable: r2.isFavorable ?? r2.is_favorable ?? "\u0646\u0647\u0627\u0626\u064A",
+    clientId: r2.clientId ?? r2.client_id ?? null,
+    assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
+    clientRole: r2.clientRole ?? r2.client_role ?? null,
+    createdBy: r2.createdBy ?? r2.created_by ?? null,
+    createdAt: r2.createdAt ?? r2.created_at,
+    updatedAt: r2.updatedAt ?? r2.updated_at,
+    ...r2.clientId || r2.client_id ? { client_id: r2.clientId ?? r2.client_id } : {},
+    ...r2.assignedLawyerId || r2.assigned_lawyer_id ? { assigned_lawyer_id: r2.assignedLawyerId ?? r2.assigned_lawyer_id } : {},
+    ...r2.clientRole || r2.client_role ? { client_role: r2.clientRole ?? r2.client_role } : {},
+    ...r2.createdBy || r2.created_by ? { created_by: r2.createdBy ?? r2.created_by } : {}
+  };
+}
 async function listJudgments(officeId) {
+  const memList = (memoryJudgments.get(officeId) || []).map(formatJudgment);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("judgments").select("*").eq("office_id", officeId).order("id", { ascending: false });
       if (!error && data) {
-        return data.map((r2) => ({
-          id: r2.id,
-          officeId: r2.office_id,
-          caseNumber: r2.case_number || "",
-          court: r2.court || "",
-          plaintiff: r2.plaintiff || "",
-          defendant: r2.defendant || "",
-          assignedLawyer: r2.assigned_lawyer || "",
-          judgmentNumber: r2.judgment_number || "",
-          judgmentDate: r2.judgment_date || "",
-          summary: r2.summary || "",
-          isFavorable: r2.is_favorable || "\u0646\u0647\u0627\u0626\u064A",
-          createdAt: r2.created_at
-        }));
+        const dbJudgments = data.map((d) => {
+          const formatted = formatJudgment(d);
+          const fromMem = (memoryJudgments.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              clientRole: fromMem.clientRole || formatted.clientRole,
+              createdBy: fromMem.createdBy || formatted.createdBy
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbJudgments.map((j) => j.id));
+        return [...dbJudgments, ...memList.filter((m2) => !dbIds.has(m2.id))];
       }
     } catch (err) {
       logger.warn({ err }, "Supabase listJudgments failed, falling back to memory");
     }
   }
-  return (memoryJudgments.get(officeId) || []).map((j) => ({ ...j }));
+  return memList;
 }
 async function getJudgmentById(id, officeId) {
+  const memList = memoryJudgments.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("judgments").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        return {
-          id: data.id,
-          officeId: data.office_id,
-          caseNumber: data.case_number || "",
-          court: data.court || "",
-          plaintiff: data.plaintiff || "",
-          defendant: data.defendant || "",
-          assignedLawyer: data.assigned_lawyer || "",
-          judgmentNumber: data.judgment_number || "",
-          judgmentDate: data.judgment_date || "",
-          summary: data.summary || "",
-          isFavorable: data.is_favorable || "\u0646\u0647\u0627\u0626\u064A",
-          createdAt: data.created_at
-        };
+        const formatted = formatJudgment(data);
+        if (fromMem) {
+          return {
+            ...formatted,
+            clientId: fromMem.clientId || formatted.clientId,
+            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+            clientRole: fromMem.clientRole || formatted.clientRole,
+            createdBy: fromMem.createdBy || formatted.createdBy
+          };
+        }
+        return formatted;
       }
     } catch (err) {
       logger.warn({ err }, "Supabase getJudgmentById failed, falling back to memory");
     }
   }
-  const list = memoryJudgments.get(officeId) || [];
-  const j = list.find((item) => item.id === id);
-  return j ? { ...j } : null;
+  return fromMem ? formatJudgment(fromMem) : null;
 }
 async function createJudgment(data, officeId) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const clientId = data.clientId || data.client_id || null;
+  const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
+  const clientRole = data.clientRole || data.client_role || null;
+  const createdBy = data.createdBy || data.created_by || null;
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -829970,24 +831320,28 @@ async function createJudgment(data, officeId) {
           judgment_number: data.judgmentNumber || "",
           judgment_date: data.judgmentDate || "",
           summary: data.summary || "",
-          is_favorable: data.isFavorable || "\u0646\u0647\u0627\u0626\u064A"
+          is_favorable: data.isFavorable || "\u0646\u0647\u0627\u0626\u064A",
+          client_id: clientId,
+          assigned_lawyer_id: assignedLawyerId,
+          client_role: clientRole,
+          created_by: createdBy
         }
       ]).select().single();
       if (!error && inserted) {
-        return {
+        const formatted = formatJudgment(inserted);
+        const memRecord = {
+          ...formatted,
           id: inserted.id,
-          officeId: inserted.office_id,
-          caseNumber: inserted.case_number,
-          court: inserted.court,
-          plaintiff: inserted.plaintiff,
-          defendant: inserted.defendant,
-          assignedLawyer: inserted.assigned_lawyer,
-          judgmentNumber: inserted.judgment_number,
-          judgmentDate: inserted.judgment_date,
-          summary: inserted.summary,
-          isFavorable: inserted.is_favorable,
-          createdAt: inserted.created_at
+          officeId,
+          clientId,
+          assignedLawyerId,
+          clientRole,
+          createdBy
         };
+        const list2 = memoryJudgments.get(officeId) || [];
+        list2.unshift(memRecord);
+        memoryJudgments.set(officeId, list2);
+        return formatJudgment(memRecord);
       }
     } catch (err) {
       logger.warn({ err }, "Supabase createJudgment failed, falling back to memory");
@@ -830006,12 +831360,16 @@ async function createJudgment(data, officeId) {
     judgmentDate: data.judgmentDate || "",
     summary: data.summary || "",
     isFavorable: data.isFavorable || "\u0646\u0647\u0627\u0626\u064A",
+    clientId,
+    assignedLawyerId,
+    clientRole,
+    createdBy,
     createdAt: now
   };
   const list = memoryJudgments.get(officeId) || [];
   list.unshift(record);
   memoryJudgments.set(officeId, list);
-  return { ...record };
+  return formatJudgment(record);
 }
 async function updateJudgment(id, data, officeId) {
   const client = getSupabaseClient();
@@ -830027,22 +831385,15 @@ async function updateJudgment(id, data, officeId) {
       if (data.judgmentDate !== void 0) updatePayload.judgment_date = data.judgmentDate;
       if (data.summary !== void 0) updatePayload.summary = data.summary;
       if (data.isFavorable !== void 0) updatePayload.is_favorable = data.isFavorable;
+      if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
+      if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
+      if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
+      if (data.clientRole !== void 0) updatePayload.client_role = data.clientRole;
+      if (data.client_role !== void 0) updatePayload.client_role = data.client_role;
       const { data: updated2, error } = await client.from("judgments").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated2) {
-        return {
-          id: updated2.id,
-          officeId: updated2.office_id,
-          caseNumber: updated2.case_number,
-          court: updated2.court,
-          plaintiff: updated2.plaintiff,
-          defendant: updated2.defendant,
-          assignedLawyer: updated2.assigned_lawyer,
-          judgmentNumber: updated2.judgment_number,
-          judgmentDate: updated2.judgment_date,
-          summary: updated2.summary,
-          isFavorable: updated2.is_favorable,
-          createdAt: updated2.created_at
-        };
+        return formatJudgment(updated2);
       }
     } catch (err) {
       logger.warn({ err }, "Supabase updateJudgment failed, falling back to memory");
@@ -830062,10 +831413,19 @@ async function updateJudgment(id, data, officeId) {
     judgmentNumber: data.judgmentNumber !== void 0 ? data.judgmentNumber : current.judgmentNumber,
     judgmentDate: data.judgmentDate !== void 0 ? data.judgmentDate : current.judgmentDate,
     summary: data.summary !== void 0 ? data.summary : current.summary,
-    isFavorable: data.isFavorable !== void 0 ? data.isFavorable : current.isFavorable
+    isFavorable: data.isFavorable !== void 0 ? data.isFavorable : current.isFavorable,
+    clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
+    clientRole: data.clientRole !== void 0 ? data.clientRole : data.client_role !== void 0 ? data.client_role : current.clientRole,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   list[idx] = updated;
-  return { ...updated };
+  return formatJudgment(updated);
+}
+async function reassignJudgment(id, assignedLawyerId, officeId, lawyerName) {
+  const payload = { assignedLawyerId };
+  if (lawyerName !== void 0) payload.assignedLawyer = lawyerName;
+  return updateJudgment(id, payload, officeId);
 }
 async function deleteJudgment(id, officeId) {
   const client = getSupabaseClient();
@@ -830140,7 +831500,7 @@ async function exportOfficeDataToGoogleSheets(officeId) {
     };
   }
 }
-var import_moment_hijri2, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, _nextId;
+var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, _nextId;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -830148,6 +831508,8 @@ var init_postgres_service = __esm({
     init_logger();
     init_hijri();
     import_moment_hijri2 = __toESM(require_moment_hijri(), 1);
+    import_crypto4 = __toESM(require("crypto"), 1);
+    memoryClients = /* @__PURE__ */ new Map();
     memorySessions = /* @__PURE__ */ new Map();
     memoryTasks = /* @__PURE__ */ new Map();
     memoryPoa = /* @__PURE__ */ new Map();
@@ -830165,7 +831527,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express16 = __toESM(require_express2(), 1);
+var import_express17 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -830174,7 +831536,7 @@ var import_fs4 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express16 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -831068,6 +832430,132 @@ init_postgres_service();
 init_supabase_service();
 init_hijri();
 init_env();
+init_logger();
+var COLUMN_INDEX = {
+  "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629": 0,
+  "\u0627\u0644\u0645\u062F\u0639\u064A": 1,
+  "\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647": 2,
+  "\u0627\u0644\u0645\u062D\u0643\u0645\u0629": 3,
+  "\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629": 4,
+  "\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0642\u0636\u064A\u0629": 5,
+  "\u0646\u0648\u0639 \u0627\u0644\u062C\u0644\u0633\u0629": 6,
+  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062C\u0644\u0633\u0629 \u0647\u062C\u0631\u064A": 7,
+  "\u064A\u0648\u0645 \u0627\u0644\u062C\u0644\u0633\u0629": 8,
+  "\u0648\u0642\u062A \u0627\u0644\u062C\u0644\u0633\u0629": 9,
+  "\u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629": 10,
+  "\u0645\u0644\u0627\u062D\u0638\u0627\u062A": 11,
+  "\u062D\u0627\u0644\u0629 \u0627\u0644\u062C\u0644\u0633\u0629": 12,
+  "\u062A\u0630\u0643\u064A\u0631 24 \u0633\u0627\u0639\u0629": 13,
+  "\u062A\u0630\u0643\u064A\u0631 6 \u0633\u0627\u0639\u0627\u062A": 14,
+  "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621": 15,
+  "\u0627\u0644\u062A\u0642\u0631\u064A\u0631": 16,
+  "Case Number": 0,
+  "Plaintiff": 1,
+  "Defendant": 2,
+  "Court": 3,
+  "Court Circuit": 4,
+  "Case Subject": 5,
+  "Session Type": 6,
+  "Session Date Hijri": 7,
+  "Session Day": 8,
+  "Session Time": 9,
+  "Days Remaining": 10,
+  "Notes": 11,
+  "Status": 12,
+  "Reminder24": 13,
+  "Reminder6": 14,
+  "Created At": 15,
+  "Report": 16
+};
+var ARABIC_DAYS = [
+  "\u0627\u0644\u0623\u062D\u062F",
+  "\u0627\u0644\u0627\u062B\u0646\u064A\u0646",
+  "\u0627\u0644\u062B\u0644\u0627\u062B\u0627\u0621",
+  "\u0627\u0644\u0623\u0631\u0628\u0639\u0627\u0621",
+  "\u0627\u0644\u062E\u0645\u064A\u0633",
+  "\u0627\u0644\u062C\u0645\u0639\u0629",
+  "\u0627\u0644\u0633\u0628\u062A"
+];
+function cell(row, name) {
+  const index = COLUMN_INDEX[name];
+  if (index === void 0) return "";
+  return row[index] ?? "";
+}
+function nullableString(value) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+function parseStatus(raw) {
+  const normalized = raw.trim();
+  if (normalized === "Upcoming" || normalized === "\u0642\u0627\u062F\u0645\u0629") return "Upcoming";
+  if (normalized === "Today" || normalized === "\u0627\u0644\u064A\u0648\u0645") return "Today";
+  if (normalized === "Finished" || normalized === "\u0645\u0646\u062A\u0647\u064A\u0629") return "Finished";
+  if (normalized === "Cancelled" || normalized === "\u0645\u0644\u063A\u0627\u0629") return "Cancelled";
+  return "Upcoming";
+}
+function rowToSession(id, row) {
+  const sessionDateHijri = nullableString(cell(row, "Session Date Hijri"));
+  const sessionTime = nullableString(cell(row, "Session Time"));
+  const hearingDate = computeHearingDateTime(sessionDateHijri, sessionTime);
+  const rawSessionDay = nullableString(cell(row, "Session Day"));
+  const sessionDay = rawSessionDay || computeSessionDayStr(sessionDateHijri, sessionTime);
+  return {
+    id,
+    caseNumber: nullableString(cell(row, "Case Number")),
+    plaintiff: nullableString(cell(row, "Plaintiff")),
+    defendant: nullableString(cell(row, "Defendant")),
+    court: nullableString(cell(row, "Court")),
+    courtCircuit: nullableString(cell(row, "Court Circuit")),
+    caseSubject: nullableString(cell(row, "Case Subject")),
+    sessionType: nullableString(cell(row, "Session Type")),
+    sessionDateHijri,
+    sessionDay: sessionDay && sessionDay !== "\u2014" ? sessionDay : null,
+    sessionTime,
+    notes: nullableString(cell(row, "Notes")),
+    status: parseStatus(cell(row, "Status")),
+    reminder24: cell(row, "Reminder24") === "true",
+    reminder6: cell(row, "Reminder6") === "true",
+    createdAt: cell(row, "Created At") || (/* @__PURE__ */ new Date()).toISOString(),
+    hearingAt: hearingDate ? hearingDate.toISOString() : null
+  };
+}
+function sessionInputToRow(input, createdAt) {
+  const daysRemaining = computeDaysRemainingStr(input.sessionDateHijri, input.sessionTime);
+  const sessionDay = computeSessionDayStr(input.sessionDateHijri, input.sessionTime);
+  const anyInput = input;
+  return [
+    input.caseNumber ?? "",
+    input.plaintiff ?? "",
+    input.defendant ?? "",
+    input.court ?? "",
+    input.courtCircuit ?? "",
+    input.caseSubject ?? "",
+    input.sessionType ?? "",
+    input.sessionDateHijri ?? "",
+    sessionDay,
+    input.sessionTime ?? "",
+    daysRemaining,
+    input.notes ?? "",
+    anyInput.status ?? "Upcoming",
+    anyInput.reminder24 ? "true" : "false",
+    anyInput.reminder6 ? "true" : "false",
+    createdAt,
+    ""
+  ];
+}
+function computeSessionDayStr(sessionDateHijri, sessionTime) {
+  const hearingAt = computeHearingDateTime(sessionDateHijri, sessionTime);
+  if (hearingAt) {
+    return ARABIC_DAYS[hearingAt.getUTCDay()] ?? "\u2014";
+  }
+  const hijri = parseHijriDateString(sessionDateHijri);
+  if (!hijri) return "\u2014";
+  const greg = hijriToGregorian(hijri);
+  if (!greg) return "\u2014";
+  const date = new Date(Date.UTC(greg.year, greg.month - 1, greg.day));
+  return ARABIC_DAYS[date.getUTCDay()] ?? "\u2014";
+}
 function computeDaysRemainingStr(sessionDateHijri, sessionTime) {
   let hearingAt = computeHearingDateTime(sessionDateHijri, sessionTime);
   if (!hearingAt) {
@@ -831145,7 +832633,28 @@ async function markReminderSent(id, kind, userIdOrOfficeId) {
 }
 async function listSessions2(status, userIdOrOfficeId) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
-  const sessions = await listSessions(officeId, status);
+  let sessions = await listSessions(officeId, status);
+  if (sessions.length === 0) {
+    try {
+      const { getUserGoogleCredentials: getUserGoogleCredentials2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+      const creds = await getUserGoogleCredentials2(officeId);
+      if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+        const { listRows: listRows2, ensureSheetReady: ensureSheetReady2 } = await Promise.resolve().then(() => (init_googleSheets_service(), googleSheets_service_exports));
+        await ensureSheetReady2(officeId);
+        const rows = await listRows2(officeId);
+        if (rows && rows.length > 0) {
+          const sheetSessions = rows.map(({ id, values }) => rowToSession(id, values));
+          const filtered = status && status !== "All" ? sheetSessions.filter((s2) => s2.status === status) : sheetSessions;
+          return filtered.map((s2) => ({
+            ...s2,
+            status: deriveEffectiveStatus(s2)
+          }));
+        }
+      }
+    } catch (err) {
+      logger.debug({ err, officeId }, "Google Sheets fallback check skipped");
+    }
+  }
   return sessions.map((s2) => ({
     ...s2,
     status: deriveEffectiveStatus(s2)
@@ -831154,15 +832663,50 @@ async function listSessions2(status, userIdOrOfficeId) {
 async function getSessionById2(id, userIdOrOfficeId) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
   const session = await getSessionById(id, officeId);
-  if (!session) return null;
-  return {
-    ...session,
-    status: deriveEffectiveStatus(session)
-  };
+  if (session) {
+    return {
+      ...session,
+      status: deriveEffectiveStatus(session)
+    };
+  }
+  try {
+    const { getUserGoogleCredentials: getUserGoogleCredentials2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    const creds = await getUserGoogleCredentials2(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { listRows: listRows2 } = await Promise.resolve().then(() => (init_googleSheets_service(), googleSheets_service_exports));
+      const rows = await listRows2(officeId);
+      const match = rows.find((r2) => r2.id === id);
+      if (match) {
+        const s2 = rowToSession(match.id, match.values);
+        return {
+          ...s2,
+          status: deriveEffectiveStatus(s2)
+        };
+      }
+    }
+  } catch (err) {
+    logger.debug({ err, id, officeId }, "Google Sheets getSessionById fallback skipped");
+  }
+  return null;
 }
 async function createSession2(data, userIdOrOfficeId) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
   const session = await createSession(data, officeId);
+  try {
+    const { getUserGoogleCredentials: getUserGoogleCredentials2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    const creds = await getUserGoogleCredentials2(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { appendRow: appendRow2, ensureSheetReady: ensureSheetReady2 } = await Promise.resolve().then(() => (init_googleSheets_service(), googleSheets_service_exports));
+      await ensureSheetReady2(officeId).catch(() => {
+      });
+      const row = sessionInputToRow(data, session.createdAt || (/* @__PURE__ */ new Date()).toISOString());
+      await appendRow2(row, officeId).catch((err) => {
+        logger.warn({ err, officeId }, "Failed to append session to Google Sheets");
+      });
+    }
+  } catch (err) {
+    logger.debug({ err, officeId }, "Google Sheets sync skipped on createSession");
+  }
   return {
     ...session,
     status: deriveEffectiveStatus(session)
@@ -831172,6 +832716,39 @@ async function updateSession2(id, data, userIdOrOfficeId) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
   const session = await updateSession(id, data, officeId);
   if (!session) return null;
+  try {
+    const { getUserGoogleCredentials: getUserGoogleCredentials2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    const creds = await getUserGoogleCredentials2(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { updateRowCells: updateRowCells2 } = await Promise.resolve().then(() => (init_googleSheets_service(), googleSheets_service_exports));
+      const rowUpdates = {};
+      if (data.caseNumber !== void 0) rowUpdates[COLUMN_INDEX["Case Number"]] = data.caseNumber || "";
+      if (data.plaintiff !== void 0) rowUpdates[COLUMN_INDEX["Plaintiff"]] = data.plaintiff || "";
+      if (data.defendant !== void 0) rowUpdates[COLUMN_INDEX["Defendant"]] = data.defendant || "";
+      if (data.court !== void 0) rowUpdates[COLUMN_INDEX["Court"]] = data.court || "";
+      if (data.courtCircuit !== void 0) rowUpdates[COLUMN_INDEX["Court Circuit"]] = data.courtCircuit || "";
+      if (data.caseSubject !== void 0) rowUpdates[COLUMN_INDEX["Case Subject"]] = data.caseSubject || "";
+      if (data.sessionType !== void 0) rowUpdates[COLUMN_INDEX["Session Type"]] = data.sessionType || "";
+      if (data.sessionDateHijri !== void 0) {
+        rowUpdates[COLUMN_INDEX["Session Date Hijri"]] = data.sessionDateHijri || "";
+        rowUpdates[COLUMN_INDEX["Session Day"]] = computeSessionDayStr(data.sessionDateHijri, data.sessionTime || session.sessionTime);
+        rowUpdates[COLUMN_INDEX["Days Remaining"]] = computeDaysRemainingStr(data.sessionDateHijri, data.sessionTime || session.sessionTime);
+      }
+      if (data.sessionTime !== void 0) {
+        rowUpdates[COLUMN_INDEX["Session Time"]] = data.sessionTime || "";
+      }
+      if (data.notes !== void 0) rowUpdates[COLUMN_INDEX["Notes"]] = data.notes || "";
+      if (data.status !== void 0) rowUpdates[COLUMN_INDEX["Status"]] = data.status || "Upcoming";
+      const anyData = data;
+      if (anyData.reminder24 !== void 0) rowUpdates[COLUMN_INDEX["Reminder24"]] = anyData.reminder24 ? "true" : "false";
+      if (anyData.reminder6 !== void 0) rowUpdates[COLUMN_INDEX["Reminder6"]] = anyData.reminder6 ? "true" : "false";
+      await updateRowCells2(id, rowUpdates, officeId).catch((err) => {
+        logger.warn({ err, id, officeId }, "Failed to sync session update to Google Sheets");
+      });
+    }
+  } catch (err) {
+    logger.debug({ err, id, officeId }, "Google Sheets update sync skipped");
+  }
   return {
     ...session,
     status: deriveEffectiveStatus(session)
@@ -831179,7 +832756,20 @@ async function updateSession2(id, data, userIdOrOfficeId) {
 }
 async function deleteSession2(id, userIdOrOfficeId) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
-  return deleteSession(id, officeId);
+  const deleted = await deleteSession(id, officeId);
+  try {
+    const { getUserGoogleCredentials: getUserGoogleCredentials2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    const creds = await getUserGoogleCredentials2(officeId);
+    if (creds && creds.spreadsheetId && creds.serviceAccountJson) {
+      const { deleteRow: deleteRow2 } = await Promise.resolve().then(() => (init_googleSheets_service(), googleSheets_service_exports));
+      await deleteRow2(id, officeId).catch((err) => {
+        logger.warn({ err, id, officeId }, "Failed to sync session deletion to Google Sheets");
+      });
+    }
+  } catch (err) {
+    logger.debug({ err, id, officeId }, "Google Sheets delete sync skipped");
+  }
+  return deleted;
 }
 async function getSessionReport2(id, userIdOrOfficeId) {
   const officeId = await resolveOfficeId(userIdOrOfficeId);
@@ -831219,6 +832809,173 @@ async function getDashboardStats(userIdOrOfficeId, assignee) {
     totalPoas: poas.length
   };
 }
+var ARABIC_MONTH_NAMES = [
+  "\u064A\u0646\u0627\u064A\u0631",
+  "\u0641\u0628\u0631\u0627\u064A\u0631",
+  "\u0645\u0627\u0631\u0633",
+  "\u0623\u0628\u0631\u064A\u0644",
+  "\u0645\u0627\u064A\u0648",
+  "\u064A\u0648\u0646\u064A\u0648",
+  "\u064A\u0648\u0644\u064A\u0648",
+  "\u0623\u063A\u0633\u0637\u0633",
+  "\u0633\u0628\u062A\u0645\u0628\u0631",
+  "\u0623\u0643\u062A\u0648\u0628\u0631",
+  "\u0646\u0648\u0641\u0645\u0628\u0631",
+  "\u062F\u064A\u0633\u0645\u0628\u0631"
+];
+async function getDashboardChartsData(userIdOrOfficeId, assignee, isAdmin = false) {
+  const officeId = await resolveOfficeId(userIdOrOfficeId);
+  const [allSessions, allTasks, allJudgments, officeMembers] = await Promise.all([
+    listSessions(officeId),
+    listTasks(officeId),
+    listJudgments(officeId),
+    isAdmin ? listOfficeMembers(officeId).catch(() => []) : Promise.resolve([])
+  ]);
+  const sessions = assignee ? allSessions.filter((s2) => {
+    const text = `${s2.notes || ""} ${s2.plaintiff || ""}`.toLowerCase();
+    return text.includes(assignee.toLowerCase());
+  }) : allSessions;
+  const tasks3 = assignee ? allTasks.filter((t2) => {
+    const a = (t2.assignee || "").toLowerCase();
+    return a.includes(assignee.toLowerCase());
+  }) : allTasks;
+  const now = /* @__PURE__ */ new Date();
+  const trendBuckets = [];
+  for (let i2 = -4; i2 <= 1; i2++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i2, 1);
+    const m2 = d.getMonth();
+    const y = d.getFullYear();
+    const key = `${y}-${String(m2 + 1).padStart(2, "0")}`;
+    trendBuckets.push({
+      key,
+      month: ARABIC_MONTH_NAMES[m2],
+      total: 0,
+      finished: 0,
+      upcoming: 0
+    });
+  }
+  for (const s2 of sessions) {
+    if (s2.hearingAt) {
+      const dt = new Date(s2.hearingAt);
+      if (!isNaN(dt.getTime())) {
+        const sKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+        const bucket = trendBuckets.find((b) => b.key === sKey);
+        if (bucket) {
+          bucket.total += 1;
+          const status = deriveEffectiveStatus(s2);
+          if (status === "Finished") {
+            bucket.finished += 1;
+          } else {
+            bucket.upcoming += 1;
+          }
+        }
+      }
+    }
+  }
+  const sessionsTrend = trendBuckets.map(({ month, total, finished, upcoming }) => ({
+    month,
+    total,
+    finished,
+    upcoming
+  }));
+  let upcomingCount = 0;
+  let todayCount = 0;
+  let finishedCount = 0;
+  let otherCount = 0;
+  for (const s2 of sessions) {
+    const status = deriveEffectiveStatus(s2);
+    if (status === "Upcoming") upcomingCount++;
+    else if (status === "Today") todayCount++;
+    else if (status === "Finished") finishedCount++;
+    else otherCount++;
+  }
+  const sessionsStatusDistribution = [
+    { name: "\u062C\u0644\u0633\u0627\u062A \u0642\u0627\u062F\u0645\u0629", count: upcomingCount, fill: "#C9A449" },
+    { name: "\u062C\u0644\u0633\u0627\u062A \u0627\u0644\u064A\u0648\u0645", count: todayCount, fill: "#D97706" },
+    { name: "\u062C\u0644\u0633\u0627\u062A \u0645\u0646\u062A\u0647\u064A\u0629", count: finishedCount, fill: "#3F4A2C" },
+    { name: "\u0645\u0644\u063A\u0627\u0629 / \u0623\u062E\u0631\u0649", count: otherCount, fill: "#94A3B8" }
+  ];
+  let completedTasks = 0;
+  let inProgressTasks = 0;
+  let pendingTasks = 0;
+  let overdueTasks = 0;
+  const nowMs = Date.now();
+  for (const t2 of tasks3) {
+    const s2 = String(t2.status || "");
+    const dueMs = t2.dueDate ? new Date(t2.dueDate).getTime() : NaN;
+    const isOverdue = !isNaN(dueMs) && dueMs < nowMs && s2 !== "\u0645\u0643\u062A\u0645\u0644\u0629";
+    if (s2 === "\u0645\u0643\u062A\u0645\u0644\u0629") completedTasks++;
+    else if (isOverdue) overdueTasks++;
+    else if (s2 === "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630") inProgressTasks++;
+    else pendingTasks++;
+  }
+  const tasksStatusDistribution = [
+    { name: "\u0645\u0643\u062A\u0645\u0644\u0629", count: completedTasks, fill: "#10B981" },
+    { name: "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630", count: inProgressTasks, fill: "#3B82F6" },
+    { name: "\u0645\u0639\u0644\u0642\u0629 / \u0645\u0624\u062C\u0644\u0629", count: pendingTasks, fill: "#C9A449" },
+    { name: "\u0645\u062A\u0623\u062E\u0631\u0629", count: overdueTasks, fill: "#EF4444" }
+  ];
+  let urgentPriority = 0;
+  let regularPriority = 0;
+  for (const t2 of tasks3) {
+    const p = String(t2.priority || "");
+    if (p === "\u0639\u0627\u062C\u0644\u0629") urgentPriority++;
+    else regularPriority++;
+  }
+  const tasksPriorityDistribution = [
+    { priority: "\u0639\u0627\u062C\u0644\u0629", count: urgentPriority, fill: "#EF4444" },
+    { priority: "\u0639\u0627\u062F\u064A\u0629", count: regularPriority, fill: "#C9A449" }
+  ];
+  const courtFrequency = {};
+  for (const s2 of sessions) {
+    const c = s2.court?.trim() || "\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";
+    courtFrequency[c] = (courtFrequency[c] || 0) + 1;
+  }
+  const sortedCourts = Object.entries(courtFrequency).sort(([, a], [, b]) => b - a).map(([court, count]) => ({ court, count }));
+  const topCourts = sortedCourts.slice(0, 4);
+  const remainingCount = sortedCourts.slice(4).reduce((sum, item) => sum + item.count, 0);
+  if (remainingCount > 0) {
+    topCourts.push({ court: "\u0645\u062D\u0627\u0643\u0645 \u0623\u062E\u0631\u0649", count: remainingCount });
+  }
+  let favorableCount = 0;
+  let preliminaryCount = 0;
+  let otherJudgments = 0;
+  for (const j of allJudgments) {
+    const fav = String(j.isFavorable || "");
+    if (fav === "\u0646\u0647\u0627\u0626\u064A" || fav.includes("\u0646\u0647\u0627\u0626\u064A") || fav.includes("\u0642\u0637\u0639\u064A")) {
+      favorableCount++;
+    } else if (fav === "\u0627\u0628\u062A\u062F\u0627\u0626\u064A" || fav.includes("\u0627\u0628\u062A\u062F\u0627\u0626\u064A")) {
+      preliminaryCount++;
+    } else {
+      otherJudgments++;
+    }
+  }
+  const judgmentsDistribution = [
+    { name: "\u0623\u062D\u0643\u0627\u0645 \u0646\u0647\u0627\u0626\u064A\u0629", count: favorableCount, fill: "#10B981" },
+    { name: "\u0623\u062D\u0643\u0627\u0645 \u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629", count: preliminaryCount, fill: "#3B82F6" },
+    { name: "\u0623\u062E\u0631\u0649 / \u0642\u064A\u062F \u0627\u0644\u062A\u062F\u0642\u064A\u0642", count: otherJudgments, fill: "#C9A449" }
+  ];
+  const teamAiUsage = isAdmin ? officeMembers.map((m2) => {
+    const usage = m2.ai_usage_count || 0;
+    const quota = m2.ai_quota_limit ?? 100;
+    const percentage = Math.min(100, Math.round(usage / quota * 100));
+    return {
+      name: m2.display_name || m2.username,
+      usage,
+      quota,
+      percentage
+    };
+  }) : void 0;
+  return {
+    sessionsTrend,
+    sessionsStatusDistribution,
+    tasksStatusDistribution,
+    tasksPriorityDistribution,
+    courtsDistribution: topCourts,
+    judgmentsDistribution,
+    teamAiUsage
+  };
+}
 
 // src/routes/dashboard.ts
 init_logger();
@@ -831234,6 +832991,19 @@ router3.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFrom
   } catch (err) {
     logger.error({ err }, "Failed to load dashboard stats");
     res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645." });
+  }
+});
+router3.get("/dashboard/charts", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
+  try {
+    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const isPersonal = req.query.scope === "personal";
+    const assignee = isPersonal ? req.authUser?.displayName || req.authUser?.username : void 0;
+    const isAdmin = req.authUser?.role === "admin";
+    const chartsData = await getDashboardChartsData(officeId, assignee, isAdmin);
+    res.json(chartsData);
+  } catch (err) {
+    logger.error({ err }, "Failed to load dashboard charts data");
+    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0637\u0637\u0627\u062A \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629." });
   }
 });
 var dashboard_default = router3;
@@ -847632,7 +849402,43 @@ var WhatsappReminderChannel = class {
 
 // src/routes/sessions.ts
 init_hijri();
+
+// src/utils/record-access.ts
+init_supabase_service();
+function canUserAccessRecord(record, authUser) {
+  if (!authUser) return false;
+  if (authUser.role === "admin" || authUser.role === "super_admin") return true;
+  const assignedLawyerId = record.assignedLawyerId ?? record.assigned_lawyer_id;
+  if (assignedLawyerId) {
+    return assignedLawyerId === authUser.userId;
+  }
+  const createdBy = record.createdBy ?? record.created_by;
+  return Boolean(createdBy && createdBy === authUser.userId);
+}
+async function validateOfficeLawyer(lawyerId, officeId) {
+  if (!lawyerId) {
+    return { valid: true };
+  }
+  const user = await findUserByIdOrUsername(lawyerId);
+  if (!user) {
+    return { valid: false, error: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." };
+  }
+  const userOfficeId = user.role === "admin" ? user.office_id || user.id : user.office_id || user.admin_id;
+  if (userOfficeId !== officeId) {
+    return { valid: false, error: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u062D\u062F\u062F \u0644\u0627 \u064A\u0646\u062A\u0645\u064A \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." };
+  }
+  return { valid: true, lawyerName: user.display_name || user.username };
+}
+
+// src/routes/sessions.ts
 var router5 = (0, import_express5.Router)();
+function getOfficeId(req) {
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
+}
 router5.use("/sessions", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function handleRouteError(res, err, defaultMsg) {
   if (err instanceof GoogleBindingMissingError) {
@@ -847675,6 +849481,9 @@ router5.get("/sessions", async (req, res) => {
       return;
     }
     let sessions = await listSessions2(parseResult.data.status, officeId);
+    if (req.authUser?.role === "staff") {
+      sessions = sessions.filter((s2) => canUserAccessRecord(s2, req.authUser));
+    }
     if (req.query.scope === "personal") {
       const username = (req.authUser?.username || "").toLowerCase();
       const displayName = (req.authUser?.displayName || "").toLowerCase();
@@ -847683,7 +849492,18 @@ router5.get("/sessions", async (req, res) => {
         return username && text.includes(username) || displayName && text.includes(displayName);
       });
     }
-    const data = ListSessionsResponse.parse(sessions);
+    const parsedList = ListSessionsResponse.parse(sessions);
+    const data = sessions.map((s2, idx) => ({
+      ...parsedList[idx],
+      clientId: s2.clientId || s2.client_id || null,
+      client_id: s2.clientId || s2.client_id || null,
+      assignedLawyerId: s2.assignedLawyerId || s2.assigned_lawyer_id || null,
+      assigned_lawyer_id: s2.assignedLawyerId || s2.assigned_lawyer_id || null,
+      clientRole: s2.clientRole || s2.client_role || null,
+      client_role: s2.clientRole || s2.client_role || null,
+      createdBy: s2.createdBy || s2.created_by || null,
+      created_by: s2.createdBy || s2.created_by || null
+    }));
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to list sessions");
@@ -847704,9 +849524,42 @@ router5.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
-    const session = await createSession2(parseResult.data, officeId);
-    const data = CreateSessionResponse.parse(session);
+    const officeId = getOfficeId(req);
+    const body = req.body || {};
+    const clientId = body.clientId || body.client_id || null;
+    let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+    const clientRole = body.clientRole || body.client_role || null;
+    const createdBy = req.authUser?.userId || null;
+    if (req.authUser?.role === "staff") {
+      assignedLawyerId = req.authUser.userId;
+    } else if (assignedLawyerId) {
+      const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+      if (!val.valid) {
+        res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+        return;
+      }
+    }
+    const session = await createSession2(
+      {
+        ...parseResult.data,
+        clientId,
+        assignedLawyerId,
+        clientRole,
+        createdBy
+      },
+      officeId
+    );
+    const data = {
+      ...CreateSessionResponse.parse(session),
+      clientId: session.clientId || session.client_id || null,
+      client_id: session.clientId || session.client_id || null,
+      assignedLawyerId: session.assignedLawyerId || session.assigned_lawyer_id || null,
+      assigned_lawyer_id: session.assignedLawyerId || session.assigned_lawyer_id || null,
+      clientRole: session.clientRole || session.client_role || null,
+      client_role: session.clientRole || session.client_role || null,
+      createdBy: session.createdBy || session.created_by || null,
+      created_by: session.createdBy || session.created_by || null
+    };
     res.status(201).json(data);
   } catch (err) {
     logger.error({ err }, "Failed to create session");
@@ -847722,11 +849575,21 @@ router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
     const session = await getSessionById2(id, officeId);
-    if (!session) {
+    if (!session || !canUserAccessRecord(session, req.authUser)) {
       res.status(404).json({ error: "Session not found." });
       return;
     }
-    const data = GetSessionResponse.parse(session);
+    const data = {
+      ...GetSessionResponse.parse(session),
+      clientId: session.clientId || session.client_id || null,
+      client_id: session.clientId || session.client_id || null,
+      assignedLawyerId: session.assignedLawyerId || session.assigned_lawyer_id || null,
+      assigned_lawyer_id: session.assignedLawyerId || session.assigned_lawyer_id || null,
+      clientRole: session.clientRole || session.client_role || null,
+      client_role: session.clientRole || session.client_role || null,
+      createdBy: session.createdBy || session.created_by || null,
+      created_by: session.createdBy || session.created_by || null
+    };
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to load session");
@@ -847745,13 +849608,47 @@ router5.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => 
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
-    const session = await updateSession2(id, parseResult.data, officeId);
+    const officeId = getOfficeId(req);
+    const existing = await getSessionById2(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+    const body = req.body || {};
+    const extraPayload = {};
+    if (body.clientId !== void 0 || body.client_id !== void 0) {
+      extraPayload.clientId = body.clientId !== void 0 ? body.clientId : body.client_id;
+    }
+    if (body.clientRole !== void 0 || body.client_role !== void 0) {
+      extraPayload.clientRole = body.clientRole !== void 0 ? body.clientRole : body.client_role;
+    }
+    if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0)) {
+      const targetLawyer = body.assignedLawyerId !== void 0 ? body.assignedLawyerId : body.assigned_lawyer_id;
+      if (targetLawyer) {
+        const val = await validateOfficeLawyer(targetLawyer, officeId);
+        if (!val.valid) {
+          res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+          return;
+        }
+      }
+      extraPayload.assignedLawyerId = targetLawyer;
+    }
+    const session = await updateSession2(id, { ...parseResult.data, ...extraPayload }, officeId);
     if (!session) {
       res.status(404).json({ error: "Session not found." });
       return;
     }
-    const data = UpdateSessionResponse.parse(session);
+    const data = {
+      ...UpdateSessionResponse.parse(session),
+      clientId: session.clientId || session.client_id || null,
+      client_id: session.clientId || session.client_id || null,
+      assignedLawyerId: session.assignedLawyerId || session.assigned_lawyer_id || null,
+      assigned_lawyer_id: session.assignedLawyerId || session.assigned_lawyer_id || null,
+      clientRole: session.clientRole || session.client_role || null,
+      client_role: session.clientRole || session.client_role || null,
+      createdBy: session.createdBy || session.created_by || null,
+      created_by: session.createdBy || session.created_by || null
+    };
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to update session");
@@ -847765,7 +849662,12 @@ router5.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) =>
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const officeId = getOfficeId(req);
+    const existing = await getSessionById2(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
     const deleted = await deleteSession2(id, officeId);
     if (!deleted) {
       res.status(404).json({ error: "Session not found." });
@@ -847775,6 +849677,38 @@ router5.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) =>
   } catch (err) {
     logger.error({ err }, "Failed to delete session");
     handleRouteError(res, err, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062C\u0644\u0633\u0629.");
+  }
+});
+router5.patch("/sessions/:id/reassign", attachAuthUser, requireAuth, async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u0645\u0642\u062A\u0635\u0631\u0629 \u0639\u0644\u0649 \u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628." });
+    return;
+  }
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid session id." });
+    return;
+  }
+  const officeId = getOfficeId(req);
+  const targetLawyerId = req.body?.assignedLawyerId !== void 0 ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
+  if (targetLawyerId) {
+    const val = await validateOfficeLawyer(targetLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+  }
+  try {
+    const existing = await getSessionById2(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+    const updated = await updateSession2(id, { assignedLawyerId: targetLawyerId || null }, officeId);
+    res.json(updated);
+  } catch (err) {
+    logger.error({ err }, "Failed to reassign session");
+    handleRouteError(res, err, "\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u062C\u0644\u0633\u0629.");
   }
 });
 router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (req, res) => {
@@ -848246,7 +850180,7 @@ var reports_default = router7;
 
 // src/routes/cron.ts
 var import_express8 = __toESM(require_express2(), 1);
-var import_crypto4 = __toESM(require("crypto"), 1);
+var import_crypto5 = __toESM(require("crypto"), 1);
 init_env();
 init_logger();
 
@@ -848532,9 +850466,9 @@ async function runReminderSweep() {
 // src/routes/cron.ts
 var router8 = (0, import_express8.Router)();
 function safeCompare(a, b) {
-  const hashA = import_crypto4.default.createHash("sha256").update(a).digest();
-  const hashB = import_crypto4.default.createHash("sha256").update(b).digest();
-  return import_crypto4.default.timingSafeEqual(hashA, hashB);
+  const hashA = import_crypto5.default.createHash("sha256").update(a).digest();
+  const hashB = import_crypto5.default.createHash("sha256").update(b).digest();
+  return import_crypto5.default.timingSafeEqual(hashA, hashB);
 }
 router8.get("/cron/reminders", async (req, res) => {
   const secret = env.cronSecret;
@@ -848577,36 +850511,71 @@ function generateRefId() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
 router9.use("/poa", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
-function getOfficeId(req) {
+function getOfficeId2(req) {
   const officeId = req.authUser?.officeId || req.authUser?.userId;
   if (!officeId) {
     throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
   }
   return officeId;
 }
-function formatPoa(p) {
+function formatPoa2(p) {
   return {
     ...p,
     sheetRowId: p.id
   };
 }
 router9.get("/poa", async (req, res) => {
-  const officeId = getOfficeId(req);
+  const officeId = getOfficeId2(req);
   try {
-    const list = await listPoa(officeId);
-    res.json(list.map(formatPoa));
+    let list = await listPoa(officeId);
+    if (req.authUser?.role === "staff") {
+      list = list.filter((p) => canUserAccessRecord(p, req.authUser));
+    }
+    res.json(list.map(formatPoa2));
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to list POA records");
     res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0627\u062A. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
+router9.get("/poa/:rowId", async (req, res) => {
+  const officeId = getOfficeId2(req);
+  const rowId = parseInt(String(req.params.rowId), 10);
+  if (isNaN(rowId)) {
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  try {
+    const poa = await getPoaById(rowId, officeId);
+    if (!poa || !canUserAccessRecord(poa, req.authUser)) {
+      res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    res.json(formatPoa2(poa));
+  } catch (err) {
+    const refId = generateRefId();
+    logger.error({ refId, err, rowId }, "Failed to get POA record");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
 router9.post("/poa", async (req, res) => {
-  const officeId = getOfficeId(req);
+  const officeId = getOfficeId2(req);
   const body = req.body;
   if (!body.clientName?.trim() || !body.poaNumber?.trim()) {
     res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
     return;
+  }
+  const clientId = body.clientId || body.client_id || null;
+  let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+  const createdBy = req.authUser?.userId || null;
+  if (req.authUser?.role === "staff") {
+    assignedLawyerId = req.authUser.userId;
+  } else if (assignedLawyerId) {
+    const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
   }
   try {
     const created = await createPoa(
@@ -848616,12 +850585,15 @@ router9.post("/poa", async (req, res) => {
         issueDateHijri: body.issueDateHijri?.trim() || "",
         expiryDateHijri: body.expiryDateHijri?.trim() || "",
         daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : void 0,
-        notes: body.notes?.trim() || ""
+        notes: body.notes?.trim() || "",
+        clientId,
+        assignedLawyerId,
+        createdBy
       },
       officeId
     );
     logger.info({ id: created.id, officeId }, "POA record created in database");
-    res.status(201).json(formatPoa(created));
+    res.status(201).json(formatPoa2(created));
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to create POA record");
@@ -848629,46 +850601,104 @@ router9.post("/poa", async (req, res) => {
   }
 });
 router9.put("/poa/:rowId", async (req, res) => {
-  const officeId = getOfficeId(req);
+  const officeId = getOfficeId2(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
-  const body = req.body;
   try {
-    const updated = await updatePoa(
-      rowId,
-      {
-        clientName: body.clientName?.trim(),
-        poaNumber: body.poaNumber?.trim(),
-        issueDateHijri: body.issueDateHijri?.trim(),
-        expiryDateHijri: body.expiryDateHijri?.trim(),
-        daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : void 0,
-        notes: body.notes?.trim()
-      },
-      officeId
-    );
+    const existing = await getPoaById(rowId, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    const body = req.body;
+    const payload = {
+      clientName: body.clientName?.trim(),
+      poaNumber: body.poaNumber?.trim(),
+      issueDateHijri: body.issueDateHijri?.trim(),
+      expiryDateHijri: body.expiryDateHijri?.trim(),
+      daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : void 0,
+      notes: body.notes?.trim()
+    };
+    if (body.clientId !== void 0 || body.client_id !== void 0) {
+      payload.clientId = body.clientId !== void 0 ? body.clientId : body.client_id;
+    }
+    if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0)) {
+      const targetLawyer = body.assignedLawyerId !== void 0 ? body.assignedLawyerId : body.assigned_lawyer_id;
+      if (targetLawyer) {
+        const val = await validateOfficeLawyer(targetLawyer, officeId);
+        if (!val.valid) {
+          res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+          return;
+        }
+      }
+      payload.assignedLawyerId = targetLawyer;
+    }
+    const updated = await updatePoa(rowId, payload, officeId);
     if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
     logger.info({ id: rowId, officeId }, "POA record updated in database");
-    res.json(formatPoa(updated));
+    res.json(formatPoa2(updated));
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to update POA record");
     res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
+router9.patch("/poa/:id/reassign", async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u0645\u0642\u062A\u0635\u0631\u0629 \u0639\u0644\u0649 \u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628." });
+    return;
+  }
+  const officeId = getOfficeId2(req);
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  const targetLawyerId = req.body?.assignedLawyerId !== void 0 ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
+  if (targetLawyerId) {
+    const val = await validateOfficeLawyer(targetLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+  }
+  try {
+    const existing = await getPoaById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    const updated = await reassignPoa(id, targetLawyerId || null, officeId);
+    if (!updated) {
+      res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    res.json(formatPoa2(updated));
+  } catch (err) {
+    const refId = generateRefId();
+    logger.error({ refId, err, id }, "Failed to reassign POA");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
 router9.delete("/poa/:rowId", async (req, res) => {
-  const officeId = getOfficeId(req);
+  const officeId = getOfficeId2(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
+    const existing = await getPoaById(rowId, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
     const deleted = await deletePoa(rowId, officeId);
     if (!deleted) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
@@ -848693,7 +850723,7 @@ function generateRefId2() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
 router10.use("/judgments", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
-function getOfficeId2(req) {
+function getOfficeId3(req) {
   const officeId = req.authUser?.officeId || req.authUser?.userId;
   if (!officeId) {
     throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
@@ -848701,9 +850731,12 @@ function getOfficeId2(req) {
   return officeId;
 }
 router10.get("/judgments", async (req, res) => {
-  const officeId = getOfficeId2(req);
+  const officeId = getOfficeId3(req);
   try {
-    const list = await listJudgments(officeId);
+    let list = await listJudgments(officeId);
+    if (req.authUser?.role === "staff") {
+      list = list.filter((j) => canUserAccessRecord(j, req.authUser));
+    }
     res.json(list);
   } catch (err) {
     const refId = generateRefId2();
@@ -848712,7 +850745,7 @@ router10.get("/judgments", async (req, res) => {
   }
 });
 router10.get("/judgments/:id", async (req, res) => {
-  const officeId = getOfficeId2(req);
+  const officeId = getOfficeId3(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
@@ -848720,7 +850753,7 @@ router10.get("/judgments/:id", async (req, res) => {
   }
   try {
     const judgment = await getJudgmentById(id, officeId);
-    if (!judgment) {
+    if (!judgment || !canUserAccessRecord(judgment, req.authUser)) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
     }
@@ -848732,11 +850765,29 @@ router10.get("/judgments/:id", async (req, res) => {
   }
 });
 router10.post("/judgments", async (req, res) => {
-  const officeId = getOfficeId2(req);
+  const officeId = getOfficeId3(req);
   const body = req.body;
   if (!body.caseNumber?.trim() || !body.judgmentNumber?.trim()) {
     res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0648\u0631\u0642\u0645 \u0627\u0644\u0635\u0643 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
     return;
+  }
+  const clientId = body.clientId || body.client_id || null;
+  let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+  let assignedLawyer = body.assignedLawyer?.trim() || "";
+  const clientRole = body.clientRole || body.client_role || null;
+  const createdBy = req.authUser?.userId || null;
+  if (req.authUser?.role === "staff") {
+    assignedLawyerId = req.authUser.userId;
+    assignedLawyer = req.authUser.displayName || req.authUser.username;
+  } else if (assignedLawyerId) {
+    const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+    if (val.lawyerName && !assignedLawyer) {
+      assignedLawyer = val.lawyerName;
+    }
   }
   try {
     const created = await createJudgment(
@@ -848745,11 +850796,15 @@ router10.post("/judgments", async (req, res) => {
         court: body.court?.trim() || "",
         plaintiff: body.plaintiff?.trim() || "",
         defendant: body.defendant?.trim() || "",
-        assignedLawyer: body.assignedLawyer?.trim() || "",
+        assignedLawyer,
         judgmentNumber: body.judgmentNumber.trim(),
         judgmentDate: body.judgmentDate?.trim() || "",
         summary: body.summary?.trim() || "",
-        isFavorable: body.isFavorable || "\u0646\u0647\u0627\u0626\u064A"
+        isFavorable: body.isFavorable || "\u0646\u0647\u0627\u0626\u064A",
+        clientId,
+        assignedLawyerId,
+        clientRole,
+        createdBy
       },
       officeId
     );
@@ -848762,29 +850817,54 @@ router10.post("/judgments", async (req, res) => {
   }
 });
 router10.put("/judgments/:id", async (req, res) => {
-  const officeId = getOfficeId2(req);
+  const officeId = getOfficeId3(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
-  const body = req.body;
   try {
-    const updated = await updateJudgment(
-      id,
-      {
-        caseNumber: body.caseNumber?.trim(),
-        court: body.court?.trim(),
-        plaintiff: body.plaintiff?.trim(),
-        defendant: body.defendant?.trim(),
-        assignedLawyer: body.assignedLawyer?.trim(),
-        judgmentNumber: body.judgmentNumber?.trim(),
-        judgmentDate: body.judgmentDate?.trim(),
-        summary: body.summary?.trim(),
-        isFavorable: body.isFavorable
-      },
-      officeId
-    );
+    const existing = await getJudgmentById(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    const body = req.body;
+    const payload = {
+      caseNumber: body.caseNumber?.trim(),
+      court: body.court?.trim(),
+      plaintiff: body.plaintiff?.trim(),
+      defendant: body.defendant?.trim(),
+      assignedLawyer: body.assignedLawyer?.trim(),
+      judgmentNumber: body.judgmentNumber?.trim(),
+      judgmentDate: body.judgmentDate?.trim(),
+      summary: body.summary?.trim(),
+      isFavorable: body.isFavorable
+    };
+    if (body.clientId !== void 0 || body.client_id !== void 0) {
+      payload.clientId = body.clientId !== void 0 ? body.clientId : body.client_id;
+    }
+    if (body.clientRole !== void 0 || body.client_role !== void 0) {
+      payload.clientRole = body.clientRole !== void 0 ? body.clientRole : body.client_role;
+    }
+    if (req.authUser?.role === "staff") {
+      delete payload.assignedLawyerId;
+      delete payload.assigned_lawyer_id;
+    } else if (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0) {
+      const targetLawyer = body.assignedLawyerId !== void 0 ? body.assignedLawyerId : body.assigned_lawyer_id;
+      if (targetLawyer) {
+        const val = await validateOfficeLawyer(targetLawyer, officeId);
+        if (!val.valid) {
+          res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+          return;
+        }
+        if (val.lawyerName && !payload.assignedLawyer) {
+          payload.assignedLawyer = val.lawyerName;
+        }
+      }
+      payload.assignedLawyerId = targetLawyer;
+    }
+    const updated = await updateJudgment(id, payload, officeId);
     if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -848797,14 +850877,54 @@ router10.put("/judgments/:id", async (req, res) => {
     res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
+router10.patch("/judgments/:id/reassign", async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u0645\u0642\u062A\u0635\u0631\u0629 \u0639\u0644\u0649 \u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628." });
+    return;
+  }
+  const officeId = getOfficeId3(req);
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  const targetLawyerId = req.body?.assignedLawyerId !== void 0 ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
+  let lawyerName;
+  if (targetLawyerId) {
+    const val = await validateOfficeLawyer(targetLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+    lawyerName = val.lawyerName;
+  }
+  try {
+    const existing = await getJudgmentById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    const updated = await reassignJudgment(id, targetLawyerId || null, officeId, lawyerName);
+    res.json(updated);
+  } catch (err) {
+    const refId = generateRefId2();
+    logger.error({ refId, err, id }, "Failed to reassign judgment");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
 router10.delete("/judgments/:id", async (req, res) => {
-  const officeId = getOfficeId2(req);
+  const officeId = getOfficeId3(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
+    const existing = await getJudgmentById(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
     const deleted = await deleteJudgment(id, officeId);
     if (!deleted) {
       res.status(404).json({ error: "\u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
@@ -848829,7 +850949,7 @@ function generateRefId3() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
 router11.use("/tasks", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
-function getOfficeId3(req) {
+function getOfficeId4(req) {
   const officeId = req.authUser?.officeId || req.authUser?.userId;
   if (!officeId) {
     throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
@@ -848837,9 +850957,12 @@ function getOfficeId3(req) {
   return officeId;
 }
 router11.get("/tasks", async (req, res) => {
-  const officeId = getOfficeId3(req);
+  const officeId = getOfficeId4(req);
   try {
     let tasks3 = await listTasks(officeId);
+    if (req.authUser?.role === "staff") {
+      tasks3 = tasks3.filter((t2) => canUserAccessRecord(t2, req.authUser));
+    }
     if (req.query.scope === "personal") {
       const username = (req.authUser?.username || "").toLowerCase();
       const displayName = (req.authUser?.displayName || "").toLowerCase();
@@ -848859,7 +850982,7 @@ router11.get("/tasks", async (req, res) => {
   }
 });
 router11.get("/tasks/:id", async (req, res) => {
-  const officeId = getOfficeId3(req);
+  const officeId = getOfficeId4(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
@@ -848867,7 +850990,7 @@ router11.get("/tasks/:id", async (req, res) => {
   }
   try {
     const task = await getTaskById(id, officeId);
-    if (!task) {
+    if (!task || !canUserAccessRecord(task, req.authUser)) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
@@ -848879,21 +851002,41 @@ router11.get("/tasks/:id", async (req, res) => {
   }
 });
 router11.post("/tasks", async (req, res) => {
-  const officeId = getOfficeId3(req);
+  const officeId = getOfficeId4(req);
   const body = req.body;
   if (!body.title?.trim()) {
     res.status(400).json({ error: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
+  const clientId = body.clientId || body.client_id || null;
+  let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+  let assignee = body.assignee?.trim() || "";
+  const createdBy = req.authUser?.userId || null;
+  if (req.authUser?.role === "staff") {
+    assignedLawyerId = req.authUser.userId;
+    assignee = req.authUser.displayName || req.authUser.username;
+  } else if (assignedLawyerId) {
+    const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+    if (val.lawyerName && !assignee) {
+      assignee = val.lawyerName;
+    }
+  }
   try {
     const created = await createTask(
       {
         title: body.title.trim(),
-        assignee: body.assignee?.trim() || "",
+        assignee,
         priority: body.priority || "\u0639\u0627\u062F\u064A\u0629",
         dueDate: body.dueDate?.trim() || "",
         status: body.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
-        notes: body.notes?.trim() || ""
+        notes: body.notes?.trim() || "",
+        clientId,
+        assignedLawyerId,
+        createdBy
       },
       officeId
     );
@@ -848906,15 +851049,41 @@ router11.post("/tasks", async (req, res) => {
   }
 });
 router11.put("/tasks/:id", async (req, res) => {
-  const officeId = getOfficeId3(req);
+  const officeId = getOfficeId4(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
-  const body = req.body;
   try {
-    const updated = await updateTask(id, body, officeId);
+    const existing = await getTaskById(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    const body = req.body;
+    const payload = { ...body };
+    if (body.clientId !== void 0 || body.client_id !== void 0) {
+      payload.clientId = body.clientId !== void 0 ? body.clientId : body.client_id;
+    }
+    if (req.authUser?.role === "staff") {
+      delete payload.assignedLawyerId;
+      delete payload.assigned_lawyer_id;
+    } else if (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0) {
+      const targetLawyer = body.assignedLawyerId !== void 0 ? body.assignedLawyerId : body.assigned_lawyer_id;
+      if (targetLawyer) {
+        const val = await validateOfficeLawyer(targetLawyer, officeId);
+        if (!val.valid) {
+          res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+          return;
+        }
+        if (val.lawyerName && !payload.assignee) {
+          payload.assignee = val.lawyerName;
+        }
+      }
+      payload.assignedLawyerId = targetLawyer;
+    }
+    const updated = await updateTask(id, payload, officeId);
     if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
@@ -848927,14 +851096,54 @@ router11.put("/tasks/:id", async (req, res) => {
     res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
   }
 });
+router11.patch("/tasks/:id/reassign", async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u0645\u0642\u062A\u0635\u0631\u0629 \u0639\u0644\u0649 \u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628." });
+    return;
+  }
+  const officeId = getOfficeId4(req);
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  const targetLawyerId = req.body?.assignedLawyerId !== void 0 ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
+  let lawyerName;
+  if (targetLawyerId) {
+    const val = await validateOfficeLawyer(targetLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+    lawyerName = val.lawyerName;
+  }
+  try {
+    const existing = await getTaskById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    const updated = await reassignTask(id, targetLawyerId || null, officeId, lawyerName);
+    res.json(updated);
+  } catch (err) {
+    const refId = generateRefId3();
+    logger.error({ refId, err, id }, "Failed to reassign task");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
 router11.delete("/tasks/:id", async (req, res) => {
-  const officeId = getOfficeId3(req);
+  const officeId = getOfficeId4(req);
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
   try {
+    const existing = await getTaskById(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
     const deleted = await deleteTask(id, officeId);
     if (!deleted) {
       res.status(404).json({ error: "\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
@@ -849134,6 +851343,161 @@ router13.post("/super-admin/setup-first", async (req, res) => {
   }
 });
 router13.use("/super-admin", attachAuthUser, requireSuperAdmin);
+router13.get("/super-admin/overview", async (_req, res) => {
+  try {
+    const overview = await getSuperAdminOverview();
+    res.json(overview);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch super admin overview");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0646\u0638\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629." });
+  }
+});
+router13.get("/super-admin/audit-log", async (req, res) => {
+  try {
+    const office_id = typeof req.query.office_id === "string" ? req.query.office_id : void 0;
+    const page = typeof req.query.page === "string" ? parseInt(req.query.page, 10) : void 0;
+    const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : void 0;
+    const result = await listAuditLogs({ office_id, page, limit });
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch audit log");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0633\u062C\u0644 \u0627\u0644\u0623\u062D\u062F\u0627\u062B." });
+  }
+});
+router13.get("/super-admin/settings", async (_req, res) => {
+  try {
+    const settings = await getPlatformSettings();
+    res.json(settings);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch platform settings");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629." });
+  }
+});
+router13.patch("/super-admin/settings", async (req, res) => {
+  try {
+    const {
+      activation_link_expiry_hours,
+      new_office_registration_enabled,
+      support_contact_email,
+      support_contact_phone
+    } = req.body;
+    const updated = await updatePlatformSettings({
+      activation_link_expiry_hours: activation_link_expiry_hours !== void 0 ? Math.max(1, Number(activation_link_expiry_hours)) : void 0,
+      new_office_registration_enabled: new_office_registration_enabled !== void 0 ? Boolean(new_office_registration_enabled) : void 0,
+      support_contact_email: support_contact_email !== void 0 ? String(support_contact_email).trim() : void 0,
+      support_contact_phone: support_contact_phone !== void 0 ? String(support_contact_phone).trim() : void 0
+    });
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "updated_platform_settings",
+      details: {
+        changes: req.body
+      }
+    });
+    res.json(updated);
+  } catch (err) {
+    logger.error({ err }, "Failed to update platform settings");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629." });
+  }
+});
+router13.get("/super-admin/plans", async (_req, res) => {
+  try {
+    const plans = await listSubscriptionPlans();
+    res.json({ plans });
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch subscription plans");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0628\u0627\u0642\u0627\u062A \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." });
+  }
+});
+router13.post("/super-admin/plans", async (req, res) => {
+  try {
+    const { name, slug, ai_quota_limit, price, features } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0628\u0627\u0642\u0629 \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    if (!slug || typeof slug !== "string" || !slug.trim()) {
+      res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0628\u0627\u0642\u0629 (Slug) \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    const plan = await createSubscriptionPlan({
+      name: name.trim(),
+      slug: slug.trim().toLowerCase(),
+      ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : 100,
+      price: typeof price === "string" ? price.trim() : "",
+      features: typeof features === "object" && features !== null ? features : {}
+    });
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "created_plan",
+      details: {
+        plan_id: plan.id,
+        name: plan.name,
+        slug: plan.slug
+      }
+    });
+    res.status(201).json(plan);
+  } catch (err) {
+    logger.error({ err }, "Failed to create subscription plan");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." });
+  }
+});
+router13.patch("/super-admin/plans/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { name, slug, ai_quota_limit, price, features } = req.body;
+    const plan = await updateSubscriptionPlan(id, {
+      name,
+      slug,
+      ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0,
+      price,
+      features
+    });
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "updated_plan",
+      details: {
+        plan_id: id,
+        changes: req.body
+      }
+    });
+    res.json(plan);
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to update subscription plan");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." });
+  }
+});
+router13.delete("/super-admin/plans/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    await deleteSubscriptionPlan(id);
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "deleted_plan",
+      details: {
+        plan_id: id
+      }
+    });
+    res.status(200).json({ success: true, message: "\u062A\u0645 \u062D\u0630\u0641 \u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0628\u0646\u062C\u0627\u062D." });
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, "Failed to delete subscription plan");
+    res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643." });
+  }
+});
+router13.get("/super-admin/office-features/:officeId", async (req, res) => {
+  try {
+    const officeId = String(req.params.officeId);
+    const resolved = await getOfficeFeatures(officeId);
+    res.json(resolved);
+  } catch (err) {
+    logger.error({ err, officeId: req.params.officeId }, "Failed to resolve office features");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0645\u064A\u0632\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
 router13.get("/super-admin/admins", async (_req, res) => {
   try {
     const admins = await listSupabaseAdmins();
@@ -849158,11 +851522,13 @@ router13.post("/super-admin/admins", async (req, res) => {
       email,
       display_name,
       phone,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
-      ai_quota_limit
+      ai_quota_limit,
+      ai_quota_limit_override
     } = req.body;
     if (!username || !password || !office_name) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u060C \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u060C \u0648\u0627\u0633\u0645 \u0627\u0644\u0645\u0643\u062A\u0628 \u062C\u0645\u064A\u0639\u0647\u0627 \u0645\u0637\u0644\u0648\u0628\u0629." });
@@ -849180,11 +851546,25 @@ router13.post("/super-admin/admins", async (req, res) => {
       email,
       display_name,
       phone,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
-      ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0
+      ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0,
+      ai_quota_limit_override: ai_quota_limit_override !== void 0 && ai_quota_limit_override !== null ? Number(ai_quota_limit_override) : void 0
+    });
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "created_office",
+      target_office_id: newAdmin.id,
+      details: {
+        office_name: newAdmin.office_name,
+        username: newAdmin.username,
+        plan_tier: newAdmin.plan_tier,
+        plan_id: newAdmin.plan_id
+      }
     });
     res.status(201).json(newAdmin);
   } catch (err) {
@@ -849202,11 +851582,13 @@ router13.patch("/super-admin/admins/:id", async (req, res) => {
       email,
       phone,
       status,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
       ai_quota_limit,
+      ai_quota_limit_override,
       ai_usage_count
     } = req.body;
     if (password !== void 0 && typeof password === "string" && password.trim() !== "") {
@@ -849223,12 +851605,24 @@ router13.patch("/super-admin/admins/:id", async (req, res) => {
       email,
       phone,
       status,
+      plan_id,
       plan_tier,
       billing_cycle,
       subscription_end_date,
       subscription_notes,
       ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0,
+      ai_quota_limit_override: ai_quota_limit_override !== void 0 ? ai_quota_limit_override === null ? null : Number(ai_quota_limit_override) : void 0,
       ai_usage_count: ai_usage_count !== void 0 ? Number(ai_usage_count) : void 0
+    });
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "updated_office",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name,
+        changes: req.body
+      }
     });
     res.json(updated);
   } catch (err) {
@@ -849265,6 +851659,17 @@ router13.post("/super-admin/admins/:id/extend", async (req, res) => {
       status: "active"
       // Automatically reactivate if suspended
     });
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "extended_subscription",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name,
+        period,
+        subscription_end_date: updated.subscription_end_date
+      }
+    });
     res.json(updated);
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to extend subscription");
@@ -849276,6 +851681,16 @@ router13.post("/super-admin/admins/:id/toggle-status", async (req, res) => {
     const id = String(req.params.id);
     const { status } = req.body;
     const updated = await toggleAdminStatus(id, status);
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: status === "suspended" ? "suspended_office" : "activated_office",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name,
+        new_status: status
+      }
+    });
     res.json(updated);
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to toggle office admin status");
@@ -849286,6 +851701,15 @@ router13.post("/super-admin/admins/:id/reset-ai-usage", async (req, res) => {
   try {
     const id = String(req.params.id);
     const updated = await resetAdminAiUsage(id);
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "reset_ai_usage",
+      target_office_id: id,
+      details: {
+        office_name: updated.office_name
+      }
+    });
     res.json(updated);
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to reset office AI usage");
@@ -849296,6 +851720,15 @@ router13.delete("/super-admin/admins/:id", async (req, res) => {
   try {
     const id = String(req.params.id);
     await deleteSupabaseAdmin(id);
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "deleted_office",
+      target_office_id: id,
+      details: {
+        office_id: id
+      }
+    });
     res.status(204).send();
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to delete office admin");
@@ -849319,6 +851752,16 @@ router13.post("/super-admin/link-member", async (req, res) => {
       return;
     }
     const linked = await linkMemberToAdmin(memberId, adminId);
+    await recordAuditLog({
+      actor_id: req.user?.id,
+      actor_username: req.user?.username,
+      action: "linked_member",
+      target_office_id: adminId,
+      details: {
+        member_id: memberId,
+        admin_id: adminId
+      }
+    });
     res.json({ success: true, member: linked });
   } catch (err) {
     logger.error({ err }, "Failed to link member to admin");
@@ -849368,23 +851811,338 @@ router14.patch("/subscription/members/:id/quota", async (req, res) => {
 });
 var subscription_default = router14;
 
-// src/routes/index.ts
+// src/routes/clients.ts
+var import_express15 = __toESM(require_express2(), 1);
+init_logger();
+init_postgres_service();
 var router15 = (0, import_express15.Router)();
-router15.use(health_default);
-router15.use(auth_default);
-router15.use(dashboard_default);
-router15.use(ai_default);
-router15.use(sessions_default);
-router15.use(settings_default);
-router15.use(reports_default);
-router15.use(cron_default);
-router15.use(poa_default);
-router15.use(judgments_default);
-router15.use(tasks_default);
-router15.use(users_default);
-router15.use(super_admin_default);
-router15.use(subscription_default);
-var routes_default = router15;
+function generateRefId4() {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+router15.use("/clients", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
+function getOfficeId5(req) {
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
+}
+async function getStaffAccessibleClientIds(officeId, authUser) {
+  const [sessions, tasks3, poas, judgments] = await Promise.all([
+    listSessions(officeId),
+    listTasks(officeId),
+    listPoa(officeId),
+    listJudgments(officeId)
+  ]);
+  const set = /* @__PURE__ */ new Set();
+  for (const s2 of sessions) {
+    const cId = s2.clientId || s2.client_id;
+    if (cId && canUserAccessRecord(s2, authUser)) {
+      set.add(cId);
+    }
+  }
+  for (const t2 of tasks3) {
+    const cId = t2.clientId || t2.client_id;
+    if (cId && canUserAccessRecord(t2, authUser)) {
+      set.add(cId);
+    }
+  }
+  for (const p of poas) {
+    const cId = p.clientId || p.client_id;
+    if (cId && canUserAccessRecord(p, authUser)) {
+      set.add(cId);
+    }
+  }
+  for (const j of judgments) {
+    const cId = j.clientId || j.client_id;
+    if (cId && canUserAccessRecord(j, authUser)) {
+      set.add(cId);
+    }
+  }
+  return set;
+}
+router15.get("/clients/legacy-unassigned", async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D \u0644\u0643 \u0628\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0641\u0631\u0632." });
+    return;
+  }
+  const officeId = getOfficeId5(req);
+  try {
+    const [sessions, tasks3, poas, judgments] = await Promise.all([
+      listSessions(officeId),
+      listTasks(officeId),
+      listPoa(officeId),
+      listJudgments(officeId)
+    ]);
+    const unassignedSessions = sessions.filter(
+      (s2) => !s2.clientId && !s2.client_id || !s2.assignedLawyerId && !s2.assigned_lawyer_id
+    );
+    const unassignedTasks = tasks3.filter(
+      (t2) => !t2.clientId && !t2.client_id || !t2.assignedLawyerId && !t2.assigned_lawyer_id
+    );
+    const unassignedPoas = poas.filter(
+      (p) => !p.clientId && !p.client_id || !p.assignedLawyerId && !p.assigned_lawyer_id
+    );
+    const unassignedJudgments = judgments.filter(
+      (j) => !j.clientId && !j.client_id || !j.assignedLawyerId && !j.assigned_lawyer_id
+    );
+    res.json({
+      sessions: unassignedSessions,
+      tasks: unassignedTasks,
+      poa: unassignedPoas,
+      judgments: unassignedJudgments,
+      totalUnassigned: unassignedSessions.length + unassignedTasks.length + unassignedPoas.length + unassignedJudgments.length
+    });
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err }, "Failed to get legacy unassigned records");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u063A\u064A\u0631 \u0627\u0644\u0645\u0639\u064A\u0646\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router15.post("/clients/triage-link", async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D \u0644\u0643 \u0628\u0631\u0628\u0637 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0642\u062F\u064A\u0645\u0629." });
+    return;
+  }
+  const officeId = getOfficeId5(req);
+  const { module: module2, id, clientId, client_id, assignedLawyerId, assigned_lawyer_id } = req.body || {};
+  const targetClientId = clientId !== void 0 ? clientId : client_id;
+  const targetLawyerId = assignedLawyerId !== void 0 ? assignedLawyerId : assigned_lawyer_id;
+  if (!module2 || !id) {
+    res.status(400).json({ error: "\u0627\u0644\u0648\u062D\u062F\u0629 \u0648\u0645\u0639\u0631\u0641 \u0627\u0644\u0633\u062C\u0644 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
+    return;
+  }
+  let lawyerName;
+  if (targetLawyerId) {
+    const val = await validateOfficeLawyer(targetLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+    lawyerName = val.lawyerName;
+  }
+  try {
+    let updated = null;
+    const numId = Number(id);
+    if (module2 === "sessions") {
+      const payload = {};
+      if (targetClientId !== void 0) payload.clientId = targetClientId;
+      if (targetLawyerId !== void 0) payload.assignedLawyerId = targetLawyerId;
+      updated = await updateSession(numId, payload, officeId);
+    } else if (module2 === "tasks") {
+      const payload = {};
+      if (targetClientId !== void 0) payload.clientId = targetClientId;
+      if (targetLawyerId !== void 0) {
+        payload.assignedLawyerId = targetLawyerId;
+        if (lawyerName) payload.assignee = lawyerName;
+      }
+      updated = await updateTask(numId, payload, officeId);
+    } else if (module2 === "poa") {
+      const payload = {};
+      if (targetClientId !== void 0) payload.clientId = targetClientId;
+      if (targetLawyerId !== void 0) payload.assignedLawyerId = targetLawyerId;
+      updated = await updatePoa(numId, payload, officeId);
+    } else if (module2 === "judgments") {
+      const payload = {};
+      if (targetClientId !== void 0) payload.clientId = targetClientId;
+      if (targetLawyerId !== void 0) {
+        payload.assignedLawyerId = targetLawyerId;
+        if (lawyerName) payload.assignedLawyer = lawyerName;
+      }
+      updated = await updateJudgment(numId, payload, officeId);
+    } else {
+      res.status(400).json({ error: "\u0648\u062D\u062F\u0629 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641\u0629." });
+      return;
+    }
+    if (!updated) {
+      res.status(404).json({ error: "\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err }, "Failed to triage link record");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0631\u0628\u0637 \u0627\u0644\u0633\u062C\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router15.get("/clients", async (req, res) => {
+  const officeId = getOfficeId5(req);
+  try {
+    let clients = await listClients(officeId);
+    if (req.authUser?.role === "staff") {
+      const accessibleIds = await getStaffAccessibleClientIds(officeId, req.authUser);
+      clients = clients.filter((c) => accessibleIds.has(c.id));
+    }
+    res.json(clients);
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err }, "Failed to list clients");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router15.post("/clients", async (req, res) => {
+  const officeId = getOfficeId5(req);
+  const body = req.body || {};
+  if (!body.name?.trim()) {
+    res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628." });
+    return;
+  }
+  try {
+    const client = await createClient2(
+      {
+        name: body.name.trim(),
+        phone: body.phone?.trim() || "",
+        notes: body.notes?.trim() || ""
+      },
+      officeId
+    );
+    res.status(201).json(client);
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err }, "Failed to create client");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router15.get("/clients/:id", async (req, res) => {
+  const officeId = getOfficeId5(req);
+  const id = String(req.params.id);
+  try {
+    const client = await getClientById(id, officeId);
+    if (!client) {
+      res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    if (req.authUser?.role === "staff") {
+      const accessibleIds = await getStaffAccessibleClientIds(officeId, req.authUser);
+      if (!accessibleIds.has(client.id)) {
+        res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+        return;
+      }
+    }
+    res.json(client);
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err, id }, "Failed to get client");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router15.patch("/clients/:id", async (req, res) => {
+  const officeId = getOfficeId5(req);
+  const id = String(req.params.id);
+  const body = req.body || {};
+  try {
+    if (req.authUser?.role === "staff") {
+      const accessibleIds = await getStaffAccessibleClientIds(officeId, req.authUser);
+      if (!accessibleIds.has(id)) {
+        res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+        return;
+      }
+    }
+    const updated = await updateClient(
+      id,
+      {
+        name: body.name !== void 0 ? body.name.trim() : void 0,
+        phone: body.phone !== void 0 ? body.phone.trim() : void 0,
+        notes: body.notes !== void 0 ? body.notes.trim() : void 0
+      },
+      officeId
+    );
+    if (!updated) {
+      res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err, id }, "Failed to update client");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router15.delete("/clients/:id", async (req, res) => {
+  const officeId = getOfficeId5(req);
+  const id = String(req.params.id);
+  try {
+    if (req.authUser?.role === "staff") {
+      const accessibleIds = await getStaffAccessibleClientIds(officeId, req.authUser);
+      if (!accessibleIds.has(id)) {
+        res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+        return;
+      }
+    }
+    const deleted = await deleteClient(id, officeId);
+    if (!deleted) {
+      res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    res.status(204).send();
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err, id }, "Failed to delete client");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router15.get("/clients/:id/timeline", async (req, res) => {
+  const officeId = getOfficeId5(req);
+  const id = String(req.params.id);
+  try {
+    const client = await getClientById(id, officeId);
+    if (!client) {
+      res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    const [allSessions, allTasks, allPoas, allJudgments] = await Promise.all([
+      listSessions(officeId),
+      listTasks(officeId),
+      listPoa(officeId),
+      listJudgments(officeId)
+    ]);
+    let sessions = allSessions.filter((s2) => (s2.clientId || s2.client_id) === id);
+    let tasks3 = allTasks.filter((t2) => (t2.clientId || t2.client_id) === id);
+    let poa = allPoas.filter((p) => (p.clientId || p.client_id) === id);
+    let judgments = allJudgments.filter((j) => (j.clientId || j.client_id) === id);
+    if (req.authUser?.role === "staff") {
+      sessions = sessions.filter((s2) => canUserAccessRecord(s2, req.authUser));
+      tasks3 = tasks3.filter((t2) => canUserAccessRecord(t2, req.authUser));
+      poa = poa.filter((p) => canUserAccessRecord(p, req.authUser));
+      judgments = judgments.filter((j) => canUserAccessRecord(j, req.authUser));
+      if (sessions.length === 0 && tasks3.length === 0 && poa.length === 0 && judgments.length === 0) {
+        res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+        return;
+      }
+    }
+    res.json({
+      client,
+      sessions,
+      tasks: tasks3,
+      poa,
+      judgments
+    });
+  } catch (err) {
+    const refId = generateRefId4();
+    logger.error({ refId, err, id }, "Failed to get client timeline");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0633\u062C\u0644 \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+var clients_default = router15;
+
+// src/routes/index.ts
+var router16 = (0, import_express16.Router)();
+router16.use(health_default);
+router16.use(auth_default);
+router16.use(dashboard_default);
+router16.use(ai_default);
+router16.use(sessions_default);
+router16.use(settings_default);
+router16.use(reports_default);
+router16.use(cron_default);
+router16.use(poa_default);
+router16.use(judgments_default);
+router16.use(tasks_default);
+router16.use(users_default);
+router16.use(super_admin_default);
+router16.use(subscription_default);
+router16.use(clients_default);
+var routes_default = router16;
 
 // src/app.ts
 init_logger();
@@ -849392,7 +852150,7 @@ init_env();
 var import_meta = {};
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path5.default.dirname(currentFilename);
-var app = (0, import_express16.default)();
+var app = (0, import_express17.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -849425,8 +852183,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express16.default.json());
-app.use(import_express16.default.urlencoded({ extended: true }));
+app.use(import_express17.default.json());
+app.use(import_express17.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -849446,7 +852204,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express16.default.static(distPath));
+  app.use(import_express17.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path5.default.join(distPath, "index.html"));

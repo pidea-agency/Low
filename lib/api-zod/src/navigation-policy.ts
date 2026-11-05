@@ -61,6 +61,15 @@ export const APP_NAVIGATION_CONFIG: NavItemConfig[] = [
     category: "main",
   },
   {
+    id: "clients",
+    name: "العملاء والموكلين",
+    path: "/clients",
+    iconName: "UserCheck",
+    roles: ["admin", "staff"],
+    keywords: "العملاء الموكلين ملف العميل سجل العملاء clients client profile",
+    category: "main",
+  },
+  {
     id: "judgments",
     name: "الأحكام",
     path: "/judgments",

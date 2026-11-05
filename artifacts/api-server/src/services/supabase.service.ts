@@ -2243,6 +2243,11 @@ export async function setupFirstSuperAdmin(input: {
  * and the 5 offices with subscriptions expiring soonest.
  */
 export async function getSuperAdminOverview(): Promise<{
+  totalOffices?: number;
+  activeSubscriptions?: number;
+  expiringIn7Days?: number;
+  totalAiUsage?: number;
+  expiringSoonest?: any[];
   stats: {
     total_offices: number;
     active_subscriptions: number;

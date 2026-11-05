@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { useListSessions, useDeleteSession, useUpdateSession, getListSessionsQueryKey, getGetDashboardStatsQueryKey } from '@workspace/api-client-react';
+import { useListSessions, useDeleteSession, useUpdateSession, useGetCurrentUser, getListSessionsQueryKey, getGetDashboardStatsQueryKey } from '@workspace/api-client-react';
 import type { SessionStatus } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'wouter';
-import { Calendar, ChevronLeft, Plus, Scale, Clock, User, MoreVertical, Pencil, Trash2, ArrowUpDown, AlertCircle, RefreshCw } from 'lucide-react';
+import { Calendar, ChevronLeft, Plus, Scale, Clock, User, MoreVertical, Pencil, Trash2, ArrowUpDown, AlertCircle, RefreshCw, UserCog } from 'lucide-react';
 import { TimeRemainingBadge } from '@/components/time-remaining';
 import { sortSessions, type SortOption } from '@/lib/session-sort';
 import { getArabicDayName } from '@/lib/hijri';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { ClientPicker } from '@/components/clients/client-picker';
+import { LawyerSelect } from '@/components/clients/lawyer-select';
+import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,12 +126,16 @@ export default function SessionsPage() {
   const [statusFilter, setStatusFilter] = useState<SessionStatus | 'all'>('all');
   const [sortBy, setSortBy] = useState<SortOption>('nearest');
 
+  const { data: currentUser } = useGetCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<SessionItem | null>(null);
 
   // Edit state
   const [editTarget, setEditTarget] = useState<SessionItem | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [reassignTarget, setReassignTarget] = useState<SessionItem | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -150,10 +157,13 @@ export default function SessionsPage() {
       plaintiff: session.plaintiff || '',
       defendant: session.defendant || '',
       court: session.court || '',
-      courtCircuit: session.courtCircuit as string || '',
+      courtCircuit: (session.courtCircuit as string) || '',
       sessionDateHijri: session.sessionDateHijri || '',
       sessionTime: session.sessionTime || '',
       status: session.status,
+      clientId: ((session as any).clientId || (session as any).client_id || '') as string,
+      clientRole: ((session as any).clientRole || (session as any).client_role || '') as string,
+      assignedLawyerId: ((session as any).assignedLawyerId || (session as any).assigned_lawyer_id || '') as string,
     });
     setEditTarget(session);
   };
@@ -388,6 +398,19 @@ export default function SessionsPage() {
                         <Pencil className="w-3.5 h-3.5" />
                         تعديل سريع
                       </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setReassignTarget(session as unknown as SessionItem);
+                          }}
+                          className="gap-2 cursor-pointer text-primary focus:text-primary focus:bg-primary/10"
+                        >
+                          <UserCog className="w-3.5 h-3.5" />
+                          إعادة تعيين المحامي
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={(e) => openDelete(session as unknown as SessionItem, e)}
@@ -490,6 +513,53 @@ export default function SessionsPage() {
               </Select>
             </div>
 
+            {/* Client & Lawyer Linking */}
+            <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+              <div className="space-y-1.5">
+                <ClientPicker
+                  value={editForm.clientId || null}
+                  onChange={(cid) => setEditForm((prev) => ({ ...prev, clientId: cid || '' }))}
+                  label="العميل المرتبط"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  طرف موكلنا في الدعوى
+                </Label>
+                <Select
+                  value={editForm.clientRole || 'none'}
+                  onValueChange={(val) => setEditForm((prev) => ({ ...prev, clientRole: val === 'none' ? '' : val }))}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="اختر صفة الموكل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">غير محدد</SelectItem>
+                    <SelectItem value="plaintiff">المدّعي</SelectItem>
+                    <SelectItem value="defendant">المدّعى عليه</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <LawyerSelect
+                  value={editForm.assignedLawyerId || null}
+                  onChange={(lid, lawyerName) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      assignedLawyerId: lid || '',
+                      assignedLawyer: lawyerName || prev.assignedLawyer || '',
+                    }))
+                  }
+                  currentRole={currentUser?.role}
+                  currentUserId={currentUser?.id}
+                  currentUserName={(currentUser as any)?.displayName || currentUser?.username}
+                  label="المحامي المكلف"
+                />
+              </div>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               {quickEditFields.map((f) => (
                 <div key={f.key} className="space-y-1.5">
@@ -532,6 +602,23 @@ export default function SessionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {reassignTarget && (
+        <ReassignDialog
+          open={!!reassignTarget}
+          onOpenChange={(open) => {
+            if (!open) setReassignTarget(null);
+          }}
+          module="sessions"
+          recordId={reassignTarget.id}
+          recordTitle={`جلسة ${reassignTarget.caseNumber || reassignTarget.id}`}
+          currentLawyerId={(reassignTarget as any).assignedLawyerId || (reassignTarget as any).assigned_lawyer_id}
+          onSuccess={() => {
+            setReassignTarget(null);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }

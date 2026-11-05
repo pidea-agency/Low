@@ -33,6 +33,8 @@ const SessionReportPage = React.lazy(() => import('@/pages/session-report'));
 const PoaPage = React.lazy(() => import('@/pages/poa'));
 const JudgmentsPage = React.lazy(() => import('@/pages/judgments'));
 const TasksPage = React.lazy(() => import('@/pages/tasks'));
+const ClientsPage = React.lazy(() => import('@/pages/clients'));
+const ClientProfilePage = React.lazy(() => import('@/pages/client-profile'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -241,6 +243,24 @@ function Router() {
         <AuthGuard>
           <AppShell>
             <TasksPage />
+          </AppShell>
+        </AuthGuard>
+      </Route>
+      <Route path="/clients">
+        <AuthGuard>
+          <AppShell>
+            <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+              <ClientsPage />
+            </Suspense>
+          </AppShell>
+        </AuthGuard>
+      </Route>
+      <Route path="/clients/:id">
+        <AuthGuard>
+          <AppShell>
+            <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+              <ClientProfilePage />
+            </Suspense>
           </AppShell>
         </AuthGuard>
       </Route>

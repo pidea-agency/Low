@@ -13,6 +13,7 @@ import tasksRouter from "./tasks";
 import usersRouter from "./users";
 import superAdminRouter from "./super-admin";
 import subscriptionRouter from "./subscription";
+import clientsRouter from "./clients";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(tasksRouter);
 router.use(usersRouter);
 router.use(superAdminRouter);
 router.use(subscriptionRouter);
+router.use(clientsRouter);
 
 export default router;

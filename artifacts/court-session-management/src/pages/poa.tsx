@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, AlertCircle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, AlertCircle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
+import { ClientPicker } from '@/components/clients/client-picker';
+import { LawyerSelect } from '@/components/clients/lawyer-select';
+import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import {
   getStoredPoaRecords,
   setStoredPoaRecords,
@@ -51,6 +54,12 @@ export interface PowerOfAttorney {
   tempId?: string;
   retryCount?: number;
   lastError?: string;
+  clientId?: string | null;
+  client_id?: string | null;
+  assignedLawyerId?: string | null;
+  assigned_lawyer_id?: string | null;
+  assignedLawyer?: string;
+  assigned_lawyer?: string;
 }
 
 export type HijriDateValidation =
@@ -131,6 +140,7 @@ export default function PowerOfAttorneyPage() {
   const { data: currentUser, isLoading: isUserLoading } = useGetCurrentUser();
   const userId = currentUser?.id || (currentUser as any)?.userId;
   const officeId = (currentUser as any)?.officeId || userId;
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   const [confirmedRecords, setConfirmedRecords] = useState<PowerOfAttorney[]>([]);
   const [pendingRecords, setPendingRecords] = useState<PendingPoaRecord[]>([]);
@@ -142,11 +152,14 @@ export default function PowerOfAttorneyPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PowerOfAttorney | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PowerOfAttorney | null>(null);
+  const [reassignTarget, setReassignTarget] = useState<PowerOfAttorney | null>(null);
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Form State
   const [formError, setFormError] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [assignedLawyerId, setAssignedLawyerId] = useState<string | null>(null);
   const [poaNumber, setPoaNumber] = useState('');
   const [issueDateHijri, setIssueDateHijri] = useState('');
   const [expiryDateHijri, setExpiryDateHijri] = useState('');
@@ -228,6 +241,8 @@ export default function PowerOfAttorneyPage() {
   const resetForm = () => {
     setFormError(null);
     setClientName('');
+    setClientId(null);
+    setAssignedLawyerId(null);
     setPoaNumber('');
     setIssueDateHijri('');
     setExpiryDateHijri('');
@@ -241,6 +256,8 @@ export default function PowerOfAttorneyPage() {
     if (record) {
       setEditingRecord(record);
       setClientName(record.clientName);
+      setClientId(record.clientId || (record as any).client_id || null);
+      setAssignedLawyerId(record.assignedLawyerId || (record as any).assigned_lawyer_id || null);
       setPoaNumber(record.poaNumber);
       setIssueDateHijri(record.issueDateHijri);
       setExpiryDateHijri(record.expiryDateHijri);
@@ -305,6 +322,8 @@ export default function PowerOfAttorneyPage() {
       expiryDateHijri: expiryDateHijri.trim(),
       daysRemaining: days,
       notes: notes.trim(),
+      clientId: clientId || null,
+      assignedLawyerId: assignedLawyerId || null,
     };
 
     try {
@@ -608,6 +627,20 @@ export default function PowerOfAttorneyPage() {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Client Picker */}
+                  <div className="space-y-1.5 md:col-span-2">
+                    <ClientPicker
+                      value={clientId}
+                      onChange={(id, name) => {
+                        setClientId(id);
+                        if (name) {
+                          setClientName(name);
+                        }
+                      }}
+                      label="العميل المرتبط"
+                    />
+                  </div>
+
                   {/* Client Name */}
                   <div className="space-y-1.5 md:col-span-2">
                     <Label htmlFor="poa-client-name" className="text-xs font-semibold flex items-center gap-1">
@@ -626,6 +659,18 @@ export default function PowerOfAttorneyPage() {
                       required
                       onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى تعبئة هذا الحقل')}
                       onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                    />
+                  </div>
+
+                  {/* Lawyer Select */}
+                  <div className="space-y-1.5 md:col-span-2">
+                    <LawyerSelect
+                      value={assignedLawyerId}
+                      onChange={(id) => setAssignedLawyerId(id)}
+                      currentRole={currentUser?.role}
+                      currentUserId={currentUser?.id}
+                      currentUserName={(currentUser as any)?.displayName || currentUser?.username}
+                      label="المحامي المكلف"
                     />
                   </div>
 
@@ -849,6 +894,15 @@ export default function PowerOfAttorneyPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 shrink-0">
+                      {isAdmin && (
+                        <button
+                          onClick={() => setReassignTarget(record)}
+                          className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                          title="إعادة تعيين المحامي"
+                        >
+                          <UserCog className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleOpenModal(record)}
                         className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -1004,6 +1058,23 @@ export default function PowerOfAttorneyPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {reassignTarget && (
+        <ReassignDialog
+          open={!!reassignTarget}
+          onOpenChange={(open) => {
+            if (!open) setReassignTarget(null);
+          }}
+          module="poa"
+          recordId={reassignTarget.sheetRowId || Number(reassignTarget.id.replace(/\D/g, '')) || 0}
+          recordTitle={`وكالة ${reassignTarget.poaNumber}`}
+          currentLawyerId={reassignTarget.assignedLawyerId || reassignTarget.assigned_lawyer_id}
+          onSuccess={() => {
+            setReassignTarget(null);
+            loadRecords(true);
+          }}
+        />
+      )}
     </div>
   );
 }

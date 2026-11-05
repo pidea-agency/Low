@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getArabicDayName } from '@/lib/hijri';
-import { Gavel, Plus, Trash2, Calendar as CalendarIcon, User, Scale, Search, Edit3, Loader2, RefreshCw, CheckCircle2, XCircle, FileText, UserCheck, AlertCircle } from 'lucide-react';
+import { Gavel, Plus, Trash2, Calendar as CalendarIcon, User, Scale, Search, Edit3, Loader2, RefreshCw, CheckCircle2, XCircle, FileText, UserCheck, AlertCircle, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useGetCurrentUser } from '@workspace/api-client-react';
+import { ClientPicker } from '@/components/clients/client-picker';
+import { LawyerSelect } from '@/components/clients/lawyer-select';
+import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import {
   Dialog,
   DialogContent,
@@ -45,10 +49,18 @@ export interface JudgmentRecord {
   summary: string;
   isFavorable: 'نهائي' | 'ابتدائي' | 'نعم' | 'لا' | string;
   createdAt: string;
+  clientId?: string | null;
+  client_id?: string | null;
+  clientRole?: string | null;
+  client_role?: string | null;
+  assignedLawyerId?: string | null;
+  assigned_lawyer_id?: string | null;
 }
 
 export default function JudgmentsPage() {
   const { toast } = useToast();
+  const { data: currentUser } = useGetCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   const [records, setRecords] = useState<JudgmentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +70,7 @@ export default function JudgmentsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<JudgmentRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JudgmentRecord | null>(null);
+  const [reassignTarget, setReassignTarget] = useState<JudgmentRecord | null>(null);
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Form State
@@ -67,6 +80,9 @@ export default function JudgmentsPage() {
   const [plaintiff, setPlaintiff] = useState('');
   const [defendant, setDefendant] = useState('');
   const [assignedLawyer, setAssignedLawyer] = useState('');
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientRole, setClientRole] = useState<string>('');
+  const [assignedLawyerId, setAssignedLawyerId] = useState<string | null>(null);
   const [judgmentNumber, setJudgmentNumber] = useState('');
   const [judgmentDate, setJudgmentDate] = useState('');
   const [summary, setSummary] = useState('');
@@ -115,6 +131,9 @@ export default function JudgmentsPage() {
     setPlaintiff('');
     setDefendant('');
     setAssignedLawyer('');
+    setClientId(null);
+    setClientRole('');
+    setAssignedLawyerId(null);
     setJudgmentNumber('');
     setJudgmentDate('');
     setSummary('');
@@ -131,6 +150,9 @@ export default function JudgmentsPage() {
     setPlaintiff(rec.plaintiff || '');
     setDefendant(rec.defendant || '');
     setAssignedLawyer(rec.assignedLawyer || '');
+    setClientId(rec.clientId || (rec as any).client_id || null);
+    setClientRole(rec.clientRole || (rec as any).client_role || '');
+    setAssignedLawyerId(rec.assignedLawyerId || (rec as any).assigned_lawyer_id || null);
     setJudgmentNumber(rec.judgmentNumber || '');
     setJudgmentDate(rec.judgmentDate || '');
     setSummary(rec.summary || '');
@@ -182,6 +204,9 @@ export default function JudgmentsPage() {
         judgmentDate: judgmentDate.trim(),
         summary: summary.trim(),
         isFavorable,
+        clientId: clientId || null,
+        clientRole: clientRole || null,
+        assignedLawyerId: assignedLawyerId || null,
       };
 
       let res: Response;
@@ -552,6 +577,18 @@ export default function JudgmentsPage() {
 
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-border/40">
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReassignTarget(rec)}
+                      className="h-8 gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/10"
+                      title="إعادة تعيين المحامي"
+                    >
+                      <UserCog className="w-3.5 h-3.5" />
+                      إعادة تعيين
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -618,6 +655,61 @@ export default function JudgmentsPage() {
                 <div className="flex-1 font-medium">{formError}</div>
               </div>
             )}
+
+            {/* Client & Lawyer Linking */}
+            <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+              <div className="space-y-1.5">
+                <ClientPicker
+                  value={clientId}
+                  onChange={(id, name) => {
+                    setClientId(id);
+                    if (name) {
+                      if (clientRole === 'plaintiff' && !plaintiff) setPlaintiff(name);
+                      if (clientRole === 'defendant' && !defendant) setDefendant(name);
+                    }
+                  }}
+                  label="العميل المرتبط"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  طرف موكلنا في القضية
+                </Label>
+                <Select
+                  value={clientRole || 'none'}
+                  onValueChange={(val) => {
+                    const next = val === 'none' ? '' : val;
+                    setClientRole(next);
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="اختر صفة الموكل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">غير محدد</SelectItem>
+                    <SelectItem value="plaintiff">المدّعي</SelectItem>
+                    <SelectItem value="defendant">المدّعى عليه</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <LawyerSelect
+                  value={assignedLawyerId}
+                  onChange={(id, lawyerName) => {
+                    setAssignedLawyerId(id);
+                    if (lawyerName && !assignedLawyer) {
+                      setAssignedLawyer(lawyerName);
+                    }
+                  }}
+                  currentRole={currentUser?.role}
+                  currentUserId={currentUser?.id}
+                  currentUserName={(currentUser as any)?.displayName || currentUser?.username}
+                  label="المحامي المكلف"
+                />
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -818,6 +910,23 @@ export default function JudgmentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Reassign Dialog */}
+      {reassignTarget && (
+        <ReassignDialog
+          open={!!reassignTarget}
+          onOpenChange={(open) => {
+            if (!open) setReassignTarget(null);
+          }}
+          module="judgments"
+          recordId={reassignTarget.id}
+          recordTitle={`حكم ${reassignTarget.judgmentNumber || reassignTarget.caseNumber || reassignTarget.id}`}
+          currentLawyerId={reassignTarget.assignedLawyerId || reassignTarget.assigned_lawyer_id}
+          onSuccess={() => {
+            setReassignTarget(null);
+            loadRecords(true);
+          }}
+        />
+      )}
     </div>
   );
 }

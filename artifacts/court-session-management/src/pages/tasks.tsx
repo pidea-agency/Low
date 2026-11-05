@@ -22,7 +22,12 @@ import {
   RefreshCw,
   MessageCircle,
   AlertCircle,
+  UserCog,
 } from 'lucide-react';
+import { useGetCurrentUser } from '@workspace/api-client-react';
+import { ClientPicker } from '@/components/clients/client-picker';
+import { LawyerSelect } from '@/components/clients/lawyer-select';
+import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -67,6 +72,10 @@ interface Task {
   notes: string;
   createdAt: string;
   reminderSent?: boolean;
+  clientId?: string | null;
+  client_id?: string | null;
+  assignedLawyerId?: string | null;
+  assigned_lawyer_id?: string | null;
 }
 
 const STORAGE_KEY = 'legal_tasks_v1';
@@ -142,6 +151,8 @@ const emptyForm = (): Omit<Task, 'id' | 'createdAt'> => ({
   status: 'قيد التنفيذ',
   notes: '',
   reminderSent: false,
+  clientId: null,
+  assignedLawyerId: null,
 });
 
 // ─── RemainingBadge ───────────────────────────────────────────────────────────
@@ -177,9 +188,11 @@ interface TaskCardProps {
   onReminder: (t: Task) => void;
   onSendWhatsapp: (t: Task) => void;
   isSendingWhatsapp?: boolean;
+  onReassign?: (t: Task) => void;
+  isAdmin?: boolean;
 }
 
-function TaskCard({ task, onEdit, onDelete, onView, onReminder, onSendWhatsapp, isSendingWhatsapp }: TaskCardProps) {
+function TaskCard({ task, onEdit, onDelete, onView, onReminder, onSendWhatsapp, isSendingWhatsapp, onReassign, isAdmin }: TaskCardProps) {
   const s = statusConfig[task.status];
   const p = priorityConfig[task.priority];
   const SIcon = s.icon;
@@ -208,6 +221,11 @@ function TaskCard({ task, onEdit, onDelete, onView, onReminder, onSendWhatsapp, 
             >
               {isSendingWhatsapp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
             </button>
+            {isAdmin && onReassign && (
+              <button title="إعادة تعيين المحامي" onClick={() => onReassign(task)} className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--primary)' }}>
+                <UserCog className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button title="تعديل" onClick={() => onEdit(task)} className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--muted-foreground)' }}>
               <Edit3 className="w-3.5 h-3.5" />
             </button>
@@ -251,11 +269,30 @@ function Section({ title, count, color, icon: Icon, children, defaultOpen = true
 }
 
 // ─── TaskFormDialog ───────────────────────────────────────────────────────────
-interface TaskFormDialogProps { open: boolean; onClose: () => void; onSave: (d: Omit<Task, 'id' | 'createdAt'>) => void; initial?: Task | null; isSaving?: boolean; }
+interface TaskFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (d: Omit<Task, 'id' | 'createdAt'>) => void;
+  initial?: Task | null;
+  isSaving?: boolean;
+  currentUser?: any;
+}
 
-function TaskFormDialog({ open, onClose, onSave, initial, isSaving }: TaskFormDialogProps) {
+function TaskFormDialog({ open, onClose, onSave, initial, isSaving, currentUser }: TaskFormDialogProps) {
   const [form, setForm] = useState(emptyForm());
-  useEffect(() => { if (open) setForm(initial ? { ...initial } : emptyForm()); }, [open, initial]);
+  useEffect(() => {
+    if (open) {
+      setForm(
+        initial
+          ? {
+              ...initial,
+              clientId: initial.clientId || (initial as any).client_id || null,
+              assignedLawyerId: initial.assignedLawyerId || (initial as any).assigned_lawyer_id || null,
+            }
+          : emptyForm()
+      );
+    }
+  }, [open, initial]);
   const remainingDays = form.dueDate ? getRemainingDays(form.dueDate) : null;
 
   return (
@@ -272,10 +309,32 @@ function TaskFormDialog({ open, onClose, onSave, initial, isSaving }: TaskFormDi
             <Label htmlFor="tk-title">عنوان المهمة *</Label>
             <Input id="tk-title" placeholder="أدخل عنوان المهمة..." value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
           </div>
+
           <div className="space-y-1.5">
-            <Label htmlFor="tk-assignee">المكلف بالمهمة</Label>
-            <Input id="tk-assignee" placeholder="اسم الشخص المكلف..." value={form.assignee} onChange={e => setForm(f => ({ ...f, assignee: e.target.value }))} />
+            <ClientPicker
+              value={form.clientId || null}
+              onChange={(cid) => setForm((f) => ({ ...f, clientId: cid }))}
+              label="العميل المرتبط"
+            />
           </div>
+
+          <div className="space-y-1.5">
+            <LawyerSelect
+              value={form.assignedLawyerId || null}
+              onChange={(lid, lawyerName) =>
+                setForm((f) => ({
+                  ...f,
+                  assignedLawyerId: lid,
+                  assignee: lawyerName || f.assignee,
+                }))
+              }
+              currentRole={currentUser?.role}
+              currentUserId={currentUser?.id}
+              currentUserName={(currentUser as any)?.displayName || currentUser?.username}
+              label="المحامي المكلف"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>الأولوية</Label>
@@ -414,6 +473,8 @@ function TaskDetailDialog({ task, onClose, onEdit, onDelete, onReminder, onSendW
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function TasksPage() {
   const { toast } = useToast();
+  const { data: currentUser } = useGetCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -425,6 +486,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewTask, setViewTask] = useState<Task | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const [reassignTarget, setReassignTarget] = useState<Task | null>(null);
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Load Tasks from API (and fallback to localStorage if offline)
@@ -619,6 +681,8 @@ export default function TasksPage() {
     onReminder: handleReminder,
     onSendWhatsapp: handleSendWhatsappReminder,
     isSendingWhatsapp: sendingWhatsappId === task.id,
+    onReassign: (t: Task) => setReassignTarget(t),
+    isAdmin,
   });
 
   return (
@@ -735,7 +799,14 @@ export default function TasksPage() {
       )}
 
       {/* Dialogs */}
-      <TaskFormDialog open={formOpen} onClose={() => { setFormOpen(false); setEditingTask(null); }} onSave={handleSave} initial={editingTask} isSaving={isSaving} />
+      <TaskFormDialog
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setEditingTask(null); }}
+        onSave={handleSave}
+        initial={editingTask}
+        isSaving={isSaving}
+        currentUser={currentUser}
+      />
       <TaskDetailDialog
         task={viewTask}
         onClose={() => setViewTask(null)}
@@ -745,6 +816,23 @@ export default function TasksPage() {
         onSendWhatsapp={handleSendWhatsappReminder}
         isSendingWhatsapp={viewTask ? sendingWhatsappId === viewTask.id : false}
       />
+
+      {reassignTarget && (
+        <ReassignDialog
+          open={!!reassignTarget}
+          onOpenChange={(open) => {
+            if (!open) setReassignTarget(null);
+          }}
+          module="tasks"
+          recordId={reassignTarget.id}
+          recordTitle={reassignTarget.title}
+          currentLawyerId={reassignTarget.assignedLawyerId || reassignTarget.assigned_lawyer_id}
+          onSuccess={() => {
+            setReassignTarget(null);
+            loadTasks(true);
+          }}
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">

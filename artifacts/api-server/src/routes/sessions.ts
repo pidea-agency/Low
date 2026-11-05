@@ -22,9 +22,18 @@ import { logger } from "../lib/logger";
 import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
 import { computeHearingDateTime } from "../utils/hijri";
+import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
 import type { Response } from "express";
 
 const router: IRouter = Router();
+
+function getOfficeId(req: any): string {
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("غير مصرح: معرف المكتب مفقود.");
+  }
+  return officeId;
+}
 
 // Stop all Excel Sheet read/write operations if the user's subscription is suspended or expired
 // Super Admins are blocked from office sessions data
@@ -83,6 +92,9 @@ router.get("/sessions", async (req, res) => {
       return;
     }
     let sessions = await listSessions(parseResult.data.status, officeId);
+    if (req.authUser?.role === "staff") {
+      sessions = sessions.filter((s) => canUserAccessRecord(s, req.authUser));
+    }
     if (req.query.scope === "personal") {
       const username = (req.authUser?.username || "").toLowerCase();
       const displayName = ((req.authUser as any)?.displayName || "").toLowerCase();
@@ -91,7 +103,18 @@ router.get("/sessions", async (req, res) => {
         return (username && text.includes(username)) || (displayName && text.includes(displayName));
       });
     }
-    const data = ListSessionsResponse.parse(sessions);
+    const parsedList = ListSessionsResponse.parse(sessions);
+    const data = sessions.map((s: any, idx: number) => ({
+      ...parsedList[idx],
+      clientId: s.clientId || s.client_id || null,
+      client_id: s.clientId || s.client_id || null,
+      assignedLawyerId: s.assignedLawyerId || s.assigned_lawyer_id || null,
+      assigned_lawyer_id: s.assignedLawyerId || s.assigned_lawyer_id || null,
+      clientRole: s.clientRole || s.client_role || null,
+      client_role: s.clientRole || s.client_role || null,
+      createdBy: s.createdBy || s.created_by || null,
+      created_by: s.createdBy || s.created_by || null,
+    }));
     res.json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to list sessions");
@@ -113,9 +136,44 @@ router.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
-    const session = await createSession(parseResult.data, officeId);
-    const data = CreateSessionResponse.parse(session);
+    const officeId = getOfficeId(req);
+    const body = req.body || {};
+    const clientId = body.clientId || body.client_id || null;
+    let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+    const clientRole = body.clientRole || body.client_role || null;
+    const createdBy = req.authUser?.userId || null;
+
+    if (req.authUser?.role === "staff") {
+      assignedLawyerId = req.authUser.userId;
+    } else if (assignedLawyerId) {
+      const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+      if (!val.valid) {
+        res.status(400).json({ error: val.error || "المحامي غير صالح." });
+        return;
+      }
+    }
+
+    const session = await createSession(
+      {
+        ...parseResult.data,
+        clientId,
+        assignedLawyerId,
+        clientRole,
+        createdBy,
+      } as any,
+      officeId,
+    );
+    const data = {
+      ...CreateSessionResponse.parse(session),
+      clientId: (session as any).clientId || (session as any).client_id || null,
+      client_id: (session as any).clientId || (session as any).client_id || null,
+      assignedLawyerId: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || null,
+      assigned_lawyer_id: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || null,
+      clientRole: (session as any).clientRole || (session as any).client_role || null,
+      client_role: (session as any).clientRole || (session as any).client_role || null,
+      createdBy: (session as any).createdBy || (session as any).created_by || null,
+      created_by: (session as any).createdBy || (session as any).created_by || null,
+    };
     res.status(201).json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to create session");
@@ -132,11 +190,21 @@ router.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
     const session = await getSessionById(id, officeId);
-    if (!session) {
+    if (!session || !canUserAccessRecord(session, req.authUser)) {
       res.status(404).json({ error: "Session not found." });
       return;
     }
-    const data = GetSessionResponse.parse(session);
+    const data = {
+      ...GetSessionResponse.parse(session),
+      clientId: (session as any).clientId || (session as any).client_id || null,
+      client_id: (session as any).clientId || (session as any).client_id || null,
+      assignedLawyerId: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || null,
+      assigned_lawyer_id: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || null,
+      clientRole: (session as any).clientRole || (session as any).client_role || null,
+      client_role: (session as any).clientRole || (session as any).client_role || null,
+      createdBy: (session as any).createdBy || (session as any).created_by || null,
+      created_by: (session as any).createdBy || (session as any).created_by || null,
+    };
     res.json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to load session");
@@ -156,13 +224,49 @@ router.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
-    const session = await updateSession(id, parseResult.data, officeId);
+    const officeId = getOfficeId(req);
+    const existing = await getSessionById(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+
+    const body = req.body || {};
+    const extraPayload: any = {};
+    if (body.clientId !== undefined || body.client_id !== undefined) {
+      extraPayload.clientId = body.clientId !== undefined ? body.clientId : body.client_id;
+    }
+    if (body.clientRole !== undefined || body.client_role !== undefined) {
+      extraPayload.clientRole = body.clientRole !== undefined ? body.clientRole : body.client_role;
+    }
+    if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== undefined || body.assigned_lawyer_id !== undefined)) {
+      const targetLawyer = body.assignedLawyerId !== undefined ? body.assignedLawyerId : body.assigned_lawyer_id;
+      if (targetLawyer) {
+        const val = await validateOfficeLawyer(targetLawyer, officeId);
+        if (!val.valid) {
+          res.status(400).json({ error: val.error || "المحامي غير صالح." });
+          return;
+        }
+      }
+      extraPayload.assignedLawyerId = targetLawyer;
+    }
+
+    const session = await updateSession(id, { ...parseResult.data, ...extraPayload }, officeId);
     if (!session) {
       res.status(404).json({ error: "Session not found." });
       return;
     }
-    const data = UpdateSessionResponse.parse(session);
+    const data = {
+      ...UpdateSessionResponse.parse(session),
+      clientId: (session as any).clientId || (session as any).client_id || null,
+      client_id: (session as any).clientId || (session as any).client_id || null,
+      assignedLawyerId: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || null,
+      assigned_lawyer_id: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || null,
+      clientRole: (session as any).clientRole || (session as any).client_role || null,
+      client_role: (session as any).clientRole || (session as any).client_role || null,
+      createdBy: (session as any).createdBy || (session as any).created_by || null,
+      created_by: (session as any).createdBy || (session as any).created_by || null,
+    };
     res.json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to update session");
@@ -177,7 +281,13 @@ router.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => 
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const officeId = getOfficeId(req);
+    const existing = await getSessionById(id, officeId);
+    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+
     const deleted = await deleteSession(id, officeId);
     if (!deleted) {
       res.status(404).json({ error: "Session not found." });
@@ -187,6 +297,47 @@ router.delete("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => 
   } catch (err: any) {
     logger.error({ err }, "Failed to delete session");
     handleRouteError(res, err, "فشل حذف الجلسة.");
+  }
+});
+
+/**
+ * PATCH /sessions/:id/reassign
+ * Admin-only: reassign a session to an office lawyer or unassign.
+ */
+router.patch("/sessions/:id/reassign", attachAuthUser, requireAuth, async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "إعادة التعيين مقتصرة على مشرف المكتب." });
+    return;
+  }
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid session id." });
+    return;
+  }
+
+  const officeId = getOfficeId(req);
+  const targetLawyerId = req.body?.assignedLawyerId !== undefined ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
+
+  if (targetLawyerId) {
+    const val = await validateOfficeLawyer(targetLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "المحامي غير صالح." });
+      return;
+    }
+  }
+
+  try {
+    const existing = await getSessionById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+
+    const updated = await updateSession(id, { assignedLawyerId: targetLawyerId || null } as any, officeId);
+    res.json(updated);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to reassign session");
+    handleRouteError(res, err, "فشل إعادة تعيين الجلسة.");
   }
 });
 

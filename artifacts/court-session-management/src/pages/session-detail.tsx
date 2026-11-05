@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'wouter';
-import { useGetSession, useUpdateSession, useDeleteSession, getListSessionsQueryKey, getGetDashboardStatsQueryKey, getGetSessionQueryKey } from '@workspace/api-client-react';
+import { useGetSession, useUpdateSession, useDeleteSession, useGetCurrentUser, getListSessionsQueryKey, getGetDashboardStatsQueryKey, getGetSessionQueryKey } from '@workspace/api-client-react';
 import type { SessionStatus } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { ArrowRight, Save, Trash2, Scale, MessageCircle, Send } from 'lucide-react';
 import { TimeRemainingCard } from '@/components/time-remaining';
+import { ClientPicker } from '@/components/clients/client-picker';
+import { LawyerSelect } from '@/components/clients/lawyer-select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,6 +67,7 @@ export default function SessionDetailPage() {
 
   const sessionId = Number(params.id);
   const { data: session, isLoading, error } = useGetSession(sessionId);
+  const { data: currentUser } = useGetCurrentUser();
 
   const [formData, setFormData] = useState<any>({});
   const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
@@ -86,6 +89,9 @@ export default function SessionDetailPage() {
         sessionTime: session.sessionTime || '',
         notes: session.notes || '',
         status: session.status,
+        clientId: (session as any).clientId || (session as any).client_id || '',
+        clientRole: (session as any).clientRole || (session as any).client_role || '',
+        assignedLawyerId: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || '',
       });
     }
   }, [session]);
@@ -273,6 +279,47 @@ export default function SessionDetailPage() {
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Client & Lawyer Linking */}
+          <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+            <div className="space-y-1.5">
+              <ClientPicker
+                value={formData.clientId || null}
+                onChange={(cid) => updateField('clientId', cid || '')}
+                label="العميل المرتبط"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                طرف موكلنا في الدعوى
+              </Label>
+              <Select
+                value={formData.clientRole || 'none'}
+                onValueChange={(val) => updateField('clientRole', val === 'none' ? '' : val)}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="اختر صفة الموكل" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">غير محدد</SelectItem>
+                  <SelectItem value="plaintiff">المدّعي</SelectItem>
+                  <SelectItem value="defendant">المدّعى عليه</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <LawyerSelect
+                value={formData.assignedLawyerId || null}
+                onChange={(lid) => updateField('assignedLawyerId', lid || '')}
+                currentRole={currentUser?.role}
+                currentUserId={currentUser?.id}
+                currentUserName={(currentUser as any)?.displayName || currentUser?.username}
+                label="المحامي المكلف"
+              />
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             {formFields.map((f) => (
               <div key={f.key} className="space-y-1.5">
