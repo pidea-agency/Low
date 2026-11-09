@@ -1,7 +1,6 @@
 import { useGetCurrentUser } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { useEffect } from 'react';
-import { handleSessionTerminationCleanup } from '@/lib/poa-storage';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading, error } = useGetCurrentUser();
@@ -9,7 +8,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && (error || !user)) {
-      handleSessionTerminationCleanup();
       setLocation('/login');
     } else if (!isLoading && user?.role === 'super_admin') {
       setLocation('/super-admin');

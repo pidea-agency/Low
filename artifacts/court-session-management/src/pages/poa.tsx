@@ -1,5 +1,23 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, AlertCircle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw, UserCog, Paperclip } from 'lucide-react';
+import {
+  ShieldCheck,
+  Plus,
+  Trash2,
+  Calendar as CalendarIcon,
+  User,
+  FileKey,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  Search,
+  Edit3,
+  Sparkles,
+  Loader2,
+  RefreshCw,
+  UserCog,
+  Paperclip,
+  Link as LinkIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,16 +29,6 @@ import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
-import {
-  getStoredPoaRecords,
-  setStoredPoaRecords,
-  cleanLegacyPoaStorage,
-  getPendingPoaRecords,
-  setPendingPoaRecords,
-  addPendingPoaRecord,
-  removePendingPoaRecord,
-  PendingPoaRecord,
-} from '@/lib/poa-storage';
 import moment from 'moment-hijri';
 import {
   Dialog,
@@ -44,18 +52,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export interface PowerOfAttorney {
   id: string;
-  sheetRowId?: number; // 1-based sheet row id for update/delete operations
-  clientName: string;
+  sheetRowId?: number;
+  clientName?: string;
   poaNumber: string;
   issueDateHijri: string;
   expiryDateHijri: string;
   daysRemaining: number;
   notes?: string;
   createdAt: string;
-  isPending?: boolean;
-  tempId?: string;
-  retryCount?: number;
-  lastError?: string;
   clientId?: string | null;
   client_id?: string | null;
   assignedLawyerId?: string | null;
@@ -144,10 +148,8 @@ export default function PowerOfAttorneyPage() {
   const officeId = (currentUser as any)?.officeId || userId;
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
-  const [confirmedRecords, setConfirmedRecords] = useState<PowerOfAttorney[]>([]);
-  const [pendingRecords, setPendingRecords] = useState<PendingPoaRecord[]>([]);
-  const [retryingId, setRetryingId] = useState<string | null>(null);
-  const [pendingDeleteTarget, setPendingDeleteTarget] = useState<PendingPoaRecord | null>(null);
+  const [records, setRecords] = useState<PowerOfAttorney[]>([]);
+  const [clientsMap, setClientsMap] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -160,21 +162,24 @@ export default function PowerOfAttorneyPage() {
   const [attachmentTarget, setAttachmentTarget] = useState<PowerOfAttorney | null>(null);
   const [bindingError, setBindingError] = useState<string | null>(null);
 
+  // Unlinked POAs Triage Dialog state
+  const [unlinkedDialogOpen, setUnlinkedDialogOpen] = useState(false);
+  const [triageLinking, setTriageLinking] = useState<Record<string, string | null>>({});
+  const [savingTriageId, setSavingTriageId] = useState<string | null>(null);
+
   // Form State
   const [formError, setFormError] = useState<string | null>(null);
-  const [clientName, setClientName] = useState('');
   const [clientId, setClientId] = useState<string | null>(null);
   const [assignedLawyerId, setAssignedLawyerId] = useState<string | null>(null);
   const [poaNumber, setPoaNumber] = useState('');
   const [issueDateHijri, setIssueDateHijri] = useState('');
   const [expiryDateHijri, setExpiryDateHijri] = useState('');
-  const [expiryValidation, setExpiryValidation] = useState<HijriDateValidation>({ status: 'empty', days: 0, message: 'أدخل تاريخ الانتهاء' });
+  const [expiryValidation, setExpiryValidation] = useState<HijriDateValidation>({
+    status: 'empty',
+    days: 0,
+    message: 'أدخل تاريخ الانتهاء',
+  });
   const [notes, setNotes] = useState('');
-
-  // Clean un-migrated legacy key on mount
-  useEffect(() => {
-    cleanLegacyPoaStorage();
-  }, []);
 
   // Recalculate days live as user types expiry date
   useEffect(() => {
@@ -182,6 +187,22 @@ export default function PowerOfAttorneyPage() {
   }, [expiryDateHijri]);
 
   // ── Data fetching ──────────────────────────────────────────────────────────
+
+  const fetchClients = useCallback(async () => {
+    try {
+      const res = await fetch('/api/clients', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const map: Record<string, string> = {};
+          data.forEach((c: any) => {
+            if (c.id && c.name) map[c.id] = c.name;
+          });
+          setClientsMap(map);
+        }
+      }
+    } catch (_) {}
+  }, []);
 
   const loadRecords = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setIsLoading(true);
@@ -191,17 +212,13 @@ export default function PowerOfAttorneyPage() {
       if (res.ok) {
         setBindingError(null);
         const data: (PowerOfAttorney & { sheetRowId?: number })[] = await res.json();
-        // API returns objects containing sheetRowId; maintain unique ID for keying
         const parsed = data.map((d, idx) => ({
           ...d,
-          id: d.id || `poa-sheet-${d.sheetRowId ?? idx + 2}`,
+          id: d.id || `poa-${d.sheetRowId ?? idx + 2}`,
           sheetRowId: d.sheetRowId ?? idx + 2,
         }));
         const refreshed = refreshDays(parsed);
-        setConfirmedRecords(refreshed);
-        if (officeId && userId) {
-          setStoredPoaRecords(officeId, userId, refreshed);
-        }
+        setRecords(refreshed);
         setIsLoading(false);
         return;
       }
@@ -211,41 +228,40 @@ export default function PowerOfAttorneyPage() {
         setIsLoading(false);
         return;
       }
+      toast({
+        title: 'خطأ',
+        description: 'فشل تحميل بيانات الوكالات.',
+        variant: 'destructive',
+      });
     } catch (_) {
-      // API unreachable — fall through to localStorage
-    }
-    // Fallback: load from isolated localStorage
-    if (officeId && userId) {
-      const saved = getStoredPoaRecords<PowerOfAttorney>(officeId, userId);
-      if (saved) {
-        setConfirmedRecords(refreshDays(saved));
-      }
+      toast({
+        title: 'خطأ في الاتصال',
+        description: 'تعذر الاتصال بالخادم لتحميل الوكالات.',
+        variant: 'destructive',
+      });
     }
     setIsLoading(false);
-  }, [officeId, userId]);
+  }, [toast]);
 
   useEffect(() => {
-    // Only read from storage and initiate load once the current user and office identity are ready
     if (isUserLoading || !officeId || !userId) return;
-
-    // Load isolated pending records
-    const pending = getPendingPoaRecords(officeId, userId);
-    setPendingRecords(pending);
-
-    // Fast initial display of cached confirmed records
-    const saved = getStoredPoaRecords<PowerOfAttorney>(officeId, userId);
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      setConfirmedRecords(refreshDays(saved));
-      setIsLoading(false);
-    }
+    fetchClients();
     loadRecords();
-  }, [isUserLoading, officeId, userId, loadRecords]);
+  }, [isUserLoading, officeId, userId, fetchClients, loadRecords]);
+
+  // Derived client name helper
+  const getClientDisplayName = useCallback((record: PowerOfAttorney) => {
+    const cid = record.clientId || record.client_id;
+    if (cid && clientsMap[cid]) {
+      return clientsMap[cid];
+    }
+    return record.clientName || 'عميل غير محدد';
+  }, [clientsMap]);
 
   // ── Form helpers ──────────────────────────────────────────────────────────
 
   const resetForm = () => {
     setFormError(null);
-    setClientName('');
     setClientId(null);
     setAssignedLawyerId(null);
     setPoaNumber('');
@@ -260,7 +276,6 @@ export default function PowerOfAttorneyPage() {
     setFormError(null);
     if (record) {
       setEditingRecord(record);
-      setClientName(record.clientName);
       setClientId(record.clientId || (record as any).client_id || null);
       setAssignedLawyerId(record.assignedLawyerId || (record as any).assigned_lawyer_id || null);
       setPoaNumber(record.poaNumber);
@@ -280,12 +295,20 @@ export default function PowerOfAttorneyPage() {
     e.preventDefault();
     if (isSaving) return;
 
-    if (!clientName.trim() || !poaNumber.trim()) {
-      const msg = 'يرجى تعبئة اسم العميل ورقم الوكالة.';
+    if (!clientId) {
+      const msg = 'يرجى اختيار العميل المرتبط بالوكالة.';
       setFormError(msg);
       toast({ title: 'تنبيه', description: msg, variant: 'destructive' });
       return;
     }
+
+    if (!poaNumber.trim()) {
+      const msg = 'يرجى إدخال رقم الوكالة.';
+      setFormError(msg);
+      toast({ title: 'تنبيه', description: msg, variant: 'destructive' });
+      return;
+    }
+
     if (expiryDateHijri.trim()) {
       const val = parseAndValidateHijriDate(expiryDateHijri);
       if (val.status === 'invalid') {
@@ -299,6 +322,7 @@ export default function PowerOfAttorneyPage() {
         return;
       }
     }
+
     if (issueDateHijri.trim()) {
       const issueVal = parseAndValidateHijriDate(issueDateHijri);
       if (issueVal.status === 'invalid') {
@@ -317,25 +341,24 @@ export default function PowerOfAttorneyPage() {
     setFormError(null);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     const days = calculateDaysRemainingFromHijri(expiryDateHijri);
     const payload = {
-      clientName: clientName.trim(),
       poaNumber: poaNumber.trim(),
       issueDateHijri: issueDateHijri.trim(),
       expiryDateHijri: expiryDateHijri.trim(),
       daysRemaining: days,
       notes: notes.trim(),
-      clientId: clientId || null,
+      clientId,
       assignedLawyerId: assignedLawyerId || null,
     };
 
     try {
       let res: Response;
-      if (editingRecord?.sheetRowId) {
-        // Update
-        res = await fetch(`/api/poa/${editingRecord.sheetRowId}`, {
+      const targetId = editingRecord?.sheetRowId || editingRecord?.id;
+      if (editingRecord && targetId) {
+        res = await fetch(`/api/poa/${targetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -343,11 +366,10 @@ export default function PowerOfAttorneyPage() {
           signal: controller.signal,
         });
       } else {
-        // Create
         res = await fetch('/api/poa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, createdAt: new Date().toISOString() }),
+          body: JSON.stringify(payload),
           credentials: 'include',
           signal: controller.signal,
         });
@@ -359,53 +381,29 @@ export default function PowerOfAttorneyPage() {
         const errorData = await res.json().catch(() => ({}));
         const refIdStr = errorData.refId ? ` رقم المرجع: ${errorData.refId}` : '';
         const errMsg = errorData.error
-          ? (errorData.refId && errorData.error.includes(errorData.refId) ? errorData.error : `${errorData.error}${refIdStr}`)
-          : `تعذر حفظ الوكالة في Google Sheets.${refIdStr}`;
+          ? (errorData.refId && errorData.error.includes(errorData.refId)
+              ? errorData.error
+              : `${errorData.error}${refIdStr}`)
+          : 'فشل حفظ الوكالة، حاول مرة أخرى.';
         throw new Error(errMsg);
-      }
-
-      const savedData: PowerOfAttorney = await res.json();
-
-      // Clear any matching pending record on server save
-      if (officeId && userId) {
-        const currentPending = getPendingPoaRecords(officeId, userId);
-        const matching = currentPending.find((p) => p.payload.poaNumber === payload.poaNumber);
-        if (matching) {
-          removePendingPoaRecord(officeId, userId, matching.tempId);
-          setPendingRecords(getPendingPoaRecords(officeId, userId));
-        }
       }
 
       toast({
         title: editingRecord ? 'تم التحديث' : 'تمت الإضافة',
-        description: editingRecord ? 'تم تحديث بيانات الوكالة في Google Sheets بنجاح.' : 'تم حفظ الوكالة في Google Sheets بنجاح.',
+        description: editingRecord ? 'تم تحديث بيانات الوكالة بنجاح.' : 'تم حفظ الوكالة بنجاح.',
       });
 
       setFormError(null);
       setIsOpen(false);
       resetForm();
+      await fetchClients();
       await loadRecords(true);
     } catch (err: any) {
       clearTimeout(timeoutId);
-      let message = err.message || 'فشل حفظ الوكالة.';
+      let message = err.message || 'فشل حفظ الوكالة، حاول مرة أخرى.';
       if (err.name === 'AbortError') {
         message = 'انتهت مهلة حفظ الوكالة (20 ثانية). يرجى المحاولة مرة أخرى.';
       }
-
-      // Store in isolated pending storage for new additions so user data is never lost
-      if (officeId && userId && !editingRecord) {
-        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        const pendingItem: PendingPoaRecord = {
-          tempId,
-          createdAt: new Date().toISOString(),
-          payload,
-          retryCount: 0,
-          lastError: message,
-        };
-        addPendingPoaRecord(officeId, userId, pendingItem);
-        setPendingRecords(getPendingPoaRecords(officeId, userId));
-      }
-
       setFormError(message);
       toast({
         title: 'خطأ في حفظ الوكالة',
@@ -417,167 +415,89 @@ export default function PowerOfAttorneyPage() {
     }
   };
 
-  const handleRetryPending = async (record: PowerOfAttorney) => {
-    if (!record.tempId || retryingId) return;
-    setRetryingId(record.tempId);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
-
-    try {
-      const res = await fetch('/api/poa', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': record.tempId,
-        },
-        body: JSON.stringify({
-          clientName: record.clientName,
-          poaNumber: record.poaNumber,
-          issueDateHijri: record.issueDateHijri,
-          expiryDateHijri: record.expiryDateHijri,
-          daysRemaining: record.daysRemaining,
-          notes: record.notes || '',
-          createdAt: record.createdAt || new Date().toISOString(),
-        }),
-        credentials: 'include',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const refIdStr = errorData.refId ? ` رقم المرجع: ${errorData.refId}` : '';
-        const errMsg = errorData.error
-          ? (errorData.refId && errorData.error.includes(errorData.refId) ? errorData.error : `${errorData.error}${refIdStr}`)
-          : `تعذر حفظ الوكالة في Google Sheets.${refIdStr}`;
-        throw new Error(errMsg);
-      }
-
-      // Save confirmed by server! Remove from pending storage
-      if (officeId && userId) {
-        removePendingPoaRecord(officeId, userId, record.tempId);
-        setPendingRecords(getPendingPoaRecords(officeId, userId));
-      }
-
-      toast({
-        title: 'تم حفظ الوكالة بنجاح',
-        description: 'تم تأكيد حفظ الوكالة ومزامنتها مع Google Sheets.',
-      });
-
-      await loadRecords(true);
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      let message = err.message || 'فشل حفظ الوكالة.';
-      if (err.name === 'AbortError') {
-        message = 'انتهت مهلة حفظ الوكالة (20 ثانية). يرجى المحاولة مرة أخرى.';
-      }
-
-      // Increment retry count in pending storage
-      if (officeId && userId && record.tempId) {
-        const current = getPendingPoaRecords(officeId, userId);
-        const updated = current.map((p) =>
-          p.tempId === record.tempId
-            ? { ...p, retryCount: p.retryCount + 1, lastError: message }
-            : p
-        );
-        setPendingPoaRecords(officeId, userId, updated);
-        setPendingRecords(updated);
-      }
-
-      toast({
-        title: 'فشلت إعادة محاولة الحفظ',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setRetryingId(null);
-    }
-  };
-
-  const handleConfirmDeletePending = () => {
-    if (!pendingDeleteTarget || !officeId || !userId) return;
-    removePendingPoaRecord(officeId, userId, pendingDeleteTarget.tempId);
-    setPendingRecords(getPendingPoaRecords(officeId, userId));
-    setPendingDeleteTarget(null);
-    toast({
-      title: 'تم الحذف',
-      description: 'تم حذف الوكالة المعلقة من السجل المحلي.',
-    });
-  };
-
   const handleDeleteConfirmed = async () => {
     const record = deleteTarget;
     setDeleteTarget(null);
     if (!record) return;
 
-    if (record.isPending && record.tempId) {
-      if (officeId && userId) {
-        removePendingPoaRecord(officeId, userId, record.tempId);
-        setPendingRecords(getPendingPoaRecords(officeId, userId));
-      }
-      toast({ title: 'تم الحذف', description: 'تم حذف الوكالة المعلقة من السجل المحلي.' });
+    try {
+      const id = record.sheetRowId || record.id;
+      const res = await fetch(`/api/poa/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: 'تم الحذف', description: 'تم حذف الوكالة بنجاح.' });
+      await loadRecords();
+    } catch (_) {
+      toast({
+        title: 'خطأ',
+        description: 'فشل حذف الوكالة، حاول مرة أخرى.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // ── Manual Link for Unlinked POAs ──────────────────────────────────────────
+
+  const handleSaveTriageLink = async (record: PowerOfAttorney) => {
+    const targetCid = triageLinking[record.id];
+    if (!targetCid) {
+      toast({
+        title: 'تنبيه',
+        description: 'يرجى اختيار العميل أولاً لربطه بالوكالة.',
+        variant: 'destructive',
+      });
       return;
     }
 
+    setSavingTriageId(record.id);
     try {
-      if (record.sheetRowId) {
-        const res = await fetch(`/api/poa/${record.sheetRowId}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
-        if (!res.ok) throw new Error();
-        toast({ title: 'تم الحذف', description: 'تم حذف الوكالة من Google Sheets.' });
-        await loadRecords();
-        return;
-      } else {
-        toast({ title: 'تم الحذف', description: 'تم حذف الوكالة من السجل المحلي.' });
+      const id = record.sheetRowId || record.id;
+      const res = await fetch(`/api/poa/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: targetCid }),
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'فشل ربط الوكالة بالعميل');
       }
-    } catch (_) {
-      toast({ title: 'تم الحذف محلياً', description: 'تعذر الحذف من الشيت — تم الحذف محلياً.' });
+
+      toast({
+        title: 'تم الربط بنجاح',
+        description: `تم ربط الوكالة ${record.poaNumber} بالعميل بنجاح.`,
+      });
+
+      await fetchClients();
+      await loadRecords(true);
+    } catch (err: any) {
+      toast({
+        title: 'خطأ',
+        description: err.message || 'فشل ربط الوكالة بالعميل، حاول مرة أخرى.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingTriageId(null);
     }
-    setConfirmedRecords((prev) => {
-      const next = prev.filter((r) => r.id !== record.id);
-      if (officeId && userId) {
-        setStoredPoaRecords(officeId, userId, next);
-      }
-      return next;
-    });
   };
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const mergedRecords = useMemo(() => {
-    const pendingMapped: PowerOfAttorney[] = pendingRecords.map((p) => ({
-      id: `pending-${p.tempId}`,
-      tempId: p.tempId,
-      isPending: true,
-      retryCount: p.retryCount,
-      lastError: p.lastError,
-      clientName: p.payload.clientName,
-      poaNumber: p.payload.poaNumber,
-      issueDateHijri: p.payload.issueDateHijri,
-      expiryDateHijri: p.payload.expiryDateHijri,
-      daysRemaining: p.payload.expiryDateHijri
-        ? calculateDaysRemainingFromHijri(p.payload.expiryDateHijri)
-        : p.payload.daysRemaining,
-      notes: p.payload.notes,
-      createdAt: p.createdAt,
-    }));
+  const unlinkedRecords = useMemo(() => {
+    return records.filter((r) => !r.clientId && !r.client_id);
+  }, [records]);
 
-    const confirmedPoaNumbers = new Set(confirmedRecords.map((c) => c.poaNumber));
-    const dedupedPending = pendingMapped.filter((p) => !confirmedPoaNumbers.has(p.poaNumber));
-
-    return [...dedupedPending, ...confirmedRecords];
-  }, [confirmedRecords, pendingRecords]);
-
-  const filteredRecords = mergedRecords.filter(
-    (r) =>
-      r.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredRecords = records.filter((r) => {
+    const clientName = getClientDisplayName(r);
+    return (
+      clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.poaNumber.includes(searchQuery) ||
       (r.notes && r.notes.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+    );
+  });
 
   const totalItems = filteredRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -598,7 +518,7 @@ export default function PowerOfAttorneyPage() {
             </h1>
           </div>
           <p className="text-muted-foreground text-sm mr-3">
-            متابعة وكالات العملاء — تُحفظ تلقائياً في ورقة <span className="font-mono font-medium text-emerald-600">Attorney</span> بنفس ملف Google Sheets
+            متابعة وكالات العملاء وصلاحياتها وتواريخ انتهائها
           </p>
         </div>
 
@@ -609,7 +529,10 @@ export default function PowerOfAttorneyPage() {
 
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => handleOpenModal()} className="gap-2 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold shadow-md shadow-[#C99732]/25 border-0 cursor-pointer">
+              <Button
+                onClick={() => handleOpenModal()}
+                className="gap-2 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold shadow-md shadow-[#C99732]/25 border-0 cursor-pointer"
+              >
                 <Plus className="w-4 h-4" />
                 + إضافة وكالة جديدة
               </Button>
@@ -636,38 +559,15 @@ export default function PowerOfAttorneyPage() {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Client Picker */}
+                  {/* Client Picker - Required */}
                   <div className="space-y-1.5 md:col-span-2">
                     <ClientPicker
                       value={clientId}
-                      onChange={(id, name) => {
+                      onChange={(id) => {
                         setClientId(id);
-                        if (name) {
-                          setClientName(name);
-                        }
-                      }}
-                      label="العميل المرتبط"
-                    />
-                  </div>
-
-                  {/* Client Name */}
-                  <div className="space-y-1.5 md:col-span-2">
-                    <Label htmlFor="poa-client-name" className="text-xs font-semibold flex items-center gap-1">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>اسم العميل</span> <span className="text-rose-500">*</span>
-                    </Label>
-                    <Input
-                      id="poa-client-name"
-                      placeholder="مثال: شركة الحلول القانونية / محمد أحمد"
-                      value={clientName}
-                      onChange={(e) => {
-                        setClientName(e.target.value);
                         if (formError) setFormError(null);
                       }}
-                      disabled={isSaving}
-                      required
-                      onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى تعبئة هذا الحقل')}
-                      onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                      label="العميل المرتبط"
                     />
                   </div>
 
@@ -701,8 +601,6 @@ export default function PowerOfAttorneyPage() {
                       dir="ltr"
                       disabled={isSaving}
                       required
-                      onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('يرجى تعبئة هذا الحقل')}
-                      onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                     />
                   </div>
 
@@ -750,17 +648,19 @@ export default function PowerOfAttorneyPage() {
                       <Sparkles className="w-4 h-4 text-emerald-500" />
                       <span className="text-xs font-semibold">حالة صلاحية الوكالة:</span>
                     </div>
-                    <span className={`font-mono text-sm font-bold px-3 py-0.5 rounded-full ${
-                      expiryValidation.status === 'invalid'
-                        ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                        : expiryValidation.status === 'empty'
-                        ? 'bg-muted text-muted-foreground'
-                        : expiryValidation.days <= 0
-                        ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                        : expiryValidation.days <= 30
-                        ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                        : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    }`}>
+                    <span
+                      className={`font-mono text-sm font-bold px-3 py-0.5 rounded-full ${
+                        expiryValidation.status === 'invalid'
+                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                          : expiryValidation.status === 'empty'
+                          ? 'bg-muted text-muted-foreground'
+                          : expiryValidation.days <= 0
+                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
+                          : expiryValidation.days <= 30
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                          : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
                       {expiryValidation.message}
                     </span>
                   </div>
@@ -784,7 +684,7 @@ export default function PowerOfAttorneyPage() {
                   </div>
 
                   {editingRecord && (
-                    <div className="pt-3 border-t border-border/50">
+                    <div className="pt-3 border-t border-border/50 md:col-span-2">
                       <AttachmentsPanel
                         relatedRecordType="poa"
                         relatedRecordId={editingRecord.sheetRowId || editingRecord.id}
@@ -797,9 +697,14 @@ export default function PowerOfAttorneyPage() {
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>
                     إلغاء
                   </Button>
-                  <Button type="submit" data-testid="button-save-poa" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" disabled={isSaving}>
+                  <Button
+                    type="submit"
+                    data-testid="button-save-poa"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                    disabled={isSaving}
+                  >
                     {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isSaving ? 'جارٍ حفظ الوكالة...' : editingRecord ? 'تحديث الوكالة' : 'حفظ في Google Sheets'}
+                    {isSaving ? 'جارٍ حفظ الوكالة...' : editingRecord ? 'تحديث الوكالة' : 'حفظ الوكالة'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -812,6 +717,31 @@ export default function PowerOfAttorneyPage() {
         <div className="fade-in-up rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-destructive flex items-center gap-3">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div className="flex-1 font-semibold text-sm">{bindingError}</div>
+        </div>
+      )}
+
+      {/* Admin Triage Banner for Unlinked POAs */}
+      {isAdmin && unlinkedRecords.length > 0 && (
+        <div className="fade-in-up rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm">وكالات تحتاج إلى ربط بعملاء</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                يوجد {unlinkedRecords.length} وكالة غير مرتبطة بعميل مسجل في النظام. يُرجى ربطها لضمان مطابقة الصلاحيات.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setUnlinkedDialogOpen(true)}
+            className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm"
+          >
+            <LinkIcon className="w-3.5 h-3.5" />
+            <span>عرض وربط الوكالات ({unlinkedRecords.length})</span>
+          </Button>
         </div>
       )}
 
@@ -848,74 +778,42 @@ export default function PowerOfAttorneyPage() {
               const isExpired = record.daysRemaining <= 0;
               const isExpiringSoon = record.daysRemaining > 0 && record.daysRemaining <= 7;
               const isWarning = record.daysRemaining > 7 && record.daysRemaining <= 30;
+              const isUnlinked = !record.clientId && !record.client_id;
+              const clientDisplayName = getClientDisplayName(record);
 
               return (
                 <div
                   key={record.id}
-                  className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden ${
-                    record.isPending
-                      ? 'border-amber-500/50 bg-amber-500/5'
-                      : 'border-border bg-card'
-                  }`}
+                  className="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden"
                 >
-                {/* Status bar */}
-                <div
-                  className={`absolute top-0 right-0 left-0 h-1 ${
-                    record.isPending
-                      ? 'bg-amber-500'
-                      : isExpired
-                      ? 'bg-rose-500'
-                      : isWarning
-                      ? 'bg-amber-500'
-                      : 'bg-emerald-500'
-                  }`}
-                />
+                  {/* Status bar */}
+                  <div
+                    className={`absolute top-0 right-0 left-0 h-1 ${
+                      isExpired
+                        ? 'bg-rose-500'
+                        : isWarning
+                        ? 'bg-amber-500'
+                        : 'bg-emerald-500'
+                    }`}
+                  />
 
-                <div className="flex items-start justify-between gap-2 pt-1">
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-base line-clamp-1">{record.clientName}</h3>
-                      {record.isPending && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-medium text-xs bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                          <Clock className="w-3 h-3 animate-pulse" />
-                          بانتظار الحفظ
-                          {record.retryCount && record.retryCount > 0 ? ` (المحاولة ${record.retryCount})` : ''}
-                        </span>
-                      )}
+                  <div className="flex items-start justify-between gap-2 pt-1">
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-base line-clamp-1">{clientDisplayName}</h3>
+                        {isUnlinked && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-[11px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            <AlertTriangle className="w-3 h-3" />
+                            غير مربوطة بعميل
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                        <FileKey className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>{record.poaNumber}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                      <FileKey className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span>{record.poaNumber}</span>
-                    </div>
-                  </div>
 
-                  {record.isPending ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        data-testid={`button-retry-poa-${record.tempId}`}
-                        disabled={retryingId === record.tempId}
-                        onClick={() => handleRetryPending(record)}
-                        className="h-8 gap-1.5 text-xs border-amber-500/40 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                        title="إعادة محاولة الحفظ في Google Sheets"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${retryingId === record.tempId ? 'animate-spin' : ''}`} />
-                        <span>{retryingId === record.tempId ? 'جارٍ الحفظ...' : 'إعادة المحاولة'}</span>
-                      </Button>
-                      <button
-                        data-testid={`button-delete-pending-poa-${record.tempId}`}
-                        onClick={() => {
-                          const raw = pendingRecords.find((p) => p.tempId === record.tempId);
-                          if (raw) setPendingDeleteTarget(raw);
-                        }}
-                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
-                        title="حذف الوكالة المعلقة"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
                     <div className="flex items-center gap-1 shrink-0">
                       {isAdmin && (
                         <button
@@ -948,77 +846,86 @@ export default function PowerOfAttorneyPage() {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Days remaining */}
+                  <div className="flex items-center justify-between bg-muted/50 p-2.5 rounded-lg text-xs font-semibold">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                      المتبقي:
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
+                        isExpired
+                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                          : isExpiringSoon
+                          ? 'bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/40 shadow-sm animate-pulse'
+                          : isWarning
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          : 'bg-emerald-50 text-emerald-700 dark:text-emerald-400 border border-emerald-200'
+                      }`}
+                    >
+                      {isExpired ? (
+                        <>
+                          <AlertTriangle className="w-3 h-3" /> منتهية
+                        </>
+                      ) : isExpiringSoon ? (
+                        <>
+                          <AlertCircle className="w-3 h-3 text-[#C9A449]" /> {record.daysRemaining} يوم (تنتهي قريباً)
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" /> {record.daysRemaining} يوم
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t border-border/50">
+                    <div>
+                      <span className="block text-[10px] text-muted-foreground/70">تاريخ الإصدار</span>
+                      <span className="font-mono font-medium">{record.issueDateHijri || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-muted-foreground/70">تاريخ الانتهاء</span>
+                      <span className="font-mono font-medium">{record.expiryDateHijri || '—'}</span>
+                    </div>
+                  </div>
+
+                  {/* Lawyer Assignment */}
+                  {(record.assignedLawyer || record.assigned_lawyer) && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-md">
+                      <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>
+                        المحامي المعين: <strong className="text-foreground">{record.assignedLawyer || record.assigned_lawyer}</strong>
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {record.notes && (
+                    <p className="text-xs text-muted-foreground/90 bg-muted/30 p-2 rounded-md line-clamp-2 border border-border/30">
+                      {record.notes}
+                    </p>
                   )}
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Days remaining */}
-                <div className="flex items-center justify-between bg-muted/50 p-2.5 rounded-lg text-xs font-semibold">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                    المتبقي (آلي):
-                  </span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
-                    isExpired
-                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                      : isExpiringSoon
-                      ? 'bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/40 shadow-sm animate-pulse'
-                      : isWarning
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                      : 'bg-emerald-50 text-emerald-700 dark:text-emerald-400 border border-emerald-200'
-                  }`}>
-                    {isExpired ? (
-                      <><AlertTriangle className="w-3 h-3" /> منتهية</>
-                    ) : isExpiringSoon ? (
-                      <><AlertCircle className="w-3 h-3 text-[#C9A449]" /> {record.daysRemaining} يوم (تنتهي قريباً)</>
-                    ) : (
-                      <><CheckCircle2 className="w-3 h-3" /> {record.daysRemaining} يوم</>
-                    )}
-                  </span>
-                </div>
-
-                {/* Dates */}
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t border-border/50">
-                  <div>
-                    <span className="block text-[10px] text-muted-foreground/70">تاريخ الإصدار</span>
-                    <span className="font-mono font-medium">{record.issueDateHijri || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-muted-foreground/70">تاريخ الانتهاء</span>
-                    <span className="font-mono font-medium">{record.expiryDateHijri || '—'}</span>
-                  </div>
-                </div>
-
-                {/* Lawyer Assignment */}
-                {(record.assignedLawyer || record.assigned_lawyer) && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-md">
-                    <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>المحامي المعين: <strong className="text-foreground">{record.assignedLawyer || record.assigned_lawyer}</strong></span>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {record.notes && (
-                  <p className="text-xs text-muted-foreground/90 bg-muted/30 p-2 rounded-md line-clamp-2 border border-border/30">
-                    {record.notes}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setCurrentPage(1);
-          }}
-        />
-      </>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
+        </>
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 mx-auto mb-4 flex items-center justify-center">
@@ -1026,7 +933,7 @@ export default function PowerOfAttorneyPage() {
           </div>
           <h3 className="text-lg font-semibold mb-2">لا توجد وكالات مسجلة</h3>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-4">
-            قم بإضافة وكالات العملاء لمتابعة صلاحيتها. تُحفظ مباشرة في ورقة <span className="font-mono">Attorney</span> بملف Google Sheets.
+            قم بإضافة وكالات العملاء لمتابعة صلاحياتها وتواريخ انتهائها.
           </p>
           <Button onClick={() => handleOpenModal()} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
             <Plus className="w-4 h-4" /> إضافة أول وكالة
@@ -1035,7 +942,12 @@ export default function PowerOfAttorneyPage() {
       )}
 
       {/* ── Delete Confirmation Dialog ───────────────────────────────────── */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent dir="rtl" className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-rose-500">
@@ -1044,7 +956,9 @@ export default function PowerOfAttorneyPage() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
               هل أنت متأكد من حذف وكالة{' '}
-              <span className="font-bold text-foreground">{deleteTarget?.clientName}</span>
+              <span className="font-bold text-foreground">
+                {deleteTarget ? getClientDisplayName(deleteTarget) : ''}
+              </span>
               {deleteTarget?.poaNumber ? (
                 <> — رقم <span className="font-mono text-foreground">{deleteTarget.poaNumber}</span></>
               ) : null}
@@ -1065,52 +979,91 @@ export default function PowerOfAttorneyPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Pending Delete Confirmation Dialog ────────────────────────────── */}
-      <AlertDialog
-        open={!!pendingDeleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setPendingDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent dir="rtl" className="max-w-sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-rose-500">
-              <Trash2 className="w-5 h-5" />
-              حذف الوكالة المعلقة
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              هل أنت متأكد من حذف الوكالة المعلقة{' '}
-              <span className="font-bold text-foreground">
-                {pendingDeleteTarget?.payload.clientName}
-              </span>
-              {pendingDeleteTarget?.payload.poaNumber ? (
-                <>
-                  {' '}
-                  — رقم{' '}
-                  <span className="font-mono text-foreground">
-                    {pendingDeleteTarget.payload.poaNumber}
-                  </span>
-                </>
-              ) : null}
-              ؟
-              <br />
-              <span className="text-rose-500 font-medium">
-                سيتم حذفها من الذاكرة المحلية ولن تتم إعادة محاولة حفظها في Google Sheets.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 flex-row-reverse sm:flex-row-reverse">
-            <AlertDialogCancel onClick={() => setPendingDeleteTarget(null)}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              data-testid="button-confirm-delete-pending-poa"
-              onClick={handleConfirmDeletePending}
-              className="bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-600"
-            >
-              نعم، احذف الوكالة المعلقة
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* ── Admin Unlinked POAs Triage Dialog ────────────────────────────── */}
+      <Dialog open={unlinkedDialogOpen} onOpenChange={setUnlinkedDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <LinkIcon className="w-5 h-5" />
+              ربط الوكالات غير المعينة بعملاء مسجلين
+            </DialogTitle>
+          </DialogHeader>
+
+          <p className="text-xs text-muted-foreground">
+            توضح القائمة أدناه الوكالات الشرعية التي لا ترتبط بأي عميل مسجل. اختر العميل المناسب لكل وكالة واضغط على "حفظ الربط".
+          </p>
+
+          <div className="space-y-3 py-3">
+            {unlinkedRecords.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-sm bg-muted/20 rounded-xl border border-dashed">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                جميع الوكالات مرتبطة بعملاء بنجاح!
+              </div>
+            ) : (
+              unlinkedRecords.map((poa) => {
+                const currentChosenCid = triageLinking[poa.id] || null;
+                const isThisSaving = savingTriageId === poa.id;
+
+                return (
+                  <div
+                    key={poa.id}
+                    className="p-4 rounded-xl border border-border bg-card space-y-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm">رقم الوكالة: {poa.poaNumber}</span>
+                          {poa.clientName && (
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                              الاسم السابق: {poa.clientName}
+                            </span>
+                          )}
+                        </div>
+                        {poa.expiryDateHijri && (
+                          <div className="text-xs text-muted-foreground">
+                            تاريخ الانتهاء: <span className="font-mono">{poa.expiryDateHijri}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-end gap-3 flex-wrap sm:flex-nowrap">
+                      <div className="flex-1 min-w-[220px]">
+                        <ClientPicker
+                          value={currentChosenCid}
+                          onChange={(newId) =>
+                            setTriageLinking((prev) => ({ ...prev, [poa.id]: newId }))
+                          }
+                          label="اختر العميل لربطه بهذه الوكالة"
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        disabled={!currentChosenCid || isThisSaving}
+                        onClick={() => handleSaveTriageLink(poa)}
+                        className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                      >
+                        {isThisSaving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <LinkIcon className="w-4 h-4" />
+                        )}
+                        <span>حفظ الربط</span>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnlinkedDialogOpen(false)}>
+              إغلاق
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {reassignTarget && (
         <ReassignDialog
@@ -1135,7 +1088,7 @@ export default function PowerOfAttorneyPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Paperclip className="w-5 h-5 text-primary" />
-              مرفقات الوكالة: {attachmentTarget?.poaNumber || attachmentTarget?.clientName}
+              مرفقات الوكالة: {attachmentTarget?.poaNumber || (attachmentTarget ? getClientDisplayName(attachmentTarget) : '')}
             </DialogTitle>
           </DialogHeader>
           {attachmentTarget && (

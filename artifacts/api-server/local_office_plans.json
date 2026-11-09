@@ -102,5 +102,21 @@
   "legacy_mw3d1fko": {
     "plan_id": "plan-pro",
     "ai_quota_limit_override": null
+  },
+  "f0a137db-d412-4b67-92ba-58dfe0e6c1f1": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "law_off_mw90dcoq": {
+    "plan_id": "plan-test-plan-mw90dcoq-mw90delg",
+    "ai_quota_limit_override": null
+  },
+  "253abed1-141f-4d0c-be02-c429d57f3e8e": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "legacy_mw90dcoq": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
   }
 }

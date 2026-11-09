@@ -852365,11 +852365,20 @@ router9.get("/poa/:rowId", async (req, res) => {
 router9.post("/poa", async (req, res) => {
   const officeId = getOfficeId2(req);
   const body = req.body;
-  if (!body.clientName?.trim() || !body.poaNumber?.trim()) {
-    res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
+  if (!body.poaNumber?.trim()) {
+    res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
   const clientId = body.clientId || body.client_id || null;
+  if (!clientId) {
+    res.status(400).json({ error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
+    return;
+  }
+  const clientRecord = await getClientById(clientId, officeId);
+  if (!clientRecord) {
+    res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
+    return;
+  }
   let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
   const createdBy = req.authUser?.userId || null;
   if (req.authUser?.role === "staff") {
@@ -852384,7 +852393,7 @@ router9.post("/poa", async (req, res) => {
   try {
     const created = await createPoa(
       {
-        clientName: body.clientName.trim(),
+        clientName: clientRecord.name,
         poaNumber: body.poaNumber.trim(),
         issueDateHijri: body.issueDateHijri?.trim() || "",
         expiryDateHijri: body.expiryDateHijri?.trim() || "",
@@ -852419,16 +852428,30 @@ router9.put("/poa/:rowId", async (req, res) => {
     }
     const body = req.body;
     const payload = {
-      clientName: body.clientName?.trim(),
-      poaNumber: body.poaNumber?.trim(),
       issueDateHijri: body.issueDateHijri?.trim(),
       expiryDateHijri: body.expiryDateHijri?.trim(),
       daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : void 0,
       notes: body.notes?.trim()
     };
-    if (body.clientId !== void 0 || body.client_id !== void 0) {
-      payload.clientId = body.clientId !== void 0 ? body.clientId : body.client_id;
+    if (body.poaNumber !== void 0) {
+      if (!body.poaNumber.trim()) {
+        res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628." });
+        return;
+      }
+      payload.poaNumber = body.poaNumber.trim();
     }
+    const targetClientId = body.clientId !== void 0 ? body.clientId : body.client_id !== void 0 ? body.client_id : existing.clientId || existing.client_id || null;
+    if (!targetClientId) {
+      res.status(400).json({ error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
+      return;
+    }
+    const clientRecord = await getClientById(targetClientId, officeId);
+    if (!clientRecord) {
+      res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
+      return;
+    }
+    payload.clientId = targetClientId;
+    payload.clientName = clientRecord.name;
     if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0)) {
       const targetLawyer = body.assignedLawyerId !== void 0 ? body.assignedLawyerId : body.assigned_lawyer_id;
       if (targetLawyer) {

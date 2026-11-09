@@ -1,5 +1,107 @@
 [
   {
+    "id": "audit-c08c6ad7-b3e9-4b51-a104-9cd9bed0e24d",
+    "actor_username": "مشرف المنصة",
+    "action": "created_office",
+    "target_office_id": "253abed1-141f-4d0c-be02-c429d57f3e8e",
+    "details": {
+      "office_name": "مكتب النظام القديم",
+      "username": "legacy_mw90dcoq",
+      "plan_tier": "pro",
+      "plan_id": "plan-pro"
+    },
+    "created_at": "2026-11-09T08:37:51.009Z"
+  },
+  {
+    "id": "audit-dbea519e-e478-449b-8a1b-880dd41cd5c8",
+    "actor_username": "مشرف المنصة",
+    "action": "deleted_plan",
+    "target_office_id": null,
+    "details": {
+      "plan_id": "plan-test-plan-mw90dcoq-mw90delg"
+    },
+    "created_at": "2026-11-09T08:37:50.435Z"
+  },
+  {
+    "id": "audit-b40b9e8b-44f8-4485-b1d3-d5a93968374c",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_office",
+    "target_office_id": "f0a137db-d412-4b67-92ba-58dfe0e6c1f1",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "changes": {
+        "plan_id": "plan-plus"
+      }
+    },
+    "created_at": "2026-11-09T08:37:50.190Z"
+  },
+  {
+    "id": "audit-4b5ba8af-e72b-441d-bea2-4c3eb8e0e5fa",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_office",
+    "target_office_id": "f0a137db-d412-4b67-92ba-58dfe0e6c1f1",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "changes": {
+        "ai_quota_limit_override": null
+      }
+    },
+    "created_at": "2026-11-09T08:37:48.309Z"
+  },
+  {
+    "id": "audit-2f73507a-138e-4cfe-84f4-63acd44101a7",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_office",
+    "target_office_id": "f0a137db-d412-4b67-92ba-58dfe0e6c1f1",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "changes": {
+        "ai_quota_limit_override": 1500
+      }
+    },
+    "created_at": "2026-11-09T08:37:47.835Z"
+  },
+  {
+    "id": "audit-da4aa970-7a1e-4af1-a7d2-7bbebe881791",
+    "actor_username": "مشرف المنصة",
+    "action": "created_office",
+    "target_office_id": "f0a137db-d412-4b67-92ba-58dfe0e6c1f1",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "username": "law_off_mw90dcoq",
+      "plan_tier": "plus",
+      "plan_id": "plan-test-plan-mw90dcoq-mw90delg"
+    },
+    "created_at": "2026-11-09T08:37:47.038Z"
+  },
+  {
+    "id": "audit-816c8191-5a92-4849-9b61-e29c034788ea",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_plan",
+    "target_office_id": null,
+    "details": {
+      "plan_id": "plan-test-plan-mw90dcoq-mw90delg",
+      "changes": {
+        "name": "باقة النخبة المحدثة",
+        "ai_quota_limit": 1000,
+        "price": "899 ر.س / شهرياً"
+      }
+    },
+    "created_at": "2026-11-09T08:37:46.278Z"
+  },
+  {
+    "id": "audit-0de390a8-0e53-4359-9ea8-8bde0ae82afa",
+    "actor_username": "مشرف المنصة",
+    "action": "created_plan",
+    "target_office_id": null,
+    "details": {
+      "plan_id": "plan-test-plan-mw90dcoq-mw90delg",
+      "name": "باقة النخبة التجريبية",
+      "slug": "test-plan-mw90dcoq"
+    },
+    "created_at": "2026-11-09T08:37:45.896Z"
+  },
+  {
     "id": "audit-a9f125f0-4bc3-4596-8e71-b6f3ab4d8925",
     "actor_username": "مشرف المنصة",
     "action": "created_office",

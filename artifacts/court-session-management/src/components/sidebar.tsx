@@ -4,7 +4,6 @@ import { Moon, Sun, LogOut, Building2, Crown, Sparkles } from 'lucide-react';
 import { useTheme } from './theme-provider';
 import { useLogout, useGetCurrentUser } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearUserPoaStorage, hasPendingPoaRecords } from '@/lib/poa-storage';
 import { useToast } from '@/hooks/use-toast';
 import { getNavItemsForRole } from '@/config/navigation';
 import { THEME_COLORS } from '@/config/theme';
@@ -29,19 +28,8 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   const handleLogout = () => {
     onNavigate?.();
-    const userId = currentUser?.id || (currentUser as any)?.userId;
-    const officeId = (currentUser as any)?.officeId || userId;
-
-    if (officeId && userId && hasPendingPoaRecords(officeId, userId)) {
-      const confirmed = window.confirm('لديك وكالات غير محفوظة بعد. تسجيل الخروج سيحذفها.');
-      if (!confirmed) {
-        return;
-      }
-    }
-
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
-        clearUserPoaStorage(officeId, userId);
         queryClient.clear();
         window.location.href = isSuperAdmin ? '/admin/login' : '/login';
       },

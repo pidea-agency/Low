@@ -2,10 +2,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import PowerOfAttorneyPage from '../pages/poa';
-import { LEGACY_POA_STORAGE_KEY, poaStorageKey } from '../lib/poa-storage';
 import * as apiClient from '@workspace/api-client-react';
 
-// Mock the API client
 vi.mock('@workspace/api-client-react', async () => {
   const actual = await vi.importActual<any>('@workspace/api-client-react');
   return {
@@ -14,120 +12,104 @@ vi.mock('@workspace/api-client-react', async () => {
   };
 });
 
-describe('PowerOfAttorneyPage Storage Isolation Component Tests', () => {
+describe('PowerOfAttorneyPage Component Tests (Direct API & Client Link)', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
-    // Default fetch mock returning offline error to test fallback to local storage
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error (offline)'));
   });
 
   afterEach(() => {
     localStorage.clear();
   });
 
-  it('Never loads data from the legacy legal_poa_records_v1 key and removes it on mount', async () => {
-    const legacyRecords = [
+  it('Loads POA records and resolves client names from /api/clients', async () => {
+    const clientsList = [
+      { id: 'client-100', name: 'شركة التنمية العقارية' },
+      { id: 'client-200', name: 'أحمد محمود العلي' },
+    ];
+    const poaRecords = [
       {
-        id: 'legacy-1',
-        clientName: 'تسريب وكالة قديمة',
-        poaNumber: '7777',
+        id: 'poa-1',
+        sheetRowId: 1,
+        clientId: 'client-100',
+        poaNumber: 'POA-88991',
         issueDateHijri: '1446/01/01',
         expiryDateHijri: '1447/01/01',
-        daysRemaining: 100,
-        createdAt: '2026-11-01T00:00:00.000Z',
+        daysRemaining: 150,
+        notes: 'وكالة عقارية',
       },
     ];
-    localStorage.setItem(LEGACY_POA_STORAGE_KEY, JSON.stringify(legacyRecords));
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.startsWith('/api/clients')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => clientsList,
+        });
+      }
+      if (url.startsWith('/api/poa')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => poaRecords,
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => [] });
+    });
 
     (apiClient.useGetCurrentUser as any).mockReturnValue({
-      data: { id: 'user_1', userId: 'user_1', officeId: 'office_1', username: 'lawyer1' },
+      data: { id: 'admin_1', userId: 'admin_1', officeId: 'office_1', role: 'admin' },
       isLoading: false,
     });
 
     render(<PowerOfAttorneyPage />);
 
-    // Legacy key must be purged
+    // Derived client name from client record should appear
     await waitFor(() => {
-      expect(localStorage.getItem(LEGACY_POA_STORAGE_KEY)).toBeNull();
+      expect(screen.getByText('شركة التنمية العقارية')).toBeDefined();
+      expect(screen.getByText('POA-88991')).toBeDefined();
     });
-
-    // The legacy record MUST NOT be displayed on screen
-    expect(screen.queryByText('تسريب وكالة قديمة')).toBeNull();
   });
 
-  it('Loads isolated records for Account A and does not display Account B records', async () => {
-    const recordsA = [
+  it('Displays triage warning banner to admin when an unlinked POA exists', async () => {
+    const unlinkedPoa = [
       {
-        id: 'poa-a',
-        clientName: 'وكالة خاصة بمكتب أ',
-        poaNumber: '1001',
+        id: 'poa-unlinked',
+        sheetRowId: 99,
+        clientId: null,
+        poaNumber: 'POA-UNLINKED-99',
         issueDateHijri: '1446/01/01',
         expiryDateHijri: '1447/01/01',
-        daysRemaining: 100,
-        createdAt: '2026-11-01T00:00:00.000Z',
-      },
-    ];
-    const recordsB = [
-      {
-        id: 'poa-b',
-        clientName: 'وكالة سرية لمكتب ب',
-        poaNumber: '2002',
-        issueDateHijri: '1446/01/01',
-        expiryDateHijri: '1447/01/01',
-        daysRemaining: 100,
-        createdAt: '2026-11-01T00:00:00.000Z',
+        daysRemaining: 120,
+        clientName: 'اسم قديم غير مربوط',
       },
     ];
 
-    // Seed both accounts in localStorage under their isolated keys
-    localStorage.setItem(poaStorageKey('office_a', 'user_a'), JSON.stringify(recordsA));
-    localStorage.setItem(poaStorageKey('office_b', 'user_b'), JSON.stringify(recordsB));
-
-    // Render as Account A
-    (apiClient.useGetCurrentUser as any).mockReturnValue({
-      data: { id: 'user_a', userId: 'user_a', officeId: 'office_a', username: 'lawyer_a' },
-      isLoading: false,
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.startsWith('/api/clients')) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => [] });
+      }
+      if (url.startsWith('/api/poa')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => unlinkedPoa,
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => [] });
     });
 
-    const { unmount } = render(<PowerOfAttorneyPage />);
-
-    // Account A sees Account A's record
-    await waitFor(() => {
-      expect(screen.getByText('وكالة خاصة بمكتب أ')).toBeDefined();
-    });
-
-    // Account A CANNOT see Account B's record
-    expect(screen.queryByText('وكالة سرية لمكتب ب')).toBeNull();
-    unmount();
-
-    // Now render as Account B
     (apiClient.useGetCurrentUser as any).mockReturnValue({
-      data: { id: 'user_b', userId: 'user_b', officeId: 'office_b', username: 'lawyer_b' },
+      data: { id: 'admin_1', userId: 'admin_1', officeId: 'office_1', role: 'admin' },
       isLoading: false,
     });
 
     render(<PowerOfAttorneyPage />);
 
-    // Account B sees Account B's record
     await waitFor(() => {
-      expect(screen.getByText('وكالة سرية لمكتب ب')).toBeDefined();
+      expect(screen.getByText(/وكالات تحتاج إلى ربط بعملاء/i)).toBeDefined();
+      expect(screen.getByText(/غير مربوطة بعميل/i)).toBeDefined();
     });
-
-    // Account B CANNOT see Account A's record
-    expect(screen.queryByText('وكالة خاصة بمكتب أ')).toBeNull();
-  });
-
-  it('Does not read or write storage while user identity is loading', async () => {
-    (apiClient.useGetCurrentUser as any).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-    });
-
-    render(<PowerOfAttorneyPage />);
-
-    // No keys created or modified
-    expect(localStorage.length).toBe(0);
   });
 });
-

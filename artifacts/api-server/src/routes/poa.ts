@@ -78,16 +78,29 @@ router.get("/poa/:rowId", async (req, res) => {
 /**
  * POST /api/poa
  * Creates a new Power of Attorney record stamped with the caller's office.
+ * Requires clientId (linked client record) and poaNumber.
  */
 router.post("/poa", async (req, res) => {
   const officeId = getOfficeId(req);
   const body = req.body as any;
-  if (!body.clientName?.trim() || !body.poaNumber?.trim()) {
-    res.status(400).json({ error: "اسم العميل ورقم الوكالة مطلوبان." });
+
+  if (!body.poaNumber?.trim()) {
+    res.status(400).json({ error: "رقم الوكالة مطلوب." });
     return;
   }
 
   const clientId = body.clientId || body.client_id || null;
+  if (!clientId) {
+    res.status(400).json({ error: "يجب تحديد العميل المرتبط بالوكالة." });
+    return;
+  }
+
+  const clientRecord = await postgresService.getClientById(clientId, officeId);
+  if (!clientRecord) {
+    res.status(400).json({ error: "العميل المحدد غير موجود في هذا المكتب." });
+    return;
+  }
+
   let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
   const createdBy = req.authUser?.userId || null;
 
@@ -104,7 +117,7 @@ router.post("/poa", async (req, res) => {
   try {
     const created = await postgresService.createPoa(
       {
-        clientName: body.clientName.trim(),
+        clientName: clientRecord.name,
         poaNumber: body.poaNumber.trim(),
         issueDateHijri: body.issueDateHijri?.trim() || "",
         expiryDateHijri: body.expiryDateHijri?.trim() || "",
@@ -128,6 +141,7 @@ router.post("/poa", async (req, res) => {
 /**
  * PUT /api/poa/:rowId
  * Updates an existing POA record. Verifies office ownership and scoping, returning 404 if not found.
+ * Enforces client_id on update.
  */
 router.put("/poa/:rowId", async (req, res) => {
   const officeId = getOfficeId(req);
@@ -146,17 +160,39 @@ router.put("/poa/:rowId", async (req, res) => {
 
     const body = req.body as any;
     const payload: any = {
-      clientName: body.clientName?.trim(),
-      poaNumber: body.poaNumber?.trim(),
       issueDateHijri: body.issueDateHijri?.trim(),
       expiryDateHijri: body.expiryDateHijri?.trim(),
       daysRemaining: body.daysRemaining !== undefined ? Number(body.daysRemaining) : undefined,
       notes: body.notes?.trim(),
     };
 
-    if (body.clientId !== undefined || body.client_id !== undefined) {
-      payload.clientId = body.clientId !== undefined ? body.clientId : body.client_id;
+    if (body.poaNumber !== undefined) {
+      if (!body.poaNumber.trim()) {
+        res.status(400).json({ error: "رقم الوكالة مطلوب." });
+        return;
+      }
+      payload.poaNumber = body.poaNumber.trim();
     }
+
+    const targetClientId = body.clientId !== undefined
+      ? body.clientId
+      : body.client_id !== undefined
+      ? body.client_id
+      : (existing.clientId || (existing as any).client_id || null);
+
+    if (!targetClientId) {
+      res.status(400).json({ error: "يجب تحديد العميل المرتبط بالوكالة." });
+      return;
+    }
+
+    const clientRecord = await postgresService.getClientById(targetClientId, officeId);
+    if (!clientRecord) {
+      res.status(400).json({ error: "العميل المحدد غير موجود في هذا المكتب." });
+      return;
+    }
+
+    payload.clientId = targetClientId;
+    payload.clientName = clientRecord.name;
 
     if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== undefined || body.assigned_lawyer_id !== undefined)) {
       const targetLawyer = body.assignedLawyerId !== undefined ? body.assignedLawyerId : body.assigned_lawyer_id;
