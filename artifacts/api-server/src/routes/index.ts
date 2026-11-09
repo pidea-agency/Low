@@ -15,6 +15,7 @@ import superAdminRouter from "./super-admin";
 import subscriptionRouter from "./subscription";
 import clientsRouter from "./clients";
 import notificationsRouter from "./notifications";
+import attachmentsRouter from "./attachments";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(superAdminRouter);
 router.use(subscriptionRouter);
 router.use(clientsRouter);
 router.use(notificationsRouter);
+router.use(attachmentsRouter);
 
 export default router;

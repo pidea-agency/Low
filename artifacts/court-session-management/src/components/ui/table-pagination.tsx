@@ -55,7 +55,7 @@ export function TablePagination({
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl border border-border/60 bg-card/60 text-xs text-muted-foreground select-none mt-4',
+        'flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl border border-[#D6E0EC] bg-white text-xs text-[#64748B] select-none mt-4 shadow-xs',
         className,
       )}
       dir="rtl"
@@ -63,19 +63,19 @@ export function TablePagination({
       {/* Items range summary */}
       <div className="flex items-center gap-2">
         <span>
-          عرض <strong className="text-foreground font-mono">{from}</strong> إلى{' '}
-          <strong className="text-foreground font-mono">{to}</strong> من أصل{' '}
-          <strong className="text-foreground font-mono">{totalItems}</strong> سجل
+          عرض <strong className="text-[#10233F] font-mono">{from}</strong> إلى{' '}
+          <strong className="text-[#10233F] font-mono">{to}</strong> من أصل{' '}
+          <strong className="text-[#10233F] font-mono">{totalItems}</strong> سجل
         </span>
 
         {/* Page size picker */}
         {onPageSizeChange && (
-          <div className="flex items-center gap-1.5 mr-2 pr-2 border-r border-border/60">
-            <span className="text-[11px] text-muted-foreground/80">لكل صفحة:</span>
+          <div className="flex items-center gap-1.5 mr-2 pr-2 border-r border-[#D6E0EC]">
+            <span className="text-[11px] text-[#64748B]">لكل صفحة:</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-7 px-2 rounded-lg bg-background border border-border text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              className="h-7 px-2 rounded-lg bg-white border border-[#D6E0EC] text-xs font-mono text-[#10233F] focus:outline-none focus:ring-1 focus:ring-[#C99732] cursor-pointer"
             >
               {pageSizeOptions.map((size) => (
                 <option key={size} value={size}>
@@ -94,7 +94,7 @@ export function TablePagination({
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 rounded-lg"
+            className="h-8 w-8 rounded-lg border-[#D6E0EC] bg-white text-[#10233F] hover:bg-[#F5F7FB]"
             onClick={() => onPageChange(1)}
             disabled={currentPage <= 1}
             title="الصفحة الأولى"
@@ -107,7 +107,7 @@ export function TablePagination({
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 rounded-lg"
+            className="h-8 w-8 rounded-lg border-[#D6E0EC] bg-white text-[#10233F] hover:bg-[#F5F7FB]"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage <= 1}
             title="الصفحة السابقة"
@@ -120,7 +120,7 @@ export function TablePagination({
           <div className="flex items-center gap-1 mx-1">
             {getPageNumbers().map((p, idx) =>
               p === 'ellipsis' ? (
-                <span key={`ellipsis-${idx}`} className="px-1.5 text-muted-foreground/60 select-none">
+                <span key={`ellipsis-${idx}`} className="px-1.5 text-[#64748B] select-none">
                   •••
                 </span>
               ) : (
@@ -130,10 +130,10 @@ export function TablePagination({
                   size="sm"
                   onClick={() => onPageChange(p)}
                   className={cn(
-                    'h-8 min-w-[32px] px-2 rounded-lg font-mono text-xs font-semibold',
+                    'h-8 min-w-[32px] px-2 rounded-lg font-mono text-xs font-bold transition-all',
                     p === currentPage
-                      ? 'bg-[#3F4A2C] hover:bg-[#353E24] text-white shadow-xs dark:bg-[#C9A449] dark:text-stone-900'
-                      : 'hover:bg-muted text-foreground',
+                      ? 'bg-[#C99732] hover:bg-[#B28325] text-white shadow-xs border-0'
+                      : 'border-[#D6E0EC] bg-white hover:bg-[#F5F7FB] text-[#10233F]',
                   )}
                 >
                   {p}
@@ -146,7 +146,7 @@ export function TablePagination({
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 rounded-lg"
+            className="h-8 w-8 rounded-lg border-[#D6E0EC] bg-white text-[#10233F] hover:bg-[#F5F7FB]"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage >= totalPages}
             title="الصفحة التالية"
@@ -159,7 +159,7 @@ export function TablePagination({
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 rounded-lg"
+            className="h-8 w-8 rounded-lg border-[#D6E0EC] bg-white text-[#10233F] hover:bg-[#F5F7FB]"
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage >= totalPages}
             title="الصفحة الأخيرة"

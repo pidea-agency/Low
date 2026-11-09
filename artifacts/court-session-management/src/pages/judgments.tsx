@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getArabicDayName } from '@/lib/hijri';
-import { Gavel, Plus, Trash2, Calendar as CalendarIcon, User, Scale, Search, Edit3, Loader2, RefreshCw, CheckCircle2, XCircle, FileText, UserCheck, AlertCircle, UserCog } from 'lucide-react';
+import { Gavel, Plus, Trash2, Calendar as CalendarIcon, User, Scale, Search, Edit3, Loader2, RefreshCw, CheckCircle2, XCircle, FileText, UserCheck, AlertCircle, UserCog, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,7 @@ import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
 import {
   Dialog,
   DialogContent,
@@ -74,6 +75,7 @@ export default function JudgmentsPage() {
   const [editingRecord, setEditingRecord] = useState<JudgmentRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JudgmentRecord | null>(null);
   const [reassignTarget, setReassignTarget] = useState<JudgmentRecord | null>(null);
+  const [attachmentTarget, setAttachmentTarget] = useState<JudgmentRecord | null>(null);
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Form State
@@ -356,11 +358,11 @@ export default function JudgmentsPage() {
           <Button
             onClick={handleOpenCreate}
             size="sm"
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            className="gap-2 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold shadow-md shadow-[#C99732]/25 border-0 cursor-pointer"
             data-testid="button-add-judgment"
           >
             <Plus className="w-4 h-4" />
-            إضافة حكم جديد
+            + إضافة حكم جديد
           </Button>
         </div>
       </div>
@@ -612,6 +614,16 @@ export default function JudgmentsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setAttachmentTarget(rec)}
+                    className="h-8 gap-1.5 text-xs text-foreground border-border hover:bg-muted"
+                    data-testid={`button-attachments-judgment-${rec.id}`}
+                  >
+                    <Paperclip className="w-3.5 h-3.5 text-primary" />
+                    المرفقات
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleOpenEdit(rec)}
                     className="h-8 gap-1.5 text-xs text-foreground border-border hover:bg-muted"
                     data-testid={`button-edit-judgment-${rec.id}`}
@@ -658,9 +670,9 @@ export default function JudgmentsPage() {
               ? 'لا توجد أحكام مطابقة لمعايير البحث والتصفية.'
               : 'قم بإضافة الأحكام والقرارات القضائية لمتابعتها هنا.'}
           </p>
-          <Button onClick={handleOpenCreate} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button onClick={handleOpenCreate} className="gap-2 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold shadow-md shadow-[#C99732]/25 border-0 cursor-pointer">
             <Plus className="w-4 h-4" />
-            إضافة حكم جديد
+            + إضافة حكم جديد
           </Button>
         </div>
       )}
@@ -898,6 +910,15 @@ export default function JudgmentsPage() {
               />
             </div>
 
+            {editingRecord && (
+              <div className="pt-3 border-t border-border/50">
+                <AttachmentsPanel
+                  relatedRecordType="judgment"
+                  relatedRecordId={editingRecord.id}
+                />
+              </div>
+            )}
+
             <DialogFooter className="gap-2 flex-row-reverse pt-2">
               <Button
                 type="submit"
@@ -960,6 +981,26 @@ export default function JudgmentsPage() {
           }}
         />
       )}
+
+      {/* Attachments Dialog */}
+      <Dialog open={!!attachmentTarget} onOpenChange={(open) => !open && setAttachmentTarget(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip className="w-5 h-5 text-primary" />
+              مرفقات الحكم: {attachmentTarget?.judgmentNumber || attachmentTarget?.caseNumber || attachmentTarget?.id}
+            </DialogTitle>
+          </DialogHeader>
+          {attachmentTarget && (
+            <div className="py-2">
+              <AttachmentsPanel
+                relatedRecordType="judgment"
+                relatedRecordId={attachmentTarget.id}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

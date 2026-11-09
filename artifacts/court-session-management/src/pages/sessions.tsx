@@ -232,16 +232,16 @@ export default function SessionsPage() {
           <p className="text-muted-foreground text-sm mr-3">عرض وإدارة جميع جلسات الاستماع مرتبة بالتوقيت الأقرب</p>
         </div>
         <Link href="/chat">
-          <Button size="sm" className="gap-2 shrink-0 shadow-sm" data-testid="button-add-session-header">
+          <Button size="sm" className="gap-2 shrink-0 shadow-md shadow-[#C99732]/25 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold border-0" data-testid="button-add-session-header">
             <Plus className="w-4 h-4" />
-            إضافة جلسة
+            + إضافة جلسة
           </Button>
         </Link>
       </div>
 
       {/* Filter Tabs & Sort Dropdown */}
       <div className="fade-in-up fade-in-up-delay-1 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5 p-1 bg-muted rounded-xl border border-border w-fit">
+        <div className="flex flex-wrap gap-1.5 p-1 bg-white rounded-2xl border border-[#D6E0EC] w-fit shadow-xs">
           {statusOptions.map((option) => (
             <button
               key={option.value}
@@ -250,10 +250,10 @@ export default function SessionsPage() {
                 setCurrentPage(1);
               }}
               data-testid={`filter-${option.value}`}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              className={`px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                 statusFilter === option.value
-                  ? 'bg-card text-foreground shadow-sm border border-border'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
+                  ? 'bg-[#C99732] text-white shadow-xs'
+                  : 'text-[#64748B] hover:text-[#10233F] hover:bg-slate-50'
               }`}
             >
               {option.label}

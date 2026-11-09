@@ -83,14 +83,14 @@ export default function AdminLoginPage() {
             <div
               className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-xs"
               style={{
-                background: 'linear-gradient(135deg, #3F4A2C 0%, #313B22 100%)',
+                background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)',
               }}
             >
-              <ShieldCheck className="w-8 h-8 text-[#C9A449]" />
+              <ShieldCheck className="w-8 h-8 text-[#C99732]" />
             </div>
 
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mb-3 bg-[#C9A449]/15 text-[#8F7026] dark:text-[#E2C372] border border-[#C9A449]/30">
-              <Sparkles className="w-3.5 h-3.5 text-[#C9A449]" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mb-3 bg-[#FFF4DE] text-[#C99732] border border-[#E8C477]/50">
+              <Sparkles className="w-3.5 h-3.5 text-[#C99732]" />
               <span>الإدارة العامة للمنصة</span>
             </div>
 
@@ -158,12 +158,12 @@ export default function AdminLoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 font-bold text-sm text-white rounded-xl mt-3 transition-all duration-200 border-0 shadow-xs cursor-pointer hover:brightness-105"
+              className="w-full h-11 font-bold text-sm text-white rounded-xl mt-3 transition-all duration-200 border-0 shadow-md shadow-[#C99732]/25 cursor-pointer hover:brightness-105"
               style={{
-                background: 'linear-gradient(135deg, #3F4A2C 0%, #313B22 100%)',
+                background: 'linear-gradient(135deg, #C99732 0%, #B28325 100%)',
               }}
             >
-              <KeyRound className="w-4 h-4 ml-1.5 text-[#C9A449]" />
+              <KeyRound className="w-4 h-4 ml-1.5 text-white" />
               {loading ? 'جارٍ التحقق...' : 'دخول المشرف العام'}
             </Button>
           </form>

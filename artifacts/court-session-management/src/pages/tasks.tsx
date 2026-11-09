@@ -29,6 +29,7 @@ import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -450,6 +451,10 @@ function TaskDetailDialog({ task, onClose, onEdit, onDelete, onReminder, onSendW
               </Button>
             </div>
           )}
+
+          <div className="pt-3 border-t border-border/50">
+            <AttachmentsPanel relatedRecordType="task" relatedRecordId={task.id} />
+          </div>
         </div>
         <DialogFooter className="gap-2 flex-row-reverse sm:flex-row-reverse">
           <Button size="sm" onClick={() => { onClose(); onEdit(task); }}><Edit3 className="w-3.5 h-3.5 ml-1" />تعديل</Button>
@@ -697,12 +702,12 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3F4A2C, #52603B)' }}>
-            <CheckSquare className="w-5 h-5 text-[#C9A449]" />
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white border border-[#D6E0EC] shadow-xs">
+            <CheckSquare className="w-6 h-6 text-[#C99732]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">إدارة المهام</h1>
-            <p className="text-xs text-muted-foreground">{tasks.length} مهمة إجمالاً</p>
+            <h1 className="text-xl sm:text-2xl font-black text-[#10233F]">الإشعارات والمهام</h1>
+            <p className="text-xs text-[#64748B] font-medium mt-0.5">متابعة الإشعارات والتنبيهات وإدارة المهام اليومية</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -712,18 +717,66 @@ export default function TasksPage() {
             onClick={() => loadTasks(true)}
             disabled={isLoading}
             title="تحديث البيانات من الشيت"
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 border-[#D6E0EC] bg-white text-[#10233F] hover:bg-[#F5F7FB] rounded-xl text-xs font-semibold"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             تحديث
           </Button>
           <Button
             onClick={() => { setEditingTask(null); setFormOpen(true); }}
-            className="flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #3F4A2C, #2A321D)', color: '#fff', border: 'none' }}
+            className="flex items-center gap-2 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl text-xs font-bold shadow-md shadow-[#C99732]/25 border-0 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />إضافة مهمة
+            <Plus className="w-4 h-4" />+ إضافة مهمة
           </Button>
+        </div>
+      </div>
+
+      {/* 4 Stat Cards matching Screenshot 5 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي المهام</p>
+            <p className="text-2xl sm:text-3xl font-black text-[#10233F]">{tasks.length}</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-[#64748B] font-bold mb-1">مهام قيد التنفيذ</p>
+            <p className="text-2xl sm:text-3xl font-black text-blue-600">
+              {tasks.filter((t) => t.status === 'قيد التنفيذ' || t.status === 'معلقة').length}
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+            <Clock className="w-6 h-6 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-[#64748B] font-bold mb-1">مهام متأخرة</p>
+            <p className="text-2xl sm:text-3xl font-black text-rose-600">
+              {tasks.filter((t) => getRemainingDays(t.dueDate) < 0 && t.status !== 'مكتملة').length}
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-6 h-6 text-rose-600" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-[#64748B] font-bold mb-1">مهام مكتملة</p>
+            <p className="text-2xl sm:text-3xl font-black text-purple-600">
+              {tasks.filter((t) => t.status === 'مكتملة').length}
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0">
+            <CheckSquare className="w-6 h-6 text-purple-600" />
+          </div>
         </div>
       </div>
 

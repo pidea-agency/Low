@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, AlertCircle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw, UserCog } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, Calendar as CalendarIcon, Clock, User, FileKey, AlertTriangle, AlertCircle, CheckCircle2, Search, Edit3, Sparkles, Loader2, RefreshCw, UserCog, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
 import {
   getStoredPoaRecords,
   setStoredPoaRecords,
@@ -156,6 +157,7 @@ export default function PowerOfAttorneyPage() {
   const [editingRecord, setEditingRecord] = useState<PowerOfAttorney | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PowerOfAttorney | null>(null);
   const [reassignTarget, setReassignTarget] = useState<PowerOfAttorney | null>(null);
+  const [attachmentTarget, setAttachmentTarget] = useState<PowerOfAttorney | null>(null);
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Form State
@@ -607,9 +609,9 @@ export default function PowerOfAttorneyPage() {
 
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => handleOpenModal()} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all">
+              <Button onClick={() => handleOpenModal()} className="gap-2 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold shadow-md shadow-[#C99732]/25 border-0 cursor-pointer">
                 <Plus className="w-4 h-4" />
-                إضافة وكالة جديدة
+                + إضافة وكالة جديدة
               </Button>
             </DialogTrigger>
 
@@ -780,6 +782,15 @@ export default function PowerOfAttorneyPage() {
                       disabled={isSaving}
                     />
                   </div>
+
+                  {editingRecord && (
+                    <div className="pt-3 border-t border-border/50">
+                      <AttachmentsPanel
+                        relatedRecordType="poa"
+                        relatedRecordId={editingRecord.sheetRowId || editingRecord.id}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <DialogFooter className="gap-2 sm:gap-0 mt-4">
@@ -916,6 +927,13 @@ export default function PowerOfAttorneyPage() {
                         </button>
                       )}
                       <button
+                        onClick={() => setAttachmentTarget(record)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        title="المرفقات"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenModal(record)}
                         className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                         title="تعديل"
@@ -946,7 +964,7 @@ export default function PowerOfAttorneyPage() {
                       ? 'bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/40 shadow-sm animate-pulse'
                       : isWarning
                       ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                      : 'bg-[#3F4A2C]/10 text-[#3F4A2C] dark:text-[#A4B580] border border-[#3F4A2C]/20'
+                      : 'bg-emerald-50 text-emerald-700 dark:text-emerald-400 border border-emerald-200'
                   }`}>
                     {isExpired ? (
                       <><AlertTriangle className="w-3 h-3" /> منتهية</>
@@ -1110,6 +1128,26 @@ export default function PowerOfAttorneyPage() {
           }}
         />
       )}
+
+      {/* Attachments Dialog */}
+      <Dialog open={!!attachmentTarget} onOpenChange={(open) => !open && setAttachmentTarget(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip className="w-5 h-5 text-primary" />
+              مرفقات الوكالة: {attachmentTarget?.poaNumber || attachmentTarget?.clientName}
+            </DialogTitle>
+          </DialogHeader>
+          {attachmentTarget && (
+            <div className="py-2">
+              <AttachmentsPanel
+                relatedRecordType="poa"
+                relatedRecordId={attachmentTarget.sheetRowId || attachmentTarget.id}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

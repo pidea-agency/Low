@@ -40,7 +40,7 @@ export function SessionListItem({ session, lawyerName }: SessionListItemProps) {
                 <span className="truncate max-w-[140px]">الخصم: {session.defendant}</span>
               )}
               {resolvedLawyer && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F4A2C] dark:text-[#C9A449] bg-[#3F4A2C]/10 dark:bg-[#C9A449]/15 px-2 py-0.5 rounded-md">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0B2A4A] dark:text-[#E8C477] bg-[#FFF4DE] dark:bg-white/10 border border-[#E8C477]/40 px-2 py-0.5 rounded-md">
                   <User className="w-3 h-3" />
                   <span>المحامي المعين: {resolvedLawyer}</span>
                 </span>

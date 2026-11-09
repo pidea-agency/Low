@@ -360,9 +360,9 @@ export default function DashboardAdminPage() {
           <Link href="/chat">
             <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-white shadow-xs cursor-pointer transition-all duration-200 hover:brightness-105"
-              style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #2A321D 100%)' }}
+              style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
             >
-              <Sparkles className="w-4 h-4 text-[#C9A449]" />
+              <Sparkles className="w-4 h-4 text-[#C99732]" />
               <span>تحليل رسالة جديدة</span>
             </div>
           </Link>
@@ -536,9 +536,9 @@ export default function DashboardAdminPage() {
         <div className="flex items-center gap-2">
           <div
             className="w-5 h-5 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #3F4A2C, #52603B)' }}
+            style={{ background: 'linear-gradient(135deg, #0B2A4A, #071D34)' }}
           >
-            <BarChart3 className="w-3 h-3 text-[#C9A449]" />
+            <BarChart3 className="w-3 h-3 text-[#C99732]" />
           </div>
           <h2 className="text-sm font-bold text-foreground">التحليلات والمخططات البيانية للمكتب</h2>
         </div>
@@ -569,9 +569,9 @@ export default function DashboardAdminPage() {
             <div className="flex items-center gap-2">
               <div
                 className="w-5 h-5 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #3F4A2C, #52603B)' }}
+                style={{ background: 'linear-gradient(135deg, #0B2A4A, #071D34)' }}
               >
-                <Calendar className="w-3 h-3 text-[#C9A449]" />
+                <Calendar className="w-3 h-3 text-[#C99732]" />
               </div>
               <h2 className="text-sm font-bold text-foreground">جلسات المحكمة القادمة في المكتب</h2>
             </div>
@@ -655,9 +655,9 @@ export default function DashboardAdminPage() {
             <div className="flex items-center gap-2">
               <div
                 className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #2A321D 100%)' }}
+                style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
               >
-                <Briefcase className="w-4 h-4 text-[#C9A449]" />
+                <Briefcase className="w-4 h-4 text-[#C99732]" />
               </div>
               <h2 className="text-base font-bold text-foreground">
                 سجل جلسات ومهام فريق عمل المكتب

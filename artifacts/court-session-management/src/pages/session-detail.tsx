@@ -12,6 +12,7 @@ import { ArrowRight, Save, Trash2, Scale, MessageCircle, Send } from 'lucide-rea
 import { TimeRemainingCard } from '@/components/time-remaining';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
+import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -372,12 +373,17 @@ export default function SessionDetailPage() {
         </div>
       </div>
 
+      {/* Attachments Section */}
+      <div className="fade-in-up fade-in-up-delay-2 rounded-2xl border border-border bg-card p-6 shadow-xs">
+        <AttachmentsPanel relatedRecordType="session" relatedRecordId={sessionId} />
+      </div>
+
       {/* Action Buttons */}
       <div className="fade-in-up fade-in-up-delay-3 flex flex-wrap gap-3">
         <Button
           onClick={handleSave}
           disabled={updateMutation.isPending}
-          className="flex-1 min-w-40 gap-2 shadow-sm"
+          className="flex-1 min-w-40 gap-2 shadow-md shadow-[#C99732]/25 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold border-0 cursor-pointer"
           data-testid="button-save"
         >
           <Save className="w-4 h-4" />

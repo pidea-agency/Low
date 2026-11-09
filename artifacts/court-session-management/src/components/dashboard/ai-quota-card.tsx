@@ -37,9 +37,9 @@ export function AiQuotaCard({
         <div className="flex items-center gap-3.5">
           <div
             className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs"
-            style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #353E24 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
           >
-            <Scale className="w-5 h-5 text-[#C9A449]" />
+            <Scale className="w-5 h-5 text-[#C99732]" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -83,12 +83,12 @@ export function AiQuotaCard({
               style={{
                 width: `${percent}%`,
                 background: isUnlimited
-                  ? 'linear-gradient(90deg, #3F4A2C 0%, #52603B 100%)'
+                  ? 'linear-gradient(90deg, #0B2A4A 0%, #C99732 100%)'
                   : percent >= 100
                   ? '#ef4444'
                   : percent >= 80
                   ? '#f59e0b'
-                  : '#C9A449',
+                  : '#C99732',
               }}
             />
           </div>

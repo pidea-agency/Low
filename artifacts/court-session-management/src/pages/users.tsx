@@ -303,10 +303,10 @@ export default function OfficeMembersPage() {
 
         <Button
           onClick={() => setIsAddModalOpen(true)}
-          className="gap-2 text-xs font-bold self-end sm:self-center shrink-0"
+          className="gap-2 text-xs font-bold self-end sm:self-center shrink-0 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl shadow-md shadow-[#C99732]/25 border-0 cursor-pointer"
         >
           <UserPlus className="w-4 h-4" />
-          إضافة محامٍ / عضو جديد
+          + إضافة محامٍ / عضو جديد
         </Button>
       </div>
 

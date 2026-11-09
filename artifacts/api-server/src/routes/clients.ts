@@ -8,7 +8,7 @@ import {
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import type { ClientRecord } from "../services/postgres.service";
-import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
+import { canUserAccessRecord, validateOfficeLawyer, getStaffAccessibleClientIds } from "../utils/record-access";
 
 const router: IRouter = Router();
 
@@ -26,42 +26,6 @@ function getOfficeId(req: any): string {
     throw new Error("غير مصرح: معرف المكتب مفقود.");
   }
   return officeId;
-}
-
-async function getStaffAccessibleClientIds(officeId: string, authUser: any): Promise<Set<string>> {
-  const [sessions, tasks, poas, judgments] = await Promise.all([
-    postgresService.listSessions(officeId),
-    postgresService.listTasks(officeId),
-    postgresService.listPoa(officeId),
-    postgresService.listJudgments(officeId),
-  ]);
-
-  const set = new Set<string>();
-  for (const s of sessions) {
-    const cId = (s as any).clientId || (s as any).client_id;
-    if (cId && canUserAccessRecord(s, authUser)) {
-      set.add(cId);
-    }
-  }
-  for (const t of tasks) {
-    const cId = t.clientId || (t as any).client_id;
-    if (cId && canUserAccessRecord(t, authUser)) {
-      set.add(cId);
-    }
-  }
-  for (const p of poas) {
-    const cId = p.clientId || (p as any).client_id;
-    if (cId && canUserAccessRecord(p, authUser)) {
-      set.add(cId);
-    }
-  }
-  for (const j of judgments) {
-    const cId = j.clientId || (j as any).client_id;
-    if (cId && canUserAccessRecord(j, authUser)) {
-      set.add(cId);
-    }
-  }
-  return set;
 }
 
 /**

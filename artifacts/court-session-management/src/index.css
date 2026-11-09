@@ -60,6 +60,18 @@
   --color-gold-hover: #B59138;
   --color-soft-border: #E7E0CB;
 
+  /* الهوية البصرية المعتمدة (New Platform Palette) */
+  --color-navy-primary: #0B2A4A;
+  --color-navy-deep: #071D34;
+  --color-gold-primary: #C99732;
+  --color-gold-light: #E8C477;
+  --color-system-bg: #F5F7FB;
+  --color-card-bg: #FFFFFF;
+  --color-field-border: #D6E0EC;
+  --color-text-primary: #10233F;
+  --color-text-secondary: #64748B;
+  --color-gold-bg: #FFF4DE;
+
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
@@ -70,69 +82,69 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE: Cream (#F6F1E3) / Deep Olive (#3F4A2C) / Gold Accent (#C9A449) */
+/* LIGHT MODE: Platform Palette (Primary Navy #0B2A4A, Deep Navy #071D34, Primary Gold #C99732, Slate #64748B, Bg #F5F7FB) */
 :root {
-  --button-outline: rgba(63, 74, 44, 0.15);
-  --badge-outline: rgba(63, 74, 44, 0.1);
+  --button-outline: rgba(11, 42, 74, 0.12);
+  --badge-outline: rgba(11, 42, 74, 0.08);
 
   --opaque-button-border-intensity: -8;
 
-  --elevate-1: rgba(63, 74, 44, 0.04);
-  --elevate-2: rgba(63, 74, 44, 0.08);
+  --elevate-1: rgba(11, 42, 74, 0.04);
+  --elevate-2: rgba(11, 42, 74, 0.08);
 
-  /* Background: Cream background (~#F6F1E3) */
-  --background: 43 45% 93%;
-  /* Foreground / Text: Deep warm olive-charcoal (~#22261D) */
-  --foreground: 80 13% 13%;
+  /* Background: System Background (#F5F7FB) */
+  --background: 220 40% 97.5%;
+  /* Foreground / Text: Deep Navy Text (#10233F) */
+  --foreground: 216 59% 15%;
 
-  /* Soft border (~#E7E0CB) */
-  --border: 43 36% 85%;
+  /* Soft border (#D6E0EC) */
+  --border: 214 36% 88%;
 
-  /* Cards: White cards (~#FFFFFF) */
+  /* Cards: White cards (#FFFFFF) */
   --card: 0 0% 100%;
-  --card-foreground: 80 13% 13%;
-  --card-border: 43 36% 85%;
+  --card-foreground: 216 59% 15%;
+  --card-border: 214 36% 88%;
 
-  /* Sidebar: Deep Olive (~#3F4A2C) */
-  --sidebar: 82 25% 23%;
-  --sidebar-foreground: 43 45% 95%;
-  --sidebar-border: 82 22% 19%;
-  --sidebar-primary: 43 54% 54%; /* Gold Accent (~#C9A449) */
+  /* Sidebar: Primary Navy (#0B2A4A) / Deep Navy (#071D34) */
+  --sidebar: 211 74% 17%;
+  --sidebar-foreground: 214 36% 92%;
+  --sidebar-border: 210 77% 12%;
+  --sidebar-primary: 39.8 60.8% 49.2%; /* Primary Gold (#C99732) */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 82 22% 18%;
-  --sidebar-accent-foreground: 43 54% 65%;
-  --sidebar-ring: 43 54% 54%;
+  --sidebar-accent: 210 77% 12%;
+  --sidebar-accent-foreground: 40.5 71.9% 69%;
+  --sidebar-ring: 39.8 60.8% 49.2%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 80 13% 13%;
-  --popover-border: 43 36% 85%;
+  --popover-foreground: 216 59% 15%;
+  --popover-border: 214 36% 88%;
 
-  /* Primary: Deep Olive (~#3F4A2C) */
-  --primary: 82 25% 23%;
-  --primary-foreground: 43 45% 95%;
+  /* Primary Action: Primary Gold (#C99732) */
+  --primary: 39.8 60.8% 49.2%;
+  --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Soft warm beige (~#ECE6D6) */
-  --secondary: 43 28% 91%;
-  --secondary-foreground: 80 13% 13%;
+  /* Secondary: Soft cool slate-blue tint (#F1F5F9) */
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 216 59% 15%;
 
-  /* Muted: Soft cream-beige (~#EFE9DA) */
-  --muted: 43 30% 90%;
-  --muted-foreground: 73 8% 41%;
+  /* Muted: Slate gray (#F1F5F9) with text #64748B */
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
 
-  /* Accent: Gold Accent (~#C9A449) used sparingly */
-  --accent: 43 54% 54%;
+  /* Accent: Primary Gold (#C99732) */
+  --accent: 39.8 60.8% 49.2%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 43 36% 85%;
-  --ring: 43 54% 54%;
+  --input: 214 36% 88%;
+  --ring: 39.8 60.8% 49.2%;
   
-  --chart-1: 82 25% 23%;
-  --chart-2: 43 54% 54%;
-  --chart-3: 160 50% 35%;
-  --chart-4: 210 40% 45%;
+  --chart-1: 211 74% 17%;
+  --chart-2: 39.8 60.8% 49.2%;
+  --chart-3: 160 60% 40%;
+  --chart-4: 215 16% 47%;
   --chart-5: 0 75% 52%;
 
   --app-font-sans: 'IBM Plex Sans Arabic', 'Cairo', system-ui, -apple-system, sans-serif;
@@ -208,48 +220,48 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 80 14% 10%;
-  --foreground: 43 25% 92%;
+  --background: 216 50% 9%;
+  --foreground: 214 36% 94%;
 
-  --border: 80 14% 19%;
+  --border: 215 35% 18%;
 
-  --card: 80 13% 13%;
-  --card-foreground: 43 25% 92%;
-  --card-border: 80 14% 19%;
+  --card: 216 50% 12%;
+  --card-foreground: 214 36% 94%;
+  --card-border: 215 35% 18%;
 
-  --sidebar: 80 16% 8%;
-  --sidebar-foreground: 43 25% 90%;
-  --sidebar-border: 80 14% 15%;
-  --sidebar-primary: 43 54% 54%;
+  --sidebar: 216 65% 8%;
+  --sidebar-foreground: 214 36% 90%;
+  --sidebar-border: 216 65% 6%;
+  --sidebar-primary: 39.8 60.8% 49.2%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 80 14% 14%;
-  --sidebar-accent-foreground: 43 54% 65%;
-  --sidebar-ring: 43 54% 54%;
+  --sidebar-accent: 216 60% 14%;
+  --sidebar-accent-foreground: 40.5 71.9% 69%;
+  --sidebar-ring: 39.8 60.8% 49.2%;
 
-  --popover: 80 13% 13%;
-  --popover-foreground: 43 25% 92%;
-  --popover-border: 80 14% 19%;
+  --popover: 216 50% 12%;
+  --popover-foreground: 214 36% 94%;
+  --popover-border: 215 35% 18%;
 
-  --primary: 82 25% 30%;
-  --primary-foreground: 43 45% 96%;
+  --primary: 39.8 60.8% 49.2%;
+  --primary-foreground: 0 0% 100%;
 
-  --secondary: 80 14% 16%;
-  --secondary-foreground: 43 25% 90%;
+  --secondary: 216 40% 16%;
+  --secondary-foreground: 214 36% 90%;
 
-  --muted: 80 14% 15%;
-  --muted-foreground: 73 10% 62%;
+  --muted: 216 40% 15%;
+  --muted-foreground: 215 20% 65%;
 
-  --accent: 43 54% 54%;
+  --accent: 39.8 60.8% 49.2%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 75% 58%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 80 14% 20%;
-  --ring: 43 54% 54%;
+  --input: 215 35% 20%;
+  --ring: 39.8 60.8% 49.2%;
   
-  --chart-1: 82 25% 30%;
-  --chart-2: 43 54% 54%;
+  --chart-1: 211 74% 35%;
+  --chart-2: 39.8 60.8% 49.2%;
   --chart-3: 160 65% 45%;
   --chart-4: 210 50% 55%;
   --chart-5: 0 75% 58%;
@@ -393,7 +405,7 @@
 
   /* Gradient text */
   .gradient-text {
-    background: linear-gradient(135deg, #3F4A2C, #C9A449);
+    background: linear-gradient(135deg, #0B2A4A, #C99732);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -406,7 +418,7 @@
   }
 
   .shimmer {
-    background: linear-gradient(90deg, transparent, rgba(201, 164, 73, 0.12), transparent);
+    background: linear-gradient(90deg, transparent, rgba(201, 151, 50, 0.15), transparent);
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }

@@ -158,6 +158,20 @@ export interface NotificationRecord {
   createdAt: string;
 }
 
+export interface AttachmentRecord {
+  id: string;
+  officeId: string;
+  uploadedBy: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task';
+  relatedRecordId: string;
+  createdAt: string;
+  uploaderName?: string;
+}
+
 // ============================================================================
 // In-Memory Fallback Store (Used during tests or if Supabase is offline)
 // ============================================================================
@@ -169,6 +183,7 @@ const memoryPoa = new Map<string, PoaRecord[]>();
 const memoryJudgments = new Map<string, JudgmentRecord[]>();
 const memoryReports = new Map<string, ReportRecord[]>();
 const memoryNotifications = new Map<string, NotificationRecord[]>();
+const memoryAttachments = new Map<string, AttachmentRecord[]>();
 
 let _nextId = 1000;
 function nextId(): number {
@@ -183,6 +198,7 @@ export function resetInMemoryStore(): void {
   memoryJudgments.clear();
   memoryReports.clear();
   memoryNotifications.clear();
+  memoryAttachments.clear();
 }
 
 // Helper: Hijri Remaining Days Calculation
@@ -2018,5 +2034,180 @@ export async function hasRecentNotification(
       new Date(n.createdAt).getTime() >= cutoffTime,
   );
 }
+
+// ============================================================================
+// Attachments (Supabase table: attachments)
+// ============================================================================
+
+function formatAttachment(row: any): AttachmentRecord {
+  return {
+    id: row.id,
+    officeId: row.officeId ?? row.office_id,
+    uploadedBy: row.uploadedBy ?? row.uploaded_by,
+    fileName: row.fileName ?? row.file_name,
+    filePath: row.filePath ?? row.file_path,
+    fileSize: Number(row.fileSize ?? row.file_size ?? 0),
+    mimeType: row.mimeType ?? row.mime_type,
+    relatedRecordType: row.relatedRecordType ?? row.related_record_type,
+    relatedRecordId: String(row.relatedRecordId ?? row.related_record_id),
+    createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
+    uploaderName: row.uploaderName ?? row.uploader_name,
+  };
+}
+
+export async function createAttachment(data: {
+  officeId: string;
+  uploadedBy: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task';
+  relatedRecordId: string;
+  uploaderName?: string;
+}): Promise<AttachmentRecord> {
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const record: AttachmentRecord = {
+    id,
+    officeId: data.officeId,
+    uploadedBy: data.uploadedBy,
+    fileName: data.fileName,
+    filePath: data.filePath,
+    fileSize: data.fileSize,
+    mimeType: data.mimeType,
+    relatedRecordType: data.relatedRecordType,
+    relatedRecordId: String(data.relatedRecordId),
+    createdAt: now,
+    uploaderName: data.uploaderName,
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client
+        .from("attachments")
+        .insert([
+          {
+            id: record.id,
+            office_id: record.officeId,
+            uploaded_by: record.uploadedBy,
+            file_name: record.fileName,
+            file_path: record.filePath,
+            file_size: record.fileSize,
+            mime_type: record.mimeType,
+            related_record_type: record.relatedRecordType,
+            related_record_id: record.relatedRecordId,
+            created_at: record.createdAt,
+          },
+        ])
+        .select()
+        .single();
+
+      if (!error && inserted) {
+        const formatted = formatAttachment({ ...inserted, uploaderName: data.uploaderName });
+        const list = memoryAttachments.get(data.officeId) || [];
+        list.unshift(formatted);
+        memoryAttachments.set(data.officeId, list);
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createAttachment failed, falling back to memory");
+    }
+  }
+
+  const list = memoryAttachments.get(data.officeId) || [];
+  list.unshift(record);
+  memoryAttachments.set(data.officeId, list);
+  return record;
+}
+
+export async function listAttachments(
+  officeId: string,
+  relatedRecordType: string,
+  relatedRecordId: string,
+): Promise<AttachmentRecord[]> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("attachments")
+        .select("*")
+        .eq("office_id", officeId)
+        .eq("related_record_type", relatedRecordType)
+        .eq("related_record_id", String(relatedRecordId))
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        return data.map(formatAttachment);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listAttachments failed, falling back to memory");
+    }
+  }
+
+  const list = memoryAttachments.get(officeId) || [];
+  return list
+    .filter(
+      (a) =>
+        a.relatedRecordType === relatedRecordType &&
+        String(a.relatedRecordId) === String(relatedRecordId),
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function getAttachmentById(
+  id: string,
+  officeId: string,
+): Promise<AttachmentRecord | null> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("attachments")
+        .select("*")
+        .eq("id", id)
+        .eq("office_id", officeId)
+        .single();
+
+      if (!error && data) {
+        return formatAttachment(data);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getAttachmentById failed, falling back to memory");
+    }
+  }
+
+  const list = memoryAttachments.get(officeId) || [];
+  const found = list.find((a) => a.id === id);
+  return found || null;
+}
+
+export async function deleteAttachment(id: string, officeId: string): Promise<boolean> {
+  let dbSuccess = false;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error } = await client
+        .from("attachments")
+        .delete()
+        .eq("id", id)
+        .eq("office_id", officeId);
+
+      if (!error) {
+        dbSuccess = true;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase deleteAttachment failed, falling back to memory");
+    }
+  }
+
+  const list = memoryAttachments.get(officeId) || [];
+  const updated = list.filter((a) => a.id !== id);
+  memoryAttachments.set(officeId, updated);
+
+  return dbSuccess || list.length !== updated.length;
+}
+
 
 

@@ -362,9 +362,9 @@ export default function ClientsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button onClick={handleOpenCreate} className="gap-1.5 shadow-sm">
+          <Button onClick={handleOpenCreate} className="gap-1.5 shadow-md shadow-[#C99732]/25 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold border-0 cursor-pointer">
             <Plus className="w-4 h-4" />
-            <span>عميل جديد</span>
+            <span>+ عميل جديد</span>
           </Button>
         </div>
       </div>

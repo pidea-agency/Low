@@ -12,6 +12,7 @@ import { Route, Switch, Redirect, Router as WouterRouter } from 'wouter';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Scale } from 'lucide-react';
 import { GlobalSearch } from '@/components/global-search';
+import { TopHeader } from '@/components/top-header';
 import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 
@@ -52,53 +53,62 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const officeName = (currentUser as any)?.officeName || (currentUser as any)?.office_name || 'إدارة الجلسات';
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden flex-col md:flex-row" dir="rtl">
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F5F7FB] dark:bg-background" dir="rtl">
       {/* Desktop Sidebar */}
-      <aside className="w-64 flex-shrink-0 hidden md:block">
+      <aside className="w-64 flex-shrink-0 hidden md:block h-full">
         <Sidebar />
       </aside>
 
-      {/* Mobile Top Header & Drawer */}
-      <div className="md:hidden flex items-center justify-between p-3 border-b border-border bg-card shrink-0 gap-2" dir="rtl">
-        <div className="flex items-center gap-2 min-w-0">
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <button
-                className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-foreground hover:bg-accent shrink-0"
-                aria-label="فتح القائمة الجانبية"
-                data-testid="button-mobile-menu-trigger"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="p-0 w-72 border-none bg-transparent shadow-2xl">
-              <Sidebar onNavigate={() => setMobileOpen(false)} />
-            </SheetContent>
-          </Sheet>
+      {/* Main Column */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        {/* Desktop Top Header */}
+        <div className="hidden md:block shrink-0">
+          <TopHeader />
+        </div>
 
+        {/* Mobile Top Header & Drawer */}
+        <div className="md:hidden flex items-center justify-between p-3 border-b border-[#071D34] bg-[#0B2A4A] text-white shrink-0 gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <Scale className="w-3.5 h-3.5 text-primary-foreground" />
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <button
+                  className="w-9 h-9 rounded-lg border border-white/20 bg-white/10 flex items-center justify-center text-white hover:bg-white/20 shrink-0 cursor-pointer"
+                  aria-label="فتح القائمة الجانبية"
+                  data-testid="button-mobile-menu-trigger"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="p-0 w-72 border-none bg-transparent shadow-2xl">
+                <Sidebar onNavigate={() => setMobileOpen(false)} />
+              </SheetContent>
+            </Sheet>
+
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-[#C99732] flex items-center justify-center shrink-0">
+                <Scale className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="font-bold text-xs truncate max-w-[120px] text-white">{officeName}</span>
             </div>
-            <span className="font-bold text-xs truncate max-w-[120px]">{officeName}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <div className="w-32 sm:w-48">
+              <GlobalSearch className="bg-white/10 text-white placeholder:text-white/60 border-white/20 hover:bg-white/15 h-8 text-xs" />
+            </div>
+            <NotificationsDropdown buttonClassName="text-white hover:bg-white/10 border-0 h-8 w-8" />
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <div className="w-32 sm:w-48">
-            <GlobalSearch className="bg-muted text-foreground border-border hover:bg-accent" />
-          </div>
-          <NotificationsDropdown buttonClassName="text-foreground hover:bg-accent border border-border" />
-        </div>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto bg-[#F5F7FB] dark:bg-background text-foreground p-3 sm:p-5 lg:p-6">
+          <ErrorBoundary>
+            <Suspense fallback={<div className="flex h-full items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C99732]"></div></div>}>
+              {children}
+            </Suspense>
+          </ErrorBoundary>
+        </main>
       </div>
-
-      <main className="flex-1 overflow-y-auto bg-background text-foreground">
-        <ErrorBoundary>
-          <Suspense fallback={<div className="flex h-full items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
-            {children}
-          </Suspense>
-        </ErrorBoundary>
-      </main>
     </div>
   );
 }

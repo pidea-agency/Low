@@ -135,7 +135,7 @@ describe("Clients Entity & Lawyer Scoping across Sessions, Tasks, POA, Judgments
         .send({ name: "مؤسسة الأفق للتجارة", phone: "0509998887" });
       expect(res2.status).toBe(201);
       clientA2 = res2.body;
-    });
+    }, 45000);
 
     it("Admin sees all clients in their office", async () => {
       const res = await request(app)

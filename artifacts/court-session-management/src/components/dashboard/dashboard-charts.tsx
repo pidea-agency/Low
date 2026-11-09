@@ -76,9 +76,9 @@ export function SessionsTrendChart({
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #2A321D 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
           >
-            <TrendingUp className="w-4 h-4 text-[#C9A449]" />
+            <TrendingUp className="w-4 h-4 text-[#C99732]" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground">نشاط وحركة الجلسات شهرياً</h3>
@@ -93,23 +93,23 @@ export function SessionsTrendChart({
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="gradientTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#C9A449" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#C9A449" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#C99732" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#C99732" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="gradientFinished" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3F4A2C" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#3F4A2C" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#0B2A4A" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#0B2A4A" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(231, 224, 203, 0.4)" />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#888' }} />
-              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#888' }} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(214, 224, 236, 0.6)" />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B' }} />
+              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B' }} />
               <Tooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
                 dataKey="total"
                 name="إجمالي الجلسات"
-                stroke="#C9A449"
+                stroke="#C99732"
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#gradientTotal)"
@@ -118,7 +118,7 @@ export function SessionsTrendChart({
                 type="monotone"
                 dataKey="finished"
                 name="جلسات منتهية"
-                stroke="#3F4A2C"
+                stroke="#0B2A4A"
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#gradientFinished)"
@@ -139,7 +139,7 @@ export function SessionsTrendChart({
           <span className="text-muted-foreground font-medium">إجمالي الجلسات</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#3F4A2C]" />
+          <span className="w-3 h-3 rounded-full bg-[#0B2A4A]" />
           <span className="text-muted-foreground font-medium">جلسات منتهية</span>
         </div>
       </div>
@@ -329,9 +329,9 @@ export function CourtsDistributionChart({
       <div className="flex items-center gap-2.5 mb-4">
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: 'linear-gradient(135deg, #3F4A2C 0%, #333D24 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
         >
-          <Building2 className="w-4 h-4 text-[#C9A449]" />
+          <Building2 className="w-4 h-4 text-[#C99732]" />
         </div>
         <div>
           <h3 className="text-sm font-bold text-foreground">توزيع القضايا حسب المحاكم</h3>
@@ -343,19 +343,19 @@ export function CourtsDistributionChart({
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 25 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(231, 224, 203, 0.4)" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(214, 224, 236, 0.6)" />
               <XAxis
                 dataKey="court"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: '#555' }}
+                tick={{ fontSize: 10, fill: '#64748B' }}
                 interval={0}
                 angle={-20}
                 textAnchor="end"
               />
-              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#888' }} />
+              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B' }} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="count" name="عدد الجلسات" fill="#3F4A2C" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="count" name="عدد الجلسات" fill="#0B2A4A" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

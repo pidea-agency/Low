@@ -45,6 +45,9 @@ import { useGetCurrentUser, useLogout } from '@workspace/api-client-react';
 import { validatePassword } from '@workspace/api-zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/components/theme-provider';
+import { ScalesLogoGraphic, CourthouseSidebarGraphic } from '@/components/courthouse-sidebar-graphic';
+import { TopHeader } from '@/components/top-header';
+import { THEME_COLORS } from '@/config/theme';
 
 export interface SubscriptionPlanFeatures {
   google_sheets_export?: boolean;
@@ -1089,49 +1092,27 @@ export default function SuperAdminPage() {
 
   const renderSidebarContent = (onNav?: () => void) => (
     <div
-      className="flex flex-col h-full sidebar-gradient"
+      className="flex flex-col h-full text-white relative overflow-hidden select-none"
       style={{
-        background: theme === 'dark'
-          ? 'linear-gradient(165deg, #222819 0%, #1A1F13 60%, #14170E 100%)'
-          : 'linear-gradient(165deg, #3F4A2C 0%, #353E24 60%, #2A321D 100%)',
-        borderInlineStart: theme === 'dark'
-          ? '1px solid rgba(255,255,255,0.06)'
-          : '1px solid rgba(255,255,255,0.08)',
+        background: `linear-gradient(180deg, ${THEME_COLORS.primaryNavy} 0%, ${THEME_COLORS.deepNavy} 70%, #041222 100%)`,
+        borderInlineStart: '1px solid rgba(255,255,255,0.08)',
       }}
     >
       {/* Brand Header */}
-      <div
-        className="p-4 space-y-2"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: '#C9A449',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
-            }}
-          >
-            <ShieldAlert className="w-5 h-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xs font-bold text-white leading-tight truncate">
-              إدارة المنظومة
-            </h1>
-            <p className="text-[10px] mt-0.5" style={{ color: '#C9A449' }}>
-              المشرف العام (Super Admin)
-            </p>
-          </div>
-        </div>
+      <div className="p-4 sm:p-5 flex flex-col items-center text-center border-b border-white/10 relative z-10">
+        <ScalesLogoGraphic className="w-12 h-12 mb-2" />
+        <h1 className="text-base font-black text-white leading-tight tracking-wide">
+          رَسَند
+        </h1>
+        <p className="text-[11px] font-semibold text-[#E8C477] mt-0.5">
+          إدارة القضايا والجلسات
+        </p>
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto sidebar-scrollbar">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-widest px-3 py-2"
-          style={{ color: 'rgba(255,255,255,0.4)' }}
-        >
-          أقسام الإدارة
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto sidebar-scrollbar relative z-10">
+        <p className="text-[10px] font-bold uppercase tracking-wider px-3 py-2 text-[#64748B]">
+          لوحة الإشراف العام
         </p>
 
         {navItems.map((item) => {
@@ -1145,29 +1126,22 @@ export default function SuperAdminPage() {
                 setCurrentSection(item.id);
                 onNav?.();
               }}
-              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${
+              className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
                 isActive
-                  ? 'bg-[#C9A449] text-white shadow-xs'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  ? 'bg-[#C99732] text-white shadow-md shadow-[#C99732]/25'
+                  : 'text-[#D6E0EC] hover:bg-white/10 hover:text-white'
               }`}
-              style={
-                isActive
-                  ? {
-                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.25)',
-                    }
-                  : undefined
-              }
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#D6E0EC]'}`} />
                 <span className="truncate text-start">{item.name}</span>
               </div>
               {item.badge !== undefined && (
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     isActive
                       ? 'bg-black/20 text-white'
-                      : 'bg-white/10 text-white/80'
+                      : 'bg-white/10 text-white/90'
                   }`}
                 >
                   {item.badge}
@@ -1178,23 +1152,38 @@ export default function SuperAdminPage() {
         })}
       </nav>
 
+      {/* Super Admin Crown Card */}
+      <div className="px-3 py-2 relative z-10">
+        <div className="p-3 rounded-xl bg-white/5 border border-[#C99732]/30 flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-[#C99732]/20 border border-[#C99732]/50 flex items-center justify-center shrink-0">
+            <Crown className="w-4 h-4 text-[#E8C477]" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-white">Super Admin</div>
+            <div className="text-[10px] text-[#E8C477]">صلاحيات كاملة</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Background Watermark: Classical Courthouse & Wave (no layout space) */}
+      <div className="absolute bottom-0 right-0 left-0 pointer-events-none select-none opacity-30 z-0 overflow-hidden">
+        <CourthouseSidebarGraphic />
+      </div>
+
       {/* Footer Actions */}
-      <div
-        className="p-3 space-y-1"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
-      >
+      <div className="p-3 border-t border-white/10 relative z-10 space-y-1 bg-[#041222]/50 backdrop-blur-xs">
         <button
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-white/70 hover:bg-white/10 hover:text-white"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-[#D6E0EC] hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
         >
           {theme === 'light' ? (
             <>
-              <Moon className="w-4 h-4 shrink-0" />
+              <Moon className="w-4 h-4 shrink-0 text-[#64748B]" />
               <span className="flex-1 text-start">الوضع الداكن</span>
             </>
           ) : (
             <>
-              <Sun className="w-4 h-4 shrink-0" />
+              <Sun className="w-4 h-4 shrink-0 text-[#E8C477]" />
               <span className="flex-1 text-start">الوضع الفاتح</span>
             </>
           )}
@@ -1203,9 +1192,9 @@ export default function SuperAdminPage() {
         <button
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer disabled:opacity-40 text-amber-100/70 hover:bg-rose-500/15 hover:text-rose-200 group"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-100 transition-colors cursor-pointer disabled:opacity-40"
         >
-          <LogOut className="w-4 h-4 shrink-0 text-rose-400/80 group-hover:text-rose-300 transition-colors" />
+          <LogOut className="w-4 h-4 shrink-0 text-rose-400" />
           <span className="flex-1 text-start">
             {logoutMutation.isPending ? 'جارٍ الخروج...' : 'تسجيل الخروج'}
           </span>
@@ -1215,21 +1204,26 @@ export default function SuperAdminPage() {
   );
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground font-sans" dir="rtl">
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F5F7FB] dark:bg-background text-foreground font-sans" dir="rtl">
       {/* Desktop Sidebar */}
       <aside className="w-64 flex-shrink-0 hidden md:block h-full">
         {renderSidebarContent()}
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        {/* Desktop Top Header Bar */}
+        <div className="hidden md:block shrink-0">
+          <TopHeader />
+        </div>
+
         {/* Mobile Top Header */}
-        <div className="md:hidden flex items-center justify-between p-3 border-b border-border bg-card shrink-0 gap-2">
+        <div className="md:hidden flex items-center justify-between p-3 border-b border-[#071D34] bg-[#0B2A4A] text-white shrink-0 gap-2">
           <div className="flex items-center gap-2.5">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button
-                  className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-foreground hover:bg-accent shrink-0"
+                  className="w-9 h-9 rounded-lg border border-white/20 bg-white/10 flex items-center justify-center text-white hover:bg-white/20 shrink-0 cursor-pointer"
                   aria-label="فتح القائمة"
                 >
                   <Menu className="w-5 h-5" />
@@ -1242,20 +1236,19 @@ export default function SuperAdminPage() {
 
             <div className="flex items-center gap-2">
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: '#C9A449' }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[#C99732]"
               >
-                <ShieldAlert className="w-4 h-4 text-white" />
+                <Crown className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-xs">إدارة المنظومة</span>
+              <span className="font-bold text-xs">رَسَند - Super Admin</span>
             </div>
           </div>
 
-          <Badge className="bg-amber-600 text-white text-[10px] px-2">Super Admin</Badge>
+          <Badge className="bg-[#C99732] text-white text-[10px] px-2">المشرف العام</Badge>
         </div>
 
         {/* Scrollable Main Body */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 bg-background">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F5F7FB] dark:bg-background">
           <div className="max-w-7xl mx-auto space-y-6">
 
             {/* SECTION 1: OVERVIEW */}
@@ -1482,57 +1475,106 @@ export default function SuperAdminPage() {
                       resetForm();
                       setIsAddModalOpen(true);
                     }}
-                    className="gap-2 text-xs font-bold"
+                    className="gap-2 text-xs font-bold bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl shadow-md shadow-[#C99732]/25 border-0"
                   >
                     <UserPlus className="w-4 h-4" />
-                    إضافة مكتب جديد
+                    + إضافة مكتب جديد
                   </Button>
                 </div>
 
                 {/* Sub-tab Navigation */}
-                <div className="flex items-center gap-2 border-b border-border pb-2 flex-wrap">
+                <div className="flex items-center gap-2 border-b border-[#D6E0EC] pb-2 flex-wrap">
                   <button
                     onClick={() => setActiveTab('admins')}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
                       activeTab === 'admins'
-                        ? 'bg-primary text-primary-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        ? 'bg-[#C99732] text-white shadow-xs'
+                        : 'text-[#64748B] hover:text-[#10233F] hover:bg-white'
                     }`}
                   >
                     <Building2 className="w-4 h-4" />
-                    <span>مكاتب المحاماة والاشتراكات ({admins.length})</span>
+                    <span>المؤسسات والمكاتب ({admins.length})</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('plans')}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
                       activeTab === 'plans'
-                        ? 'bg-primary text-primary-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        ? 'bg-[#C99732] text-white shadow-xs'
+                        : 'text-[#64748B] hover:text-[#10233F] hover:bg-white'
                     }`}
                   >
                     <Layers className="w-4 h-4" />
-                    <span>باقات الاشتراك وميزاتها ({plans.length})</span>
+                    <span>الاشتراكات والباقات ({plans.length})</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('unlinked')}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
                       activeTab === 'unlinked'
-                        ? 'bg-primary text-primary-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        ? 'bg-[#C99732] text-white shadow-xs'
+                        : 'text-[#64748B] hover:text-[#10233F] hover:bg-white'
                     }`}
                   >
                     <Link2 className="w-4 h-4" />
-                    <span>الأعضاء غير المرتبطين ({unlinkedMembers.length})</span>
+                    <span>المستخدمون ({unlinkedMembers.length})</span>
                   </button>
                 </div>
 
                 {/* Sub-tab 1: Admins */}
                 {activeTab === 'admins' && (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
+                    {/* 4 Stat Summary Cards matching Screenshot 3 */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي المكاتب</p>
+                          <p className="text-2xl sm:text-3xl font-black text-[#10233F]">{admins.length}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                          <Building2 className="w-6 h-6 text-blue-600" />
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">مكاتب نشطة</p>
+                          <p className="text-2xl sm:text-3xl font-black text-emerald-600">
+                            {admins.filter((a) => a.status !== 'suspended' && !getSubscriptionInfo(a).isExpired).length}
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">مكاتب تحت المراجعة</p>
+                          <p className="text-2xl sm:text-3xl font-black text-amber-600">
+                            {admins.filter((a) => getSubscriptionInfo(a).isExpiringSoon).length}
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                          <Clock className="w-6 h-6 text-amber-600" />
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">مكاتب غير نشطة</p>
+                          <p className="text-2xl sm:text-3xl font-black text-rose-600">
+                            {admins.filter((a) => a.status === 'suspended' || getSubscriptionInfo(a).isExpired).length}
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
+                          <Zap className="w-6 h-6 text-rose-600" />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Filters & Actions Bar */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card border border-border p-3.5 rounded-xl">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white border border-[#D6E0EC] p-3.5 rounded-2xl shadow-xs">
                       <div className="flex flex-1 items-center gap-2 min-w-0">
                         <div className="relative flex-1 max-w-sm">
                           <Search className="w-4 h-4 absolute right-3 top-2.5 text-muted-foreground" />
@@ -1786,28 +1828,167 @@ export default function SuperAdminPage() {
 
                 {/* Sub-tab 2: Subscription Plans */}
                 {activeTab === 'plans' && (
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card border border-border p-3.5 rounded-xl">
-                      <div>
-                        <h3 className="font-bold text-sm text-foreground">باقات الاشتراك وميزاتها</h3>
-                        <p className="text-xs text-muted-foreground">
-                          تحديد الميزات وحصص الذكاء الاصطناعي لكل باقة اشتراك في المنصة
-                        </p>
+                  <div className="space-y-6">
+                    {/* 4 Stat Cards matching Screenshot 4 */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي الاشتراكات</p>
+                          <p className="text-2xl sm:text-3xl font-black text-[#10233F]">{admins.length}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                          <Users className="w-6 h-6 text-emerald-600" />
+                        </div>
                       </div>
 
-                      <Button
-                        onClick={() => {
-                          resetPlanForm();
-                          setIsAddPlanModalOpen(true);
-                        }}
-                        className="gap-2 text-xs font-bold shrink-0"
-                      >
-                        <Plus className="w-4 h-4" />
-                        إضافة باقة جديدة
-                      </Button>
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">الاشتراكات النشطة</p>
+                          <p className="text-2xl sm:text-3xl font-black text-blue-600">
+                            {admins.filter((a) => a.status !== 'suspended' && !getSubscriptionInfo(a).isExpired).length}
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">الاشتراكات المنتهية قريباً</p>
+                          <p className="text-2xl sm:text-3xl font-black text-amber-600">
+                            {admins.filter((a) => getSubscriptionInfo(a).isExpiringSoon).length}
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                          <Clock className="w-6 h-6 text-amber-600" />
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                          <p className="text-xs text-[#64748B] font-bold mb-1">إيرادات الاشتراكات</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl sm:text-3xl font-black text-purple-600">
+                              {admins.reduce((acc, a) => acc + (a.plan?.price ? Number(a.plan.price) : 59), 0)} $
+                            </p>
+                            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">↑ %32+</span>
+                          </div>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0">
+                          <CreditCard className="w-6 h-6 text-purple-600" />
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-xs">
+                    {/* Middle Section: Flexible Plans Showcase Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
+                      {/* Left Banner: Marketing illustration card */}
+                      <div className="bg-gradient-to-br from-[#0B2A4A] to-[#071D34] text-white p-6 rounded-2xl border border-white/10 flex flex-col justify-between shadow-xs">
+                        <div>
+                          <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center mb-4">
+                            <Sparkles className="w-6 h-6 text-[#E8C477]" />
+                          </div>
+                          <h4 className="text-base font-black text-white mb-2 leading-tight">
+                            إدارة مرنة للاشتراكات
+                          </h4>
+                          <p className="text-xs text-[#D6E0EC]/80 leading-relaxed">
+                            أنشئ باقاتك وحدد المزايا والفترة السعرية وحصص الذكاء الاصطناعي بكل سهولة.
+                          </p>
+                        </div>
+
+                        <Button
+                          onClick={() => {
+                            resetPlanForm();
+                            setIsAddPlanModalOpen(true);
+                          }}
+                          className="w-full mt-6 bg-[#C99732] hover:bg-[#B28325] text-white font-bold text-xs rounded-xl shadow-xs border-0 cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" />
+                          إضافة باقة جديدة
+                        </Button>
+                      </div>
+
+                      {/* 3 Visual Plan Cards */}
+                      {plans.map((p) => {
+                        const isPopular = p.slug === 'pro' || p.slug.includes('plus');
+                        return (
+                          <div
+                            key={p.id}
+                            className={`bg-white rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 shadow-xs relative ${
+                              isPopular
+                                ? 'border-2 border-[#C99732] ring-4 ring-[#C99732]/10'
+                                : 'border border-[#D6E0EC]'
+                            }`}
+                          >
+                            {isPopular && (
+                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#C99732] text-white text-[10px] font-bold shadow-xs">
+                                الأكثر شيوعاً
+                              </div>
+                            )}
+
+                            <div>
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <h4 className="text-base font-black text-[#10233F]">{p.name}</h4>
+                                <Badge variant="outline" className="font-mono text-[10px] bg-slate-50 border-[#D6E0EC]">
+                                  {p.slug}
+                                </Badge>
+                              </div>
+
+                              <p className="text-[11px] text-[#64748B] mb-3">
+                                {p.slug === 'pro' ? 'للمكاتب المتوسطة والمتقدمة' : p.slug === 'enterprise' ? 'للشركات والمكاتب الكبيرة' : 'مناسبة للمكاتب الصغيرة'}
+                              </p>
+
+                              <div className="mb-4 pb-3 border-b border-[#D6E0EC]">
+                                <span className="text-2xl font-black text-[#10233F]">{p.price || (p.slug === 'pro' ? '59' : '29')} $</span>
+                                <span className="text-xs text-[#64748B] mr-1">/ شهرياً</span>
+                              </div>
+
+                              <ul className="space-y-2 text-xs text-[#10233F]">
+                                <li className="flex items-center gap-2">
+                                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span>{p.ai_quota_limit} تحليل ذكاء اصطناعي</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span>حتى {p.features?.max_members || 10} محامين وأعضاء</span>
+                                </li>
+                                {p.features?.google_sheets_export && (
+                                  <li className="flex items-center gap-2">
+                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span>تصدير مباشر لـ Google Sheets</span>
+                                  </li>
+                                )}
+                                {p.features?.whatsapp_reminders && (
+                                  <li className="flex items-center gap-2">
+                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span>تذكيرات ورسائل واتساب</span>
+                                  </li>
+                                )}
+                                {p.features?.ai_assistant && (
+                                  <li className="flex items-center gap-2">
+                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span>المساعد القانوني الذكي</span>
+                                  </li>
+                                )}
+                              </ul>
+                            </div>
+
+                            <Button
+                              variant="outline"
+                              onClick={() => openEditPlanModal(p)}
+                              className="w-full mt-5 border-[#D6E0EC] hover:border-[#C99732] hover:text-[#C99732] font-bold text-xs rounded-xl"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              تعديل الباقة
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Plans Table */}
+                    <div className="bg-white border border-[#D6E0EC] rounded-2xl overflow-hidden shadow-xs">
                       <div className="overflow-x-auto">
                         <table className="w-full text-right text-xs">
                           <thead className="bg-muted/50 border-b border-border font-bold text-muted-foreground">

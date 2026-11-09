@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Edit3,
   UserCog,
+  Paperclip,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
+import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
 
 interface Client {
   id: string;
@@ -464,6 +466,10 @@ export default function ClientProfilePage() {
               <Gavel className="w-3.5 h-3.5" />
               الأحكام ({judgments.length})
             </TabsTrigger>
+            <TabsTrigger value="attachments" className="gap-1.5 text-xs">
+              <Paperclip className="w-3.5 h-3.5" />
+              المرفقات والوثائق
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -651,7 +657,7 @@ export default function ClientProfilePage() {
                           ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                           : p.daysRemaining <= 7
                           ? 'bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/40'
-                          : 'bg-[#3F4A2C]/10 text-[#3F4A2C] dark:text-[#A4B580] border border-[#3F4A2C]/20'
+                          : 'bg-emerald-50 text-emerald-700 dark:text-emerald-400 border border-emerald-200'
                       }`}
                     >
                       {p.daysRemaining <= 0
@@ -744,6 +750,13 @@ export default function ClientProfilePage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* ── Attachments Tab ── */}
+        <TabsContent value="attachments" className="space-y-3">
+          <Card className="border border-border p-5">
+            <AttachmentsPanel relatedRecordType="client" relatedRecordId={clientId || ''} />
+          </Card>
         </TabsContent>
       </Tabs>
 
