@@ -16,6 +16,7 @@ import subscriptionRouter from "./subscription";
 import clientsRouter from "./clients";
 import notificationsRouter from "./notifications";
 import attachmentsRouter from "./attachments";
+import searchRouter from "./search";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(subscriptionRouter);
 router.use(clientsRouter);
 router.use(notificationsRouter);
 router.use(attachmentsRouter);
+router.use(searchRouter);
 
 export default router;

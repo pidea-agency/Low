@@ -2209,5 +2209,236 @@ export async function deleteAttachment(id: string, officeId: string): Promise<bo
   return dbSuccess || list.length !== updated.length;
 }
 
+// ============================================================================
+// 9. GLOBAL SEARCH
+// ============================================================================
+
+export async function searchClients(officeId: string, query: string): Promise<ClientRecord[]> {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  const memMatches = (memoryClients.get(officeId) || []).filter(
+    (c) => (c.name && c.name.toLowerCase().includes(term)) || (c.phone && c.phone.toLowerCase().includes(term)),
+  );
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("clients").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("created_at", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbClients: ClientRecord[] = data.map((r: any) => ({
+          id: r.id,
+          officeId: r.office_id,
+          name: r.name,
+          phone: r.phone || "",
+          notes: r.notes || "",
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        }));
+        const dbIds = new Set(dbClients.map((c) => c.id));
+        return [...dbClients, ...memMatches.filter((m) => !dbIds.has(m.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchClients failed, falling back to memory");
+    }
+  }
+
+  return memMatches;
+}
+
+export async function searchSessions(officeId: string, query: string): Promise<Session[]> {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  const memMatches = (memorySessions.get(officeId) || [])
+    .filter(
+      (s) =>
+        (s.caseNumber && s.caseNumber.toLowerCase().includes(term)) ||
+        (s.plaintiff && s.plaintiff.toLowerCase().includes(term)) ||
+        (s.defendant && s.defendant.toLowerCase().includes(term)),
+    )
+    .map(formatSession);
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("sessions").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`case_number.ilike.%${sanitized}%,plaintiff.ilike.%${sanitized}%,defendant.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbSessions = data.map((d: any) => {
+          const formatted = formatSession(d);
+          const fromMem = (memorySessions.get(officeId) || []).find((m) => m.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              client_id: fromMem.clientId || formatted.client_id,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              assigned_lawyer_id: fromMem.assignedLawyerId || formatted.assigned_lawyer_id,
+              clientRole: fromMem.clientRole || formatted.clientRole,
+              client_role: fromMem.clientRole || formatted.client_role,
+              createdBy: fromMem.createdBy || formatted.createdBy,
+              created_by: fromMem.createdBy || formatted.created_by,
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbSessions.map((s) => s.id));
+        return [...dbSessions, ...memMatches.filter((m) => !dbIds.has(m.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchSessions failed, falling back to memory");
+    }
+  }
+
+  return memMatches;
+}
+
+export async function searchPoa(officeId: string, query: string): Promise<PoaRecord[]> {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  const memMatches = (memoryPoa.get(officeId) || [])
+    .filter(
+      (p) =>
+        (p.clientName && p.clientName.toLowerCase().includes(term)) ||
+        (p.poaNumber && p.poaNumber.toLowerCase().includes(term)),
+    )
+    .map(formatPoa);
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("poa").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`client_name.ilike.%${sanitized}%,poa_number.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbPoas = data.map((d: any) => {
+          const formatted = formatPoa(d);
+          const fromMem = (memoryPoa.get(officeId) || []).find((m) => m.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              createdBy: fromMem.createdBy || formatted.createdBy,
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbPoas.map((p) => p.id));
+        return [...dbPoas, ...memMatches.filter((m) => !dbIds.has(m.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchPoa failed, falling back to memory");
+    }
+  }
+
+  return memMatches;
+}
+
+export async function searchJudgments(officeId: string, query: string): Promise<JudgmentRecord[]> {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  const memMatches = (memoryJudgments.get(officeId) || [])
+    .filter(
+      (j) =>
+        (j.caseNumber && j.caseNumber.toLowerCase().includes(term)) ||
+        (j.plaintiff && j.plaintiff.toLowerCase().includes(term)) ||
+        (j.defendant && j.defendant.toLowerCase().includes(term)),
+    )
+    .map(formatJudgment);
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("judgments").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`case_number.ilike.%${sanitized}%,plaintiff.ilike.%${sanitized}%,defendant.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbJudgments = data.map((d: any) => {
+          const formatted = formatJudgment(d);
+          const fromMem = (memoryJudgments.get(officeId) || []).find((m) => m.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              clientRole: fromMem.clientRole || formatted.clientRole,
+              createdBy: fromMem.createdBy || formatted.createdBy,
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbJudgments.map((j) => j.id));
+        return [...dbJudgments, ...memMatches.filter((m) => !dbIds.has(m.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchJudgments failed, falling back to memory");
+    }
+  }
+
+  return memMatches;
+}
+
+export async function searchTasks(officeId: string, query: string): Promise<TaskRecord[]> {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  const memMatches = (memoryTasks.get(officeId) || [])
+    .filter((t) => t.title && t.title.toLowerCase().includes(term))
+    .map(formatTask);
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("tasks").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.ilike("title", `%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbTasks = data.map((d: any) => {
+          const formatted = formatTask(d);
+          const fromMem = (memoryTasks.get(officeId) || []).find((m) => m.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              createdBy: fromMem.createdBy || formatted.createdBy,
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbTasks.map((t) => t.id));
+        return [...dbTasks, ...memMatches.filter((m) => !dbIds.has(m.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchTasks failed, falling back to memory");
+    }
+  }
+
+  return memMatches;
+}
+
+
 
 

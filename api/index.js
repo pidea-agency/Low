@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router19;
+    module2.exports = Router20;
     module2.exports.Route = Route;
-    function Router19(options) {
-      if (!(this instanceof Router19)) {
-        return new Router19(options);
+    function Router20(options) {
+      if (!(this instanceof Router20)) {
+        return new Router20(options);
       }
       const opts = options || {};
-      function router19(req, res, next) {
-        router19.handle(req, res, next);
+      function router20(req, res, next) {
+        router20.handle(req, res, next);
       }
-      Object.setPrototypeOf(router19, this);
-      router19.caseSensitive = opts.caseSensitive;
-      router19.mergeParams = opts.mergeParams;
-      router19.params = {};
-      router19.strict = opts.strict;
-      router19.stack = [];
-      return router19;
+      Object.setPrototypeOf(router20, this);
+      router20.caseSensitive = opts.caseSensitive;
+      router20.mergeParams = opts.mergeParams;
+      router20.params = {};
+      router20.strict = opts.strict;
+      router20.stack = [];
+      return router20;
     }
-    Router19.prototype = function() {
+    Router20.prototype = function() {
     };
-    Router19.prototype.param = function param(name, fn) {
+    Router20.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router19.prototype.handle = function handle(req, res, callback) {
+    Router20.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router19.prototype.use = function use(handler2) {
+    Router20.prototype.use = function use(handler2) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router19.prototype.route = function route(path6) {
+    Router20.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router19.prototype[method] = function(path6) {
+      Router20.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve4 = require("node:path").resolve;
     var once2 = require_once();
-    var Router19 = require_router();
+    var Router20 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init4() {
-      var router19 = null;
+      var router20 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router19 === null) {
-            router19 = new Router19({
+          if (router20 === null) {
+            router20 = new Router20({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router19;
+          return router20;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router19 = this.router;
+      var router20 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router19.use(path6, fn2);
+          return router20.use(path6, fn2);
         }
         debug(".use app under %s", path6);
         fn2.mountpath = path6;
         fn2.parent = this;
-        router19.use(path6, function mounted_app(req, res, next) {
+        router20.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter4 = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router19 = require_router();
+    var Router20 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router19.Route;
-    exports2.Router = Router19;
+    exports2.Route = Router20.Route;
+    exports2.Router = Router20;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -830283,6 +830283,11 @@ __export(postgres_service_exports, {
   reassignTask: () => reassignTask,
   resetInMemoryStore: () => resetInMemoryStore,
   saveSessionReport: () => saveSessionReport,
+  searchClients: () => searchClients,
+  searchJudgments: () => searchJudgments,
+  searchPoa: () => searchPoa,
+  searchSessions: () => searchSessions,
+  searchTasks: () => searchTasks,
   updateClient: () => updateClient,
   updateJudgment: () => updateJudgment,
   updatePoa: () => updatePoa,
@@ -831784,6 +831789,196 @@ async function deleteAttachment(id, officeId) {
   memoryAttachments.set(officeId, updated);
   return dbSuccess || list.length !== updated.length;
 }
+async function searchClients(officeId, query) {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+  const memMatches = (memoryClients.get(officeId) || []).filter(
+    (c) => c.name && c.name.toLowerCase().includes(term) || c.phone && c.phone.toLowerCase().includes(term)
+  );
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("clients").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("created_at", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbClients = data.map((r2) => ({
+          id: r2.id,
+          officeId: r2.office_id,
+          name: r2.name,
+          phone: r2.phone || "",
+          notes: r2.notes || "",
+          createdAt: r2.created_at,
+          updatedAt: r2.updated_at
+        }));
+        const dbIds = new Set(dbClients.map((c) => c.id));
+        return [...dbClients, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchClients failed, falling back to memory");
+    }
+  }
+  return memMatches;
+}
+async function searchSessions(officeId, query) {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+  const memMatches = (memorySessions.get(officeId) || []).filter(
+    (s3) => s3.caseNumber && s3.caseNumber.toLowerCase().includes(term) || s3.plaintiff && s3.plaintiff.toLowerCase().includes(term) || s3.defendant && s3.defendant.toLowerCase().includes(term)
+  ).map(formatSession);
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("sessions").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`case_number.ilike.%${sanitized}%,plaintiff.ilike.%${sanitized}%,defendant.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbSessions = data.map((d) => {
+          const formatted = formatSession(d);
+          const fromMem = (memorySessions.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              client_id: fromMem.clientId || formatted.client_id,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              assigned_lawyer_id: fromMem.assignedLawyerId || formatted.assigned_lawyer_id,
+              clientRole: fromMem.clientRole || formatted.clientRole,
+              client_role: fromMem.clientRole || formatted.client_role,
+              createdBy: fromMem.createdBy || formatted.createdBy,
+              created_by: fromMem.createdBy || formatted.created_by
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbSessions.map((s3) => s3.id));
+        return [...dbSessions, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchSessions failed, falling back to memory");
+    }
+  }
+  return memMatches;
+}
+async function searchPoa(officeId, query) {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+  const memMatches = (memoryPoa.get(officeId) || []).filter(
+    (p) => p.clientName && p.clientName.toLowerCase().includes(term) || p.poaNumber && p.poaNumber.toLowerCase().includes(term)
+  ).map(formatPoa);
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("poa").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`client_name.ilike.%${sanitized}%,poa_number.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbPoas = data.map((d) => {
+          const formatted = formatPoa(d);
+          const fromMem = (memoryPoa.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              createdBy: fromMem.createdBy || formatted.createdBy
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbPoas.map((p) => p.id));
+        return [...dbPoas, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchPoa failed, falling back to memory");
+    }
+  }
+  return memMatches;
+}
+async function searchJudgments(officeId, query) {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+  const memMatches = (memoryJudgments.get(officeId) || []).filter(
+    (j) => j.caseNumber && j.caseNumber.toLowerCase().includes(term) || j.plaintiff && j.plaintiff.toLowerCase().includes(term) || j.defendant && j.defendant.toLowerCase().includes(term)
+  ).map(formatJudgment);
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("judgments").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.or(`case_number.ilike.%${sanitized}%,plaintiff.ilike.%${sanitized}%,defendant.ilike.%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbJudgments = data.map((d) => {
+          const formatted = formatJudgment(d);
+          const fromMem = (memoryJudgments.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              clientRole: fromMem.clientRole || formatted.clientRole,
+              createdBy: fromMem.createdBy || formatted.createdBy
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbJudgments.map((j) => j.id));
+        return [...dbJudgments, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchJudgments failed, falling back to memory");
+    }
+  }
+  return memMatches;
+}
+async function searchTasks(officeId, query) {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+  const memMatches = (memoryTasks.get(officeId) || []).filter((t2) => t2.title && t2.title.toLowerCase().includes(term)).map(formatTask);
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const sanitized = term.replace(/[%_,()]/g, " ").trim();
+      let dbQuery = client.from("tasks").select("*").eq("office_id", officeId);
+      if (sanitized) {
+        dbQuery = dbQuery.ilike("title", `%${sanitized}%`);
+      }
+      const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
+      if (!error && data) {
+        const dbTasks = data.map((d) => {
+          const formatted = formatTask(d);
+          const fromMem = (memoryTasks.get(officeId) || []).find((m2) => m2.id === d.id);
+          if (fromMem) {
+            return {
+              ...formatted,
+              clientId: fromMem.clientId || formatted.clientId,
+              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
+              createdBy: fromMem.createdBy || formatted.createdBy
+            };
+          }
+          return formatted;
+        });
+        const dbIds = new Set(dbTasks.map((t2) => t2.id));
+        return [...dbTasks, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase searchTasks failed, falling back to memory");
+    }
+  }
+  return memMatches;
+}
 var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, _nextId;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
@@ -832582,7 +832777,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express19 = __toESM(require_express2(), 1);
+var import_express20 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -832591,7 +832786,7 @@ var import_fs4 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express18 = __toESM(require_express2(), 1);
+var import_express19 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -855199,26 +855394,86 @@ router17.delete("/attachments/:id", async (req, res) => {
 });
 var attachments_default = router17;
 
-// src/routes/index.ts
+// src/routes/search.ts
+var import_express18 = __toESM(require_express2(), 1);
+init_logger();
+init_postgres_service();
 var router18 = (0, import_express18.Router)();
-router18.use(health_default);
-router18.use(auth_default);
-router18.use(dashboard_default);
-router18.use(ai_default);
-router18.use(sessions_default);
-router18.use(settings_default);
-router18.use(reports_default);
-router18.use(cron_default);
-router18.use(poa_default);
-router18.use(judgments_default);
-router18.use(tasks_default);
-router18.use(users_default);
-router18.use(super_admin_default);
-router18.use(subscription_default);
-router18.use(clients_default);
-router18.use(notifications_default);
-router18.use(attachments_default);
-var routes_default = router18;
+function generateRefId5() {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+router18.use("/search", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
+function getOfficeId8(req) {
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
+}
+router18.get("/search", async (req, res) => {
+  const officeId = getOfficeId8(req);
+  const q = String(req.query.q || "").trim();
+  if (!q) {
+    res.json({
+      clients: [],
+      poa: [],
+      judgments: [],
+      sessions: [],
+      tasks: []
+    });
+    return;
+  }
+  try {
+    const isStaff = req.authUser?.role === "staff";
+    const [rawClients, rawPoa, rawJudgments, rawSessions, rawTasks, accessibleClientIds] = await Promise.all([
+      searchClients(officeId, q),
+      searchPoa(officeId, q),
+      searchJudgments(officeId, q),
+      searchSessions(officeId, q),
+      searchTasks(officeId, q),
+      isStaff ? getStaffAccessibleClientIds(officeId, req.authUser) : Promise.resolve(null)
+    ]);
+    const clients = isStaff ? rawClients.filter((c) => accessibleClientIds?.has(c.id)).slice(0, 5) : rawClients.slice(0, 5);
+    const poa = isStaff ? rawPoa.filter((p) => canUserAccessRecord(p, req.authUser)).slice(0, 5) : rawPoa.slice(0, 5);
+    const judgments = isStaff ? rawJudgments.filter((j) => canUserAccessRecord(j, req.authUser)).slice(0, 5) : rawJudgments.slice(0, 5);
+    const sessions = isStaff ? rawSessions.filter((s3) => canUserAccessRecord(s3, req.authUser)).slice(0, 5) : rawSessions.slice(0, 5);
+    const tasks3 = isStaff ? rawTasks.filter((t2) => canUserAccessRecord(t2, req.authUser)).slice(0, 5) : rawTasks.slice(0, 5);
+    res.json({
+      clients,
+      poa,
+      judgments,
+      sessions,
+      tasks: tasks3
+    });
+  } catch (err) {
+    const refId = generateRefId5();
+    logger.error({ refId, err, officeId, q }, "Failed to execute global search");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0644\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+var search_default = router18;
+
+// src/routes/index.ts
+var router19 = (0, import_express19.Router)();
+router19.use(health_default);
+router19.use(auth_default);
+router19.use(dashboard_default);
+router19.use(ai_default);
+router19.use(sessions_default);
+router19.use(settings_default);
+router19.use(reports_default);
+router19.use(cron_default);
+router19.use(poa_default);
+router19.use(judgments_default);
+router19.use(tasks_default);
+router19.use(users_default);
+router19.use(super_admin_default);
+router19.use(subscription_default);
+router19.use(clients_default);
+router19.use(notifications_default);
+router19.use(attachments_default);
+router19.use(search_default);
+var routes_default = router19;
 
 // src/app.ts
 init_logger();
@@ -855226,7 +855481,7 @@ init_env();
 var import_meta = {};
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path6.default.dirname(currentFilename);
-var app = (0, import_express19.default)();
+var app = (0, import_express20.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -855259,8 +855514,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express19.default.json());
-app.use(import_express19.default.urlencoded({ extended: true }));
+app.use(import_express20.default.json());
+app.use(import_express20.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -855280,7 +855535,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express19.default.static(distPath));
+  app.use(import_express20.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path6.default.join(distPath, "index.html"));
