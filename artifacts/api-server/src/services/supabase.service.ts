@@ -564,6 +564,69 @@ export function saveLocalPlatformSettings(settings: PlatformSettings): void {
   }
 }
 
+// ============================================================================
+// Payments Local Persistence & Cache
+// ============================================================================
+
+export interface PaymentRecord {
+  id: string;
+  office_id: string;
+  office_name?: string;
+  amount: number;
+  currency: string;
+  payment_date: string;
+  method: string;
+  status: "paid" | "pending" | "overdue";
+  notes?: string | null;
+  recorded_by?: string | null;
+  recorded_by_name?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const LOCAL_PAYMENTS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_payments.json");
+const ALT_LOCAL_PAYMENTS_FILE = resolve(process.cwd(), "local_payments.json");
+const TMP_LOCAL_PAYMENTS_FILE = "/tmp/local_payments.json";
+
+let _localPaymentsCache: PaymentRecord[] | null = null;
+
+export function loadLocalPayments(): PaymentRecord[] {
+  if (_localPaymentsCache) {
+    return _localPaymentsCache;
+  }
+  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
+  for (const p of paths) {
+    try {
+      if (existsSync(p)) {
+        const raw = readFileSync(p, "utf-8");
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          _localPaymentsCache = list;
+          return list;
+        }
+      }
+    } catch {}
+  }
+  _localPaymentsCache = [];
+  return _localPaymentsCache;
+}
+
+export function saveLocalPayments(payments: PaymentRecord[]): void {
+  _localPaymentsCache = payments;
+  const content = JSON.stringify(payments, null, 2);
+  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
+  for (const p of paths) {
+    try {
+      writeFileSync(p, content, "utf-8");
+    } catch {}
+  }
+}
+
+export function resetInMemoryPayments(): void {
+  _localPaymentsCache = [];
+  saveLocalPayments([]);
+}
+
 export function getSupabaseClient(): SupabaseClient | null {
   if (!isSupabaseConfigured()) {
     return null;
@@ -2255,7 +2318,44 @@ export async function getSuperAdminOverview(): Promise<{
     suspended_count: number;
     total_ai_usage: number;
     total_ai_quota: number;
+    total_revenue: number;
+    revenue_mom_change: number;
+    pending_payments_count: number;
+    pending_payments_amount: number;
+    new_offices_this_month: number;
   };
+  revenue: {
+    total_paid: number;
+    month_over_month_change: number;
+    pending_count: number;
+    pending_amount: number;
+    monthly_trend: Array<{
+      month: string;
+      monthLabel: string;
+      revenue: number;
+      count: number;
+    }>;
+  };
+  subscription_distribution: Array<{
+    planId: string;
+    planName: string;
+    count: number;
+    fill: string;
+  }>;
+  latest_subscriptions: Array<{
+    id: string;
+    office_name: string;
+    plan_name: string;
+    subscription_end_date: string | null;
+    status: string;
+  }>;
+  latest_offices: Array<{
+    id: string;
+    office_name: string;
+    member_count: number;
+    created_at: string;
+    status: string;
+  }>;
   expiring_soonest: Array<{
     id: string;
     office_name: string;
@@ -2268,7 +2368,12 @@ export async function getSuperAdminOverview(): Promise<{
     days_left: number | null;
   }>;
 }> {
-  const admins = await listSupabaseAdmins();
+  const [admins, allPayments, plans] = await Promise.all([
+    listSupabaseAdmins(),
+    listPayments(),
+    listSubscriptionPlans(),
+  ]);
+
   const now = new Date();
   const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
@@ -2277,6 +2382,10 @@ export async function getSuperAdminOverview(): Promise<{
   let suspendedCount = 0;
   let totalAiUsage = 0;
   let totalAiQuota = 0;
+  let newOfficesThisMonth = 0;
+
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
 
   const enrichedAdmins = admins.map((admin) => {
     totalAiUsage += Number(admin.ai_usage_count) || 0;
@@ -2287,6 +2396,13 @@ export async function getSuperAdminOverview(): Promise<{
     const isSuspended = admin.status === "suspended";
     if (isSuspended) {
       suspendedCount++;
+    }
+
+    if (admin.created_at) {
+      const created = new Date(admin.created_at);
+      if (created.getFullYear() === currentYear && created.getMonth() === currentMonth) {
+        newOfficesThisMonth++;
+      }
     }
 
     let daysLeft: number | null = null;
@@ -2320,6 +2436,8 @@ export async function getSuperAdminOverview(): Promise<{
       subscription_end_date: admin.subscription_end_date || null,
       days_left: daysLeft,
       sortScore: daysLeft !== null ? daysLeft : 999999,
+      created_at: admin.created_at,
+      member_count: admin.member_count || 0,
     };
   });
 
@@ -2327,7 +2445,102 @@ export async function getSuperAdminOverview(): Promise<{
     .filter((a) => a.subscription_end_date !== null)
     .sort((a, b) => (a.sortScore ?? 999999) - (b.sortScore ?? 999999))
     .slice(0, 5)
-    .map(({ sortScore, ...rest }) => rest);
+    .map(({ sortScore, member_count, ...rest }) => rest);
+
+  // Revenue & Payments Aggregation
+  const paidPayments = allPayments.filter((p) => p.status === "paid");
+  const pendingPayments = allPayments.filter((p) => p.status === "pending");
+
+  const totalPaidRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPendingAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+
+  const MONTH_NAMES_AR = [
+    "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+  ];
+
+  const monthlyTrend: Array<{
+    month: string;
+    monthLabel: string;
+    revenue: number;
+    count: number;
+  }> = [];
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const monthKey = `${yyyy}-${mm}`;
+    const monthLabel = `${MONTH_NAMES_AR[d.getMonth()]} ${yyyy}`;
+
+    const monthPaid = paidPayments.filter((p) => p.payment_date && p.payment_date.startsWith(monthKey));
+    const rev = monthPaid.reduce((sum, p) => sum + p.amount, 0);
+
+    monthlyTrend.push({
+      month: monthKey,
+      monthLabel,
+      revenue: rev,
+      count: monthPaid.length,
+    });
+  }
+
+  const curRev = monthlyTrend[monthlyTrend.length - 1]?.revenue || 0;
+  const prevRev = monthlyTrend[monthlyTrend.length - 2]?.revenue || 0;
+  let momChange = 0;
+  if (prevRev > 0) {
+    momChange = Math.round(((curRev - prevRev) / prevRev) * 100);
+  } else if (curRev > 0) {
+    momChange = 100;
+  }
+
+  // Subscription distribution by plan
+  const planColors = ["#C99732", "#0B2A4A", "#3F4A2C", "#E8C477", "#64748B"];
+  const subscriptionDistribution = plans.map((plan, idx) => {
+    const count = admins.filter(
+      (a) => a.plan_id === plan.id || a.plan_tier === plan.slug
+    ).length;
+    return {
+      planId: plan.id,
+      planName: plan.name,
+      count,
+      fill: planColors[idx % planColors.length],
+    };
+  });
+
+  const assignedCount = subscriptionDistribution.reduce((sum, d) => sum + d.count, 0);
+  if (admins.length > assignedCount) {
+    subscriptionDistribution.push({
+      planId: "unassigned",
+      planName: "بدون باقة",
+      count: admins.length - assignedCount,
+      fill: "#94A3B8",
+    });
+  }
+
+  // Latest subscriptions (sorted by end date or created_at)
+  const latestSubscriptions = enrichedAdmins
+    .filter((a) => a.subscription_end_date)
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .slice(0, 5)
+    .map((a) => ({
+      id: a.id,
+      office_name: a.office_name,
+      plan_name: a.plan_name || "بلس",
+      subscription_end_date: a.subscription_end_date,
+      status: a.status,
+    }));
+
+  // Latest offices
+  const latestOffices = enrichedAdmins
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .slice(0, 5)
+    .map((a) => ({
+      id: a.id,
+      office_name: a.office_name,
+      member_count: a.member_count,
+      created_at: a.created_at || new Date().toISOString(),
+      status: a.status,
+    }));
 
   return {
     totalOffices: admins.length,
@@ -2342,7 +2555,22 @@ export async function getSuperAdminOverview(): Promise<{
       suspended_count: suspendedCount,
       total_ai_usage: totalAiUsage,
       total_ai_quota: totalAiQuota,
+      total_revenue: totalPaidRevenue,
+      revenue_mom_change: momChange,
+      pending_payments_count: pendingPayments.length,
+      pending_payments_amount: totalPendingAmount,
+      new_offices_this_month: newOfficesThisMonth,
     },
+    revenue: {
+      total_paid: totalPaidRevenue,
+      month_over_month_change: momChange,
+      pending_count: pendingPayments.length,
+      pending_amount: totalPendingAmount,
+      monthly_trend: monthlyTrend,
+    },
+    subscription_distribution: subscriptionDistribution,
+    latest_subscriptions: latestSubscriptions,
+    latest_offices: latestOffices,
     expiring_soonest: expiringSoonest,
   };
 }
@@ -2547,6 +2775,375 @@ export async function updatePlatformSettings(
 
   saveLocalPlatformSettings(merged);
   return merged;
+}
+
+// ============================================================================
+// Super Admin Payments & Invoices Operations
+// ============================================================================
+
+async function checkHasPaymentsTable(client: SupabaseClient): Promise<boolean> {
+  try {
+    const { error } = await client.from("payments").select("id").limit(1);
+    return !error || error.code !== "42P01";
+  } catch {
+    return false;
+  }
+}
+
+export async function createPayment(data: {
+  office_id: string;
+  amount: number;
+  currency?: string;
+  payment_date?: string;
+  method?: string;
+  status?: "paid" | "pending" | "overdue";
+  notes?: string | null;
+  recorded_by?: string | null;
+}): Promise<PaymentRecord> {
+  const now = new Date().toISOString();
+  const paymentDate = data.payment_date || now.split("T")[0];
+  const newPayment: PaymentRecord = {
+    id: `pay-${crypto.randomUUID()}`,
+    office_id: data.office_id,
+    amount: Number(data.amount) || 0,
+    currency: data.currency?.trim() || "SAR",
+    payment_date: paymentDate,
+    method: data.method || "bank_transfer",
+    status: data.status || "paid",
+    notes: data.notes?.trim() || null,
+    recorded_by: data.recorded_by || null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPaymentsTable(client);
+      if (hasTable) {
+        const { data: inserted, error } = await client
+          .from("payments")
+          .insert([
+            {
+              id: newPayment.id,
+              office_id: newPayment.office_id,
+              amount: newPayment.amount,
+              currency: newPayment.currency,
+              payment_date: newPayment.payment_date,
+              method: newPayment.method,
+              status: newPayment.status,
+              notes: newPayment.notes,
+              recorded_by: newPayment.recorded_by,
+              created_at: newPayment.created_at,
+              updated_at: newPayment.updated_at,
+            },
+          ])
+          .select()
+          .single();
+
+        if (!error && inserted) {
+          newPayment.id = inserted.id;
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase payments insert failed, persisting locally");
+    }
+  }
+
+  const local = loadLocalPayments();
+  local.unshift(newPayment);
+  saveLocalPayments(local);
+
+  return newPayment;
+}
+
+export async function updatePayment(
+  id: string,
+  updates: Partial<Pick<PaymentRecord, "amount" | "currency" | "payment_date" | "method" | "status" | "notes">>
+): Promise<PaymentRecord | null> {
+  const local = loadLocalPayments();
+  const idx = local.findIndex((p) => p.id === id);
+  if (idx === -1) {
+    return null;
+  }
+
+  const current = local[idx];
+  const updated: PaymentRecord = {
+    ...current,
+    ...updates,
+    amount: updates.amount !== undefined ? Number(updates.amount) : current.amount,
+    updated_at: new Date().toISOString(),
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPaymentsTable(client);
+      if (hasTable) {
+        await client
+          .from("payments")
+          .update({
+            ...(updates.amount !== undefined ? { amount: updated.amount } : {}),
+            ...(updates.currency !== undefined ? { currency: updated.currency } : {}),
+            ...(updates.payment_date !== undefined ? { payment_date: updated.payment_date } : {}),
+            ...(updates.method !== undefined ? { method: updated.method } : {}),
+            ...(updates.status !== undefined ? { status: updated.status } : {}),
+            ...(updates.notes !== undefined ? { notes: updated.notes } : {}),
+            updated_at: updated.updated_at,
+          })
+          .eq("id", id);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase update payments failed, updating local");
+    }
+  }
+
+  local[idx] = updated;
+  saveLocalPayments(local);
+  return updated;
+}
+
+export async function listPayments(options?: {
+  office_id?: string;
+  status?: string;
+}): Promise<PaymentRecord[]> {
+  const admins = await listSupabaseAdmins();
+  const adminMap = new Map(admins.map((a) => [a.id, a]));
+
+  const client = getSupabaseClient();
+  let items: PaymentRecord[] = [];
+
+  if (client) {
+    try {
+      const hasTable = await checkHasPaymentsTable(client);
+      if (hasTable) {
+        let q = client.from("payments").select("*").order("created_at", { ascending: false });
+        if (options?.office_id) {
+          q = q.eq("office_id", options.office_id);
+        }
+        if (options?.status) {
+          q = q.eq("status", options.status);
+        }
+        const { data, error } = await q;
+        if (!error && Array.isArray(data)) {
+          items = data.map((d) => ({
+            id: d.id,
+            office_id: d.office_id,
+            amount: Number(d.amount) || 0,
+            currency: d.currency || "SAR",
+            payment_date: d.payment_date,
+            method: d.method || "bank_transfer",
+            status: d.status || "paid",
+            notes: d.notes || null,
+            recorded_by: d.recorded_by || null,
+            created_at: d.created_at,
+            updated_at: d.updated_at,
+          }));
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listPayments failed, reading local");
+    }
+  }
+
+  if (items.length === 0) {
+    const local = loadLocalPayments();
+    items = local.filter((p) => {
+      if (options?.office_id && p.office_id !== options.office_id) return false;
+      if (options?.status && p.status !== options.status) return false;
+      return true;
+    });
+  }
+
+  // Enrich with office_name
+  return items.map((p) => {
+    const office = adminMap.get(p.office_id);
+    return {
+      ...p,
+      office_name: office ? office.office_name || office.display_name || office.username : "مكتب غير معروف",
+    };
+  });
+}
+
+export async function getPaymentById(id: string): Promise<PaymentRecord | null> {
+  const payments = await listPayments();
+  return payments.find((p) => p.id === id) || null;
+}
+
+// ============================================================================
+// Super Admin Users Across All Offices
+// ============================================================================
+
+export async function listSuperAdminUsers(): Promise<Array<{
+  id: string;
+  username: string;
+  email?: string | null;
+  role: "super_admin" | "admin" | "staff";
+  status: string;
+  display_name?: string | null;
+  phone?: string | null;
+  office_id?: string | null;
+  office_name?: string | null;
+  created_at?: string;
+  last_login?: string | null;
+}>> {
+  const allUsers = await listSupabaseUsers();
+  const admins = allUsers.filter((u) => u.role === "admin");
+  const adminMap = new Map(admins.map((a) => [a.id, a]));
+
+  return allUsers.map((u) => {
+    let officeId: string | null = null;
+    let officeName: string = "—";
+
+    if (u.role === "admin") {
+      officeId = u.id;
+      officeName = u.office_name || u.display_name || u.username;
+    } else if (u.role === "staff") {
+      officeId = u.admin_id || null;
+      if (u.admin_id && adminMap.has(u.admin_id)) {
+        const parent = adminMap.get(u.admin_id)!;
+        officeName = parent.office_name || parent.display_name || parent.username;
+      } else {
+        officeName = "غير محدد";
+      }
+    } else if (u.role === "super_admin") {
+      officeName = "إدارة المنصة العامة";
+    }
+
+    return {
+      id: u.id,
+      username: u.username,
+      email: u.email || null,
+      role: u.role as any,
+      status: u.status || "active",
+      display_name: u.display_name || null,
+      phone: u.phone || null,
+      office_id: officeId,
+      office_name: officeName,
+      created_at: u.created_at,
+      last_login: (u as any).last_login || (u as any).last_sign_in_at || null,
+    };
+  });
+}
+
+// ============================================================================
+// Super Admin General Reports Overview
+// ============================================================================
+
+export async function getSuperAdminReportsOverview(): Promise<{
+  totalRevenue: number;
+  revenueMonthOverMonthChange: number;
+  activeSubscriptions: number;
+  totalUsers: number;
+  totalOffices: number;
+  monthlyRevenueTrend: Array<{
+    month: string;
+    monthLabel: string;
+    revenue: number;
+    count: number;
+  }>;
+  subscriptionDistribution: Array<{
+    planId: string;
+    planName: string;
+    count: number;
+    fill: string;
+  }>;
+}> {
+  const [allPayments, allUsers, admins, plans] = await Promise.all([
+    listPayments(),
+    listSupabaseUsers(),
+    listSupabaseAdmins(),
+    listSubscriptionPlans(),
+  ]);
+
+  const paidPayments = allPayments.filter((p) => p.status === "paid");
+  const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+
+  const now = new Date();
+  const MONTH_NAMES_AR = [
+    "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+  ];
+
+  const monthlyRevenueTrend: Array<{
+    month: string;
+    monthLabel: string;
+    revenue: number;
+    count: number;
+  }> = [];
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const monthKey = `${yyyy}-${mm}`;
+    const monthLabel = `${MONTH_NAMES_AR[d.getMonth()]} ${yyyy}`;
+
+    const monthPayments = paidPayments.filter((p) =>
+      p.payment_date && p.payment_date.startsWith(monthKey)
+    );
+    const rev = monthPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    monthlyRevenueTrend.push({
+      month: monthKey,
+      monthLabel,
+      revenue: rev,
+      count: monthPayments.length,
+    });
+  }
+
+  const currentMonthRev = monthlyRevenueTrend[monthlyRevenueTrend.length - 1]?.revenue || 0;
+  const prevMonthRev = monthlyRevenueTrend[monthlyRevenueTrend.length - 2]?.revenue || 0;
+
+  let revenueMonthOverMonthChange = 0;
+  if (prevMonthRev > 0) {
+    revenueMonthOverMonthChange = Math.round(
+      ((currentMonthRev - prevMonthRev) / prevMonthRev) * 100
+    );
+  } else if (currentMonthRev > 0) {
+    revenueMonthOverMonthChange = 100;
+  }
+
+  const activeSubs = admins.filter((a) => {
+    if (a.status === "suspended") return false;
+    if (a.subscription_end_date) {
+      return new Date(a.subscription_end_date).getTime() >= now.getTime();
+    }
+    return true;
+  }).length;
+
+  const planColors = ["#C99732", "#0B2A4A", "#3F4A2C", "#E8C477", "#64748B"];
+  const subscriptionDistribution = plans.map((plan, idx) => {
+    const count = admins.filter(
+      (a) => a.plan_id === plan.id || a.plan_tier === plan.slug
+    ).length;
+    return {
+      planId: plan.id,
+      planName: plan.name,
+      count,
+      fill: planColors[idx % planColors.length],
+    };
+  });
+
+  const assignedCount = subscriptionDistribution.reduce((sum, d) => sum + d.count, 0);
+  if (admins.length > assignedCount) {
+    subscriptionDistribution.push({
+      planId: "unassigned",
+      planName: "بدون باقة",
+      count: admins.length - assignedCount,
+      fill: "#94A3B8",
+    });
+  }
+
+  return {
+    totalRevenue,
+    revenueMonthOverMonthChange,
+    activeSubscriptions: activeSubs,
+    totalUsers: allUsers.length,
+    totalOffices: admins.length,
+    monthlyRevenueTrend,
+    subscriptionDistribution,
+  };
 }
 
 // ============================================================================

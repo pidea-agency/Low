@@ -49,27 +49,31 @@ export function LawyerSelect({
       try {
         const res = await fetch('/api/users', { credentials: 'include' });
         if (res.ok) {
-          const staffUsers = await res.json();
+          const data = await res.json();
+          const staffUsers = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.users)
+            ? data.users
+            : [];
           const list: LawyerOption[] = [];
 
           // Add current admin if available
-          if (currentUser?.id) {
+          const effectiveAdminId = currentUser?.id || (currentUser as any)?.userId;
+          if (effectiveAdminId) {
             list.push({
-              id: currentUser.id,
-              name: currentUser.displayName || currentUser.username || 'مشرف المكتب (أنت)',
+              id: effectiveAdminId,
+              name: currentUser?.displayName || currentUser?.username || 'مشرف المكتب (أنت)',
               role: 'admin',
             });
           }
 
-          if (Array.isArray(staffUsers)) {
-            for (const u of staffUsers) {
-              if (u.id !== currentUser?.id) {
-                list.push({
-                  id: u.id,
-                  name: u.display_name || u.displayName || u.username,
-                  role: 'staff',
-                });
-              }
+          for (const u of staffUsers) {
+            if (u.id !== effectiveAdminId) {
+              list.push({
+                id: u.id,
+                name: u.display_name || u.displayName || u.username,
+                role: 'staff',
+              });
             }
           }
           setLawyers(list);
@@ -82,7 +86,7 @@ export function LawyerSelect({
     };
 
     fetchOfficeMembers();
-  }, [isStaff, currentUser?.id, currentUser?.displayName, currentUser?.username]);
+  }, [isStaff, currentUser?.id, (currentUser as any)?.userId, currentUser?.displayName, currentUser?.username]);
 
   // If staff: render read-only indicator
   if (isStaff) {

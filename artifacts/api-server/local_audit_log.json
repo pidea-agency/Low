@@ -1,5 +1,193 @@
 [
   {
+    "id": "audit-49992f15-3c8a-4edf-8100-cfa10ffd33ee",
+    "actor_id": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "actor_username": "sa_ext_1794217661347",
+    "action": "create_payment",
+    "target_office_id": "33892b7a-d61a-403e-a431-afbbd62276bb",
+    "details": {
+      "payment_id": "pay-47018f6d-3474-49d4-8440-3de6135f7226",
+      "amount": 8888,
+      "currency": "SAR",
+      "status": "pending",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:47:50.206Z"
+  },
+  {
+    "id": "audit-f42b79cb-2923-4611-8bce-d0a53ef9842e",
+    "actor_id": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "actor_username": "sa_ext_1794217661347",
+    "action": "create_payment",
+    "target_office_id": "d8118332-aab9-4739-a286-59c4d9999bf0",
+    "details": {
+      "payment_id": "pay-39e9b198-0a78-4732-a43c-fad14ba1e196",
+      "amount": 9999,
+      "currency": "SAR",
+      "status": "overdue",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:47:49.157Z"
+  },
+  {
+    "id": "audit-4b6818f0-bbf4-4502-ae21-dc467598bef7",
+    "actor_id": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "actor_username": "sa_ext_1794217661347",
+    "action": "update_payment",
+    "target_office_id": "33892b7a-d61a-403e-a431-afbbd62276bb",
+    "details": {
+      "payment_id": "pay-d1d9cf25-0275-42a7-a9f0-3e81d60fd86b",
+      "new_status": "paid",
+      "notes": "تم استلام الدفعة النقدية وإيداعها",
+      "amount": 500
+    },
+    "created_at": "2026-11-09T09:47:48.972Z"
+  },
+  {
+    "id": "audit-abc7875a-8263-4687-a6bc-c74c24440be8",
+    "actor_id": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "actor_username": "sa_ext_1794217661347",
+    "action": "create_payment",
+    "target_office_id": "d8118332-aab9-4739-a286-59c4d9999bf0",
+    "details": {
+      "payment_id": "pay-9cb0d7ca-b2a8-428a-b20d-58bac5885259",
+      "amount": 3000,
+      "currency": "SAR",
+      "status": "paid",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:47:47.807Z"
+  },
+  {
+    "id": "audit-14c1bab3-4b00-419a-b54d-1eee863ba8c1",
+    "actor_id": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "actor_username": "sa_ext_1794217661347",
+    "action": "create_payment",
+    "target_office_id": "33892b7a-d61a-403e-a431-afbbd62276bb",
+    "details": {
+      "payment_id": "pay-d1d9cf25-0275-42a7-a9f0-3e81d60fd86b",
+      "amount": 500,
+      "currency": "SAR",
+      "status": "pending",
+      "method": "cash",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:47:47.616Z"
+  },
+  {
+    "id": "audit-e128366f-c58b-45bf-b30f-51013959148a",
+    "actor_id": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "actor_username": "sa_ext_1794217661347",
+    "action": "create_payment",
+    "target_office_id": "33892b7a-d61a-403e-a431-afbbd62276bb",
+    "details": {
+      "payment_id": "pay-bd73824a-0f4d-4e7a-a089-6090ea552b12",
+      "amount": 1500,
+      "currency": "SAR",
+      "status": "paid",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:47:46.647Z"
+  },
+  {
+    "id": "audit-8706798e-7899-4983-90e9-42a96ff48dfe",
+    "actor_id": "82a0b7c6-ecfc-4584-aec6-4b3aa02f3264",
+    "actor_username": "sa_ext_1794215654158",
+    "action": "create_payment",
+    "target_office_id": "19b46ffe-0391-4a48-887c-cbfe1f8d58ea",
+    "details": {
+      "payment_id": "pay-1266709a-d99b-4f69-9931-617ac95a020d",
+      "amount": 8888,
+      "currency": "SAR",
+      "status": "pending",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:14:27.569Z"
+  },
+  {
+    "id": "audit-1549fef0-f5ed-49a6-ab2a-72e49664249a",
+    "actor_id": "82a0b7c6-ecfc-4584-aec6-4b3aa02f3264",
+    "actor_username": "sa_ext_1794215654158",
+    "action": "create_payment",
+    "target_office_id": "f2970c70-50ba-4499-b00f-1d5b28b2faaa",
+    "details": {
+      "payment_id": "pay-9b0ed5d1-397c-427c-abb6-23fec25fa790",
+      "amount": 9999,
+      "currency": "SAR",
+      "status": "overdue",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:14:27.362Z"
+  },
+  {
+    "id": "audit-0d16c98d-3b1e-4d1a-80df-9bdde96fd7e3",
+    "actor_id": "82a0b7c6-ecfc-4584-aec6-4b3aa02f3264",
+    "actor_username": "sa_ext_1794215654158",
+    "action": "update_payment",
+    "target_office_id": "19b46ffe-0391-4a48-887c-cbfe1f8d58ea",
+    "details": {
+      "payment_id": "pay-58f15717-5628-431e-abd1-20447bd7aa89",
+      "new_status": "paid",
+      "notes": "تم استلام الدفعة النقدية وإيداعها",
+      "amount": 500
+    },
+    "created_at": "2026-11-09T09:14:27.155Z"
+  },
+  {
+    "id": "audit-301a8180-9b91-498f-81ea-479128612faf",
+    "actor_id": "82a0b7c6-ecfc-4584-aec6-4b3aa02f3264",
+    "actor_username": "sa_ext_1794215654158",
+    "action": "create_payment",
+    "target_office_id": "f2970c70-50ba-4499-b00f-1d5b28b2faaa",
+    "details": {
+      "payment_id": "pay-025aed87-eb69-4be3-b8d1-874956c759b0",
+      "amount": 3000,
+      "currency": "SAR",
+      "status": "paid",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:14:25.998Z"
+  },
+  {
+    "id": "audit-a2cdf48f-4bb1-4e3f-9a49-87a2b919a250",
+    "actor_id": "82a0b7c6-ecfc-4584-aec6-4b3aa02f3264",
+    "actor_username": "sa_ext_1794215654158",
+    "action": "create_payment",
+    "target_office_id": "19b46ffe-0391-4a48-887c-cbfe1f8d58ea",
+    "details": {
+      "payment_id": "pay-58f15717-5628-431e-abd1-20447bd7aa89",
+      "amount": 500,
+      "currency": "SAR",
+      "status": "pending",
+      "method": "cash",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:14:25.760Z"
+  },
+  {
+    "id": "audit-82eb5a12-fa41-40f1-a02b-86560cb15a81",
+    "actor_id": "82a0b7c6-ecfc-4584-aec6-4b3aa02f3264",
+    "actor_username": "sa_ext_1794215654158",
+    "action": "create_payment",
+    "target_office_id": "19b46ffe-0391-4a48-887c-cbfe1f8d58ea",
+    "details": {
+      "payment_id": "pay-4e0008e6-e676-46ed-b1ca-7f59d4acd6a3",
+      "amount": 1500,
+      "currency": "SAR",
+      "status": "paid",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-09"
+    },
+    "created_at": "2026-11-09T09:14:25.396Z"
+  },
+  {
     "id": "audit-c08c6ad7-b3e9-4b51-a104-9cd9bed0e24d",
     "actor_username": "مشرف المنصة",
     "action": "created_office",

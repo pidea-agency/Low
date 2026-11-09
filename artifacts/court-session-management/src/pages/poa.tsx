@@ -165,6 +165,7 @@ export default function PowerOfAttorneyPage() {
   // Unlinked POAs Triage Dialog state
   const [unlinkedDialogOpen, setUnlinkedDialogOpen] = useState(false);
   const [triageLinking, setTriageLinking] = useState<Record<string, string | null>>({});
+  const [triageLawyerLinking, setTriageLawyerLinking] = useState<Record<string, string | null>>({});
   const [savingTriageId, setSavingTriageId] = useState<string | null>(null);
 
   // Form State
@@ -454,10 +455,17 @@ export default function PowerOfAttorneyPage() {
     setSavingTriageId(record.id);
     try {
       const id = record.sheetRowId || record.id;
+      const targetLawyerId = triageLawyerLinking[record.id] !== undefined
+        ? triageLawyerLinking[record.id]
+        : (record.assignedLawyerId || (record as any).assigned_lawyer_id || null);
+
       const res = await fetch(`/api/poa/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId: targetCid }),
+        body: JSON.stringify({
+          clientId: targetCid,
+          assignedLawyerId: targetLawyerId || null,
+        }),
         credentials: 'include',
       });
 
@@ -1027,29 +1035,38 @@ export default function PowerOfAttorneyPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-end gap-3 flex-wrap sm:flex-nowrap">
-                      <div className="flex-1 min-w-[220px]">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <ClientPicker
                           value={currentChosenCid}
                           onChange={(newId) =>
                             setTriageLinking((prev) => ({ ...prev, [poa.id]: newId }))
                           }
-                          label="اختر العميل لربطه بهذه الوكالة"
+                          label="اختر العميل لربطه بهذه الوكالة *"
+                        />
+                        <LawyerSelect
+                          value={triageLawyerLinking[poa.id] !== undefined ? triageLawyerLinking[poa.id] : (poa.assignedLawyerId || (poa as any).assigned_lawyer_id || null)}
+                          onChange={(newId) =>
+                            setTriageLawyerLinking((prev) => ({ ...prev, [poa.id]: newId }))
+                          }
+                          label="إسناد المحامي المسؤول (اختياري)"
                         />
                       </div>
-                      <Button
-                        size="sm"
-                        disabled={!currentChosenCid || isThisSaving}
-                        onClick={() => handleSaveTriageLink(poa)}
-                        className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-                      >
-                        {isThisSaving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <LinkIcon className="w-4 h-4" />
-                        )}
-                        <span>حفظ الربط</span>
-                      </Button>
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          size="sm"
+                          disabled={!currentChosenCid || isThisSaving}
+                          onClick={() => handleSaveTriageLink(poa)}
+                          className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 cursor-pointer"
+                        >
+                          {isThisSaving ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <LinkIcon className="w-4 h-4" />
+                          )}
+                          <span>حفظ الربط والإسناد</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );

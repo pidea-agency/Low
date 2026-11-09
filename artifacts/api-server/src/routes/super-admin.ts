@@ -21,6 +21,12 @@ import {
   listAuditLogs,
   getPlatformSettings,
   updatePlatformSettings,
+  createPayment,
+  updatePayment,
+  listPayments,
+  getPaymentById,
+  listSuperAdminUsers,
+  getSuperAdminReportsOverview,
 } from "../services/supabase.service";
 import { isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
@@ -618,6 +624,143 @@ router.post("/super-admin/link-member", async (req, res) => {
   } catch (err: any) {
     logger.error({ err }, "Failed to link member to admin");
     res.status(400).json({ error: err.message || "فشل ربط العضو بالمكتب." });
+  }
+});
+
+/**
+ * GET /api/super-admin/users
+ * Lists all users across all offices (office admins, staff/lawyers, super admins) with office association.
+ */
+router.get("/super-admin/users", async (_req, res) => {
+  try {
+    const users = await listSuperAdminUsers();
+    res.json(users);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch super admin users");
+    res.status(500).json({ error: err.message || "فشل جلب قائمة المستخدمين." });
+  }
+});
+
+/**
+ * GET /api/super-admin/payments
+ * Lists manual payment records, optionally filterable by office_id and status.
+ */
+router.get("/super-admin/payments", async (req, res) => {
+  try {
+    const office_id = typeof req.query.office_id === "string" ? req.query.office_id.trim() : undefined;
+    const status = typeof req.query.status === "string" ? req.query.status.trim() : undefined;
+    const payments = await listPayments({ office_id, status });
+    res.json(payments);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch payments");
+    res.status(500).json({ error: err.message || "فشل جلب قائمة المدفوعات." });
+  }
+});
+
+/**
+ * POST /api/super-admin/payments
+ * Manually records a payment for an office and writes an audit log entry.
+ */
+router.post("/super-admin/payments", async (req, res) => {
+  try {
+    const { office_id, amount, currency, payment_date, method, status, notes } = req.body;
+    if (!office_id) {
+      res.status(400).json({ error: "معرف المكتب مطلوب." });
+      return;
+    }
+    if (amount === undefined || amount === null || isNaN(Number(amount)) || Number(amount) <= 0) {
+      res.status(400).json({ error: "المبلغ غير صالح." });
+      return;
+    }
+
+    const recorded_by = (req as any).user?.id || req.authUser?.userId || null;
+    const payment = await createPayment({
+      office_id,
+      amount: Number(amount),
+      currency,
+      payment_date,
+      method,
+      status,
+      notes,
+      recorded_by,
+    });
+
+    await recordAuditLog({
+      actor_id: (req as any).user?.id || req.authUser?.userId || "super_admin",
+      actor_username: (req as any).user?.username || req.authUser?.username || "مشرف المنصة",
+      action: "create_payment",
+      target_office_id: office_id,
+      details: {
+        payment_id: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        method: payment.method,
+        payment_date: payment.payment_date,
+      },
+    });
+
+    res.status(201).json(payment);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to create payment");
+    res.status(500).json({ error: err.message || "فشل تسجيل الدفعة." });
+  }
+});
+
+/**
+ * PATCH /api/super-admin/payments/:id
+ * Updates payment status and/or notes and records an audit log.
+ */
+router.patch("/super-admin/payments/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status, notes, amount, method, payment_date } = req.body;
+
+    const updated = await updatePayment(id, {
+      status,
+      notes,
+      amount: amount !== undefined ? Number(amount) : undefined,
+      method,
+      payment_date,
+    });
+
+    if (!updated) {
+      res.status(404).json({ error: "سجل الدفعة غير موجود." });
+      return;
+    }
+
+    await recordAuditLog({
+      actor_id: (req as any).user?.id || req.authUser?.userId || "super_admin",
+      actor_username: (req as any).user?.username || req.authUser?.username || "مشرف المنصة",
+      action: "update_payment",
+      target_office_id: updated.office_id,
+      details: {
+        payment_id: id,
+        new_status: updated.status,
+        notes: updated.notes,
+        amount: updated.amount,
+      },
+    });
+
+    res.json(updated);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to update payment");
+    res.status(500).json({ error: err.message || "فشل تحديث الدفعة." });
+  }
+});
+
+/**
+ * GET /api/super-admin/reports/overview
+ * Returns general platform reports: total revenue, active subscriptions, total users, total offices,
+ * 6-month monthly revenue trend, and subscription distribution by plan.
+ */
+router.get("/super-admin/reports/overview", async (_req, res) => {
+  try {
+    const reports = await getSuperAdminReportsOverview();
+    res.json(reports);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch super admin reports overview");
+    res.status(500).json({ error: err.message || "فشل جلب ملخص التقارير." });
   }
 });
 

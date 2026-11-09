@@ -1,0 +1,65 @@
+[
+  {
+    "id": "pay-47018f6d-3474-49d4-8440-3de6135f7226",
+    "office_id": "33892b7a-d61a-403e-a431-afbbd62276bb",
+    "amount": 8888,
+    "currency": "SAR",
+    "payment_date": "2026-11-09",
+    "method": "bank_transfer",
+    "status": "pending",
+    "notes": "فاتورة معلقة لا يجب أن تدخل في الإيراد المحصل",
+    "recorded_by": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "created_at": "2026-11-09T09:47:49.160Z",
+    "updated_at": "2026-11-09T09:47:49.160Z"
+  },
+  {
+    "id": "pay-39e9b198-0a78-4732-a43c-fad14ba1e196",
+    "office_id": "d8118332-aab9-4739-a286-59c4d9999bf0",
+    "amount": 9999,
+    "currency": "SAR",
+    "payment_date": "2026-11-09",
+    "method": "bank_transfer",
+    "status": "overdue",
+    "notes": "فاتورة متأخرة لا يجب أن تدخل في الإيراد المحصل",
+    "recorded_by": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "created_at": "2026-11-09T09:47:48.978Z",
+    "updated_at": "2026-11-09T09:47:48.978Z"
+  },
+  {
+    "id": "pay-9cb0d7ca-b2a8-428a-b20d-58bac5885259",
+    "office_id": "d8118332-aab9-4739-a286-59c4d9999bf0",
+    "amount": 3000,
+    "currency": "SAR",
+    "payment_date": "2026-11-09",
+    "method": "bank_transfer",
+    "status": "paid",
+    "notes": "اشتراك باقة برو",
+    "recorded_by": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "created_at": "2026-11-09T09:47:47.619Z",
+    "updated_at": "2026-11-09T09:47:47.619Z"
+  },
+  {
+    "id": "pay-d1d9cf25-0275-42a7-a9f0-3e81d60fd86b",
+    "office_id": "33892b7a-d61a-403e-a431-afbbd62276bb",
+    "amount": 500,
+    "currency": "SAR",
+    "status": "paid",
+    "notes": "تم استلام الدفعة النقدية وإيداعها",
+    "recorded_by": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "created_at": "2026-11-09T09:47:46.744Z",
+    "updated_at": "2026-11-09T09:47:48.771Z"
+  },
+  {
+    "id": "pay-bd73824a-0f4d-4e7a-a089-6090ea552b12",
+    "office_id": "33892b7a-d61a-403e-a431-afbbd62276bb",
+    "amount": 1500,
+    "currency": "SAR",
+    "payment_date": "2026-11-09",
+    "method": "bank_transfer",
+    "status": "paid",
+    "notes": "اشتراك باقة بلس سنوي",
+    "recorded_by": "183b6829-c28b-4194-89e8-4129bb9ee66d",
+    "created_at": "2026-11-09T09:47:46.264Z",
+    "updated_at": "2026-11-09T09:47:46.264Z"
+  }
+]

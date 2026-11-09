@@ -118,5 +118,53 @@
   "legacy_mw90dcoq": {
     "plan_id": "plan-pro",
     "ai_quota_limit_override": null
+  },
+  "c9e42e51-76f5-4c79-89a5-0ecb22b5abfa": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "off_a_1794215466977": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "8d65efbe-6914-4742-be88-eab76f4fc7bf": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "off_b_1794215470398": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "19b46ffe-0391-4a48-887c-cbfe1f8d58ea": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "off_a_1794215658424": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "f2970c70-50ba-4499-b00f-1d5b28b2faaa": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "off_b_1794215662692": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "33892b7a-d61a-403e-a431-afbbd62276bb": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "off_a_1794217663236": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "d8118332-aab9-4739-a286-59c4d9999bf0": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "off_b_1794217665312": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
   }
 }

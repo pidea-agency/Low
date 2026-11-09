@@ -57087,6 +57087,7 @@ __export(supabase_service_exports, {
   clearUserAuthCache: () => clearUserAuthCache,
   countActiveAdmins: () => countActiveAdmins,
   createOfficeMember: () => createOfficeMember,
+  createPayment: () => createPayment,
   createSubscriptionPlan: () => createSubscriptionPlan,
   createSupabaseAdmin: () => createSupabaseAdmin,
   createSupabaseUser: () => createSupabaseUser,
@@ -57102,10 +57103,12 @@ __export(supabase_service_exports, {
   getOfficeFeatures: () => getOfficeFeatures,
   getOfficeGoogleBinding: () => getOfficeGoogleBinding,
   getOfficeSubscriptionOverview: () => getOfficeSubscriptionOverview,
+  getPaymentById: () => getPaymentById,
   getPlatformSettings: () => getPlatformSettings,
   getSubscriptionPlanById: () => getSubscriptionPlanById,
   getSupabaseClient: () => getSupabaseClient,
   getSuperAdminOverview: () => getSuperAdminOverview,
+  getSuperAdminReportsOverview: () => getSuperAdminReportsOverview,
   getUserGoogleCredentials: () => getUserGoogleCredentials,
   getUserSessionVersion: () => getUserSessionVersion,
   incrementUserAiUsage: () => incrementUserAiUsage,
@@ -57113,23 +57116,28 @@ __export(supabase_service_exports, {
   linkMemberToAdmin: () => linkMemberToAdmin,
   listAuditLogs: () => listAuditLogs,
   listOfficeMembers: () => listOfficeMembers,
+  listPayments: () => listPayments,
   listSubscriptionPlans: () => listSubscriptionPlans,
   listSupabaseAdmins: () => listSupabaseAdmins,
   listSupabaseUsers: () => listSupabaseUsers,
+  listSuperAdminUsers: () => listSuperAdminUsers,
   listUnlinkedMembers: () => listUnlinkedMembers,
   loadLocalAuditLogs: () => loadLocalAuditLogs,
   loadLocalOfficePlans: () => loadLocalOfficePlans,
+  loadLocalPayments: () => loadLocalPayments,
   loadLocalPlans: () => loadLocalPlans,
   loadLocalPlatformSettings: () => loadLocalPlatformSettings,
   loadLocalUsers: () => loadLocalUsers,
   recordAuditLog: () => recordAuditLog,
   resendOfficeMemberActivation: () => resendOfficeMemberActivation,
   resetAdminAiUsage: () => resetAdminAiUsage,
+  resetInMemoryPayments: () => resetInMemoryPayments,
   resetUserAiUsage: () => resetUserAiUsage,
   revokeUserSessions: () => revokeUserSessions,
   saveFallbackActivationToken: () => saveFallbackActivationToken,
   saveLocalAuditLogs: () => saveLocalAuditLogs,
   saveLocalOfficePlans: () => saveLocalOfficePlans,
+  saveLocalPayments: () => saveLocalPayments,
   saveLocalPlans: () => saveLocalPlans,
   saveLocalPlatformSettings: () => saveLocalPlatformSettings,
   saveLocalUsers: () => saveLocalUsers,
@@ -57140,6 +57148,7 @@ __export(supabase_service_exports, {
   toggleUserStatus: () => toggleUserStatus,
   updateOfficeMember: () => updateOfficeMember,
   updateOfficeMemberQuota: () => updateOfficeMemberQuota,
+  updatePayment: () => updatePayment,
   updatePlatformSettings: () => updatePlatformSettings,
   updateSubscriptionPlan: () => updateSubscriptionPlan,
   updateSupabaseAdmin: () => updateSupabaseAdmin,
@@ -57452,6 +57461,42 @@ function saveLocalPlatformSettings(settings) {
     } catch {
     }
   }
+}
+function loadLocalPayments() {
+  if (_localPaymentsCache) {
+    return _localPaymentsCache;
+  }
+  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
+  for (const p of paths) {
+    try {
+      if ((0, import_fs3.existsSync)(p)) {
+        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          _localPaymentsCache = list;
+          return list;
+        }
+      }
+    } catch {
+    }
+  }
+  _localPaymentsCache = [];
+  return _localPaymentsCache;
+}
+function saveLocalPayments(payments) {
+  _localPaymentsCache = payments;
+  const content = JSON.stringify(payments, null, 2);
+  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
+  for (const p of paths) {
+    try {
+      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+    } catch {
+    }
+  }
+}
+function resetInMemoryPayments() {
+  _localPaymentsCache = [];
+  saveLocalPayments([]);
 }
 function getSupabaseClient() {
   if (!isSupabaseConfigured()) {
@@ -58763,7 +58808,11 @@ async function setupFirstSuperAdmin(input) {
   });
 }
 async function getSuperAdminOverview() {
-  const admins = await listSupabaseAdmins();
+  const [admins, allPayments, plans] = await Promise.all([
+    listSupabaseAdmins(),
+    listPayments(),
+    listSubscriptionPlans()
+  ]);
   const now = /* @__PURE__ */ new Date();
   const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   let activeCount = 0;
@@ -58771,6 +58820,9 @@ async function getSuperAdminOverview() {
   let suspendedCount = 0;
   let totalAiUsage = 0;
   let totalAiQuota = 0;
+  let newOfficesThisMonth = 0;
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
   const enrichedAdmins = admins.map((admin) => {
     totalAiUsage += Number(admin.ai_usage_count) || 0;
     if (admin.ai_quota_limit && admin.ai_quota_limit > 0) {
@@ -58779,6 +58831,12 @@ async function getSuperAdminOverview() {
     const isSuspended = admin.status === "suspended";
     if (isSuspended) {
       suspendedCount++;
+    }
+    if (admin.created_at) {
+      const created = new Date(admin.created_at);
+      if (created.getFullYear() === currentYear && created.getMonth() === currentMonth) {
+        newOfficesThisMonth++;
+      }
     }
     let daysLeft = null;
     let isExpiringSoon = false;
@@ -58807,10 +58865,89 @@ async function getSuperAdminOverview() {
       plan_name: admin.plan?.name || (admin.plan_tier === "pro" ? "\u0628\u0631\u0648 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629 (Pro)" : "\u0628\u0644\u0633 (Plus)"),
       subscription_end_date: admin.subscription_end_date || null,
       days_left: daysLeft,
-      sortScore: daysLeft !== null ? daysLeft : 999999
+      sortScore: daysLeft !== null ? daysLeft : 999999,
+      created_at: admin.created_at,
+      member_count: admin.member_count || 0
     };
   });
-  const expiringSoonest = enrichedAdmins.filter((a) => a.subscription_end_date !== null).sort((a, b) => (a.sortScore ?? 999999) - (b.sortScore ?? 999999)).slice(0, 5).map(({ sortScore, ...rest }) => rest);
+  const expiringSoonest = enrichedAdmins.filter((a) => a.subscription_end_date !== null).sort((a, b) => (a.sortScore ?? 999999) - (b.sortScore ?? 999999)).slice(0, 5).map(({ sortScore, member_count, ...rest }) => rest);
+  const paidPayments = allPayments.filter((p) => p.status === "paid");
+  const pendingPayments = allPayments.filter((p) => p.status === "pending");
+  const totalPaidRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPendingAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+  const MONTH_NAMES_AR = [
+    "\u064A\u0646\u0627\u064A\u0631",
+    "\u0641\u0628\u0631\u0627\u064A\u0631",
+    "\u0645\u0627\u0631\u0633",
+    "\u0623\u0628\u0631\u064A\u0644",
+    "\u0645\u0627\u064A\u0648",
+    "\u064A\u0648\u0646\u064A\u0648",
+    "\u064A\u0648\u0644\u064A\u0648",
+    "\u0623\u063A\u0633\u0637\u0633",
+    "\u0633\u0628\u062A\u0645\u0628\u0631",
+    "\u0623\u0643\u062A\u0648\u0628\u0631",
+    "\u0646\u0648\u0641\u0645\u0628\u0631",
+    "\u062F\u064A\u0633\u0645\u0628\u0631"
+  ];
+  const monthlyTrend = [];
+  for (let i2 = 5; i2 >= 0; i2--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i2, 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const monthKey = `${yyyy}-${mm}`;
+    const monthLabel = `${MONTH_NAMES_AR[d.getMonth()]} ${yyyy}`;
+    const monthPaid = paidPayments.filter((p) => p.payment_date && p.payment_date.startsWith(monthKey));
+    const rev = monthPaid.reduce((sum, p) => sum + p.amount, 0);
+    monthlyTrend.push({
+      month: monthKey,
+      monthLabel,
+      revenue: rev,
+      count: monthPaid.length
+    });
+  }
+  const curRev = monthlyTrend[monthlyTrend.length - 1]?.revenue || 0;
+  const prevRev = monthlyTrend[monthlyTrend.length - 2]?.revenue || 0;
+  let momChange = 0;
+  if (prevRev > 0) {
+    momChange = Math.round((curRev - prevRev) / prevRev * 100);
+  } else if (curRev > 0) {
+    momChange = 100;
+  }
+  const planColors = ["#C99732", "#0B2A4A", "#3F4A2C", "#E8C477", "#64748B"];
+  const subscriptionDistribution = plans.map((plan, idx) => {
+    const count = admins.filter(
+      (a) => a.plan_id === plan.id || a.plan_tier === plan.slug
+    ).length;
+    return {
+      planId: plan.id,
+      planName: plan.name,
+      count,
+      fill: planColors[idx % planColors.length]
+    };
+  });
+  const assignedCount = subscriptionDistribution.reduce((sum, d) => sum + d.count, 0);
+  if (admins.length > assignedCount) {
+    subscriptionDistribution.push({
+      planId: "unassigned",
+      planName: "\u0628\u062F\u0648\u0646 \u0628\u0627\u0642\u0629",
+      count: admins.length - assignedCount,
+      fill: "#94A3B8"
+    });
+  }
+  const latestSubscriptions = enrichedAdmins.filter((a) => a.subscription_end_date).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 5).map((a) => ({
+    id: a.id,
+    office_name: a.office_name,
+    plan_name: a.plan_name || "\u0628\u0644\u0633",
+    subscription_end_date: a.subscription_end_date,
+    status: a.status
+  }));
+  const latestOffices = enrichedAdmins.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 5).map((a) => ({
+    id: a.id,
+    office_name: a.office_name,
+    member_count: a.member_count,
+    created_at: a.created_at || (/* @__PURE__ */ new Date()).toISOString(),
+    status: a.status
+  }));
   return {
     totalOffices: admins.length,
     activeSubscriptions: activeCount,
@@ -58823,8 +58960,23 @@ async function getSuperAdminOverview() {
       expiring_soon_count: expiringSoonCount,
       suspended_count: suspendedCount,
       total_ai_usage: totalAiUsage,
-      total_ai_quota: totalAiQuota
+      total_ai_quota: totalAiQuota,
+      total_revenue: totalPaidRevenue,
+      revenue_mom_change: momChange,
+      pending_payments_count: pendingPayments.length,
+      pending_payments_amount: totalPendingAmount,
+      new_offices_this_month: newOfficesThisMonth
     },
+    revenue: {
+      total_paid: totalPaidRevenue,
+      month_over_month_change: momChange,
+      pending_count: pendingPayments.length,
+      pending_amount: totalPendingAmount,
+      monthly_trend: monthlyTrend
+    },
+    subscription_distribution: subscriptionDistribution,
+    latest_subscriptions: latestSubscriptions,
+    latest_offices: latestOffices,
     expiring_soonest: expiringSoonest
   };
 }
@@ -58964,6 +59116,282 @@ async function updatePlatformSettings(updates) {
   }
   saveLocalPlatformSettings(merged);
   return merged;
+}
+async function checkHasPaymentsTable(client) {
+  try {
+    const { error } = await client.from("payments").select("id").limit(1);
+    return !error || error.code !== "42P01";
+  } catch {
+    return false;
+  }
+}
+async function createPayment(data) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const paymentDate = data.payment_date || now.split("T")[0];
+  const newPayment = {
+    id: `pay-${import_crypto2.default.randomUUID()}`,
+    office_id: data.office_id,
+    amount: Number(data.amount) || 0,
+    currency: data.currency?.trim() || "SAR",
+    payment_date: paymentDate,
+    method: data.method || "bank_transfer",
+    status: data.status || "paid",
+    notes: data.notes?.trim() || null,
+    recorded_by: data.recorded_by || null,
+    created_at: now,
+    updated_at: now
+  };
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPaymentsTable(client);
+      if (hasTable) {
+        const { data: inserted, error } = await client.from("payments").insert([
+          {
+            id: newPayment.id,
+            office_id: newPayment.office_id,
+            amount: newPayment.amount,
+            currency: newPayment.currency,
+            payment_date: newPayment.payment_date,
+            method: newPayment.method,
+            status: newPayment.status,
+            notes: newPayment.notes,
+            recorded_by: newPayment.recorded_by,
+            created_at: newPayment.created_at,
+            updated_at: newPayment.updated_at
+          }
+        ]).select().single();
+        if (!error && inserted) {
+          newPayment.id = inserted.id;
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase payments insert failed, persisting locally");
+    }
+  }
+  const local = loadLocalPayments();
+  local.unshift(newPayment);
+  saveLocalPayments(local);
+  return newPayment;
+}
+async function updatePayment(id, updates) {
+  const local = loadLocalPayments();
+  const idx = local.findIndex((p) => p.id === id);
+  if (idx === -1) {
+    return null;
+  }
+  const current = local[idx];
+  const updated = {
+    ...current,
+    ...updates,
+    amount: updates.amount !== void 0 ? Number(updates.amount) : current.amount,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const hasTable = await checkHasPaymentsTable(client);
+      if (hasTable) {
+        await client.from("payments").update({
+          ...updates.amount !== void 0 ? { amount: updated.amount } : {},
+          ...updates.currency !== void 0 ? { currency: updated.currency } : {},
+          ...updates.payment_date !== void 0 ? { payment_date: updated.payment_date } : {},
+          ...updates.method !== void 0 ? { method: updated.method } : {},
+          ...updates.status !== void 0 ? { status: updated.status } : {},
+          ...updates.notes !== void 0 ? { notes: updated.notes } : {},
+          updated_at: updated.updated_at
+        }).eq("id", id);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase update payments failed, updating local");
+    }
+  }
+  local[idx] = updated;
+  saveLocalPayments(local);
+  return updated;
+}
+async function listPayments(options) {
+  const admins = await listSupabaseAdmins();
+  const adminMap = new Map(admins.map((a) => [a.id, a]));
+  const client = getSupabaseClient();
+  let items = [];
+  if (client) {
+    try {
+      const hasTable = await checkHasPaymentsTable(client);
+      if (hasTable) {
+        let q = client.from("payments").select("*").order("created_at", { ascending: false });
+        if (options?.office_id) {
+          q = q.eq("office_id", options.office_id);
+        }
+        if (options?.status) {
+          q = q.eq("status", options.status);
+        }
+        const { data, error } = await q;
+        if (!error && Array.isArray(data)) {
+          items = data.map((d) => ({
+            id: d.id,
+            office_id: d.office_id,
+            amount: Number(d.amount) || 0,
+            currency: d.currency || "SAR",
+            payment_date: d.payment_date,
+            method: d.method || "bank_transfer",
+            status: d.status || "paid",
+            notes: d.notes || null,
+            recorded_by: d.recorded_by || null,
+            created_at: d.created_at,
+            updated_at: d.updated_at
+          }));
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listPayments failed, reading local");
+    }
+  }
+  if (items.length === 0) {
+    const local = loadLocalPayments();
+    items = local.filter((p) => {
+      if (options?.office_id && p.office_id !== options.office_id) return false;
+      if (options?.status && p.status !== options.status) return false;
+      return true;
+    });
+  }
+  return items.map((p) => {
+    const office = adminMap.get(p.office_id);
+    return {
+      ...p,
+      office_name: office ? office.office_name || office.display_name || office.username : "\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"
+    };
+  });
+}
+async function getPaymentById(id) {
+  const payments = await listPayments();
+  return payments.find((p) => p.id === id) || null;
+}
+async function listSuperAdminUsers() {
+  const allUsers = await listSupabaseUsers();
+  const admins = allUsers.filter((u) => u.role === "admin");
+  const adminMap = new Map(admins.map((a) => [a.id, a]));
+  return allUsers.map((u) => {
+    let officeId = null;
+    let officeName = "\u2014";
+    if (u.role === "admin") {
+      officeId = u.id;
+      officeName = u.office_name || u.display_name || u.username;
+    } else if (u.role === "staff") {
+      officeId = u.admin_id || null;
+      if (u.admin_id && adminMap.has(u.admin_id)) {
+        const parent = adminMap.get(u.admin_id);
+        officeName = parent.office_name || parent.display_name || parent.username;
+      } else {
+        officeName = "\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";
+      }
+    } else if (u.role === "super_admin") {
+      officeName = "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0635\u0629 \u0627\u0644\u0639\u0627\u0645\u0629";
+    }
+    return {
+      id: u.id,
+      username: u.username,
+      email: u.email || null,
+      role: u.role,
+      status: u.status || "active",
+      display_name: u.display_name || null,
+      phone: u.phone || null,
+      office_id: officeId,
+      office_name: officeName,
+      created_at: u.created_at,
+      last_login: u.last_login || u.last_sign_in_at || null
+    };
+  });
+}
+async function getSuperAdminReportsOverview() {
+  const [allPayments, allUsers, admins, plans] = await Promise.all([
+    listPayments(),
+    listSupabaseUsers(),
+    listSupabaseAdmins(),
+    listSubscriptionPlans()
+  ]);
+  const paidPayments = allPayments.filter((p) => p.status === "paid");
+  const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+  const now = /* @__PURE__ */ new Date();
+  const MONTH_NAMES_AR = [
+    "\u064A\u0646\u0627\u064A\u0631",
+    "\u0641\u0628\u0631\u0627\u064A\u0631",
+    "\u0645\u0627\u0631\u0633",
+    "\u0623\u0628\u0631\u064A\u0644",
+    "\u0645\u0627\u064A\u0648",
+    "\u064A\u0648\u0646\u064A\u0648",
+    "\u064A\u0648\u0644\u064A\u0648",
+    "\u0623\u063A\u0633\u0637\u0633",
+    "\u0633\u0628\u062A\u0645\u0628\u0631",
+    "\u0623\u0643\u062A\u0648\u0628\u0631",
+    "\u0646\u0648\u0641\u0645\u0628\u0631",
+    "\u062F\u064A\u0633\u0645\u0628\u0631"
+  ];
+  const monthlyRevenueTrend = [];
+  for (let i2 = 5; i2 >= 0; i2--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i2, 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const monthKey = `${yyyy}-${mm}`;
+    const monthLabel = `${MONTH_NAMES_AR[d.getMonth()]} ${yyyy}`;
+    const monthPayments = paidPayments.filter(
+      (p) => p.payment_date && p.payment_date.startsWith(monthKey)
+    );
+    const rev = monthPayments.reduce((sum, p) => sum + p.amount, 0);
+    monthlyRevenueTrend.push({
+      month: monthKey,
+      monthLabel,
+      revenue: rev,
+      count: monthPayments.length
+    });
+  }
+  const currentMonthRev = monthlyRevenueTrend[monthlyRevenueTrend.length - 1]?.revenue || 0;
+  const prevMonthRev = monthlyRevenueTrend[monthlyRevenueTrend.length - 2]?.revenue || 0;
+  let revenueMonthOverMonthChange = 0;
+  if (prevMonthRev > 0) {
+    revenueMonthOverMonthChange = Math.round(
+      (currentMonthRev - prevMonthRev) / prevMonthRev * 100
+    );
+  } else if (currentMonthRev > 0) {
+    revenueMonthOverMonthChange = 100;
+  }
+  const activeSubs = admins.filter((a) => {
+    if (a.status === "suspended") return false;
+    if (a.subscription_end_date) {
+      return new Date(a.subscription_end_date).getTime() >= now.getTime();
+    }
+    return true;
+  }).length;
+  const planColors = ["#C99732", "#0B2A4A", "#3F4A2C", "#E8C477", "#64748B"];
+  const subscriptionDistribution = plans.map((plan, idx) => {
+    const count = admins.filter(
+      (a) => a.plan_id === plan.id || a.plan_tier === plan.slug
+    ).length;
+    return {
+      planId: plan.id,
+      planName: plan.name,
+      count,
+      fill: planColors[idx % planColors.length]
+    };
+  });
+  const assignedCount = subscriptionDistribution.reduce((sum, d) => sum + d.count, 0);
+  if (admins.length > assignedCount) {
+    subscriptionDistribution.push({
+      planId: "unassigned",
+      planName: "\u0628\u062F\u0648\u0646 \u0628\u0627\u0642\u0629",
+      count: admins.length - assignedCount,
+      fill: "#94A3B8"
+    });
+  }
+  return {
+    totalRevenue,
+    revenueMonthOverMonthChange,
+    activeSubscriptions: activeSubs,
+    totalUsers: allUsers.length,
+    totalOffices: admins.length,
+    monthlyRevenueTrend,
+    subscriptionDistribution
+  };
 }
 async function listOfficeMembers(adminId) {
   const allUsers = await listSupabaseUsers();
@@ -59970,7 +60398,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, DEFAULT_SUBSCRIPTION_PLANS, LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE, _localPlansCache, LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE, _localOfficePlansCache, DEFAULT_PLATFORM_SETTINGS, LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE, _localAuditLogCache, LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE, _localPlatformSettingsCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_fs3, import_path3, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, DEFAULT_SUBSCRIPTION_PLANS, LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE, _localPlansCache, LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE, _localOfficePlansCache, DEFAULT_PLATFORM_SETTINGS, LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE, _localAuditLogCache, LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE, _localPlatformSettingsCache, LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE, _localPaymentsCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -60084,6 +60512,10 @@ var init_supabase_service = __esm({
     ALT_LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path3.resolve)(process.cwd(), "local_platform_settings.json");
     TMP_LOCAL_PLATFORM_SETTINGS_FILE = "/tmp/local_platform_settings.json";
     _localPlatformSettingsCache = null;
+    LOCAL_PAYMENTS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_payments.json");
+    ALT_LOCAL_PAYMENTS_FILE = (0, import_path3.resolve)(process.cwd(), "local_payments.json");
+    TMP_LOCAL_PAYMENTS_FILE = "/tmp/local_payments.json";
+    _localPaymentsCache = null;
     officeAiLocks = /* @__PURE__ */ new Map();
     hasPhoneColumnCache = null;
     lastPhoneCheck = 0;
@@ -853593,6 +854025,110 @@ router13.post("/super-admin/link-member", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to link member to admin");
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u0631\u0628\u0637 \u0627\u0644\u0639\u0636\u0648 \u0628\u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+router13.get("/super-admin/users", async (_req, res) => {
+  try {
+    const users = await listSuperAdminUsers();
+    res.json(users);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch super admin users");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646." });
+  }
+});
+router13.get("/super-admin/payments", async (req, res) => {
+  try {
+    const office_id = typeof req.query.office_id === "string" ? req.query.office_id.trim() : void 0;
+    const status = typeof req.query.status === "string" ? req.query.status.trim() : void 0;
+    const payments = await listPayments({ office_id, status });
+    res.json(payments);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch payments");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062F\u0641\u0648\u0639\u0627\u062A." });
+  }
+});
+router13.post("/super-admin/payments", async (req, res) => {
+  try {
+    const { office_id, amount, currency, payment_date, method, status, notes } = req.body;
+    if (!office_id) {
+      res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0637\u0644\u0648\u0628." });
+      return;
+    }
+    if (amount === void 0 || amount === null || isNaN(Number(amount)) || Number(amount) <= 0) {
+      res.status(400).json({ error: "\u0627\u0644\u0645\u0628\u0644\u063A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+    const recorded_by = req.user?.id || req.authUser?.userId || null;
+    const payment = await createPayment({
+      office_id,
+      amount: Number(amount),
+      currency,
+      payment_date,
+      method,
+      status,
+      notes,
+      recorded_by
+    });
+    await recordAuditLog({
+      actor_id: req.user?.id || req.authUser?.userId || "super_admin",
+      actor_username: req.user?.username || req.authUser?.username || "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629",
+      action: "create_payment",
+      target_office_id: office_id,
+      details: {
+        payment_id: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        method: payment.method,
+        payment_date: payment.payment_date
+      }
+    });
+    res.status(201).json(payment);
+  } catch (err) {
+    logger.error({ err }, "Failed to create payment");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u0641\u0639\u0629." });
+  }
+});
+router13.patch("/super-admin/payments/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status, notes, amount, method, payment_date } = req.body;
+    const updated = await updatePayment(id, {
+      status,
+      notes,
+      amount: amount !== void 0 ? Number(amount) : void 0,
+      method,
+      payment_date
+    });
+    if (!updated) {
+      res.status(404).json({ error: "\u0633\u062C\u0644 \u0627\u0644\u062F\u0641\u0639\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
+      return;
+    }
+    await recordAuditLog({
+      actor_id: req.user?.id || req.authUser?.userId || "super_admin",
+      actor_username: req.user?.username || req.authUser?.username || "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629",
+      action: "update_payment",
+      target_office_id: updated.office_id,
+      details: {
+        payment_id: id,
+        new_status: updated.status,
+        notes: updated.notes,
+        amount: updated.amount
+      }
+    });
+    res.json(updated);
+  } catch (err) {
+    logger.error({ err }, "Failed to update payment");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062F\u0641\u0639\u0629." });
+  }
+});
+router13.get("/super-admin/reports/overview", async (_req, res) => {
+  try {
+    const reports = await getSuperAdminReportsOverview();
+    res.json(reports);
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch super admin reports overview");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0645\u0644\u062E\u0635 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631." });
   }
 });
 var super_admin_default = router13;

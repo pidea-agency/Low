@@ -32,7 +32,31 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  TrendingUp,
+  DollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
+  Receipt,
+  FileSpreadsheet,
+  Eye,
+  Mail,
+  Phone,
+  FileText,
+  Building,
+  UserCheck,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+} from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -106,11 +130,96 @@ export interface UnlinkedMember {
   created_at?: string;
 }
 
+export interface SuperAdminUser {
+  id: string;
+  username: string;
+  display_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  role: 'admin' | 'staff' | 'super_admin';
+  status: 'active' | 'suspended';
+  office_id?: string | null;
+  office_name?: string | null;
+  created_at?: string;
+  last_login?: string | null;
+}
+
+export interface PaymentItem {
+  id: string;
+  office_id: string;
+  office_name?: string;
+  amount: number;
+  currency: string;
+  payment_date: string;
+  method: 'bank_transfer' | 'cash' | 'credit_card' | 'check' | 'other';
+  status: 'paid' | 'pending' | 'overdue';
+  notes?: string | null;
+  recorded_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeneralReportsData {
+  totalRevenue: number;
+  revenueMonthOverMonthChange: number;
+  activeSubscriptions: number;
+  totalUsers: number;
+  totalOffices: number;
+  monthlyRevenueTrend: Array<{ month: string; amount: number; count: number }>;
+  subscriptionDistribution: Array<{
+    plan_id: string;
+    plan_name: string;
+    slug: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
 export interface OverviewData {
   totalOffices: number;
   activeSubscriptions: number;
   expiringIn7Days: number;
   totalAiUsage: number;
+  revenue?: {
+    total: number;
+    currency: string;
+    mom_change: number;
+    monthly_trend: Array<{ month: string; amount: number; count: number }>;
+  };
+  subscription_distribution?: Array<{
+    plan_id: string;
+    plan_name: string;
+    slug?: string;
+    count: number;
+    percentage: number;
+  }>;
+  latest_subscriptions?: Array<{
+    id: string;
+    office_name: string;
+    username: string;
+    plan_name: string;
+    end_date: string | null;
+    status: string;
+    created_at: string;
+  }>;
+  latest_offices?: Array<{
+    id: string;
+    office_name: string;
+    username: string;
+    created_at: string;
+    status: string;
+  }>;
+  stats?: {
+    total_offices: number;
+    active_subscriptions: number;
+    expiring_soon_7d: number;
+    total_ai_usage: number;
+    total_revenue: number;
+    revenue_mom_change: number;
+    pending_payments_count: number;
+    pending_payments_amount: number;
+    new_offices_this_month: number;
+  };
   expiringSoonest: Array<{
     id: string;
     office_name: string;
@@ -122,6 +231,53 @@ export interface OverviewData {
     status: string;
   }>;
 }
+
+const CHART_PALETTE = ['#C99732', '#0B2A4A', '#2563EB', '#10B981', '#8B5CF6', '#F59E0B', '#64748B'];
+
+function formatPaymentMethodLabel(method?: string): string {
+  switch (method) {
+    case 'bank_transfer': return 'تحويل بنكي';
+    case 'cash': return 'نقدي';
+    case 'credit_card': return 'بطاقة ائتمانية';
+    case 'check': return 'شيك مصدق';
+    default: return 'أخرى';
+  }
+}
+
+function formatPaymentStatusBadge(status: string): { label: string; className: string } {
+  switch (status) {
+    case 'paid':
+      return { label: 'مدفوع', className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' };
+    case 'pending':
+      return { label: 'قيد الانتظار', className: 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40' };
+    case 'overdue':
+      return { label: 'متأخر', className: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' };
+    default:
+      return { label: status, className: 'bg-muted text-muted-foreground border-border' };
+  }
+}
+
+const ChartCustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-xl border border-[#D6E0EC] bg-white dark:bg-[#071D34] p-3 shadow-lg text-xs font-sans" dir="rtl">
+        {label && <p className="font-bold mb-1 text-[#10233F] dark:text-white">{label}</p>}
+        {payload.map((entry: any, index: number) => (
+          <div key={`chart-tt-${index}`} className="flex items-center justify-between gap-4 py-0.5">
+            <span className="flex items-center gap-1.5 font-medium" style={{ color: entry.color || entry.fill }}>
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color || entry.fill }} />
+              {entry.name}:
+            </span>
+            <span className="font-mono font-bold text-[#10233F] dark:text-white tabular-nums">
+              {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export interface AuditLogItem {
   id: string;
@@ -303,12 +459,55 @@ export default function SuperAdminPage() {
   const logoutMutation = useLogout();
   const { theme, setTheme } = useTheme();
 
-  // Sidebar section state
-  const [currentSection, setCurrentSection] = useState<'overview' | 'offices' | 'audit' | 'settings'>('overview');
+  // Sidebar section state (7 reference sections + audit)
+  const [currentSection, setCurrentSection] = useState<
+    'overview' | 'offices' | 'users' | 'subscriptions' | 'payments' | 'reports' | 'settings' | 'audit'
+  >('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Sub-tabs for Offices section
-  const [activeTab, setActiveTab] = useState<'admins' | 'plans' | 'unlinked'>('admins');
+  // Sub-tabs for Offices section (plans moved to top-level subscriptions section)
+  const [activeTab, setActiveTab] = useState<'admins' | 'unlinked'>('admins');
+
+  // Users section state
+  const [usersList, setUsersList] = useState<SuperAdminUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [usersSearchQuery, setUsersSearchQuery] = useState('');
+  const [usersRoleFilter, setUsersRoleFilter] = useState<'all' | 'admin' | 'staff'>('all');
+  const [usersStatusFilter, setUsersStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
+
+  // Payments section state
+  const [paymentsList, setPaymentsList] = useState<PaymentItem[]>([]);
+  const [isLoadingPayments, setIsLoadingPayments] = useState(false);
+  const [paymentOfficeFilter, setPaymentOfficeFilter] = useState<string>('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
+  const [paymentSearchQuery, setPaymentSearchQuery] = useState('');
+  const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
+  const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentItem | null>(null);
+  const [paymentFormData, setPaymentFormData] = useState<{
+    office_id: string;
+    amount: string | number;
+    currency: string;
+    payment_date: string;
+    method: string;
+    status: 'paid' | 'pending' | 'overdue';
+    notes: string;
+  }>({
+    office_id: '',
+    amount: '',
+    currency: 'SAR',
+    payment_date: new Date().toISOString().split('T')[0],
+    method: 'bank_transfer',
+    status: 'paid',
+    notes: '',
+  });
+  const [editPaymentStatus, setEditPaymentStatus] = useState<'paid' | 'pending' | 'overdue'>('paid');
+  const [editPaymentNotes, setEditPaymentNotes] = useState('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+
+  // General Reports section state
+  const [reportsData, setReportsData] = useState<GeneralReportsData | null>(null);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
 
   // Offices state
   const [admins, setAdmins] = useState<OfficeAdmin[]>([]);
@@ -532,24 +731,194 @@ export default function SuperAdminPage() {
     } catch {}
   };
 
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const res = await fetch('/api/super-admin/users');
+      if (res.ok) {
+        const data = await res.json();
+        setUsersList(data.users || []);
+      }
+    } catch {
+      toast({
+        title: 'خطأ',
+        description: 'فشل جلب قائمة المستخدمين.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const fetchPayments = async (officeId?: string, status?: string) => {
+    setIsLoadingPayments(true);
+    try {
+      const url = new URL('/api/super-admin/payments', window.location.origin);
+      const targetOffice = officeId !== undefined ? officeId : paymentOfficeFilter;
+      const targetStatus = status !== undefined ? status : paymentStatusFilter;
+      if (targetOffice && targetOffice !== 'all') {
+        url.searchParams.set('office_id', targetOffice);
+      }
+      if (targetStatus && targetStatus !== 'all') {
+        url.searchParams.set('status', targetStatus);
+      }
+      const res = await fetch(url.pathname + url.search);
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentsList(data.payments || []);
+      }
+    } catch {
+      toast({
+        title: 'خطأ',
+        description: 'فشل جلب سجل المدفوعات والفواتير.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingPayments(false);
+    }
+  };
+
+  const handleCreatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentFormData.office_id || !paymentFormData.amount || Number(paymentFormData.amount) <= 0) {
+      toast({
+        title: 'تنبيه',
+        description: 'يرجى اختيار مكتب المحاماة وتحديد مبلغ سداد صحيح.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsSubmittingPayment(true);
+    try {
+      const res = await fetch('/api/super-admin/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          office_id: paymentFormData.office_id,
+          amount: Number(paymentFormData.amount),
+          currency: paymentFormData.currency || 'SAR',
+          payment_date: paymentFormData.payment_date,
+          method: paymentFormData.method,
+          status: paymentFormData.status,
+          notes: paymentFormData.notes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'فشل تسجيل الدفعة.');
+      }
+      toast({
+        title: 'تم بنجاح',
+        description: 'تم تسجيل الدفعة المالية بنجاح.',
+      });
+      setIsAddPaymentModalOpen(false);
+      setPaymentFormData({
+        office_id: '',
+        amount: '',
+        currency: 'SAR',
+        payment_date: new Date().toISOString().split('T')[0],
+        method: 'bank_transfer',
+        status: 'paid',
+        notes: '',
+      });
+      fetchPayments();
+      fetchOverview();
+    } catch (err: any) {
+      toast({
+        title: 'خطأ',
+        description: err.message || 'فشل تسجيل الدفعة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
+
+  const handleUpdatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPayment) return;
+    setIsSubmittingPayment(true);
+    try {
+      const res = await fetch(`/api/super-admin/payments/${selectedPayment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: editPaymentStatus,
+          notes: editPaymentNotes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'فشل تحديث بيانات الدفعة.');
+      }
+      toast({
+        title: 'تم بنجاح',
+        description: 'تم تحديث حالة الدفعة والملاحظات.',
+      });
+      setIsEditPaymentModalOpen(false);
+      setSelectedPayment(null);
+      fetchPayments();
+      fetchOverview();
+    } catch (err: any) {
+      toast({
+        title: 'خطأ',
+        description: err.message || 'فشل تحديث بيانات الدفعة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
+
+  const fetchReports = async () => {
+    setIsLoadingReports(true);
+    try {
+      const res = await fetch('/api/super-admin/reports/overview');
+      if (res.ok) {
+        const data = await res.json();
+        setReportsData(data);
+      }
+    } catch {
+      toast({
+        title: 'خطأ',
+        description: 'فشل جلب التقارير العامة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingReports(false);
+    }
+  };
+
   useEffect(() => {
     fetchAdmins();
     fetchPlans();
     fetchUnlinked();
     fetchOverview();
+    fetchUsers();
+    fetchPayments();
   }, []);
 
   useEffect(() => {
     if (currentSection === 'overview') {
       fetchOverview();
-    } else if (currentSection === 'audit') {
-      fetchAuditLogs(1, auditOfficeFilter);
-    } else if (currentSection === 'settings') {
-      fetchSettings();
     } else if (currentSection === 'offices') {
       fetchAdmins();
       fetchPlans();
       fetchUnlinked();
+    } else if (currentSection === 'users') {
+      fetchUsers();
+    } else if (currentSection === 'subscriptions') {
+      fetchPlans();
+      fetchAdmins();
+    } else if (currentSection === 'payments') {
+      fetchPayments();
+      fetchAdmins();
+    } else if (currentSection === 'reports') {
+      fetchReports();
+    } else if (currentSection === 'audit') {
+      fetchAuditLogs(1, auditOfficeFilter);
+    } else if (currentSection === 'settings') {
+      fetchSettings();
     }
   }, [currentSection]);
 
@@ -1066,27 +1435,52 @@ export default function SuperAdminPage() {
     return true;
   });
 
+  const pendingPaymentsCount = paymentsList.filter((p) => p.status === 'pending').length;
+
   const navItems = [
     {
       id: 'overview' as const,
-      name: 'نظرة عامة',
+      name: 'لوحة التحكم',
       icon: BarChart3,
     },
     {
       id: 'offices' as const,
-      name: 'المكاتب والاشتراكات',
+      name: 'المؤسسات والمكاتب',
       icon: Building2,
       badge: admins.length,
     },
     {
-      id: 'audit' as const,
-      name: 'سجل الأحداث',
-      icon: Clock,
+      id: 'users' as const,
+      name: 'المستخدمون',
+      icon: Users,
+      badge: usersList.length > 0 ? usersList.length : undefined,
+    },
+    {
+      id: 'subscriptions' as const,
+      name: 'الاشتراكات والباقات',
+      icon: Crown,
+      badge: plans.length > 0 ? plans.length : undefined,
+    },
+    {
+      id: 'payments' as const,
+      name: 'المدفوعات والفواتير',
+      icon: CreditCard,
+      badge: pendingPaymentsCount > 0 ? pendingPaymentsCount : undefined,
+    },
+    {
+      id: 'reports' as const,
+      name: 'التقارير العامة',
+      icon: TrendingUp,
     },
     {
       id: 'settings' as const,
       name: 'الإعدادات العامة',
       icon: SlidersHorizontal,
+    },
+    {
+      id: 'audit' as const,
+      name: 'سجل الأحداث',
+      icon: Clock,
     },
   ];
 
@@ -1255,17 +1649,17 @@ export default function SuperAdminPage() {
             {currentSection === 'overview' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border border-border p-5 rounded-2xl shadow-xs">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[#C99732]">
                       <BarChart3 className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-                        نظرة عامة على المنظومة
+                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                        لوحة التحكم الرئيسية
                       </h1>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        مؤشرات حيوية وإحصاءات الأداء لجميع مكاتب المحاماة، باقات الاشتراك، واستهلاك الذكاء الاصطناعي
+                      <p className="text-xs text-[#64748B] mt-0.5">
+                        مؤشرات حيوية وإحصاءات الأداء لجميع مكاتب المحاماة، باقات الاشتراك، والمدفوعات المالية
                       </p>
                     </div>
                   </div>
@@ -1273,72 +1667,258 @@ export default function SuperAdminPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={fetchOverview}
+                    onClick={() => {
+                      fetchOverview();
+                      fetchPayments();
+                      fetchUsers();
+                    }}
                     disabled={isLoadingOverview}
-                    className="gap-2 text-xs"
+                    className="gap-2 text-xs border-[#D6E0EC] hover:bg-slate-50 cursor-pointer"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isLoadingOverview ? 'animate-spin' : ''}`} />
                     تحديث المؤشرات
                   </Button>
                 </div>
 
-                {/* 4 Stat Cards */}
+                {/* 4 Top KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-3.5 shadow-xs">
-                    <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <Building2 className="w-5 h-5" />
-                    </div>
+                  {/* Revenue Card */}
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                     <div>
-                      <p className="text-xs text-muted-foreground font-semibold">إجمالي المكاتب</p>
-                      <p className="text-2xl font-black text-foreground">
-                        {overviewData?.totalOffices ?? admins.length}
+                      <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي الإيرادات المحصلة</p>
+                      <p className="text-2xl sm:text-3xl font-black text-[#10233F]">
+                        {((overviewData?.revenue?.total ?? (overviewData?.stats as any)?.total_revenue ?? 0)).toLocaleString()} ر.س
                       </p>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        {(() => {
+                          const mom = overviewData?.revenue?.mom_change ?? (overviewData?.stats as any)?.revenue_mom_change ?? 0;
+                          const isPos = mom >= 0;
+                          return (
+                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                              isPos ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                            }`}>
+                              {isPos ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                              {isPos ? `+${mom}%` : `${mom}%`} مقارنة بالشهر السابق
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                      <DollarSign className="w-6 h-6 text-[#C99732]" />
                     </div>
                   </div>
 
-                  <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-3.5 shadow-xs">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
+                  {/* Active Subscriptions */}
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                     <div>
-                      <p className="text-xs text-muted-foreground font-semibold">الاشتراكات النشطة</p>
-                      <p className="text-2xl font-black text-emerald-600">
+                      <p className="text-xs text-[#64748B] font-bold mb-1">الاشتراكات النشطة</p>
+                      <p className="text-2xl sm:text-3xl font-black text-emerald-600">
                         {overviewData?.activeSubscriptions ?? admins.filter((a) => a.status !== 'suspended' && !getSubscriptionInfo(a).isExpired).length}
                       </p>
+                      <p className="text-[11px] text-[#64748B] mt-2">
+                        من أصل {overviewData?.totalOffices ?? admins.length} مكتب مسجل
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                     </div>
                   </div>
 
-                  <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-3.5 shadow-xs">
-                    <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                      <AlertTriangle className="w-5 h-5" />
+                  {/* Total Offices */}
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي المكاتب</p>
+                      <p className="text-2xl sm:text-3xl font-black text-[#0B2A4A]">
+                        {overviewData?.totalOffices ?? admins.length}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700">
+                          +{(overviewData?.stats as any)?.new_offices_this_month ?? 0} مكتب جديد هذا الشهر
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                      <Building2 className="w-6 h-6 text-[#0B2A4A]" />
+                    </div>
+                  </div>
+
+                  {/* Pending Payments */}
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold mb-1">المدفوعات المعلقة</p>
+                      <p className="text-2xl sm:text-3xl font-black text-amber-600">
+                        {(overviewData?.stats as any)?.pending_payments_count ?? pendingPaymentsCount}
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-2">
+                        بقيمة {((overviewData?.stats as any)?.pending_payments_amount ?? paymentsList.filter(p => p.status === 'pending').reduce((s, p) => s + Number(p.amount), 0)).toLocaleString()} ر.س
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                      <CreditCard className="w-6 h-6 text-amber-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2 Charts: Revenue Trend & Plan Distribution */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  {/* Revenue Trend Area Chart (Col 7) */}
+                  <div className="lg:col-span-7 bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-black text-[#10233F]">حركة الإيرادات الشهرية</h3>
+                        <p className="text-[11px] text-[#64748B]">تطور الدفعات والإيرادات المحصلة خلال الأشهر الـ 6 الأخيرة</p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] font-bold border-[#D6E0EC] text-[#64748B]">
+                        آخر 6 أشهر
+                      </Badge>
+                    </div>
+
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={overviewData?.revenue?.monthly_trend || []}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="overviewRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#C99732" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#C99732" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                          <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}`} />
+                          <RechartsTooltip content={<ChartCustomTooltip />} />
+                          <Area
+                            type="monotone"
+                            dataKey="amount"
+                            name="الإيرادات (ر.س)"
+                            stroke="#C99732"
+                            strokeWidth={2.5}
+                            fill="url(#overviewRevenueGrad)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Plan Distribution Donut Chart (Col 5) */}
+                  <div className="lg:col-span-5 bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h3 className="text-sm font-black text-[#10233F]">توزيع الاشتراكات حسب الباقة</h3>
+                        <p className="text-[11px] text-[#64748B]">نسبة المكاتب المشتركة بكل باقة</p>
+                      </div>
+                    </div>
+
+                    <div className="relative h-48 w-full flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={overviewData?.subscription_distribution || []}
+                            dataKey="count"
+                            nameKey="plan_name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={80}
+                            paddingAngle={3}
+                          >
+                            {(overviewData?.subscription_distribution || []).map((_, idx) => (
+                              <Cell key={`cell-${idx}`} fill={CHART_PALETTE[idx % CHART_PALETTE.length]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip content={<ChartCustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-black text-[#10233F]">
+                          {overviewData?.activeSubscriptions ?? 0}
+                        </span>
+                        <span className="text-[10px] text-[#64748B] font-bold">اشتراك نشط</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-3 border-t border-[#D6E0EC]">
+                      {(overviewData?.subscription_distribution || []).map((dist, idx) => (
+                        <div key={dist.plan_id || idx} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                              style={{ backgroundColor: CHART_PALETTE[idx % CHART_PALETTE.length] }}
+                            />
+                            <span className="font-semibold text-[#10233F]">{dist.plan_name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#64748B]">{dist.count} مكتب</span>
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-mono">
+                              {dist.percentage}%
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick-Stats Panel (4 Indicators) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white border border-[#D6E0EC] p-4 rounded-2xl shadow-xs">
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <Building2 className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground font-semibold">تنتهي خلال 7 أيام</p>
-                      <p className="text-2xl font-black text-amber-600">
-                        {overviewData?.expiringIn7Days ?? admins.filter((a) => getSubscriptionInfo(a).isExpiringSoon).length}
+                      <p className="text-[11px] text-[#64748B] font-semibold">مكاتب جديدة هذا الشهر</p>
+                      <p className="text-base font-black text-[#10233F]">
+                        +{(overviewData?.stats as any)?.new_offices_this_month ?? 0}
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-3.5 shadow-xs">
-                    <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
-                      <Bot className="w-5 h-5" />
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground font-semibold">استهلاك الذكاء الاصطناعي</p>
-                      <p className="text-2xl font-black text-purple-600">
-                        {overviewData?.totalAiUsage ?? admins.reduce((acc, a) => acc + (a.ai_usage_count || 0), 0)}
+                      <p className="text-[11px] text-[#64748B] font-semibold">تنتهي خلال 7 أيام</p>
+                      <p className="text-base font-black text-amber-600">
+                        {overviewData?.expiringIn7Days ?? 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-[#64748B] font-semibold">فواتير معلقة بانتظار التحصيل</p>
+                      <p className="text-base font-black text-purple-600">
+                        {(overviewData?.stats as any)?.pending_payments_count ?? pendingPaymentsCount}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-[#64748B] font-semibold">استهلاك الذكاء الاصطناعي</p>
+                      <p className="text-base font-black text-[#10233F]">
+                        {(overviewData?.totalAiUsage ?? 0).toLocaleString()} استعلام
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Expiring Soonest Table */}
-                <div className="bg-card border border-border rounded-xl shadow-xs overflow-hidden">
-                  <div className="p-4 border-b border-border flex items-center justify-between">
+                <div className="bg-white border border-[#D6E0EC] rounded-2xl shadow-xs overflow-hidden">
+                  <div className="p-4 border-b border-[#D6E0EC] flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-amber-500" />
-                      <h2 className="text-sm font-bold text-foreground">
+                      <h2 className="text-sm font-bold text-[#10233F]">
                         أقرب 5 اشتراكات للانتهاء
                       </h2>
                     </div>
@@ -1346,7 +1926,7 @@ export default function SuperAdminPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setCurrentSection('offices')}
-                      className="text-xs text-primary hover:underline gap-1"
+                      className="text-xs text-[#0B2A4A] hover:underline gap-1 cursor-pointer"
                     >
                       عرض جميع المكاتب
                       <ChevronLeft className="w-3.5 h-3.5" />
@@ -1355,7 +1935,7 @@ export default function SuperAdminPage() {
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-right text-xs">
-                      <thead className="bg-muted/50 border-b border-border font-bold text-muted-foreground">
+                      <thead className="bg-slate-50 border-b border-[#D6E0EC] font-bold text-[#64748B]">
                         <tr>
                           <th className="p-3.5">اسم المكتب</th>
                           <th className="p-3.5">المشرف المسؤول</th>
@@ -1365,7 +1945,7 @@ export default function SuperAdminPage() {
                           <th className="p-3.5 text-center">إجراء تمديد</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border font-medium">
+                      <tbody className="divide-y divide-[#D6E0EC] font-medium text-[#10233F]">
                         {isLoadingOverview ? (
                           <tr>
                             <td colSpan={6} className="text-center p-8 text-muted-foreground">
@@ -1375,7 +1955,7 @@ export default function SuperAdminPage() {
                           </tr>
                         ) : !overviewData?.expiringSoonest || overviewData.expiringSoonest.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="text-center p-8 text-muted-foreground">
+                            <td colSpan={6} className="text-center p-8 text-[#64748B]">
                               ممتاز! لا توجد مكاتب تنتهي اشتراكاتها قريباً.
                             </td>
                           </tr>
@@ -1385,19 +1965,19 @@ export default function SuperAdminPage() {
                             const isExpiringSoon = item.days_left !== null && item.days_left >= 0 && item.days_left <= 7;
 
                             return (
-                              <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="p-3.5 font-bold text-foreground">
+                              <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                                <td className="p-3.5 font-bold text-[#10233F]">
                                   {item.office_name}
                                 </td>
-                                <td className="p-3.5 font-mono text-muted-foreground">
+                                <td className="p-3.5 font-mono text-[#64748B]">
                                   {item.username}
                                 </td>
                                 <td className="p-3.5">
-                                  <Badge variant="outline" className="font-bold text-[11px]">
+                                  <Badge variant="outline" className="font-bold text-[11px] border-[#D6E0EC]">
                                     {item.plan_name || 'بلس'}
                                   </Badge>
                                 </td>
-                                <td className="p-3.5 text-muted-foreground">
+                                <td className="p-3.5 text-[#64748B]">
                                   {formatDateDisplay(item.subscription_end_date)}
                                 </td>
                                 <td className="p-3.5">
@@ -1426,7 +2006,7 @@ export default function SuperAdminPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleQuickExtend(item.id, '1m')}
-                                      className="text-xs h-7 px-2 font-bold hover:bg-emerald-500/10 hover:text-emerald-600 border-emerald-500/30"
+                                      className="text-xs h-7 px-2 font-bold hover:bg-emerald-500/10 hover:text-emerald-600 border-emerald-500/30 cursor-pointer"
                                     >
                                       +شهر
                                     </Button>
@@ -1434,7 +2014,7 @@ export default function SuperAdminPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleQuickExtend(item.id, '1y')}
-                                      className="text-xs h-7 px-2 font-bold hover:bg-purple-500/10 hover:text-purple-600 border-purple-500/30"
+                                      className="text-xs h-7 px-2 font-bold hover:bg-purple-500/10 hover:text-purple-600 border-purple-500/30 cursor-pointer"
                                     >
                                       +سنة
                                     </Button>
@@ -1446,6 +2026,121 @@ export default function SuperAdminPage() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+
+                {/* 2 Activity Tables: Latest Subscriptions & Latest Offices */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Latest Subscriptions */}
+                  <div className="bg-white border border-[#D6E0EC] rounded-2xl shadow-xs overflow-hidden">
+                    <div className="p-4 border-b border-[#D6E0EC] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-[#C99732]" />
+                        <h3 className="text-sm font-bold text-[#10233F]">أحدث الاشتراكات والتجديدات</h3>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCurrentSection('subscriptions')}
+                        className="text-xs text-[#0B2A4A] hover:underline gap-1 cursor-pointer"
+                      >
+                        عرض الكل
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-right text-xs">
+                        <thead className="bg-slate-50 border-b border-[#D6E0EC] text-[#64748B] font-bold">
+                          <tr>
+                            <th className="p-3">المكتب</th>
+                            <th className="p-3">الباقة</th>
+                            <th className="p-3">تاريخ الانتهاء</th>
+                            <th className="p-3">الحالة</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#D6E0EC] text-[#10233F]">
+                          {(!overviewData?.latest_subscriptions || overviewData.latest_subscriptions.length === 0) ? (
+                            <tr>
+                              <td colSpan={4} className="p-6 text-center text-[#64748B]">
+                                لا توجد اشتراكات مضافة بعد
+                              </td>
+                            </tr>
+                          ) : (
+                            overviewData.latest_subscriptions.slice(0, 5).map((sub) => (
+                              <tr key={sub.id} className="hover:bg-slate-50/60">
+                                <td className="p-3 font-bold">{sub.office_name}</td>
+                                <td className="p-3">
+                                  <Badge variant="outline" className="text-[10px] font-mono border-[#D6E0EC]">
+                                    {sub.plan_name}
+                                  </Badge>
+                                </td>
+                                <td className="p-3 text-[#64748B]">{formatDateDisplay(sub.end_date)}</td>
+                                <td className="p-3">
+                                  <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                                    {sub.status === 'suspended' ? 'موقوف' : 'نشط'}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Latest Added Offices */}
+                  <div className="bg-white border border-[#D6E0EC] rounded-2xl shadow-xs overflow-hidden">
+                    <div className="p-4 border-b border-[#D6E0EC] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-[#0B2A4A]" />
+                        <h3 className="text-sm font-bold text-[#10233F]">أحدث المكاتب المنضمة</h3>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCurrentSection('offices')}
+                        className="text-xs text-[#0B2A4A] hover:underline gap-1 cursor-pointer"
+                      >
+                        عرض الكل
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-right text-xs">
+                        <thead className="bg-slate-50 border-b border-[#D6E0EC] text-[#64748B] font-bold">
+                          <tr>
+                            <th className="p-3">المكتب</th>
+                            <th className="p-3">المشرف المسؤول</th>
+                            <th className="p-3">تاريخ الانضمام</th>
+                            <th className="p-3">الحالة</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#D6E0EC] text-[#10233F]">
+                          {(!overviewData?.latest_offices || overviewData.latest_offices.length === 0) ? (
+                            <tr>
+                              <td colSpan={4} className="p-6 text-center text-[#64748B]">
+                                لا توجد مكاتب جديدة بعد
+                              </td>
+                            </tr>
+                          ) : (
+                            overviewData.latest_offices.slice(0, 5).map((off) => (
+                              <tr key={off.id} className="hover:bg-slate-50/60">
+                                <td className="p-3 font-bold">{off.office_name}</td>
+                                <td className="p-3 font-mono text-[#64748B]">{off.username}</td>
+                                <td className="p-3 text-[#64748B]">{formatDateDisplay(off.created_at)}</td>
+                                <td className="p-3">
+                                  <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                                    {off.status === 'suspended' ? 'موقوف' : 'نشط'}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1497,18 +2192,6 @@ export default function SuperAdminPage() {
                   </button>
 
                   <button
-                    onClick={() => setActiveTab('plans')}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                      activeTab === 'plans'
-                        ? 'bg-[#C99732] text-white shadow-xs'
-                        : 'text-[#64748B] hover:text-[#10233F] hover:bg-white'
-                    }`}
-                  >
-                    <Layers className="w-4 h-4" />
-                    <span>الاشتراكات والباقات ({plans.length})</span>
-                  </button>
-
-                  <button
                     onClick={() => setActiveTab('unlinked')}
                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
                       activeTab === 'unlinked'
@@ -1517,7 +2200,7 @@ export default function SuperAdminPage() {
                     }`}
                   >
                     <Link2 className="w-4 h-4" />
-                    <span>المستخدمون ({unlinkedMembers.length})</span>
+                    <span>المحامون غير المرتبطين ({unlinkedMembers.length})</span>
                   </button>
                 </div>
 
@@ -1826,9 +2509,378 @@ export default function SuperAdminPage() {
                   </div>
                 )}
 
-                {/* Sub-tab 2: Subscription Plans */}
-                {activeTab === 'plans' && (
-                  <div className="space-y-6">
+                {/* Sub-tab 2: Unlinked Members */}
+                {activeTab === 'unlinked' && (
+                  <div className="space-y-4">
+                    <div className="bg-amber-500/10 border border-amber-500/25 p-4 rounded-xl flex items-start gap-3 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                      <div>
+                        <p className="font-bold mb-1">الأعضاء غير المرتبطين بمكتب محاماة</p>
+                        <p>
+                          المحامون المسجلون هنا تم فصلهم عن إدارة المنصة المستقلة ولا ينتمون لأي مكتب بعد. لن يتمكن هؤلاء الأعضاء من استعراض أي جلسات أو قضايا حتى يتم ربطهم بمدير مكتب معتمد لديه اشتراك فعّال.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-xs">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-right text-xs">
+                          <thead className="bg-muted/50 border-b border-border font-bold text-muted-foreground">
+                            <tr>
+                              <th className="p-3.5">اسم العضو / المحامي</th>
+                              <th className="p-3.5">اسم المستخدم</th>
+                              <th className="p-3.5">الهاتف والبريد</th>
+                              <th className="p-3.5">تاريخ التسجيل</th>
+                              <th className="p-3.5">تعيين إلى مكتب محاماة</th>
+                              <th className="p-3.5 text-center">إجراء الربط</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border font-medium">
+                            {unlinkedMembers.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="text-center p-8 text-muted-foreground">
+                                  رائع! لا يوجد أي أعضاء غير مرتبطين بمكاتب حالياً.
+                                </td>
+                              </tr>
+                            ) : (
+                              unlinkedMembers.map((member) => (
+                                <tr key={member.id} className="hover:bg-muted/30 transition-colors">
+                                  <td className="p-3.5 font-bold text-foreground">
+                                    {member.display_name || member.username}
+                                  </td>
+
+                                  <td className="p-3.5 font-mono bg-muted px-2 py-0.5 rounded">
+                                    {member.username}
+                                  </td>
+
+                                  <td className="p-3.5 text-muted-foreground">
+                                    {member.phone || member.email || '—'}
+                                  </td>
+
+                                  <td className="p-3.5 text-muted-foreground">
+                                    {formatDateDisplay(member.created_at)}
+                                  </td>
+
+                                  <td className="p-3.5">
+                                    <select
+                                      value={linkingState[member.id] || ''}
+                                      onChange={(e) =>
+                                        setLinkingState({ ...linkingState, [member.id]: e.target.value })
+                                      }
+                                      className="w-full max-w-xs text-xs border border-border rounded-lg bg-background p-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                      <option value="">-- اختر مكتب المحاماة --</option>
+                                      {admins.map((adm) => (
+                                        <option key={adm.id} value={adm.id}>
+                                          {adm.office_name || adm.display_name} ({adm.username})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </td>
+
+                                  <td className="p-3.5 text-center">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleLinkMember(member.id)}
+                                      className="text-xs gap-1.5 font-bold h-8"
+                                    >
+                                      <Link2 className="w-3.5 h-3.5" />
+                                      ربط بالمكتب
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            
+            {/* SECTION 3: USERS */}
+            {currentSection === 'users' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                        المستخدمون والكوادر
+                      </h1>
+                      <p className="text-xs text-[#64748B] mt-0.5">
+                        عرض شامل لجميع المستخدمين، المحامين، ومدراء المكاتب في المنظومة مع تفاصيل الصلاحيات والانتماء
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchUsers}
+                    disabled={isLoadingUsers}
+                    className="gap-2 text-xs border-[#D6E0EC] cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                    تحديث القائمة
+                  </Button>
+                </div>
+
+                {/* 4 Mini Stat Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold">إجمالي المستخدمين</p>
+                      <p className="text-2xl font-black text-[#10233F]">{usersList.length}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Users className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold">مدراء المكاتب</p>
+                      <p className="text-2xl font-black text-[#0B2A4A]">
+                        {usersList.filter((u) => u.role === 'admin').length}
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-[#0B2A4A] flex items-center justify-center">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold">المحامون والأعضاء</p>
+                      <p className="text-2xl font-black text-[#C99732]">
+                        {usersList.filter((u) => u.role === 'staff').length}
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#C99732] flex items-center justify-center">
+                      <UserCheck className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold">الحسابات النشطة</p>
+                      <p className="text-2xl font-black text-emerald-600">
+                        {usersList.filter((u) => u.status === 'active').length}
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Bar */}
+                <div className="bg-white border border-[#D6E0EC] p-4 rounded-2xl shadow-xs space-y-3">
+                  <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-[#64748B] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Input
+                        value={usersSearchQuery}
+                        onChange={(e) => setUsersSearchQuery(e.target.value)}
+                        placeholder="ابحث بالاسم، اسم المستخدم، البريد، الهاتف، أو اسم المكتب..."
+                        className="pr-10 h-10 text-xs border-[#D6E0EC] rounded-xl"
+                      />
+                    </div>
+
+                    {/* Role Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                      <span className="text-xs font-bold text-[#64748B] ml-1 shrink-0">الدور:</span>
+                      {(['all', 'admin', 'staff'] as const).map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => setUsersRoleFilter(r)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            usersRoleFilter === r
+                              ? 'bg-[#0B2A4A] text-white shadow-xs'
+                              : 'bg-slate-100 text-[#64748B] hover:bg-slate-200'
+                          }`}
+                        >
+                          {r === 'all' ? 'الكل' : r === 'admin' ? 'مدراء المكاتب' : 'المحامون والأعضاء'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Status Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                      <span className="text-xs font-bold text-[#64748B] ml-1 shrink-0">الحالة:</span>
+                      {(['all', 'active', 'suspended'] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setUsersStatusFilter(s)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            usersStatusFilter === s
+                              ? 'bg-[#C99732] text-white shadow-xs'
+                              : 'bg-slate-100 text-[#64748B] hover:bg-slate-200'
+                          }`}
+                        >
+                          {s === 'all' ? 'الكل' : s === 'active' ? 'نشط' : 'موقوف'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Users Table */}
+                <div className="bg-white border border-[#D6E0EC] rounded-2xl overflow-hidden shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-slate-50 border-b border-[#D6E0EC] font-bold text-[#64748B]">
+                        <tr>
+                          <th className="p-3.5">المستخدم</th>
+                          <th className="p-3.5">مكتب المحاماة التابع له</th>
+                          <th className="p-3.5">الدور والصلاحية</th>
+                          <th className="p-3.5">بيانات الاتصال</th>
+                          <th className="p-3.5">حالة الحساب</th>
+                          <th className="p-3.5">تاريخ التسجيل</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#D6E0EC] text-[#10233F] font-medium">
+                        {isLoadingUsers ? (
+                          <tr>
+                            <td colSpan={6} className="text-center p-8 text-[#64748B]">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2" />
+                              جارٍ تحميل قائمة المستخدمين...
+                            </td>
+                          </tr>
+                        ) : usersList.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="text-center p-8 text-[#64748B]">
+                              لا يوجد مستخدمون مسجلون حالياً.
+                            </td>
+                          </tr>
+                        ) : (
+                          usersList
+                            .filter((u) => {
+                              if (usersRoleFilter !== 'all' && u.role !== usersRoleFilter) return false;
+                              if (usersStatusFilter !== 'all' && u.status !== usersStatusFilter) return false;
+                              if (usersSearchQuery.trim()) {
+                                const q = usersSearchQuery.toLowerCase();
+                                const matchName = (u.display_name || '').toLowerCase().includes(q);
+                                const matchUser = u.username.toLowerCase().includes(q);
+                                const matchEmail = (u.email || '').toLowerCase().includes(q);
+                                const matchPhone = (u.phone || '').toLowerCase().includes(q);
+                                const matchOffice = (u.office_name || '').toLowerCase().includes(q);
+                                if (!matchName && !matchUser && !matchEmail && !matchPhone && !matchOffice) return false;
+                              }
+                              return true;
+                            })
+                            .map((u) => (
+                              <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                                <td className="p-3.5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 border border-[#D6E0EC] flex items-center justify-center font-bold text-xs text-[#0B2A4A]">
+                                      {(u.display_name || u.username)[0].toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-sm text-[#10233F]">{u.display_name || u.username}</p>
+                                      <p className="text-[11px] font-mono text-[#64748B]">@{u.username}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-3.5">
+                                  <span className="font-semibold text-[#10233F]">{u.office_name || '—'}</span>
+                                </td>
+                                <td className="p-3.5">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[11px] font-bold ${
+                                      u.role === 'admin'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                        : u.role === 'super_admin'
+                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                                    }`}
+                                  >
+                                    {u.role === 'admin' ? 'مدير مكتب' : u.role === 'super_admin' ? 'مشرف عام' : 'محامي / عضو'}
+                                  </Badge>
+                                </td>
+                                <td className="p-3.5">
+                                  <div className="space-y-0.5 text-[11px] text-[#64748B]">
+                                    {u.email && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Mail className="w-3 h-3 shrink-0" />
+                                        <span>{u.email}</span>
+                                      </div>
+                                    )}
+                                    {u.phone && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Phone className="w-3 h-3 shrink-0" />
+                                        <span dir="ltr">{u.phone}</span>
+                                      </div>
+                                    )}
+                                    {!u.email && !u.phone && <span>—</span>}
+                                  </div>
+                                </td>
+                                <td className="p-3.5">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] ${
+                                      u.status === 'active'
+                                        ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30'
+                                        : 'bg-rose-500/15 text-rose-700 border-rose-500/30'
+                                    }`}
+                                  >
+                                    {u.status === 'active' ? 'نشط' : 'موقوف'}
+                                  </Badge>
+                                </td>
+                                <td className="p-3.5 text-[#64748B]">
+                                  {formatDateDisplay(u.created_at)}
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 4: SUBSCRIPTIONS & PLANS */}
+            {currentSection === 'subscriptions' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[#C99732]">
+                      <Crown className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                        إدارة الاشتراكات والباقات
+                      </h1>
+                      <p className="text-xs text-[#64748B] mt-0.5">
+                        إنشاء وإدارة باقات الاشتراك والتجديدات والمزايا المخصصة لمكاتب المحاماة
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => {
+                      resetPlanForm();
+                      setIsAddPlanModalOpen(true);
+                    }}
+                    className="gap-2 text-xs font-bold bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl shadow-md shadow-[#C99732]/25 border-0 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    + إضافة باقة جديدة
+                  </Button>
+                </div>
+
+                {/* Extracted Plans & Subscriptions Body */}
+                <div className="space-y-6">
                     {/* 4 Stat Cards matching Screenshot 4 */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
@@ -2116,96 +3168,461 @@ export default function SuperAdminPage() {
                       </div>
                     </div>
                   </div>
-                )}
+              </div>
+            )}
 
-                {/* Sub-tab 3: Unlinked Members */}
-                {activeTab === 'unlinked' && (
-                  <div className="space-y-4">
-                    <div className="bg-amber-500/10 border border-amber-500/25 p-4 rounded-xl flex items-start gap-3 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
-                      <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
-                      <div>
-                        <p className="font-bold mb-1">الأعضاء غير المرتبطين بمكتب محاماة</p>
-                        <p>
-                          المحامون المسجلون هنا تم فصلهم عن إدارة المنصة المستقلة ولا ينتمون لأي مكتب بعد. لن يتمكن هؤلاء الأعضاء من استعراض أي جلسات أو قضايا حتى يتم ربطهم بمدير مكتب معتمد لديه اشتراك فعّال.
-                        </p>
-                      </div>
+            {/* SECTION 5: PAYMENTS & INVOICES */}
+            {currentSection === 'payments' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600">
+                      <CreditCard className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                        المدفوعات والفواتير
+                      </h1>
+                      <p className="text-xs text-[#64748B] mt-0.5">
+                        سجل العمليات المالية والاشتراكات لجميع مكاتب المحاماة مع إمكانية توثيق الدفعات يدوياً
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchPayments()}
+                      disabled={isLoadingPayments}
+                      className="gap-2 text-xs border-[#D6E0EC] cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingPayments ? 'animate-spin' : ''}`} />
+                      تحديث
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setPaymentFormData({
+                          office_id: admins[0]?.id || '',
+                          amount: '',
+                          currency: 'SAR',
+                          payment_date: new Date().toISOString().split('T')[0],
+                          method: 'bank_transfer',
+                          status: 'paid',
+                          notes: '',
+                        });
+                        setIsAddPaymentModalOpen(true);
+                      }}
+                      className="gap-2 text-xs font-bold bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl shadow-md shadow-[#C99732]/25 border-0 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      + تسجيل دفعة جديدة
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 3 KPI Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي المدفوعات المحصلة</p>
+                      <p className="text-2xl sm:text-3xl font-black text-emerald-600">
+                        {paymentsList.filter((p) => p.status === 'paid').reduce((s, p) => s + Number(p.amount), 0).toLocaleString()} ر.س
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-1">
+                        {paymentsList.filter((p) => p.status === 'paid').length} عملية سداد مؤكدة
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                      <DollarSign className="w-6 h-6 text-emerald-600" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold mb-1">دفعات قيد الانتظار</p>
+                      <p className="text-2xl sm:text-3xl font-black text-amber-600">
+                        {paymentsList.filter((p) => p.status === 'pending').reduce((s, p) => s + Number(p.amount), 0).toLocaleString()} ر.س
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-1">
+                        {paymentsList.filter((p) => p.status === 'pending').length} دفعة معلقة
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                      <Clock className="w-6 h-6 text-amber-600" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <p className="text-xs text-[#64748B] font-bold mb-1">دفعات متأخرة</p>
+                      <p className="text-2xl sm:text-3xl font-black text-rose-600">
+                        {paymentsList.filter((p) => p.status === 'overdue').reduce((s, p) => s + Number(p.amount), 0).toLocaleString()} ر.س
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-1">
+                        {paymentsList.filter((p) => p.status === 'overdue').length} فاتورة متأخرة
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-6 h-6 text-rose-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter & Search Bar */}
+                <div className="bg-white border border-[#D6E0EC] p-4 rounded-2xl shadow-xs space-y-3">
+                  <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-[#64748B] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Input
+                        value={paymentSearchQuery}
+                        onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                        placeholder="ابحث باسم المكتب، الملاحظات، أو المبلغ..."
+                        className="pr-10 h-10 text-xs border-[#D6E0EC] rounded-xl"
+                      />
                     </div>
 
-                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-xs">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-right text-xs">
-                          <thead className="bg-muted/50 border-b border-border font-bold text-muted-foreground">
-                            <tr>
-                              <th className="p-3.5">اسم العضو / المحامي</th>
-                              <th className="p-3.5">اسم المستخدم</th>
-                              <th className="p-3.5">الهاتف والبريد</th>
-                              <th className="p-3.5">تاريخ التسجيل</th>
-                              <th className="p-3.5">تعيين إلى مكتب محاماة</th>
-                              <th className="p-3.5 text-center">إجراء الربط</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border font-medium">
-                            {unlinkedMembers.length === 0 ? (
-                              <tr>
-                                <td colSpan={6} className="text-center p-8 text-muted-foreground">
-                                  رائع! لا يوجد أي أعضاء غير مرتبطين بمكاتب حالياً.
-                                </td>
-                              </tr>
-                            ) : (
-                              unlinkedMembers.map((member) => (
-                                <tr key={member.id} className="hover:bg-muted/30 transition-colors">
-                                  <td className="p-3.5 font-bold text-foreground">
-                                    {member.display_name || member.username}
-                                  </td>
+                    {/* Office Filter Dropdown */}
+                    <div className="w-full md:w-56">
+                      <select
+                        value={paymentOfficeFilter}
+                        onChange={(e) => {
+                          setPaymentOfficeFilter(e.target.value);
+                          fetchPayments(e.target.value, paymentStatusFilter);
+                        }}
+                        className="w-full h-10 px-3 rounded-xl border border-[#D6E0EC] bg-white text-xs font-semibold text-[#10233F]"
+                      >
+                        <option value="all">جميع المكاتب</option>
+                        {admins.map((adm) => (
+                          <option key={adm.id} value={adm.id}>
+                            {adm.office_name || adm.username}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                                  <td className="p-3.5 font-mono bg-muted px-2 py-0.5 rounded">
-                                    {member.username}
-                                  </td>
+                    {/* Status Filter Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                      {(['all', 'paid', 'pending', 'overdue'] as const).map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => {
+                            setPaymentStatusFilter(st);
+                            fetchPayments(paymentOfficeFilter, st);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            paymentStatusFilter === st
+                              ? 'bg-[#0B2A4A] text-white shadow-xs'
+                              : 'bg-slate-100 text-[#64748B] hover:bg-slate-200'
+                          }`}
+                        >
+                          {st === 'all' ? 'الكل' : st === 'paid' ? 'مدفوع' : st === 'pending' ? 'قيد الانتظار' : 'متأخر'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-                                  <td className="p-3.5 text-muted-foreground">
-                                    {member.phone || member.email || '—'}
+                {/* Payments Table */}
+                <div className="bg-white border border-[#D6E0EC] rounded-2xl overflow-hidden shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-slate-50 border-b border-[#D6E0EC] font-bold text-[#64748B]">
+                        <tr>
+                          <th className="p-3.5">#</th>
+                          <th className="p-3.5">المكتب المشترك</th>
+                          <th className="p-3.5">المبلغ</th>
+                          <th className="p-3.5">تاريخ السداد</th>
+                          <th className="p-3.5">طريقة الدفع</th>
+                          <th className="p-3.5">الحالة</th>
+                          <th className="p-3.5">ملاحظات</th>
+                          <th className="p-3.5 text-center">الإجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#D6E0EC] text-[#10233F] font-medium">
+                        {isLoadingPayments ? (
+                          <tr>
+                            <td colSpan={8} className="text-center p-8 text-[#64748B]">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2" />
+                              جارٍ تحميل سجل المدفوعات...
+                            </td>
+                          </tr>
+                        ) : paymentsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="text-center p-8 text-[#64748B]">
+                              لا توجد سجلات مدفوعات مسجلة حالياً. اضغط "+ تسجيل دفعة جديدة" لإضافة معاملة.
+                            </td>
+                          </tr>
+                        ) : (
+                          paymentsList
+                            .filter((p) => {
+                              if (paymentStatusFilter !== 'all' && p.status !== paymentStatusFilter) return false;
+                              if (paymentOfficeFilter !== 'all' && p.office_id !== paymentOfficeFilter) return false;
+                              if (paymentSearchQuery.trim()) {
+                                const q = paymentSearchQuery.toLowerCase();
+                                const matchOff = (p.office_name || '').toLowerCase().includes(q);
+                                const matchNotes = (p.notes || '').toLowerCase().includes(q);
+                                const matchAmt = String(p.amount).includes(q);
+                                if (!matchOff && !matchNotes && !matchAmt) return false;
+                              }
+                              return true;
+                            })
+                            .map((p, idx) => {
+                              const stBadge = formatPaymentStatusBadge(p.status);
+                              return (
+                                <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
+                                  <td className="p-3.5 font-mono text-[#64748B]">{idx + 1}</td>
+                                  <td className="p-3.5 font-bold text-[#10233F]">{p.office_name || '—'}</td>
+                                  <td className="p-3.5 font-black text-sm text-[#0B2A4A]">
+                                    {Number(p.amount).toLocaleString()} {p.currency || 'ر.س'}
                                   </td>
-
-                                  <td className="p-3.5 text-muted-foreground">
-                                    {formatDateDisplay(member.created_at)}
-                                  </td>
-
+                                  <td className="p-3.5 text-[#64748B]">{formatDateDisplay(p.payment_date)}</td>
                                   <td className="p-3.5">
-                                    <select
-                                      value={linkingState[member.id] || ''}
-                                      onChange={(e) =>
-                                        setLinkingState({ ...linkingState, [member.id]: e.target.value })
-                                      }
-                                      className="w-full max-w-xs text-xs border border-border rounded-lg bg-background p-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-                                    >
-                                      <option value="">-- اختر مكتب المحاماة --</option>
-                                      {admins.map((adm) => (
-                                        <option key={adm.id} value={adm.id}>
-                                          {adm.office_name || adm.display_name} ({adm.username})
-                                        </option>
-                                      ))}
-                                    </select>
+                                    <Badge variant="outline" className="text-[10px] border-[#D6E0EC] text-[#64748B]">
+                                      {formatPaymentMethodLabel(p.method)}
+                                    </Badge>
                                   </td>
-
+                                  <td className="p-3.5">
+                                    <Badge variant="outline" className={`text-[10px] ${stBadge.className}`}>
+                                      {stBadge.label}
+                                    </Badge>
+                                  </td>
+                                  <td className="p-3.5 text-[#64748B] max-w-xs truncate" title={p.notes || ''}>
+                                    {p.notes || '—'}
+                                  </td>
                                   <td className="p-3.5 text-center">
                                     <Button
                                       size="sm"
-                                      onClick={() => handleLinkMember(member.id)}
-                                      className="text-xs gap-1.5 font-bold h-8"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedPayment(p);
+                                        setEditPaymentStatus(p.status);
+                                        setEditPaymentNotes(p.notes || '');
+                                        setIsEditPaymentModalOpen(true);
+                                      }}
+                                      className="text-xs h-7 px-2.5 font-bold border-[#D6E0EC] hover:bg-slate-100 cursor-pointer"
                                     >
-                                      <Link2 className="w-3.5 h-3.5" />
-                                      ربط بالمكتب
+                                      <Edit2 className="w-3 h-3 ml-1" />
+                                      تعديل الحالة
                                     </Button>
                                   </td>
                                 </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                              );
+                            })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 6: GENERAL REPORTS */}
+            {currentSection === 'reports' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600">
+                      <TrendingUp className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                        التقارير العامة والتحليلات
+                      </h1>
+                      <p className="text-xs text-[#64748B] mt-0.5">
+                        تحليلات مالية ومؤشرات النمو وتوزيع الاشتراكات على مستوى المنصة
+                      </p>
                     </div>
                   </div>
-                )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchReports}
+                    disabled={isLoadingReports}
+                    className="gap-2 text-xs border-[#D6E0EC] cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingReports ? 'animate-spin' : ''}`} />
+                    تحديث التقارير
+                  </Button>
+                </div>
+
+                {/* 4 Top KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                    <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي الإيرادات المحققة</p>
+                    <p className="text-2xl sm:text-3xl font-black text-[#10233F]">
+                      {(reportsData?.totalRevenue ?? 0).toLocaleString()} ر.س
+                    </p>
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-2">
+                      ↑ {reportsData?.revenueMonthOverMonthChange ?? 0}% عن الشهر الماضي
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                    <p className="text-xs text-[#64748B] font-bold mb-1">الاشتراكات النشطة</p>
+                    <p className="text-2xl sm:text-3xl font-black text-emerald-600">
+                      {reportsData?.activeSubscriptions ?? 0}
+                    </p>
+                    <p className="text-[11px] text-[#64748B] mt-2">اشتراكات مفعّلة حالياً</p>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                    <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي مستخدمي المنظومة</p>
+                    <p className="text-2xl sm:text-3xl font-black text-blue-600">
+                      {reportsData?.totalUsers ?? 0}
+                    </p>
+                    <p className="text-[11px] text-[#64748B] mt-2">محامين، مدراء، وموظفين</p>
+                  </div>
+
+                  <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
+                    <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي مكاتب المحاماة</p>
+                    <p className="text-2xl sm:text-3xl font-black text-[#0B2A4A]">
+                      {reportsData?.totalOffices ?? 0}
+                    </p>
+                    <p className="text-[11px] text-[#64748B] mt-2">مكتب ومؤسسة معتمدة</p>
+                  </div>
+                </div>
+
+                {/* 2 Big Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  <div className="lg:col-span-7 bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-black text-[#10233F]">منحنى نمو الإيرادات (6 أشهر)</h3>
+                        <p className="text-[11px] text-[#64748B]">إجمالي المبالغ المحصلة شهرياً بالريال السعودي</p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] font-bold border-[#D6E0EC]">
+                        آخر 6 أشهر
+                      </Badge>
+                    </div>
+
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={reportsData?.monthlyRevenueTrend || []}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="reportsRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#C99732" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#C99732" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                          <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}`} />
+                          <RechartsTooltip content={<ChartCustomTooltip />} />
+                          <Area
+                            type="monotone"
+                            dataKey="amount"
+                            name="الإيرادات (ر.س)"
+                            stroke="#C99732"
+                            strokeWidth={2.5}
+                            fill="url(#reportsRevenueGrad)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5 bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                    <div className="mb-2">
+                      <h3 className="text-sm font-black text-[#10233F]">توزيع الباقات والاشتراكات</h3>
+                      <p className="text-[11px] text-[#64748B]">نسبة المكاتب المشتركة بكل باقة</p>
+                    </div>
+
+                    <div className="relative h-48 w-full flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={reportsData?.subscriptionDistribution || []}
+                            dataKey="count"
+                            nameKey="plan_name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={80}
+                            paddingAngle={3}
+                          >
+                            {(reportsData?.subscriptionDistribution || []).map((_, idx) => (
+                              <Cell key={`rep-cell-${idx}`} fill={CHART_PALETTE[idx % CHART_PALETTE.length]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip content={<ChartCustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="space-y-1.5 pt-3 border-t border-[#D6E0EC]">
+                      {(reportsData?.subscriptionDistribution || []).map((dist, idx) => (
+                        <div key={dist.plan_id || idx} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                              style={{ backgroundColor: CHART_PALETTE[idx % CHART_PALETTE.length] }}
+                            />
+                            <span className="font-semibold text-[#10233F]">{dist.plan_name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#64748B]">{dist.count} مكتب</span>
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-mono">
+                              {dist.percentage}%
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plans Performance Table */}
+                <div className="bg-white border border-[#D6E0EC] rounded-2xl overflow-hidden shadow-xs">
+                  <div className="p-4 border-b border-[#D6E0EC]">
+                    <h3 className="text-sm font-bold text-[#10233F]">تفاصيل أداء باقات الاشتراك</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-slate-50 border-b border-[#D6E0EC] font-bold text-[#64748B]">
+                        <tr>
+                          <th className="p-3.5">اسم الباقة</th>
+                          <th className="p-3.5">المعرف (Slug)</th>
+                          <th className="p-3.5">سعر الباقة</th>
+                          <th className="p-3.5">المكاتب المشتركة</th>
+                          <th className="p-3.5">حصة الذكاء الاصطناعي</th>
+                          <th className="p-3.5">نسبة الانتشار</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#D6E0EC] text-[#10233F]">
+                        {plans.map((p) => {
+                          const dist = (reportsData?.subscriptionDistribution || []).find((d) => d.plan_id === p.id);
+                          return (
+                            <tr key={p.id} className="hover:bg-slate-50/60">
+                              <td className="p-3.5 font-bold">{p.name}</td>
+                              <td className="p-3.5 font-mono text-[#64748B]">{p.slug}</td>
+                              <td className="p-3.5 font-bold text-[#0B2A4A]">{p.price ? `${p.price} ر.س` : 'مخصص'}</td>
+                              <td className="p-3.5">{p.office_count ?? 0} مكتب</td>
+                              <td className="p-3.5">
+                                <Badge variant="outline" className="text-[10px] border-[#D6E0EC]">
+                                  {p.ai_quota_limit} تحليل / شهر
+                                </Badge>
+                              </td>
+                              <td className="p-3.5">
+                                <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                                  {dist?.percentage ?? 0}%
+                                </Badge>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -3253,6 +4670,210 @@ export default function SuperAdminPage() {
           </div>
         </div>
       )}
+
+      {/* Add Payment Modal */}
+      {isAddPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">تسجيل دفعة جديدة</h3>
+                  <p className="text-xs text-muted-foreground">توثيق معاملة مالية وسداد اشتراك لمكتب محاماة</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddPaymentModalOpen(false)}
+                className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePayment} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-foreground">مكتب المحاماة المشترك *</Label>
+                <select
+                  required
+                  value={paymentFormData.office_id}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, office_id: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-medium text-foreground"
+                >
+                  <option value="">-- اختر المكتب --</option>
+                  {admins.map((adm) => (
+                    <option key={adm.id} value={adm.id}>
+                      {adm.office_name || adm.username} ({adm.username})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">المبلغ *</Label>
+                  <Input
+                    type="number"
+                    required
+                    min={1}
+                    step="any"
+                    placeholder="مثال: 1500"
+                    value={paymentFormData.amount}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
+                    className="text-xs h-10 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">العملة</Label>
+                  <Input
+                    value={paymentFormData.currency}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, currency: e.target.value })}
+                    className="text-xs h-10 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">تاريخ السداد *</Label>
+                  <Input
+                    type="date"
+                    required
+                    value={paymentFormData.payment_date}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_date: e.target.value })}
+                    className="text-xs h-10 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">طريقة الدفع *</Label>
+                  <select
+                    value={paymentFormData.method}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, method: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-medium text-foreground"
+                  >
+                    <option value="bank_transfer">تحويل بنكي</option>
+                    <option value="cash">نقدي</option>
+                    <option value="credit_card">بطاقة ائتمانية</option>
+                    <option value="check">شيك مصدق</option>
+                    <option value="other">أخرى</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-foreground">حالة السداد *</Label>
+                <select
+                  value={paymentFormData.status}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, status: e.target.value as any })}
+                  className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-medium text-foreground"
+                >
+                  <option value="paid">مدفوع ومؤكد</option>
+                  <option value="pending">قيد الانتظار / معلق</option>
+                  <option value="overdue">متأخر</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-foreground">ملاحظات / رقم المرجع</Label>
+                <Textarea
+                  placeholder="رقم الحوالة البنكية، رقم الإيصال، أو تفاصيل أخرى..."
+                  value={paymentFormData.notes}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
+                  className="text-xs min-h-[70px] resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddPaymentModalOpen(false)}
+                  className="text-xs cursor-pointer"
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingPayment}
+                  className="text-xs font-bold bg-[#C99732] hover:bg-[#B28325] text-white cursor-pointer"
+                >
+                  {isSubmittingPayment ? 'جارٍ التسجيل...' : 'تسجيل الدفعة'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Payment Status Modal */}
+      {isEditPaymentModalOpen && selectedPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+              <div>
+                <h3 className="text-base font-bold text-foreground">تعديل حالة الدفعة</h3>
+                <p className="text-xs text-muted-foreground">
+                  المكتب: {selectedPayment.office_name} ({Number(selectedPayment.amount).toLocaleString()} {selectedPayment.currency})
+                </p>
+              </div>
+              <button
+                onClick={() => setIsEditPaymentModalOpen(false)}
+                className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePayment} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-foreground">حالة السداد *</Label>
+                <select
+                  value={editPaymentStatus}
+                  onChange={(e) => setEditPaymentStatus(e.target.value as any)}
+                  className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-medium text-foreground"
+                >
+                  <option value="paid">مدفوع ومؤكد</option>
+                  <option value="pending">قيد الانتظار / معلق</option>
+                  <option value="overdue">متأخر</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-foreground">ملاحظات</Label>
+                <Textarea
+                  value={editPaymentNotes}
+                  onChange={(e) => setEditPaymentNotes(e.target.value)}
+                  placeholder="ملاحظات حول المعاملة أو التحديث..."
+                  className="text-xs min-h-[80px]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditPaymentModalOpen(false)}
+                  className="text-xs cursor-pointer"
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingPayment}
+                  className="text-xs font-bold bg-[#C99732] hover:bg-[#B28325] text-white cursor-pointer"
+                >
+                  {isSubmittingPayment ? 'جارٍ الحفظ...' : 'حفظ التغييرات'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
