@@ -23,6 +23,7 @@ import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdmin
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
 import { computeHearingDateTime } from "../utils/hijri";
 import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
+import * as postgresService from "../services/postgres.service";
 import type { Response } from "express";
 
 const router: IRouter = Router();
@@ -70,6 +71,74 @@ function handleRouteError(res: Response, err: any, defaultMsg: string): void {
     ? "فشل الاتصال بـ Google Sheets بسبب عدم تزامن تاريخ وتوقيت الجهاز مع سيرفرات Google (invalid_grant)."
     : err?.message || defaultMsg;
   res.status(500).json({ error: errorMsg });
+}
+
+function parseTimeToMinutes(timeStr: string): number | null {
+  if (!timeStr) return null;
+  const normalized = timeStr.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632)).trim();
+  const match = normalized.match(/(\d{1,2}):(\d{2})\s*(ص|م|صباحاً|مساءً|am|pm)?/i);
+  if (!match) return null;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const modifier = (match[3] || '').toLowerCase();
+
+  if (modifier === 'م' || modifier === 'مساءً' || modifier === 'pm') {
+    if (hours < 12) hours += 12;
+  } else if (modifier === 'ص' || modifier === 'صباحاً' || modifier === 'am') {
+    if (hours === 12) hours = 0;
+  }
+  return hours * 60 + minutes;
+}
+
+function areTimesOverlapping(t1: string | null | undefined, t2: string | null | undefined): boolean {
+  if (!t1 || !t2) return false;
+  const s1 = t1.trim().toLowerCase();
+  const s2 = t2.trim().toLowerCase();
+  if (s1 === s2) return true;
+
+  const m1 = parseTimeToMinutes(s1);
+  const m2 = parseTimeToMinutes(s2);
+  if (m1 !== null && m2 !== null) {
+    return Math.abs(m1 - m2) < 30;
+  }
+  return false;
+}
+
+async function findConflictingSession(
+  officeId: string,
+  assignedLawyerId: string | null | undefined,
+  sessionDateHijri: string | null | undefined,
+  sessionTime: string | null | undefined,
+  excludeSessionId?: number,
+): Promise<any | null> {
+  if (!assignedLawyerId || !sessionDateHijri || !sessionTime) {
+    return null;
+  }
+
+  const normDate = sessionDateHijri.trim();
+  const existingSessions = await postgresService.listSessions(officeId);
+
+  for (const s of existingSessions) {
+    if (excludeSessionId && Number(s.id) === Number(excludeSessionId)) {
+      continue;
+    }
+    if (s.status === "Cancelled") {
+      continue;
+    }
+    const sLawyerId = (s as any).assignedLawyerId || (s as any).assigned_lawyer_id;
+    if (sLawyerId !== assignedLawyerId) {
+      continue;
+    }
+    const sDate = s.sessionDateHijri ? s.sessionDateHijri.trim() : "";
+    if (sDate !== normDate) {
+      continue;
+    }
+    if (areTimesOverlapping(s.sessionTime, sessionTime)) {
+      return s;
+    }
+  }
+
+  return null;
 }
 
 function unconfiguredResponse(): { error: string } {
@@ -151,6 +220,21 @@ router.post("/sessions", attachAuthUser, requireAuth, async (req, res) => {
         res.status(400).json({ error: val.error || "المحامي غير صالح." });
         return;
       }
+    }
+
+    // Check for session conflict for the same assigned lawyer
+    const conflict = await findConflictingSession(
+      officeId,
+      assignedLawyerId,
+      parseResult.data.sessionDateHijri,
+      parseResult.data.sessionTime,
+    );
+    if (conflict) {
+      const caseLabel = conflict.caseNumber ? `قضية رقم ${conflict.caseNumber}` : `جلسة #${conflict.id}`;
+      res.status(400).json({
+        error: `تعارض في المواعيد: لدى المحامي جلسة أخرى في نفس التاريخ والوقت (${caseLabel}).`,
+      });
+      return;
     }
 
     const session = await createSession(
@@ -251,6 +335,32 @@ router.patch("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
       extraPayload.assignedLawyerId = targetLawyer;
     }
 
+    // Check for session conflict on update
+    const targetLawyer = extraPayload.assignedLawyerId !== undefined
+      ? extraPayload.assignedLawyerId
+      : ((existing as any).assignedLawyerId || (existing as any).assigned_lawyer_id);
+    const targetDate = parseResult.data.sessionDateHijri !== undefined
+      ? parseResult.data.sessionDateHijri
+      : existing.sessionDateHijri;
+    const targetTime = parseResult.data.sessionTime !== undefined
+      ? parseResult.data.sessionTime
+      : existing.sessionTime;
+
+    const conflict = await findConflictingSession(
+      officeId,
+      targetLawyer,
+      targetDate,
+      targetTime,
+      id,
+    );
+    if (conflict) {
+      const caseLabel = conflict.caseNumber ? `قضية رقم ${conflict.caseNumber}` : `جلسة #${conflict.id}`;
+      res.status(400).json({
+        error: `تعارض في المواعيد: لدى المحامي جلسة أخرى في نفس التاريخ والوقت (${caseLabel}).`,
+      });
+      return;
+    }
+
     const session = await updateSession(id, { ...parseResult.data, ...extraPayload }, officeId);
     if (!session) {
       res.status(404).json({ error: "Session not found." });
@@ -331,6 +441,23 @@ router.patch("/sessions/:id/reassign", attachAuthUser, requireAuth, async (req, 
     if (!existing) {
       res.status(404).json({ error: "Session not found." });
       return;
+    }
+
+    if (targetLawyerId) {
+      const conflict = await findConflictingSession(
+        officeId,
+        targetLawyerId,
+        existing.sessionDateHijri,
+        existing.sessionTime,
+        id,
+      );
+      if (conflict) {
+        const caseLabel = conflict.caseNumber ? `قضية رقم ${conflict.caseNumber}` : `جلسة #${conflict.id}`;
+        res.status(400).json({
+          error: `تعارض في المواعيد: لدى المحامي جلسة أخرى في نفس التاريخ والوقت (${caseLabel}).`,
+        });
+        return;
+      }
     }
 
     const updated = await updateSession(id, { assignedLawyerId: targetLawyerId || null } as any, officeId);

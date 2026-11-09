@@ -100,6 +100,56 @@ export default function ClientProfilePage() {
     currentLawyerId?: string | null;
   } | null>(null);
 
+  // Notes state
+  const [notes, setNotes] = useState<any[]>([]);
+  const [newNoteBody, setNewNoteBody] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
+  const loadNotes = useCallback(async () => {
+    if (!clientId) return;
+    try {
+      const res = await fetch(`/api/clients/${clientId}/notes`, { credentials: 'include' });
+      if (res.ok) {
+        const json = await res.json();
+        setNotes(json || []);
+      }
+    } catch (_) {}
+  }, [clientId]);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientId || !newNoteBody.trim() || savingNote) return;
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/clients/${clientId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ body: newNoteBody.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'فشل حفظ الملاحظة');
+      }
+      const created = await res.json();
+      setNotes((prev) => [created, ...prev]);
+      setNewNoteBody('');
+      toast({ title: 'تمت إضافة الملاحظة بنجاح' });
+    } catch (err: any) {
+      toast({
+        title: 'خطأ',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   const loadProfile = useCallback(async () => {
@@ -470,6 +520,10 @@ export default function ClientProfilePage() {
               <Paperclip className="w-3.5 h-3.5" />
               المرفقات والوثائق
             </TabsTrigger>
+            <TabsTrigger value="notes" className="gap-1.5 text-xs">
+              <MessageCircle className="w-3.5 h-3.5" />
+              ملاحظات ({notes.length})
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -757,6 +811,71 @@ export default function ClientProfilePage() {
           <Card className="border border-border p-5">
             <AttachmentsPanel relatedRecordType="client" relatedRecordId={clientId || ''} />
           </Card>
+        </TabsContent>
+
+        {/* ── Notes Tab ── */}
+        <TabsContent value="notes" className="space-y-4">
+          {/* Add Note Form */}
+          <Card className="border border-border p-4 bg-card/60">
+            <form onSubmit={handleAddNote} className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="client-new-note" className="text-xs font-semibold">إضافة ملاحظة جديدة للعميل</Label>
+                <Textarea
+                  id="client-new-note"
+                  value={newNoteBody}
+                  onChange={(e) => setNewNoteBody(e.target.value)}
+                  placeholder="اكتب ملاحظة نشاط أو تفاصيل تواصل مع العميل هنا..."
+                  rows={3}
+                  className="text-xs resize-none"
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!newNoteBody.trim() || savingNote}
+                  className="text-xs gap-1.5 bg-[#C99732] hover:bg-[#b0832b] text-white"
+                >
+                  {savingNote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>حفظ الملاحظة</span>
+                </Button>
+              </div>
+            </form>
+          </Card>
+
+          {/* Notes Chronological List */}
+          {notes.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl p-8 text-xs">
+              لا توجد أية ملاحظات مسجلة على هذا العميل بعد. أضف أول ملاحظة أعلاه.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notes.map((n) => (
+                <div key={n.id} className="p-4 rounded-xl border border-border bg-card space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                      <div className="w-5 h-5 rounded-full bg-[#0B2A4A]/10 text-[#0B2A4A] dark:text-[#E8C477] font-bold text-[10px] flex items-center justify-center">
+                        {(n.authorName || 'م').charAt(0)}
+                      </div>
+                      <span>{n.authorName || 'مستخدم'}</span>
+                    </div>
+                    <span className="font-mono text-[11px]">
+                      {n.createdAt ? new Date(n.createdAt).toLocaleDateString('ar-SA', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }) : ''}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap">
+                    {n.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

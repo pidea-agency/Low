@@ -9,6 +9,7 @@ import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import type { ClientRecord } from "../services/postgres.service";
 import { canUserAccessRecord, validateOfficeLawyer, getStaffAccessibleClientIds } from "../utils/record-access";
+import { findUserByIdOrUsername } from "../services/supabase.service";
 
 const router: IRouter = Router();
 
@@ -362,6 +363,113 @@ router.get("/clients/:id/timeline", async (req, res) => {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to get client timeline");
     res.status(500).json({ error: `فشل استرجاع سجل العميل. رقم المرجع: ${refId}`, refId });
+  }
+});
+
+/**
+ * GET /api/clients/:id/notes
+ * Returns chronological notes for a client.
+ * Staff can only view notes for clients they are assigned to.
+ */
+router.get("/clients/:id/notes", async (req, res) => {
+  const officeId = getOfficeId(req);
+  const id = String(req.params.id);
+
+  try {
+    const client = await postgresService.getClientById(id, officeId);
+    if (!client) {
+      res.status(404).json({ error: "العميل غير موجود." });
+      return;
+    }
+
+    if (req.authUser?.role === "staff") {
+      const accessibleIds = await getStaffAccessibleClientIds(officeId, req.authUser);
+      if (!accessibleIds.has(id)) {
+        res.status(404).json({ error: "العميل غير موجود." });
+        return;
+      }
+    }
+
+    const rawNotes = await postgresService.listClientNotes(id, officeId);
+
+    // Populate author display name
+    const notes = await Promise.all(
+      rawNotes.map(async (n) => {
+        let authorName = "مستخدم";
+        try {
+          const user = await findUserByIdOrUsername(n.authorId);
+          if (user) {
+            authorName = user.display_name || user.username;
+          }
+        } catch (_) {}
+        return {
+          ...n,
+          authorName,
+        };
+      }),
+    );
+
+    res.json(notes);
+  } catch (err: any) {
+    const refId = generateRefId();
+    logger.error({ refId, err, id }, "Failed to list client notes");
+    res.status(500).json({ error: `فشل استرجاع ملاحظات العميل. رقم المرجع: ${refId}`, refId });
+  }
+});
+
+/**
+ * POST /api/clients/:id/notes
+ * Creates a new note on a client.
+ * Staff can only add notes to clients they are assigned to.
+ */
+router.post("/clients/:id/notes", async (req, res) => {
+  const officeId = getOfficeId(req);
+  const id = String(req.params.id);
+  const bodyText = req.body?.body ? String(req.body.body).trim() : "";
+
+  if (!bodyText) {
+    res.status(400).json({ error: "نص الملاحظة مطلوب." });
+    return;
+  }
+
+  try {
+    const client = await postgresService.getClientById(id, officeId);
+    if (!client) {
+      res.status(404).json({ error: "العميل غير موجود." });
+      return;
+    }
+
+    if (req.authUser?.role === "staff") {
+      const accessibleIds = await getStaffAccessibleClientIds(officeId, req.authUser);
+      if (!accessibleIds.has(id)) {
+        res.status(403).json({ error: "غير مصرح لك بإضافة ملاحظات لهذا العميل." });
+        return;
+      }
+    }
+
+    const createdNote = await postgresService.createClientNote({
+      clientId: id,
+      officeId,
+      authorId: req.authUser!.userId!,
+      body: bodyText,
+    });
+
+    let authorName = req.authUser?.displayName || req.authUser?.username || "مستخدم";
+    try {
+      const user = await findUserByIdOrUsername(req.authUser!.userId!);
+      if (user) {
+        authorName = user.display_name || user.username;
+      }
+    } catch (_) {}
+
+    res.status(201).json({
+      ...createdNote,
+      authorName,
+    });
+  } catch (err: any) {
+    const refId = generateRefId();
+    logger.error({ refId, err, id }, "Failed to create client note");
+    res.status(500).json({ error: `فشل حفظ ملاحظة العميل. رقم المرجع: ${refId}`, refId });
   }
 });
 

@@ -172,6 +172,16 @@ export interface AttachmentRecord {
   uploaderName?: string;
 }
 
+export interface ClientNoteRecord {
+  id: string;
+  officeId: string;
+  clientId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  authorName?: string;
+}
+
 // ============================================================================
 // In-Memory Fallback Store (Used during tests or if Supabase is offline)
 // ============================================================================
@@ -184,6 +194,7 @@ const memoryJudgments = new Map<string, JudgmentRecord[]>();
 const memoryReports = new Map<string, ReportRecord[]>();
 const memoryNotifications = new Map<string, NotificationRecord[]>();
 const memoryAttachments = new Map<string, AttachmentRecord[]>();
+const memoryClientNotes = new Map<string, ClientNoteRecord[]>();
 
 let _nextId = 1000;
 function nextId(): number {
@@ -199,6 +210,7 @@ export function resetInMemoryStore(): void {
   memoryReports.clear();
   memoryNotifications.clear();
   memoryAttachments.clear();
+  memoryClientNotes.clear();
 }
 
 // Helper: Hijri Remaining Days Calculation
@@ -2438,6 +2450,93 @@ export async function searchTasks(officeId: string, query: string): Promise<Task
 
   return memMatches;
 }
+
+// ============================================================================
+// 10. CLIENT ACTIVITY NOTES
+// ============================================================================
+
+export async function listClientNotes(clientId: string, officeId: string): Promise<ClientNoteRecord[]> {
+  const memList = (memoryClientNotes.get(officeId) || []).filter((n) => n.clientId === clientId);
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("client_notes")
+        .select("*")
+        .eq("office_id", officeId)
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        const dbNotes: ClientNoteRecord[] = data.map((r: any) => ({
+          id: r.id,
+          officeId: r.office_id,
+          clientId: r.client_id,
+          authorId: r.author_id,
+          body: r.body,
+          createdAt: r.created_at,
+        }));
+        const dbIds = new Set(dbNotes.map((n) => n.id));
+        return [...dbNotes, ...memList.filter((m) => !dbIds.has(m.id))].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listClientNotes failed, falling back to memory");
+    }
+  }
+  return [...memList].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function createClientNote(data: {
+  clientId: string;
+  officeId: string;
+  authorId: string;
+  body: string;
+}): Promise<ClientNoteRecord> {
+  const noteId = crypto.randomUUID ? crypto.randomUUID() : `note-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const now = new Date().toISOString();
+  const newNote: ClientNoteRecord = {
+    id: noteId,
+    officeId: data.officeId,
+    clientId: data.clientId,
+    authorId: data.authorId,
+    body: data.body,
+    createdAt: now,
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: dbData, error } = await client
+        .from("client_notes")
+        .insert({
+          id: noteId,
+          office_id: data.officeId,
+          client_id: data.clientId,
+          author_id: data.authorId,
+          body: data.body,
+          created_at: now,
+        })
+        .select()
+        .single();
+
+      if (!error && dbData) {
+        newNote.id = dbData.id;
+        newNote.createdAt = dbData.created_at;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createClientNote failed, saving to memory");
+    }
+  }
+
+  const existing = memoryClientNotes.get(data.officeId) || [];
+  existing.unshift(newNote);
+  memoryClientNotes.set(data.officeId, existing);
+
+  return newNote;
+}
+
 
 
 

@@ -98,6 +98,32 @@ export default function DashboardAdminPage() {
     }).length;
   }, [poas]);
 
+  // Load office members workload
+  const { data: workloadData, isLoading: isLoadingWorkload } = useQuery<{
+    members: Array<{
+      lawyerId: string;
+      lawyerName: string;
+      username: string;
+      activeSessions: number;
+      openPoa: number;
+      pendingTasks: number;
+      totalWorkload: number;
+    }>;
+    unassigned?: {
+      activeSessions: number;
+      openPoa: number;
+      pendingTasks: number;
+      totalWorkload: number;
+    };
+  }>({
+    queryKey: ['/api/workload'],
+    queryFn: async () => {
+      const res = await fetch('/api/workload', { credentials: 'include' });
+      if (!res.ok) return { members: [] };
+      return res.json();
+    },
+  });
+
   // Load office dashboard charts
   useEffect(() => {
     let isMounted = true;
@@ -559,6 +585,105 @@ export default function DashboardAdminPage() {
           <CourtsDistributionChart data={chartsData?.courtsDistribution} isLoading={isLoadingCharts} />
           <TeamAiUsageChart data={chartsData?.teamAiUsage} isLoading={isLoadingCharts} />
         </div>
+      </div>
+
+      {/* Workload Widget: Lawyer Task & Session Distribution */}
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm fade-in-up">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-[#C99732]"
+              style={{ background: 'linear-gradient(135deg, #0B2A4A, #071D34)' }}
+            >
+              <Briefcase className="w-4 h-4 text-[#C99732]" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-foreground">توزيع عبء العمل على المحامين</h2>
+              <p className="text-xs text-muted-foreground">متابعة الجلسات النشطة، الوكالات السارية، والمهام قيد التنفيذ لكل محامٍ</p>
+            </div>
+          </div>
+          <Link
+            href="/users"
+            className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
+          >
+            <span>إدارة المحامين</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {isLoadingWorkload ? (
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : workloadData?.members && workloadData.members.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-right text-xs">
+              <thead>
+                <tr className="border-b border-border/60 text-muted-foreground">
+                  <th className="pb-2 font-medium">المحامي</th>
+                  <th className="pb-2 font-medium text-center">جلسات نشطة</th>
+                  <th className="pb-2 font-medium text-center">وكالات سارية</th>
+                  <th className="pb-2 font-medium text-center">مهام قيد التنفيذ</th>
+                  <th className="pb-2 font-medium text-center">إجمالي الأعباء</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {workloadData.members.map((m) => {
+                  const maxWorkload = Math.max(...workloadData.members.map((x) => x.totalWorkload), 1);
+                  const pct = Math.round((m.totalWorkload / maxWorkload) * 100);
+
+                  return (
+                    <tr key={m.lawyerId} className="hover:bg-muted/40 transition-colors">
+                      <td className="py-3 font-semibold text-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-[#0B2A4A]/10 text-[#0B2A4A] dark:text-[#E8C477] font-bold text-xs flex items-center justify-center">
+                            {m.lawyerName.charAt(0)}
+                          </div>
+                          <div>
+                            <div>{m.lawyerName}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">@{m.username}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          {m.activeSessions}
+                        </span>
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          {m.openPoa}
+                        </span>
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                          {m.pendingTasks}
+                        </span>
+                      </td>
+                      <td className="py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-20 bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-[#C99732] h-full rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="font-mono font-bold text-foreground text-xs">{m.totalWorkload}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground text-xs">
+            لم يتم تسجيل أي محامين في هذا المكتب بعد.
+          </div>
+        )}
       </div>
 
       {/* Activity Section: Upcoming Hearings & Urgent Tasks */}
