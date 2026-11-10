@@ -35,20 +35,11 @@ export const APP_NAVIGATION_CONFIG: NavItemConfig[] = [
   },
   {
     id: "sessions",
-    name: "جميع الجلسات",
+    name: "الجلسات",
     path: "/sessions",
     iconName: "Calendar",
     roles: ["admin", "staff"],
-    keywords: "جميع الجلسات جلسات المحكمة مواعيد جدول استماع sessions",
-    category: "main",
-  },
-  {
-    id: "reports",
-    name: "تقارير الجلسات",
-    path: "/reports",
-    iconName: "FileText",
-    roles: ["admin", "staff"],
-    keywords: "تقارير الجلسات تقرير طباعة تصدير ملخص reports",
+    keywords: "الجلسات جلسات المحكمة مواعيد جدول استماع تقارير sessions reports",
     category: "main",
   },
   {

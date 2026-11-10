@@ -173,17 +173,23 @@ router.get("/sessions", async (req, res) => {
       });
     }
     const parsedList = ListSessionsResponse.parse(sessions);
-    const data = sessions.map((s: any, idx: number) => ({
-      ...parsedList[idx],
-      clientId: s.clientId || s.client_id || null,
-      client_id: s.clientId || s.client_id || null,
-      assignedLawyerId: s.assignedLawyerId || s.assigned_lawyer_id || null,
-      assigned_lawyer_id: s.assignedLawyerId || s.assigned_lawyer_id || null,
-      clientRole: s.clientRole || s.client_role || null,
-      client_role: s.clientRole || s.client_role || null,
-      createdBy: s.createdBy || s.created_by || null,
-      created_by: s.createdBy || s.created_by || null,
-    }));
+    const reportStatusSet = await postgresService.getSessionReportStatusMap(officeId);
+    const data = sessions.map((s: any, idx: number) => {
+      const hasReport = Boolean(s.report || reportStatusSet.has(Number(s.id)));
+      return {
+        ...parsedList[idx],
+        clientId: s.clientId || s.client_id || null,
+        client_id: s.clientId || s.client_id || null,
+        assignedLawyerId: s.assignedLawyerId || s.assigned_lawyer_id || null,
+        assigned_lawyer_id: s.assignedLawyerId || s.assigned_lawyer_id || null,
+        clientRole: s.clientRole || s.client_role || null,
+        client_role: s.clientRole || s.client_role || null,
+        createdBy: s.createdBy || s.created_by || null,
+        created_by: s.createdBy || s.created_by || null,
+        has_report: hasReport,
+        hasReport: hasReport,
+      };
+    });
     res.json(data);
   } catch (err: any) {
     logger.error({ err }, "Failed to list sessions");
@@ -278,6 +284,8 @@ router.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    const reportData = await postgresService.getSessionReport(id, officeId);
+    const hasReport = Boolean((session as any).report || reportData?.report);
     const data = {
       ...GetSessionResponse.parse(session),
       clientId: (session as any).clientId || (session as any).client_id || null,
@@ -288,6 +296,8 @@ router.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
       client_role: (session as any).clientRole || (session as any).client_role || null,
       createdBy: (session as any).createdBy || (session as any).created_by || null,
       created_by: (session as any).createdBy || (session as any).created_by || null,
+      has_report: hasReport,
+      hasReport: hasReport,
     };
     res.json(data);
   } catch (err: any) {

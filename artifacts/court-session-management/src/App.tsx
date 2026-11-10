@@ -30,7 +30,6 @@ const SessionsPage = React.lazy(() => import('@/pages/sessions'));
 const SessionDetailPage = React.lazy(() => import('@/pages/session-detail'));
 const SettingsPage = React.lazy(() => import('@/pages/settings'));
 const SubscriptionPage = React.lazy(() => import('@/pages/subscription'));
-const ReportsPage = React.lazy(() => import('@/pages/reports'));
 const SessionReportPage = React.lazy(() => import('@/pages/session-report'));
 const PoaPage = React.lazy(() => import('@/pages/poa'));
 const JudgmentsPage = React.lazy(() => import('@/pages/judgments'));
@@ -229,11 +228,7 @@ function Router() {
         </RequireRole>
       </Route>
       <Route path="/reports">
-        <AuthGuard>
-          <AppShell>
-            <ReportsPage />
-          </AppShell>
-        </AuthGuard>
+        <Redirect to="/sessions" replace />
       </Route>
       <Route path="/reports/:id">
         <AuthGuard>

@@ -830704,6 +830704,7 @@ __export(postgres_service_exports, {
   getPoaById: () => getPoaById,
   getSessionById: () => getSessionById,
   getSessionReport: () => getSessionReport,
+  getSessionReportStatusMap: () => getSessionReportStatusMap,
   getTaskById: () => getTaskById,
   hasRecentNotification: () => hasRecentNotification,
   listAttachments: () => listAttachments,
@@ -831248,27 +831249,42 @@ async function getSessionReport(id, officeId) {
   const found = reportsList.find((r2) => r2.sessionId === id);
   return { session, report: found ? found.report : null };
 }
-async function saveSessionReport(id, report, officeId) {
-  const session = await getSessionById(id, officeId);
-  if (!session) return null;
+async function getSessionReportStatusMap(officeId) {
+  const reportedSet = /* @__PURE__ */ new Set();
+  const memReports = memoryReports.get(officeId) || [];
+  for (const r2 of memReports) {
+    if (r2.report && r2.sessionId) {
+      reportedSet.add(Number(r2.sessionId));
+    }
+  }
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from("reports").insert([
-        {
-          office_id: officeId,
-          session_id: id,
-          report,
-          created_at: (/* @__PURE__ */ new Date()).toISOString(),
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      const { data: rData } = await client.from("reports").select("session_id, report").eq("office_id", officeId);
+      if (rData) {
+        for (const row of rData) {
+          if (row.report && row.session_id) {
+            reportedSet.add(Number(row.session_id));
+          }
         }
-      ]);
-      await client.from("sessions").update({ report, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id).eq("office_id", officeId);
-      return { session, report };
+      }
+      const { data: sData } = await client.from("sessions").select("id, report").eq("office_id", officeId).not("report", "is", null);
+      if (sData) {
+        for (const row of sData) {
+          if (row.report && row.id) {
+            reportedSet.add(Number(row.id));
+          }
+        }
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase saveSessionReport failed, falling back to memory");
+      logger.warn({ err }, "Supabase query in getSessionReportStatusMap failed, using memory only");
     }
   }
+  return reportedSet;
+}
+async function saveSessionReport(id, report, officeId) {
+  const session = await getSessionById(id, officeId);
+  if (!session) return null;
   const reportsList = memoryReports.get(officeId) || [];
   const existingIdx = reportsList.findIndex((r2) => r2.sessionId === id);
   if (existingIdx !== -1) {
@@ -831285,6 +831301,28 @@ async function saveSessionReport(id, report, officeId) {
     });
   }
   memoryReports.set(officeId, reportsList);
+  const sList = memorySessions.get(officeId) || [];
+  const sIdx = sList.findIndex((s3) => s3.id === id);
+  if (sIdx !== -1) {
+    sList[sIdx].report = report;
+  }
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      await client.from("reports").insert([
+        {
+          office_id: officeId,
+          session_id: id,
+          report,
+          created_at: (/* @__PURE__ */ new Date()).toISOString(),
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      ]);
+      await client.from("sessions").update({ report, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id).eq("office_id", officeId);
+    } catch (err) {
+      logger.warn({ err }, "Supabase saveSessionReport failed, falling back to memory");
+    }
+  }
   return { session, report };
 }
 function formatTask(r2) {
@@ -851722,17 +851760,23 @@ router5.get("/sessions", async (req, res) => {
       });
     }
     const parsedList = ListSessionsResponse.parse(sessions);
-    const data = sessions.map((s3, idx) => ({
-      ...parsedList[idx],
-      clientId: s3.clientId || s3.client_id || null,
-      client_id: s3.clientId || s3.client_id || null,
-      assignedLawyerId: s3.assignedLawyerId || s3.assigned_lawyer_id || null,
-      assigned_lawyer_id: s3.assignedLawyerId || s3.assigned_lawyer_id || null,
-      clientRole: s3.clientRole || s3.client_role || null,
-      client_role: s3.clientRole || s3.client_role || null,
-      createdBy: s3.createdBy || s3.created_by || null,
-      created_by: s3.createdBy || s3.created_by || null
-    }));
+    const reportStatusSet = await getSessionReportStatusMap(officeId);
+    const data = sessions.map((s3, idx) => {
+      const hasReport = Boolean(s3.report || reportStatusSet.has(Number(s3.id)));
+      return {
+        ...parsedList[idx],
+        clientId: s3.clientId || s3.client_id || null,
+        client_id: s3.clientId || s3.client_id || null,
+        assignedLawyerId: s3.assignedLawyerId || s3.assigned_lawyer_id || null,
+        assigned_lawyer_id: s3.assignedLawyerId || s3.assigned_lawyer_id || null,
+        clientRole: s3.clientRole || s3.client_role || null,
+        client_role: s3.clientRole || s3.client_role || null,
+        createdBy: s3.createdBy || s3.created_by || null,
+        created_by: s3.createdBy || s3.created_by || null,
+        has_report: hasReport,
+        hasReport
+      };
+    });
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to list sessions");
@@ -851821,6 +851865,8 @@ router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    const reportData = await getSessionReport(id, officeId);
+    const hasReport = Boolean(session.report || reportData?.report);
     const data = {
       ...GetSessionResponse.parse(session),
       clientId: session.clientId || session.client_id || null,
@@ -851830,7 +851876,9 @@ router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
       clientRole: session.clientRole || session.client_role || null,
       client_role: session.clientRole || session.client_role || null,
       createdBy: session.createdBy || session.created_by || null,
-      created_by: session.createdBy || session.created_by || null
+      created_by: session.createdBy || session.created_by || null,
+      has_report: hasReport,
+      hasReport
     };
     res.json(data);
   } catch (err) {

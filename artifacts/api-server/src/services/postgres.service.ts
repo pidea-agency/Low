@@ -860,9 +860,78 @@ export async function getSessionReport(id: number, officeId: string): Promise<{ 
   return { session, report: found ? found.report : null };
 }
 
+export async function getSessionReportStatusMap(officeId: string): Promise<Set<number>> {
+  const reportedSet = new Set<number>();
+
+  const memReports = memoryReports.get(officeId) || [];
+  for (const r of memReports) {
+    if (r.report && r.sessionId) {
+      reportedSet.add(Number(r.sessionId));
+    }
+  }
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: rData } = await client
+        .from("reports")
+        .select("session_id, report")
+        .eq("office_id", officeId);
+      if (rData) {
+        for (const row of rData) {
+          if (row.report && row.session_id) {
+            reportedSet.add(Number(row.session_id));
+          }
+        }
+      }
+
+      const { data: sData } = await client
+        .from("sessions")
+        .select("id, report")
+        .eq("office_id", officeId)
+        .not("report", "is", null);
+      if (sData) {
+        for (const row of sData) {
+          if (row.report && row.id) {
+            reportedSet.add(Number(row.id));
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase query in getSessionReportStatusMap failed, using memory only");
+    }
+  }
+
+  return reportedSet;
+}
+
 export async function saveSessionReport(id: number, report: string, officeId: string): Promise<{ session: Session; report: string } | null> {
   const session = await getSessionById(id, officeId);
   if (!session) return null;
+
+  // Always update memory store for reliable fallback and fast lookups
+  const reportsList = memoryReports.get(officeId) || [];
+  const existingIdx = reportsList.findIndex((r) => r.sessionId === id);
+  if (existingIdx !== -1) {
+    reportsList[existingIdx].report = report;
+    reportsList[existingIdx].updatedAt = new Date().toISOString();
+  } else {
+    reportsList.push({
+      id: nextId(),
+      officeId,
+      sessionId: id,
+      report,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  memoryReports.set(officeId, reportsList);
+
+  const sList = memorySessions.get(officeId) || [];
+  const sIdx = sList.findIndex((s) => s.id === id);
+  if (sIdx !== -1) {
+    (sList[sIdx] as any).report = report;
+  }
 
   const client = getSupabaseClient();
   if (client) {
@@ -883,28 +952,11 @@ export async function saveSessionReport(id: number, report: string, officeId: st
         .update({ report, updated_at: new Date().toISOString() })
         .eq("id", id)
         .eq("office_id", officeId);
-      return { session, report };
     } catch (err) {
       logger.warn({ err }, "Supabase saveSessionReport failed, falling back to memory");
     }
   }
 
-  const reportsList = memoryReports.get(officeId) || [];
-  const existingIdx = reportsList.findIndex((r) => r.sessionId === id);
-  if (existingIdx !== -1) {
-    reportsList[existingIdx].report = report;
-    reportsList[existingIdx].updatedAt = new Date().toISOString();
-  } else {
-    reportsList.push({
-      id: nextId(),
-      officeId,
-      sessionId: id,
-      report,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-  memoryReports.set(officeId, reportsList);
   return { session, report };
 }
 

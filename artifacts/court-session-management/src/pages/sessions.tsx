@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useListSessions, useDeleteSession, useUpdateSession, useGetCurrentUser, getListSessionsQueryKey, getGetDashboardStatsQueryKey } from '@workspace/api-client-react';
 import type { SessionStatus } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'wouter';
-import { Calendar, ChevronLeft, Plus, Scale, Clock, User, MoreVertical, Pencil, Trash2, ArrowUpDown, AlertCircle, RefreshCw, UserCog } from 'lucide-react';
+import {
+  Calendar,
+  ChevronLeft,
+  Plus,
+  Scale,
+  Clock,
+  User,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  ArrowUpDown,
+  AlertCircle,
+  RefreshCw,
+  UserCog,
+  Download,
+  CalendarDays,
+  Gavel,
+  CheckSquare,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { TimeRemainingBadge } from '@/components/time-remaining';
 import { sortSessions, type SortOption } from '@/lib/session-sort';
 import { getArabicDayName } from '@/lib/hijri';
@@ -132,6 +154,60 @@ export default function SessionsPage() {
   const { data: currentUser } = useGetCurrentUser();
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
+  // Monthly Report Summary State (Admin-only)
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  const [monthlyData, setMonthlyData] = useState<any>(null);
+  const [isLoadingMonthly, setIsLoadingMonthly] = useState<boolean>(false);
+  const [isMonthlyCollapsed, setIsMonthlyCollapsed] = useState<boolean>(false);
+
+  const loadMonthlyReport = useCallback(async () => {
+    if (!isAdmin) return;
+    setIsLoadingMonthly(true);
+    try {
+      const res = await fetch(`/api/reports/monthly?month=${selectedMonth}&year=${selectedYear}`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setMonthlyData(json);
+      }
+    } catch (err) {
+      console.error('Failed to load monthly report', err);
+    } finally {
+      setIsLoadingMonthly(false);
+    }
+  }, [isAdmin, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    loadMonthlyReport();
+  }, [loadMonthlyReport]);
+
+  const handleExportCsv = () => {
+    if (!monthlyData) return;
+    const headers = ['المحامي', 'الجلسات المعقودة', 'الأحكام الصادرة', 'المهام المنجزة'];
+    const rows = [
+      ['الإجمالي العام للمكتب', monthlyData.overall.sessionsHeld, monthlyData.overall.judgmentsClosed, monthlyData.overall.tasksCompleted],
+      ...monthlyData.byLawyer.map((l: any) => [
+        `"${l.lawyerName}"`,
+        l.sessionsHeld,
+        l.judgmentsClosed,
+        l.tasksCompleted,
+      ]),
+    ];
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `monthly-report-${selectedYear}-${selectedMonth}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<SessionItem | null>(null);
 
@@ -239,6 +315,171 @@ export default function SessionsPage() {
         </Link>
       </div>
 
+      {/* Monthly Report Summary (Admin Only) */}
+      {isAdmin && (
+        <Card className="border border-border p-5 space-y-4 bg-card/60 shadow-sm fade-in-up">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setIsMonthlyCollapsed(!isMonthlyCollapsed)}
+              className="flex items-center gap-2 cursor-pointer text-right group focus:outline-none"
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#C99732] shrink-0"
+                style={{ background: 'linear-gradient(135deg, #0B2A4A, #071D34)' }}
+              >
+                <CalendarDays className="w-4 h-4 text-[#C99732]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                    التقرير الشهري المجمع للمكتب
+                  </h2>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#C99732]/15 text-[#C99732] font-semibold border border-[#C99732]/30">
+                    خاص بالمدير
+                  </span>
+                  {isMonthlyCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  إحصائيات إنجاز الجلسات والأحكام والمهام حسب المحامي المسؤول
+                </p>
+              </div>
+            </button>
+
+            {/* Filter controls + Export CSV */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select
+                value={String(selectedMonth)}
+                onValueChange={(v) => setSelectedMonth(parseInt(v, 10))}
+              >
+                <SelectTrigger className="h-8 text-xs bg-card border-border w-[110px]">
+                  <SelectValue placeholder="الشهر" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      شهر {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(v) => setSelectedYear(parseInt(v, 10))}
+              >
+                <SelectTrigger className="h-8 text-xs bg-card border-border w-[90px]">
+                  <SelectValue placeholder="السنة" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  {[2024, 2025, 2026, 2027].map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCsv}
+                disabled={!monthlyData || isLoadingMonthly}
+                className="h-8 text-xs gap-1.5 border-[#C99732]/40 text-[#C99732] hover:bg-[#C99732]/10 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>تصدير (CSV)</span>
+              </Button>
+            </div>
+          </div>
+
+          {!isMonthlyCollapsed && (
+            <>
+              {isLoadingMonthly ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                  ))}
+                </div>
+              ) : monthlyData ? (
+                <div className="space-y-4 pt-1">
+                  {/* Overall KPI cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Scale className="w-4 h-4 text-blue-600" />
+                        <span className="text-xs text-muted-foreground font-medium">جلسات معقودة</span>
+                      </div>
+                      <span className="font-bold text-base font-mono text-blue-700 dark:text-blue-400">
+                        {monthlyData.overall.sessionsHeld}
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Gavel className="w-4 h-4 text-amber-600" />
+                        <span className="text-xs text-muted-foreground font-medium">أحكام صادرة</span>
+                      </div>
+                      <span className="font-bold text-base font-mono text-amber-700 dark:text-amber-400">
+                        {monthlyData.overall.judgmentsClosed}
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckSquare className="w-4 h-4 text-emerald-600" />
+                        <span className="text-xs text-muted-foreground font-medium">مهام مكتملة</span>
+                      </div>
+                      <span className="font-bold text-base font-mono text-emerald-700 dark:text-emerald-400">
+                        {monthlyData.overall.tasksCompleted}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Per-Lawyer Breakdown */}
+                  {monthlyData.byLawyer && monthlyData.byLawyer.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-right text-xs">
+                        <thead>
+                          <tr className="border-b border-border/60 text-muted-foreground">
+                            <th className="pb-2 font-medium">المحامي</th>
+                            <th className="pb-2 font-medium text-center">الجلسات المنعقدة</th>
+                            <th className="pb-2 font-medium text-center">الأحكام الصادرة</th>
+                            <th className="pb-2 font-medium text-center">المهام المكتملة</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {monthlyData.byLawyer.map((l: any) => (
+                            <tr key={l.lawyerId} className="hover:bg-muted/40 transition-colors">
+                              <td className="py-2.5 font-semibold text-foreground">
+                                {l.lawyerName}
+                              </td>
+                              <td className="py-2.5 text-center font-mono font-medium">
+                                {l.sessionsHeld}
+                              </td>
+                              <td className="py-2.5 text-center font-mono font-medium">
+                                {l.judgmentsClosed}
+                              </td>
+                              <td className="py-2.5 text-center font-mono font-medium">
+                                {l.tasksCompleted}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </>
+          )}
+        </Card>
+      )}
+
       {/* Filter Tabs & Sort Dropdown */}
       <div className="fade-in-up fade-in-up-delay-1 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5 p-1 bg-white rounded-2xl border border-[#D6E0EC] w-fit shadow-xs">
@@ -326,6 +567,10 @@ export default function SessionsPage() {
           {paginatedSessions.map((session, i) => {
             const effectiveStatus = deriveEffectiveStatus(session.status, session.hearingAt);
             const style = statusStyleMap[effectiveStatus];
+            const hasReport = Boolean(
+              (session as any).has_report ?? (session as any).hasReport ?? (session as any).report
+            );
+
             return (
               <div key={session.id} className="relative group" style={{ animationDelay: `${i * 0.04}s` }}>
                 <Link href={`/sessions/${session.id}`}>
@@ -338,7 +583,7 @@ export default function SessionsPage() {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold text-base font-mono" data-testid={`session-case-${session.id}`}>
                               {session.caseNumber || '—'}
@@ -347,9 +592,91 @@ export default function SessionsPage() {
                               <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
                               {statusLabelMap[effectiveStatus]}
                             </span>
+                            {/* "حالة التقرير" badge */}
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                hasReport
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                              }`}
+                              data-testid={`session-report-status-${session.id}`}
+                            >
+                              <FileText className="w-3 h-3" />
+                              {hasReport ? 'مكتمل' : 'لم يُكتب بعد'}
+                            </span>
                           </div>
-                          {/* Spacer for the absolute menu button */}
-                          <div className="w-8 h-8 shrink-0" />
+
+                          {/* Inline Actions: "التقرير" button + Actions Dropdown */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Link
+                              href={`/reports/${session.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#C99732]/10 text-[#C99732] hover:bg-[#C99732]/20 border border-[#C99732]/30 transition-colors cursor-pointer"
+                              data-testid={`button-view-report-${session.id}`}
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>التقرير</span>
+                            </Link>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 focus:outline-none cursor-pointer"
+                                  data-testid={`button-session-menu-${session.id}`}
+                                  aria-label="خيارات الجلسة"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem asChild>
+                                  <Link
+                                    href={`/reports/${session.id}`}
+                                    className="gap-2 cursor-pointer flex items-center text-foreground"
+                                  >
+                                    <FileText className="w-3.5 h-3.5 text-[#C99732]" />
+                                    <span>كتابة / عرض التقرير</span>
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => openEdit(session as unknown as SessionItem, e)}
+                                  className="gap-2 cursor-pointer"
+                                  data-testid={`button-edit-session-${session.id}`}
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                  تعديل سريع
+                                </DropdownMenuItem>
+                                {isAdmin && (
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setReassignTarget(session as unknown as SessionItem);
+                                    }}
+                                    className="gap-2 cursor-pointer text-primary focus:text-primary focus:bg-primary/10"
+                                  >
+                                    <UserCog className="w-3.5 h-3.5" />
+                                    إعادة تعيين المحامي
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={(e) => openDelete(session as unknown as SessionItem, e)}
+                                  className="gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                                  data-testid={`button-delete-session-${session.id}`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  حذف الجلسة
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
@@ -394,53 +721,7 @@ export default function SessionsPage() {
                   </div>
                 </Link>
 
-                {/* Actions Dropdown — sits outside the Link to avoid navigation */}
-                <div className="absolute top-4 left-4 z-10">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150 focus:opacity-100 focus:outline-none"
-                        data-testid={`button-session-menu-${session.id}`}
-                        aria-label="خيارات الجلسة"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem
-                        onClick={(e) => openEdit(session as unknown as SessionItem, e)}
-                        className="gap-2 cursor-pointer"
-                        data-testid={`button-edit-session-${session.id}`}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        تعديل سريع
-                      </DropdownMenuItem>
-                      {isAdmin && (
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setReassignTarget(session as unknown as SessionItem);
-                          }}
-                          className="gap-2 cursor-pointer text-primary focus:text-primary focus:bg-primary/10"
-                        >
-                          <UserCog className="w-3.5 h-3.5" />
-                          إعادة تعيين المحامي
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={(e) => openDelete(session as unknown as SessionItem, e)}
-                        className="gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-                        data-testid={`button-delete-session-${session.id}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        حذف الجلسة
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+
               </div>
             );
           })}
