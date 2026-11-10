@@ -56,6 +56,7 @@ export interface SessionRecord {
   report?: string | null;
   hearingAt: string | null;
   clientId?: string | null;
+  caseId?: string | null;
   assignedLawyerId?: string | null;
   clientRole?: "plaintiff" | "defendant" | null;
   createdBy?: string | null;
@@ -69,6 +70,7 @@ export type SessionCreateData = SessionInput & {
   reminder6?: boolean;
   sessionDay?: string | null;
   clientId?: string | null;
+  caseId?: string | null;
   assignedLawyerId?: string | null;
   clientRole?: "plaintiff" | "defendant" | null;
   createdBy?: string | null;
@@ -79,6 +81,7 @@ export type SessionUpdateData = SessionUpdate & {
   reminder6?: boolean;
   sessionDay?: string | null;
   clientId?: string | null;
+  caseId?: string | null;
   assignedLawyerId?: string | null;
   clientRole?: "plaintiff" | "defendant" | null;
 };
@@ -129,11 +132,29 @@ export interface JudgmentRecord {
   summary: string;
   isFavorable: "نهائي" | "ابتدائي" | string;
   clientId?: string | null;
+  caseId?: string | null;
   assignedLawyerId?: string | null;
   clientRole?: "plaintiff" | "defendant" | null;
   createdBy?: string | null;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface CaseRecord {
+  id: string;
+  officeId: string;
+  clientId: string;
+  caseNumber: string;
+  caseType: string;
+  court: string;
+  assignedLawyerId?: string | null;
+  status: "open" | "closed" | "postponed";
+  opposingParty?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  clientName?: string;
+  assignedLawyerName?: string;
 }
 
 export interface ReportRecord {
@@ -166,7 +187,7 @@ export interface AttachmentRecord {
   filePath: string;
   fileSize: number;
   mimeType: string;
-  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task';
+  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task' | 'case';
   relatedRecordId: string;
   createdAt: string;
   uploaderName?: string;
@@ -195,6 +216,7 @@ const memoryReports = new Map<string, ReportRecord[]>();
 const memoryNotifications = new Map<string, NotificationRecord[]>();
 const memoryAttachments = new Map<string, AttachmentRecord[]>();
 const memoryClientNotes = new Map<string, ClientNoteRecord[]>();
+const memoryCases = new Map<string, CaseRecord[]>();
 
 let _nextId = 1000;
 function nextId(): number {
@@ -211,6 +233,7 @@ export function resetInMemoryStore(): void {
   memoryNotifications.clear();
   memoryAttachments.clear();
   memoryClientNotes.clear();
+  memoryCases.clear();
 }
 
 // Helper: Hijri Remaining Days Calculation
@@ -277,6 +300,8 @@ function formatSession(s: any): any {
     hearingAt,
     clientId: s.clientId ?? s.client_id ?? null,
     client_id: s.clientId ?? s.client_id ?? null,
+    caseId: s.caseId ?? s.case_id ?? null,
+    case_id: s.caseId ?? s.case_id ?? null,
     assignedLawyerId: s.assignedLawyerId ?? s.assigned_lawyer_id ?? null,
     assigned_lawyer_id: s.assignedLawyerId ?? s.assigned_lawyer_id ?? null,
     clientRole: s.clientRole ?? s.client_role ?? null,
@@ -578,6 +603,7 @@ export async function createSession(data: SessionCreateData, officeId: string): 
   const now = new Date().toISOString();
 
   const clientId = data.clientId || (data as any).client_id || null;
+  const caseId = data.caseId || (data as any).case_id || null;
   const assignedLawyerId = data.assignedLawyerId || (data as any).assigned_lawyer_id || null;
   const clientRole = data.clientRole || (data as any).client_role || null;
   const createdBy = data.createdBy || (data as any).created_by || null;
@@ -606,6 +632,7 @@ export async function createSession(data: SessionCreateData, officeId: string): 
             reminder6: Boolean(data.reminder6),
             hearing_at: hearingAt,
             client_id: clientId,
+            case_id: caseId,
             assigned_lawyer_id: assignedLawyerId,
             client_role: clientRole,
             created_by: createdBy,
@@ -621,6 +648,7 @@ export async function createSession(data: SessionCreateData, officeId: string): 
           id: inserted.id,
           officeId,
           clientId,
+          caseId,
           assignedLawyerId,
           clientRole,
           createdBy,
@@ -632,6 +660,8 @@ export async function createSession(data: SessionCreateData, officeId: string): 
           ...formatted,
           clientId,
           client_id: clientId,
+          caseId,
+          case_id: caseId,
           assignedLawyerId,
           assigned_lawyer_id: assignedLawyerId,
           clientRole,
@@ -665,6 +695,7 @@ export async function createSession(data: SessionCreateData, officeId: string): 
     reminder6: Boolean(data.reminder6),
     hearingAt,
     clientId,
+    caseId,
     assignedLawyerId,
     clientRole,
     createdBy,
@@ -700,6 +731,8 @@ export async function updateSession(id: number, data: SessionUpdateData, officeI
       if (data.reminder6 !== undefined) updatePayload.reminder6 = data.reminder6;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
       if (data.clientRole !== undefined) updatePayload.client_role = data.clientRole;
@@ -748,6 +781,7 @@ export async function updateSession(id: number, data: SessionUpdateData, officeI
     reminder24: data.reminder24 !== undefined ? Boolean(data.reminder24) : current.reminder24,
     reminder6: data.reminder6 !== undefined ? Boolean(data.reminder6) : current.reminder6,
     clientId: data.clientId !== undefined ? data.clientId : (data as any).client_id !== undefined ? (data as any).client_id : current.clientId,
+    caseId: data.caseId !== undefined ? data.caseId : (data as any).case_id !== undefined ? (data as any).case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== undefined ? data.assignedLawyerId : (data as any).assigned_lawyer_id !== undefined ? (data as any).assigned_lawyer_id : current.assignedLawyerId,
     clientRole: data.clientRole !== undefined ? data.clientRole : (data as any).client_role !== undefined ? (data as any).client_role : current.clientRole,
     updatedAt: new Date().toISOString(),
@@ -1076,6 +1110,8 @@ export async function updateTask(
       if (data.notes !== undefined) updatePayload.notes = data.notes;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
 
@@ -1348,6 +1384,8 @@ export async function updatePoa(
       if (data.notes !== undefined) updatePayload.notes = data.notes;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
 
@@ -1441,12 +1479,14 @@ function formatJudgment(r: any): JudgmentRecord {
     summary: r.summary || "",
     isFavorable: r.isFavorable ?? r.is_favorable ?? "نهائي",
     clientId: r.clientId ?? r.client_id ?? null,
+    caseId: r.caseId ?? r.case_id ?? null,
     assignedLawyerId: r.assignedLawyerId ?? r.assigned_lawyer_id ?? null,
     clientRole: r.clientRole ?? r.client_role ?? null,
     createdBy: r.createdBy ?? r.created_by ?? null,
     createdAt: r.createdAt ?? r.created_at,
     updatedAt: r.updatedAt ?? r.updated_at,
     ...(r.clientId || r.client_id ? { client_id: r.clientId ?? r.client_id } : {}),
+    ...(r.caseId || r.case_id ? { case_id: r.caseId ?? r.case_id } : {}),
     ...(r.assignedLawyerId || r.assigned_lawyer_id ? { assigned_lawyer_id: r.assignedLawyerId ?? r.assigned_lawyer_id } : {}),
     ...(r.clientRole || r.client_role ? { client_role: r.clientRole ?? r.client_role } : {}),
     ...(r.createdBy || r.created_by ? { created_by: r.createdBy ?? r.created_by } : {}),
@@ -1545,6 +1585,7 @@ export async function createJudgment(
 ): Promise<JudgmentRecord> {
   const now = new Date().toISOString();
   const clientId = data.clientId || (data as any).client_id || null;
+  const caseId = (data as any).caseId || (data as any).case_id || null;
   const assignedLawyerId = data.assignedLawyerId || (data as any).assigned_lawyer_id || null;
   const clientRole = data.clientRole || (data as any).client_role || null;
   const createdBy = data.createdBy || (data as any).created_by || null;
@@ -1567,6 +1608,7 @@ export async function createJudgment(
             summary: data.summary || "",
             is_favorable: data.isFavorable || "نهائي",
             client_id: clientId,
+            case_id: caseId,
             assigned_lawyer_id: assignedLawyerId,
             client_role: clientRole,
             created_by: createdBy,
@@ -1582,6 +1624,7 @@ export async function createJudgment(
           id: inserted.id,
           officeId,
           clientId,
+          caseId,
           assignedLawyerId,
           clientRole,
           createdBy,
@@ -1610,6 +1653,7 @@ export async function createJudgment(
     summary: data.summary || "",
     isFavorable: data.isFavorable || "نهائي",
     clientId,
+    caseId,
     assignedLawyerId,
     clientRole,
     createdBy,
@@ -1642,6 +1686,8 @@ export async function updateJudgment(
       if (data.isFavorable !== undefined) updatePayload.is_favorable = data.isFavorable;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
       if (data.clientRole !== undefined) updatePayload.client_role = data.clientRole;
@@ -1680,6 +1726,7 @@ export async function updateJudgment(
     summary: data.summary !== undefined ? data.summary : current.summary,
     isFavorable: data.isFavorable !== undefined ? data.isFavorable : current.isFavorable,
     clientId: data.clientId !== undefined ? data.clientId : (data as any).client_id !== undefined ? (data as any).client_id : current.clientId,
+    caseId: data.caseId !== undefined ? data.caseId : (data as any).case_id !== undefined ? (data as any).case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== undefined ? data.assignedLawyerId : (data as any).assigned_lawyer_id !== undefined ? (data as any).assigned_lawyer_id : current.assignedLawyerId,
     clientRole: data.clientRole !== undefined ? data.clientRole : (data as any).client_role !== undefined ? (data as any).client_role : current.clientRole,
     updatedAt: new Date().toISOString(),
@@ -2074,7 +2121,7 @@ export async function createAttachment(data: {
   filePath: string;
   fileSize: number;
   mimeType: string;
-  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task';
+  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task' | 'case';
   relatedRecordId: string;
   uploaderName?: string;
 }): Promise<AttachmentRecord> {
@@ -2536,6 +2583,371 @@ export async function createClientNote(data: {
 
   return newNote;
 }
+
+// ============================================================================
+// CASES (Central Case Entity)
+// ============================================================================
+
+function formatCase(r: any): CaseRecord {
+  return {
+    id: String(r.id),
+    officeId: r.officeId ?? r.office_id,
+    clientId: String(r.clientId ?? r.client_id),
+    caseNumber: String(r.caseNumber ?? r.case_number ?? ""),
+    caseType: String(r.caseType ?? r.case_type ?? ""),
+    court: String(r.court ?? ""),
+    assignedLawyerId: r.assignedLawyerId ?? r.assigned_lawyer_id ?? null,
+    status: (r.status === "closed" || r.status === "postponed" ? r.status : "open") as "open" | "closed" | "postponed",
+    opposingParty: r.opposingParty ?? r.opposing_party ?? null,
+    createdBy: r.createdBy ?? r.created_by ?? null,
+    createdAt: r.createdAt ?? r.created_at ?? new Date().toISOString(),
+    updatedAt: r.updatedAt ?? r.updated_at ?? new Date().toISOString(),
+    clientName: r.clientName ?? r.client_name,
+    assignedLawyerName: r.assignedLawyerName ?? r.assigned_lawyer_name,
+  };
+}
+
+export async function listCases(
+  officeId: string,
+  filters?: {
+    status?: string;
+    court?: string;
+    clientId?: string;
+    caseNumber?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+): Promise<CaseRecord[]> {
+  const memList = (memoryCases.get(officeId) || []).map(formatCase);
+  let allCases = memList;
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("cases")
+        .select("*")
+        .eq("office_id", officeId)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        const dbCases = data.map(formatCase);
+        const dbIds = new Set(dbCases.map((c) => c.id));
+        allCases = [...dbCases, ...memList.filter((m) => !dbIds.has(m.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listCases failed, falling back to memory");
+    }
+  }
+
+  // Resolve client names
+  const clients = await listClients(officeId);
+  const clientMap = new Map(clients.map((c) => [c.id, c.name]));
+
+  let result = allCases.map((c) => ({
+    ...c,
+    clientName: c.clientName || clientMap.get(c.clientId) || "—",
+  }));
+
+  // Apply filters
+  if (filters?.status && filters.status !== "all") {
+    result = result.filter((c) => c.status === filters.status);
+  }
+  if (filters?.court && filters.court !== "all") {
+    result = result.filter((c) => c.court.toLowerCase().includes(filters.court!.toLowerCase()));
+  }
+  if (filters?.clientId && filters.clientId !== "all") {
+    result = result.filter((c) => c.clientId === filters.clientId);
+  }
+  if (filters?.caseNumber) {
+    const q = filters.caseNumber.toLowerCase();
+    result = result.filter(
+      (c) =>
+        c.caseNumber.toLowerCase().includes(q) ||
+        (c.clientName && c.clientName.toLowerCase().includes(q)) ||
+        (c.opposingParty && c.opposingParty.toLowerCase().includes(q)) ||
+        c.caseType.toLowerCase().includes(q)
+    );
+  }
+  if (filters?.dateFrom) {
+    const fromTime = new Date(filters.dateFrom).getTime();
+    result = result.filter((c) => new Date(c.createdAt).getTime() >= fromTime);
+  }
+  if (filters?.dateTo) {
+    const toTime = new Date(filters.dateTo).getTime() + 24 * 60 * 60 * 1000;
+    result = result.filter((c) => new Date(c.createdAt).getTime() <= toTime);
+  }
+
+  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function getCaseById(id: string, officeId: string): Promise<CaseRecord | null> {
+  const memList = memoryCases.get(officeId) || [];
+  const fromMem = memList.find((c) => c.id === id);
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("cases")
+        .select("*")
+        .eq("id", id)
+        .eq("office_id", officeId)
+        .single();
+
+      if (!error && data) {
+        const formatted = formatCase(data);
+        if (fromMem) {
+          return {
+            ...formatted,
+            assignedLawyerId: fromMem.assignedLawyerId !== undefined ? fromMem.assignedLawyerId : formatted.assignedLawyerId,
+          };
+        }
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getCaseById failed, falling back to memory");
+    }
+  }
+
+  return fromMem ? formatCase(fromMem) : null;
+}
+
+export async function createCase(
+  data: {
+    clientId: string;
+    caseNumber: string;
+    caseType?: string;
+    court?: string;
+    assignedLawyerId?: string | null;
+    status?: "open" | "closed" | "postponed";
+    opposingParty?: string | null;
+    createdBy?: string | null;
+  },
+  officeId: string
+): Promise<CaseRecord> {
+  const id = crypto.randomUUID ? crypto.randomUUID() : `case-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const now = new Date().toISOString();
+  const status = data.status || "open";
+
+  const record: CaseRecord = {
+    id,
+    officeId,
+    clientId: data.clientId,
+    caseNumber: data.caseNumber,
+    caseType: data.caseType || "",
+    court: data.court || "",
+    assignedLawyerId: data.assignedLawyerId || null,
+    status,
+    opposingParty: data.opposingParty || null,
+    createdBy: data.createdBy || null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client
+        .from("cases")
+        .insert({
+          id,
+          office_id: officeId,
+          client_id: data.clientId,
+          case_number: data.caseNumber,
+          case_type: data.caseType || "",
+          court: data.court || "",
+          assigned_lawyer_id: data.assignedLawyerId || null,
+          status,
+          opposing_party: data.opposingParty || null,
+          created_by: data.createdBy || null,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (!error && inserted) {
+        const formatted = formatCase(inserted);
+        const list = memoryCases.get(officeId) || [];
+        list.unshift(record);
+        memoryCases.set(officeId, list);
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createCase failed, saving to memory");
+    }
+  }
+
+  const list = memoryCases.get(officeId) || [];
+  list.unshift(record);
+  memoryCases.set(officeId, list);
+  return record;
+}
+
+export async function updateCase(
+  id: string,
+  data: Partial<Omit<CaseRecord, "id" | "officeId">>,
+  officeId: string
+): Promise<CaseRecord | null> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (data.caseNumber !== undefined) updatePayload.case_number = data.caseNumber;
+      if (data.caseType !== undefined) updatePayload.case_type = data.caseType;
+      if (data.court !== undefined) updatePayload.court = data.court;
+      if (data.status !== undefined) updatePayload.status = data.status;
+      if (data.opposingParty !== undefined) updatePayload.opposing_party = data.opposingParty;
+      if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
+      if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
+
+      const { data: updated, error } = await client
+        .from("cases")
+        .update(updatePayload)
+        .eq("id", id)
+        .eq("office_id", officeId)
+        .select()
+        .single();
+
+      if (!error && updated) {
+        const formatted = formatCase(updated);
+        const list = memoryCases.get(officeId) || [];
+        const idx = list.findIndex((c) => c.id === id);
+        if (idx !== -1) list[idx] = { ...list[idx], ...formatted };
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase updateCase failed, updating in memory");
+    }
+  }
+
+  const list = memoryCases.get(officeId) || [];
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+
+  const current = list[idx];
+  const updatedRecord: CaseRecord = {
+    ...current,
+    caseNumber: data.caseNumber !== undefined ? data.caseNumber : current.caseNumber,
+    caseType: data.caseType !== undefined ? data.caseType : current.caseType,
+    court: data.court !== undefined ? data.court : current.court,
+    status: data.status !== undefined ? data.status : current.status,
+    opposingParty: data.opposingParty !== undefined ? data.opposingParty : current.opposingParty,
+    clientId: data.clientId !== undefined ? data.clientId : current.clientId,
+    assignedLawyerId: data.assignedLawyerId !== undefined ? data.assignedLawyerId : current.assignedLawyerId,
+    updatedAt: new Date().toISOString(),
+  };
+
+  list[idx] = updatedRecord;
+  return updatedRecord;
+}
+
+export async function reassignCase(
+  id: string,
+  assignedLawyerId: string | null,
+  officeId: string
+): Promise<CaseRecord | null> {
+  return updateCase(id, { assignedLawyerId }, officeId);
+}
+
+export async function deleteCase(id: string, officeId: string): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error, count } = await client
+        .from("cases")
+        .delete({ count: "exact" })
+        .eq("id", id)
+        .eq("office_id", officeId);
+      if (!error && (count ?? 0) > 0) return true;
+    } catch (err) {
+      logger.warn({ err }, "Supabase deleteCase failed, falling back to memory");
+    }
+  }
+
+  const list = memoryCases.get(officeId) || [];
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
+
+export async function getCaseDetail(
+  id: string,
+  officeId: string
+): Promise<{
+  case: CaseRecord;
+  client: ClientRecord | null;
+  sessions: Session[];
+  judgments: JudgmentRecord[];
+  attachments: AttachmentRecord[];
+} | null> {
+  const caseRecord = await getCaseById(id, officeId);
+  if (!caseRecord) return null;
+
+  const [allSessions, allJudgments, allAttachments, client] = await Promise.all([
+    listSessions(officeId),
+    listJudgments(officeId),
+    listAttachments(officeId, "case", id),
+    caseRecord.clientId ? getClientById(caseRecord.clientId, officeId) : Promise.resolve(null),
+  ]);
+
+  const linkedSessions = allSessions
+    .filter((s) => {
+      const cId = (s as any).caseId || (s as any).case_id;
+      return (cId && cId === id) || (s.caseNumber && s.caseNumber === caseRecord.caseNumber);
+    })
+    .sort((a, b) => {
+      const tA = a.hearingAt ? new Date(a.hearingAt).getTime() : 0;
+      const tB = b.hearingAt ? new Date(b.hearingAt).getTime() : 0;
+      return tA - tB;
+    });
+
+  const linkedJudgments = allJudgments.filter((j) => {
+    const cId = (j as any).caseId || (j as any).case_id;
+    return (cId && cId === id) || (j.caseNumber && j.caseNumber === caseRecord.caseNumber);
+  });
+
+  return {
+    case: {
+      ...caseRecord,
+      clientName: client ? client.name : caseRecord.clientName || "—",
+    },
+    client,
+    sessions: linkedSessions,
+    judgments: linkedJudgments,
+    attachments: allAttachments,
+  };
+}
+
+export async function getCaseStats(
+  officeId: string,
+  filterRecords?: (c: CaseRecord) => boolean
+): Promise<{ total: number; open: number; closed: number; postponed: number }> {
+  let cases = await listCases(officeId);
+  if (filterRecords) {
+    cases = cases.filter(filterRecords);
+  }
+
+  let open = 0;
+  let closed = 0;
+  let postponed = 0;
+
+  for (const c of cases) {
+    if (c.status === "closed") closed++;
+    else if (c.status === "postponed") postponed++;
+    else open++;
+  }
+
+  return {
+    total: cases.length,
+    open,
+    closed,
+    postponed,
+  };
+}
+
 
 
 

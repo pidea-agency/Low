@@ -37,14 +37,14 @@ export interface AttachmentItem {
   filePath: string;
   fileSize: number;
   mimeType: string;
-  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task';
+  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task' | 'case';
   relatedRecordId: string;
   createdAt: string;
   uploaderName?: string;
 }
 
 export interface AttachmentsPanelProps {
-  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task';
+  relatedRecordType: 'client' | 'poa' | 'judgment' | 'session' | 'task' | 'case';
   relatedRecordId: string | number;
   title?: string;
   className?: string;

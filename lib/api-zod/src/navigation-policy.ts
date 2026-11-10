@@ -70,6 +70,15 @@ export const APP_NAVIGATION_CONFIG: NavItemConfig[] = [
     category: "main",
   },
   {
+    id: "cases",
+    name: "القضايا",
+    path: "/cases",
+    iconName: "Briefcase",
+    roles: ["admin", "staff"],
+    keywords: "القضايا قضية ملفات القضايا دعوى نزاع cases",
+    category: "main",
+  },
+  {
     id: "judgments",
     name: "الأحكام",
     path: "/judgments",

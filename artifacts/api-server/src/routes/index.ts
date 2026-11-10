@@ -18,6 +18,7 @@ import notificationsRouter from "./notifications";
 import attachmentsRouter from "./attachments";
 import searchRouter from "./search";
 import workloadRouter from "./workload";
+import casesRouter from "./cases";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(notificationsRouter);
 router.use(attachmentsRouter);
 router.use(searchRouter);
 router.use(workloadRouter);
+router.use(casesRouter);
 
 export default router;

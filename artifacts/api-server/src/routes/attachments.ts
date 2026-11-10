@@ -170,7 +170,7 @@ router.post("/attachments", async (req, res) => {
     return;
   }
 
-  const validTypes = ["client", "poa", "judgment", "session", "task"];
+  const validTypes = ["client", "poa", "judgment", "session", "task", "case"];
   if (!validTypes.includes(relatedRecordType)) {
     try {
       await fs.unlink(uploadedFile.filepath);

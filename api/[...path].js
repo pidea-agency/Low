@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router21;
+    module2.exports = Router22;
     module2.exports.Route = Route;
-    function Router21(options) {
-      if (!(this instanceof Router21)) {
-        return new Router21(options);
+    function Router22(options) {
+      if (!(this instanceof Router22)) {
+        return new Router22(options);
       }
       const opts = options || {};
-      function router21(req, res, next) {
-        router21.handle(req, res, next);
+      function router22(req, res, next) {
+        router22.handle(req, res, next);
       }
-      Object.setPrototypeOf(router21, this);
-      router21.caseSensitive = opts.caseSensitive;
-      router21.mergeParams = opts.mergeParams;
-      router21.params = {};
-      router21.strict = opts.strict;
-      router21.stack = [];
-      return router21;
+      Object.setPrototypeOf(router22, this);
+      router22.caseSensitive = opts.caseSensitive;
+      router22.mergeParams = opts.mergeParams;
+      router22.params = {};
+      router22.strict = opts.strict;
+      router22.stack = [];
+      return router22;
     }
-    Router21.prototype = function() {
+    Router22.prototype = function() {
     };
-    Router21.prototype.param = function param(name, fn) {
+    Router22.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router21.prototype.handle = function handle(req, res, callback) {
+    Router22.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router21.prototype.use = function use(handler2) {
+    Router22.prototype.use = function use(handler2) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router21.prototype.route = function route(path6) {
+    Router22.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router21.prototype[method] = function(path6) {
+      Router22.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve4 = require("node:path").resolve;
     var once2 = require_once();
-    var Router21 = require_router();
+    var Router22 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init4() {
-      var router21 = null;
+      var router22 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router21 === null) {
-            router21 = new Router21({
+          if (router22 === null) {
+            router22 = new Router22({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router21;
+          return router22;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router21 = this.router;
+      var router22 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router21.use(path6, fn2);
+          return router22.use(path6, fn2);
         }
         debug(".use app under %s", path6);
         fn2.mountpath = path6;
         fn2.parent = this;
-        router21.use(path6, function mounted_app(req, res, next) {
+        router22.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter4 = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router21 = require_router();
+    var Router22 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router21.Route;
-    exports2.Router = Router21;
+    exports2.Route = Router22.Route;
+    exports2.Router = Router22;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -830679,6 +830679,7 @@ var postgres_service_exports = {};
 __export(postgres_service_exports, {
   calcDaysFromHijri: () => calcDaysFromHijri,
   createAttachment: () => createAttachment,
+  createCase: () => createCase,
   createClient: () => createClient2,
   createClientNote: () => createClientNote,
   createJudgment: () => createJudgment,
@@ -830687,6 +830688,7 @@ __export(postgres_service_exports, {
   createSession: () => createSession,
   createTask: () => createTask,
   deleteAttachment: () => deleteAttachment,
+  deleteCase: () => deleteCase,
   deleteClient: () => deleteClient,
   deleteJudgment: () => deleteJudgment,
   deletePoa: () => deletePoa,
@@ -830694,6 +830696,9 @@ __export(postgres_service_exports, {
   deleteTask: () => deleteTask,
   exportOfficeDataToGoogleSheets: () => exportOfficeDataToGoogleSheets,
   getAttachmentById: () => getAttachmentById,
+  getCaseById: () => getCaseById,
+  getCaseDetail: () => getCaseDetail,
+  getCaseStats: () => getCaseStats,
   getClientById: () => getClientById,
   getJudgmentById: () => getJudgmentById,
   getPoaById: () => getPoaById,
@@ -830702,6 +830707,7 @@ __export(postgres_service_exports, {
   getTaskById: () => getTaskById,
   hasRecentNotification: () => hasRecentNotification,
   listAttachments: () => listAttachments,
+  listCases: () => listCases,
   listClientNotes: () => listClientNotes,
   listClients: () => listClients,
   listJudgments: () => listJudgments,
@@ -830711,6 +830717,7 @@ __export(postgres_service_exports, {
   listTasks: () => listTasks,
   markAllNotificationsRead: () => markAllNotificationsRead,
   markNotificationRead: () => markNotificationRead,
+  reassignCase: () => reassignCase,
   reassignJudgment: () => reassignJudgment,
   reassignPoa: () => reassignPoa,
   reassignSession: () => reassignSession,
@@ -830722,6 +830729,7 @@ __export(postgres_service_exports, {
   searchPoa: () => searchPoa,
   searchSessions: () => searchSessions,
   searchTasks: () => searchTasks,
+  updateCase: () => updateCase,
   updateClient: () => updateClient,
   updateJudgment: () => updateJudgment,
   updatePoa: () => updatePoa,
@@ -830741,6 +830749,7 @@ function resetInMemoryStore() {
   memoryNotifications.clear();
   memoryAttachments.clear();
   memoryClientNotes.clear();
+  memoryCases.clear();
 }
 function calcDaysFromHijri(hijriDateStr) {
   if (!hijriDateStr?.trim()) return 0;
@@ -830802,6 +830811,8 @@ function formatSession(s3) {
     hearingAt,
     clientId: s3.clientId ?? s3.client_id ?? null,
     client_id: s3.clientId ?? s3.client_id ?? null,
+    caseId: s3.caseId ?? s3.case_id ?? null,
+    case_id: s3.caseId ?? s3.case_id ?? null,
     assignedLawyerId: s3.assignedLawyerId ?? s3.assigned_lawyer_id ?? null,
     assigned_lawyer_id: s3.assignedLawyerId ?? s3.assigned_lawyer_id ?? null,
     clientRole: s3.clientRole ?? s3.client_role ?? null,
@@ -831031,6 +831042,7 @@ async function createSession(data, officeId) {
   const hearingAt = hearingAtDate ? hearingAtDate.toISOString() : null;
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const clientId = data.clientId || data.client_id || null;
+  const caseId = data.caseId || data.case_id || null;
   const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
   const clientRole = data.clientRole || data.client_role || null;
   const createdBy = data.createdBy || data.created_by || null;
@@ -831056,6 +831068,7 @@ async function createSession(data, officeId) {
           reminder6: Boolean(data.reminder6),
           hearing_at: hearingAt,
           client_id: clientId,
+          case_id: caseId,
           assigned_lawyer_id: assignedLawyerId,
           client_role: clientRole,
           created_by: createdBy
@@ -831068,6 +831081,7 @@ async function createSession(data, officeId) {
           id: inserted.id,
           officeId,
           clientId,
+          caseId,
           assignedLawyerId,
           clientRole,
           createdBy
@@ -831079,6 +831093,8 @@ async function createSession(data, officeId) {
           ...formatted,
           clientId,
           client_id: clientId,
+          caseId,
+          case_id: caseId,
           assignedLawyerId,
           assigned_lawyer_id: assignedLawyerId,
           clientRole,
@@ -831111,6 +831127,7 @@ async function createSession(data, officeId) {
     reminder6: Boolean(data.reminder6),
     hearingAt,
     clientId,
+    caseId,
     assignedLawyerId,
     clientRole,
     createdBy,
@@ -831143,6 +831160,8 @@ async function updateSession(id, data, officeId) {
       if (data.reminder6 !== void 0) updatePayload.reminder6 = data.reminder6;
       if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
       if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.caseId !== void 0) updatePayload.case_id = data.caseId;
+      if (data.case_id !== void 0) updatePayload.case_id = data.case_id;
       if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       if (data.clientRole !== void 0) updatePayload.client_role = data.clientRole;
@@ -831180,6 +831199,7 @@ async function updateSession(id, data, officeId) {
     reminder24: data.reminder24 !== void 0 ? Boolean(data.reminder24) : current.reminder24,
     reminder6: data.reminder6 !== void 0 ? Boolean(data.reminder6) : current.reminder6,
     clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    caseId: data.caseId !== void 0 ? data.caseId : data.case_id !== void 0 ? data.case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
     clientRole: data.clientRole !== void 0 ? data.clientRole : data.client_role !== void 0 ? data.client_role : current.clientRole,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -831422,6 +831442,8 @@ async function updateTask(id, data, officeId) {
       if (data.notes !== void 0) updatePayload.notes = data.notes;
       if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
       if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.caseId !== void 0) updatePayload.case_id = data.caseId;
+      if (data.case_id !== void 0) updatePayload.case_id = data.case_id;
       if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       const { data: updated2, error } = await client.from("tasks").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
@@ -831624,6 +831646,8 @@ async function updatePoa(id, data, officeId) {
       if (data.notes !== void 0) updatePayload.notes = data.notes;
       if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
       if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.caseId !== void 0) updatePayload.case_id = data.caseId;
+      if (data.case_id !== void 0) updatePayload.case_id = data.case_id;
       if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       const { data: updated2, error } = await client.from("poa").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
@@ -831686,12 +831710,14 @@ function formatJudgment(r2) {
     summary: r2.summary || "",
     isFavorable: r2.isFavorable ?? r2.is_favorable ?? "\u0646\u0647\u0627\u0626\u064A",
     clientId: r2.clientId ?? r2.client_id ?? null,
+    caseId: r2.caseId ?? r2.case_id ?? null,
     assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
     clientRole: r2.clientRole ?? r2.client_role ?? null,
     createdBy: r2.createdBy ?? r2.created_by ?? null,
     createdAt: r2.createdAt ?? r2.created_at,
     updatedAt: r2.updatedAt ?? r2.updated_at,
     ...r2.clientId || r2.client_id ? { client_id: r2.clientId ?? r2.client_id } : {},
+    ...r2.caseId || r2.case_id ? { case_id: r2.caseId ?? r2.case_id } : {},
     ...r2.assignedLawyerId || r2.assigned_lawyer_id ? { assigned_lawyer_id: r2.assignedLawyerId ?? r2.assigned_lawyer_id } : {},
     ...r2.clientRole || r2.client_role ? { client_role: r2.clientRole ?? r2.client_role } : {},
     ...r2.createdBy || r2.created_by ? { created_by: r2.createdBy ?? r2.created_by } : {}
@@ -831756,6 +831782,7 @@ async function getJudgmentById(id, officeId) {
 async function createJudgment(data, officeId) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const clientId = data.clientId || data.client_id || null;
+  const caseId = data.caseId || data.case_id || null;
   const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
   const clientRole = data.clientRole || data.client_role || null;
   const createdBy = data.createdBy || data.created_by || null;
@@ -831775,6 +831802,7 @@ async function createJudgment(data, officeId) {
           summary: data.summary || "",
           is_favorable: data.isFavorable || "\u0646\u0647\u0627\u0626\u064A",
           client_id: clientId,
+          case_id: caseId,
           assigned_lawyer_id: assignedLawyerId,
           client_role: clientRole,
           created_by: createdBy
@@ -831787,6 +831815,7 @@ async function createJudgment(data, officeId) {
           id: inserted.id,
           officeId,
           clientId,
+          caseId,
           assignedLawyerId,
           clientRole,
           createdBy
@@ -831814,6 +831843,7 @@ async function createJudgment(data, officeId) {
     summary: data.summary || "",
     isFavorable: data.isFavorable || "\u0646\u0647\u0627\u0626\u064A",
     clientId,
+    caseId,
     assignedLawyerId,
     clientRole,
     createdBy,
@@ -831840,6 +831870,8 @@ async function updateJudgment(id, data, officeId) {
       if (data.isFavorable !== void 0) updatePayload.is_favorable = data.isFavorable;
       if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
       if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
+      if (data.caseId !== void 0) updatePayload.case_id = data.caseId;
+      if (data.case_id !== void 0) updatePayload.case_id = data.case_id;
       if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       if (data.clientRole !== void 0) updatePayload.client_role = data.clientRole;
@@ -831868,6 +831900,7 @@ async function updateJudgment(id, data, officeId) {
     summary: data.summary !== void 0 ? data.summary : current.summary,
     isFavorable: data.isFavorable !== void 0 ? data.isFavorable : current.isFavorable,
     clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    caseId: data.caseId !== void 0 ? data.caseId : data.case_id !== void 0 ? data.case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
     clientRole: data.clientRole !== void 0 ? data.clientRole : data.client_role !== void 0 ? data.client_role : current.clientRole,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -832475,7 +832508,259 @@ async function createClientNote(data) {
   memoryClientNotes.set(data.officeId, existing);
   return newNote;
 }
-var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, _nextId;
+function formatCase(r2) {
+  return {
+    id: String(r2.id),
+    officeId: r2.officeId ?? r2.office_id,
+    clientId: String(r2.clientId ?? r2.client_id),
+    caseNumber: String(r2.caseNumber ?? r2.case_number ?? ""),
+    caseType: String(r2.caseType ?? r2.case_type ?? ""),
+    court: String(r2.court ?? ""),
+    assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
+    status: r2.status === "closed" || r2.status === "postponed" ? r2.status : "open",
+    opposingParty: r2.opposingParty ?? r2.opposing_party ?? null,
+    createdBy: r2.createdBy ?? r2.created_by ?? null,
+    createdAt: r2.createdAt ?? r2.created_at ?? (/* @__PURE__ */ new Date()).toISOString(),
+    updatedAt: r2.updatedAt ?? r2.updated_at ?? (/* @__PURE__ */ new Date()).toISOString(),
+    clientName: r2.clientName ?? r2.client_name,
+    assignedLawyerName: r2.assignedLawyerName ?? r2.assigned_lawyer_name
+  };
+}
+async function listCases(officeId, filters) {
+  const memList = (memoryCases.get(officeId) || []).map(formatCase);
+  let allCases = memList;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("cases").select("*").eq("office_id", officeId).order("created_at", { ascending: false });
+      if (!error && data) {
+        const dbCases = data.map(formatCase);
+        const dbIds = new Set(dbCases.map((c) => c.id));
+        allCases = [...dbCases, ...memList.filter((m2) => !dbIds.has(m2.id))];
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase listCases failed, falling back to memory");
+    }
+  }
+  const clients = await listClients(officeId);
+  const clientMap = new Map(clients.map((c) => [c.id, c.name]));
+  let result = allCases.map((c) => ({
+    ...c,
+    clientName: c.clientName || clientMap.get(c.clientId) || "\u2014"
+  }));
+  if (filters?.status && filters.status !== "all") {
+    result = result.filter((c) => c.status === filters.status);
+  }
+  if (filters?.court && filters.court !== "all") {
+    result = result.filter((c) => c.court.toLowerCase().includes(filters.court.toLowerCase()));
+  }
+  if (filters?.clientId && filters.clientId !== "all") {
+    result = result.filter((c) => c.clientId === filters.clientId);
+  }
+  if (filters?.caseNumber) {
+    const q = filters.caseNumber.toLowerCase();
+    result = result.filter(
+      (c) => c.caseNumber.toLowerCase().includes(q) || c.clientName && c.clientName.toLowerCase().includes(q) || c.opposingParty && c.opposingParty.toLowerCase().includes(q) || c.caseType.toLowerCase().includes(q)
+    );
+  }
+  if (filters?.dateFrom) {
+    const fromTime = new Date(filters.dateFrom).getTime();
+    result = result.filter((c) => new Date(c.createdAt).getTime() >= fromTime);
+  }
+  if (filters?.dateTo) {
+    const toTime = new Date(filters.dateTo).getTime() + 24 * 60 * 60 * 1e3;
+    result = result.filter((c) => new Date(c.createdAt).getTime() <= toTime);
+  }
+  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+async function getCaseById(id, officeId) {
+  const memList = memoryCases.get(officeId) || [];
+  const fromMem = memList.find((c) => c.id === id);
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("cases").select("*").eq("id", id).eq("office_id", officeId).single();
+      if (!error && data) {
+        const formatted = formatCase(data);
+        if (fromMem) {
+          return {
+            ...formatted,
+            assignedLawyerId: fromMem.assignedLawyerId !== void 0 ? fromMem.assignedLawyerId : formatted.assignedLawyerId
+          };
+        }
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase getCaseById failed, falling back to memory");
+    }
+  }
+  return fromMem ? formatCase(fromMem) : null;
+}
+async function createCase(data, officeId) {
+  const id = import_crypto4.default.randomUUID ? import_crypto4.default.randomUUID() : `case-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const status = data.status || "open";
+  const record = {
+    id,
+    officeId,
+    clientId: data.clientId,
+    caseNumber: data.caseNumber,
+    caseType: data.caseType || "",
+    court: data.court || "",
+    assignedLawyerId: data.assignedLawyerId || null,
+    status,
+    opposingParty: data.opposingParty || null,
+    createdBy: data.createdBy || null,
+    createdAt: now,
+    updatedAt: now
+  };
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: inserted, error } = await client.from("cases").insert({
+        id,
+        office_id: officeId,
+        client_id: data.clientId,
+        case_number: data.caseNumber,
+        case_type: data.caseType || "",
+        court: data.court || "",
+        assigned_lawyer_id: data.assignedLawyerId || null,
+        status,
+        opposing_party: data.opposingParty || null,
+        created_by: data.createdBy || null,
+        created_at: now,
+        updated_at: now
+      }).select().single();
+      if (!error && inserted) {
+        const formatted = formatCase(inserted);
+        const list2 = memoryCases.get(officeId) || [];
+        list2.unshift(record);
+        memoryCases.set(officeId, list2);
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase createCase failed, saving to memory");
+    }
+  }
+  const list = memoryCases.get(officeId) || [];
+  list.unshift(record);
+  memoryCases.set(officeId, list);
+  return record;
+}
+async function updateCase(id, data, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const updatePayload = { updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      if (data.caseNumber !== void 0) updatePayload.case_number = data.caseNumber;
+      if (data.caseType !== void 0) updatePayload.case_type = data.caseType;
+      if (data.court !== void 0) updatePayload.court = data.court;
+      if (data.status !== void 0) updatePayload.status = data.status;
+      if (data.opposingParty !== void 0) updatePayload.opposing_party = data.opposingParty;
+      if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
+      if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
+      const { data: updated, error } = await client.from("cases").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
+      if (!error && updated) {
+        const formatted = formatCase(updated);
+        const list2 = memoryCases.get(officeId) || [];
+        const idx2 = list2.findIndex((c) => c.id === id);
+        if (idx2 !== -1) list2[idx2] = { ...list2[idx2], ...formatted };
+        return formatted;
+      }
+    } catch (err) {
+      logger.warn({ err }, "Supabase updateCase failed, updating in memory");
+    }
+  }
+  const list = memoryCases.get(officeId) || [];
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  const current = list[idx];
+  const updatedRecord = {
+    ...current,
+    caseNumber: data.caseNumber !== void 0 ? data.caseNumber : current.caseNumber,
+    caseType: data.caseType !== void 0 ? data.caseType : current.caseType,
+    court: data.court !== void 0 ? data.court : current.court,
+    status: data.status !== void 0 ? data.status : current.status,
+    opposingParty: data.opposingParty !== void 0 ? data.opposingParty : current.opposingParty,
+    clientId: data.clientId !== void 0 ? data.clientId : current.clientId,
+    assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : current.assignedLawyerId,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  list[idx] = updatedRecord;
+  return updatedRecord;
+}
+async function reassignCase(id, assignedLawyerId, officeId) {
+  return updateCase(id, { assignedLawyerId }, officeId);
+}
+async function deleteCase(id, officeId) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error, count } = await client.from("cases").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
+      if (!error && (count ?? 0) > 0) return true;
+    } catch (err) {
+      logger.warn({ err }, "Supabase deleteCase failed, falling back to memory");
+    }
+  }
+  const list = memoryCases.get(officeId) || [];
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
+async function getCaseDetail(id, officeId) {
+  const caseRecord = await getCaseById(id, officeId);
+  if (!caseRecord) return null;
+  const [allSessions, allJudgments, allAttachments, client] = await Promise.all([
+    listSessions(officeId),
+    listJudgments(officeId),
+    listAttachments(officeId, "case", id),
+    caseRecord.clientId ? getClientById(caseRecord.clientId, officeId) : Promise.resolve(null)
+  ]);
+  const linkedSessions = allSessions.filter((s3) => {
+    const cId = s3.caseId || s3.case_id;
+    return cId && cId === id || s3.caseNumber && s3.caseNumber === caseRecord.caseNumber;
+  }).sort((a, b) => {
+    const tA = a.hearingAt ? new Date(a.hearingAt).getTime() : 0;
+    const tB = b.hearingAt ? new Date(b.hearingAt).getTime() : 0;
+    return tA - tB;
+  });
+  const linkedJudgments = allJudgments.filter((j) => {
+    const cId = j.caseId || j.case_id;
+    return cId && cId === id || j.caseNumber && j.caseNumber === caseRecord.caseNumber;
+  });
+  return {
+    case: {
+      ...caseRecord,
+      clientName: client ? client.name : caseRecord.clientName || "\u2014"
+    },
+    client,
+    sessions: linkedSessions,
+    judgments: linkedJudgments,
+    attachments: allAttachments
+  };
+}
+async function getCaseStats(officeId, filterRecords) {
+  let cases = await listCases(officeId);
+  if (filterRecords) {
+    cases = cases.filter(filterRecords);
+  }
+  let open = 0;
+  let closed = 0;
+  let postponed = 0;
+  for (const c of cases) {
+    if (c.status === "closed") closed++;
+    else if (c.status === "postponed") postponed++;
+    else open++;
+  }
+  return {
+    total: cases.length,
+    open,
+    closed,
+    postponed
+  };
+}
+var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, _nextId;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -832493,6 +832778,7 @@ var init_postgres_service = __esm({
     memoryNotifications = /* @__PURE__ */ new Map();
     memoryAttachments = /* @__PURE__ */ new Map();
     memoryClientNotes = /* @__PURE__ */ new Map();
+    memoryCases = /* @__PURE__ */ new Map();
     _nextId = 1e3;
   }
 });
@@ -833274,7 +833560,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express21 = __toESM(require_express2(), 1);
+var import_express22 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -833283,7 +833569,7 @@ var import_fs4 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express20 = __toESM(require_express2(), 1);
+var import_express21 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -851196,11 +851482,12 @@ async function validateOfficeLawyer(lawyerId, officeId) {
   return { valid: true, lawyerName: user.display_name || user.username };
 }
 async function getStaffAccessibleClientIds(officeId, authUser) {
-  const [sessions, tasks3, poas, judgments] = await Promise.all([
+  const [sessions, tasks3, poas, judgments, cases] = await Promise.all([
     listSessions(officeId),
     listTasks(officeId),
     listPoa(officeId),
-    listJudgments(officeId)
+    listJudgments(officeId),
+    listCases(officeId)
   ]);
   const set = /* @__PURE__ */ new Set();
   for (const s3 of sessions) {
@@ -851224,6 +851511,12 @@ async function getStaffAccessibleClientIds(officeId, authUser) {
   for (const j of judgments) {
     const cId = j.clientId || j.client_id;
     if (cId && canUserAccessRecord(j, authUser)) {
+      set.add(cId);
+    }
+  }
+  for (const c of cases) {
+    const cId = c.clientId || c.client_id;
+    if (cId && canUserAccessRecord(c, authUser)) {
       set.add(cId);
     }
   }
@@ -851293,6 +851586,16 @@ async function verifyRecordAccess(officeId, relatedRecordType, relatedRecordId, 
       }
       if (!canUserAccessRecord(judgment, authUser)) {
         return { allowed: false, status: 403, error: "\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062D\u0643\u0645." };
+      }
+      return { allowed: true };
+    }
+    case "case": {
+      const caseRecord = await getCaseById(String(relatedRecordId), officeId);
+      if (!caseRecord) {
+        return { allowed: false, status: 404, error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." };
+      }
+      if (!canUserAccessRecord(caseRecord, authUser)) {
+        return { allowed: false, status: 403, error: "\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u0642\u0636\u064A\u0629." };
       }
       return { allowed: true };
     }
@@ -856162,7 +856465,7 @@ router17.post("/attachments", async (req, res) => {
     });
     return;
   }
-  const validTypes = ["client", "poa", "judgment", "session", "task"];
+  const validTypes = ["client", "poa", "judgment", "session", "task", "case"];
   if (!validTypes.includes(relatedRecordType)) {
     try {
       await import_promises2.default.unlink(uploadedFile.filepath);
@@ -856446,28 +856749,302 @@ router19.get("/workload", async (req, res) => {
 });
 var workload_default = router19;
 
-// src/routes/index.ts
+// src/routes/cases.ts
+var import_express20 = __toESM(require_express2(), 1);
+init_logger();
+init_postgres_service();
 var router20 = (0, import_express20.Router)();
-router20.use(health_default);
-router20.use(auth_default);
-router20.use(dashboard_default);
-router20.use(ai_default);
-router20.use(sessions_default);
-router20.use(settings_default);
-router20.use(reports_default);
-router20.use(cron_default);
-router20.use(poa_default);
-router20.use(judgments_default);
-router20.use(tasks_default);
-router20.use(users_default);
-router20.use(super_admin_default);
-router20.use(subscription_default);
-router20.use(clients_default);
-router20.use(notifications_default);
-router20.use(attachments_default);
-router20.use(search_default);
-router20.use(workload_default);
-var routes_default = router20;
+function generateRefId7() {
+  return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+}
+router20.use("/cases", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
+function getOfficeId10(req) {
+  const officeId = req.authUser?.officeId || req.authUser?.userId;
+  if (!officeId) {
+    throw new Error("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F.");
+  }
+  return officeId;
+}
+router20.get("/cases/stats", async (req, res) => {
+  const officeId = getOfficeId10(req);
+  try {
+    const isStaff = req.authUser?.role === "staff";
+    const stats = await getCaseStats(
+      officeId,
+      isStaff ? (c) => canUserAccessRecord(c, req.authUser) : void 0
+    );
+    res.json(stats);
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to get cases stats");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0642\u0636\u0627\u064A\u0627. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router20.get("/cases", async (req, res) => {
+  const officeId = getOfficeId10(req);
+  try {
+    const { status, court, client_id, clientId, case_number, q, date_from, date_to } = req.query;
+    const filters = {
+      status: status ? String(status) : void 0,
+      court: court ? String(court) : void 0,
+      clientId: clientId || client_id ? String(clientId || client_id) : void 0,
+      caseNumber: case_number || q ? String(case_number || q) : void 0,
+      dateFrom: date_from ? String(date_from) : void 0,
+      dateTo: date_to ? String(date_to) : void 0
+    };
+    let cases = await listCases(officeId, filters);
+    if (req.authUser?.role === "staff") {
+      cases = cases.filter((c) => canUserAccessRecord(c, req.authUser));
+    }
+    res.json(cases);
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to list cases");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0642\u0636\u0627\u064A\u0627. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router20.post("/cases", async (req, res) => {
+  const officeId = getOfficeId10(req);
+  const body = req.body || {};
+  const clientId = body.clientId || body.client_id;
+  const caseNumber = body.caseNumber || body.case_number;
+  if (!clientId || !String(clientId).trim()) {
+    res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628 \u0644\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0642\u0636\u064A\u0629." });
+    return;
+  }
+  if (!caseNumber || !String(caseNumber).trim()) {
+    res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0645\u0637\u0644\u0648\u0628." });
+    return;
+  }
+  const client = await getClientById(String(clientId).trim(), officeId);
+  if (!client) {
+    res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
+    return;
+  }
+  const assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+  if (assignedLawyerId) {
+    const lawyerVal = await validateOfficeLawyer(assignedLawyerId, officeId);
+    if (!lawyerVal.valid) {
+      res.status(400).json({ error: lawyerVal.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+  }
+  const status = body.status || "open";
+  if (!["open", "closed", "postponed"].includes(status)) {
+    res.status(400).json({ error: "\u062D\u0627\u0644\u0629 \u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u0627\u0644\u062D\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u0645\u0648\u062D\u0629: open, closed, postponed." });
+    return;
+  }
+  try {
+    const newCase = await createCase(
+      {
+        clientId: String(clientId).trim(),
+        caseNumber: String(caseNumber).trim(),
+        caseType: body.caseType || body.case_type || "",
+        court: body.court || "",
+        assignedLawyerId,
+        status,
+        opposingParty: body.opposingParty || body.opposing_party || "",
+        createdBy: req.authUser?.userId || null
+      },
+      officeId
+    );
+    res.status(201).json(newCase);
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to create case");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router20.get("/cases/:id/detail", async (req, res) => {
+  const officeId = getOfficeId10(req);
+  const { id } = req.params;
+  try {
+    const caseRecord = await getCaseById(id, officeId);
+    if (!caseRecord) {
+      res.status(404).json({ error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    if (!canUserAccessRecord(caseRecord, req.authUser)) {
+      res.status(403).json({ error: "\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u0642\u0636\u064A\u0629." });
+      return;
+    }
+    const detail = await getCaseDetail(id, officeId);
+    if (!detail) {
+      res.status(404).json({ error: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0642\u0636\u064A\u0629." });
+      return;
+    }
+    if (req.authUser?.role === "staff") {
+      detail.sessions = detail.sessions.filter((s3) => canUserAccessRecord(s3, req.authUser));
+      detail.judgments = detail.judgments.filter((j) => canUserAccessRecord(j, req.authUser));
+    }
+    res.json(detail);
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to get case detail");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router20.get("/cases/:id", async (req, res) => {
+  const officeId = getOfficeId10(req);
+  const { id } = req.params;
+  try {
+    const caseRecord = await getCaseById(id, officeId);
+    if (!caseRecord) {
+      res.status(404).json({ error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    if (!canUserAccessRecord(caseRecord, req.authUser)) {
+      res.status(403).json({ error: "\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u0642\u0636\u064A\u0629." });
+      return;
+    }
+    res.json(caseRecord);
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to get case");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router20.patch("/cases/:id", async (req, res) => {
+  const officeId = getOfficeId10(req);
+  const { id } = req.params;
+  const body = req.body || {};
+  try {
+    const existing = await getCaseById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    if (!canUserAccessRecord(existing, req.authUser)) {
+      res.status(403).json({ error: "\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u062A\u0639\u062F\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0642\u0636\u064A\u0629." });
+      return;
+    }
+    const payload = {};
+    if (body.caseNumber !== void 0 || body.case_number !== void 0) {
+      payload.caseNumber = String(body.caseNumber ?? body.case_number).trim();
+    }
+    if (body.caseType !== void 0 || body.case_type !== void 0) {
+      payload.caseType = String(body.caseType ?? body.case_type).trim();
+    }
+    if (body.court !== void 0) {
+      payload.court = String(body.court).trim();
+    }
+    if (body.opposingParty !== void 0 || body.opposing_party !== void 0) {
+      payload.opposingParty = body.opposingParty ?? body.opposing_party;
+    }
+    if (body.status !== void 0) {
+      if (!["open", "closed", "postponed"].includes(body.status)) {
+        res.status(400).json({ error: "\u062D\u0627\u0644\u0629 \u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+        return;
+      }
+      payload.status = body.status;
+    }
+    const clientId = body.clientId ?? body.client_id;
+    if (clientId !== void 0) {
+      const client = await getClientById(clientId, officeId);
+      if (!client) {
+        res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
+        return;
+      }
+      payload.clientId = clientId;
+    }
+    const lawyerId = body.assignedLawyerId ?? body.assigned_lawyer_id;
+    if (lawyerId !== void 0) {
+      if (req.authUser?.role === "staff") {
+        res.status(403).json({ error: "\u0641\u0642\u0637 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u064A\u0645\u0643\u0646\u0647 \u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u0639\u064A\u0646." });
+        return;
+      }
+      if (lawyerId) {
+        const val = await validateOfficeLawyer(lawyerId, officeId);
+        if (!val.valid) {
+          res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+          return;
+        }
+      }
+      payload.assignedLawyerId = lawyerId || null;
+    }
+    const updated = await updateCase(id, payload, officeId);
+    res.json(updated);
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to update case");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router20.patch("/cases/:id/reassign", async (req, res) => {
+  if (req.authUser?.role === "staff") {
+    res.status(403).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D \u0644\u0643 \u0628\u0625\u0639\u0627\u062F\u0629 \u0625\u0633\u0646\u0627\u062F \u0627\u0644\u0642\u0636\u0627\u064A\u0627. \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u062E\u0627\u0635\u0629 \u0628\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0641\u0642\u0637." });
+    return;
+  }
+  const officeId = getOfficeId10(req);
+  const { id } = req.params;
+  const body = req.body || {};
+  const assignedLawyerId = body.assignedLawyerId ?? body.assigned_lawyer_id ?? null;
+  if (assignedLawyerId) {
+    const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+    if (!val.valid) {
+      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      return;
+    }
+  }
+  try {
+    const updated = await reassignCase(id, assignedLawyerId, officeId);
+    if (!updated) {
+      res.status(404).json({ error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to reassign case");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0625\u0633\u0646\u0627\u062F \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+router20.delete("/cases/:id", async (req, res) => {
+  const officeId = getOfficeId10(req);
+  const { id } = req.params;
+  try {
+    const existing = await getCaseById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    if (!canUserAccessRecord(existing, req.authUser)) {
+      res.status(403).json({ error: "\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0642\u0636\u064A\u0629." });
+      return;
+    }
+    const ok = await deleteCase(id, officeId);
+    res.json({ success: ok });
+  } catch (err) {
+    const refId = generateRefId7();
+    logger.error({ refId, err }, "Failed to delete case");
+    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  }
+});
+var cases_default = router20;
+
+// src/routes/index.ts
+var router21 = (0, import_express21.Router)();
+router21.use(health_default);
+router21.use(auth_default);
+router21.use(dashboard_default);
+router21.use(ai_default);
+router21.use(sessions_default);
+router21.use(settings_default);
+router21.use(reports_default);
+router21.use(cron_default);
+router21.use(poa_default);
+router21.use(judgments_default);
+router21.use(tasks_default);
+router21.use(users_default);
+router21.use(super_admin_default);
+router21.use(subscription_default);
+router21.use(clients_default);
+router21.use(notifications_default);
+router21.use(attachments_default);
+router21.use(search_default);
+router21.use(workload_default);
+router21.use(cases_default);
+var routes_default = router21;
 
 // src/app.ts
 init_logger();
@@ -856475,7 +857052,7 @@ init_env();
 var import_meta = {};
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path6.default.dirname(currentFilename);
-var app = (0, import_express21.default)();
+var app = (0, import_express22.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -856508,8 +857085,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express21.default.json());
-app.use(import_express21.default.urlencoded({ extended: true }));
+app.use(import_express22.default.json());
+app.use(import_express22.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -856529,7 +857106,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express21.default.static(distPath));
+  app.use(import_express22.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path6.default.join(distPath, "index.html"));

@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   CreditCard,
   UserCheck,
+  Briefcase,
 } from 'lucide-react';
 import {
   APP_NAVIGATION_CONFIG,
@@ -40,6 +41,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   ShieldAlert,
   CreditCard,
   UserCheck,
+  Briefcase,
 };
 
 export interface AppNavItem {

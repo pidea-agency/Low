@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 
 interface ReassignDialogProps {
-  module: 'sessions' | 'tasks' | 'poa' | 'judgments';
+  module: 'sessions' | 'tasks' | 'poa' | 'judgments' | 'cases';
   recordId: number | string | null;
   recordTitle?: string;
   currentLawyerId?: string | null;
@@ -45,6 +45,7 @@ export function ReassignDialog({
     tasks: 'المهمة',
     poa: 'الوكالة',
     judgments: 'الحكم',
+    cases: 'القضية',
   };
 
   const handleReassign = async () => {

@@ -57,11 +57,12 @@ export async function getStaffAccessibleClientIds(
   officeId: string,
   authUser: SessionCookiePayload,
 ): Promise<Set<string>> {
-  const [sessions, tasks, poas, judgments] = await Promise.all([
+  const [sessions, tasks, poas, judgments, cases] = await Promise.all([
     postgresService.listSessions(officeId),
     postgresService.listTasks(officeId),
     postgresService.listPoa(officeId),
     postgresService.listJudgments(officeId),
+    postgresService.listCases(officeId),
   ]);
 
   const set = new Set<string>();
@@ -86,6 +87,12 @@ export async function getStaffAccessibleClientIds(
   for (const j of judgments) {
     const cId = j.clientId || (j as any).client_id;
     if (cId && canUserAccessRecord(j, authUser)) {
+      set.add(cId);
+    }
+  }
+  for (const c of cases) {
+    const cId = c.clientId || (c as any).client_id;
+    if (cId && canUserAccessRecord(c, authUser)) {
       set.add(cId);
     }
   }
@@ -166,6 +173,16 @@ export async function verifyRecordAccess(
       }
       if (!canUserAccessRecord(judgment, authUser)) {
         return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذا الحكم." };
+      }
+      return { allowed: true };
+    }
+    case "case": {
+      const caseRecord = await postgresService.getCaseById(String(relatedRecordId), officeId);
+      if (!caseRecord) {
+        return { allowed: false, status: 404, error: "القضية غير موجودة." };
+      }
+      if (!canUserAccessRecord(caseRecord, authUser)) {
+        return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذه القضية." };
       }
       return { allowed: true };
     }
