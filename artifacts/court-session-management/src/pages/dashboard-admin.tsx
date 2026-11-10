@@ -1390,7 +1390,10 @@ export default function DashboardAdminPage() {
 
       {/* ─── 7. ADMIN QUICK ACTION SHORTCUTS (Tested Links) ─── */}
       <div className="space-y-3 fade-in-up">
-        <h2 className="text-sm font-bold text-[#10233F]">روابط الإدارة والخدمات</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-bold text-[#10233F]">روابط الإدارة والخدمات</h2>
+          <span className="sr-only">لوحة الإدارة والمكتب</span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <QuickActionCard
             title="إدارة أعضاء المكتب"

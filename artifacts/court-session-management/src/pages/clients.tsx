@@ -18,6 +18,10 @@ import {
   ShieldCheck,
   Gavel,
   Check,
+  User,
+  ArrowLeft,
+  Save,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -343,6 +347,295 @@ export default function ClientsPage() {
     }
   };
 
+  // Screen 4 (Image 4: إضافة / تعديل عميل)
+  if (createOpen || editingClient) {
+    const isEdit = !!editingClient;
+    const clientCode = editingClient ? `CL-0${editingClient.id.slice(0, 3)}` : 'CL-0256';
+    const clientDate = editingClient ? editingClient.createdAt.slice(0, 10) : '2024/03/10';
+
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl">
+        {/* Top Breadcrumb & Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="text-xs text-[#64748B] flex items-center gap-1.5 mb-1.5 font-medium">
+              <span>القضايا</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>العملاء</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span className="text-[#10233F] font-bold">إضافة / تعديل عميل</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C4933F]">
+                <UserCheck className="w-5 h-5" />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight">
+                إضافة / تعديل عميل
+              </h1>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setCreateOpen(false);
+              setEditingClient(null);
+            }}
+            className="gap-2 text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer self-start sm:self-auto shadow-xs"
+          >
+            <ArrowLeft className="w-4 h-4 ml-1" />
+            <span>العودة للعملاء</span>
+          </Button>
+        </div>
+
+        <form onSubmit={handleSaveClient}>
+          {/* 2-Column Grid matching Image 4 */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Avatar & Summary Card (lg:col-span-3) */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs text-center space-y-4">
+                <div className="relative inline-block mx-auto">
+                  <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-400">
+                    <User className="w-12 h-12" />
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#C4933F] text-white flex items-center justify-center shadow-xs cursor-pointer border-2 border-white">
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-black text-[#10233F]">بيانات العميل</h3>
+
+                <div className="space-y-3 text-xs pt-2 border-t border-slate-100 text-right">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-[#C4933F]" />
+                      رقم العميل
+                    </span>
+                    <span className="font-bold font-mono text-[#10233F]">{clientCode}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
+                      تاريخ الإضافة
+                    </span>
+                    <span className="font-mono text-[#10233F]">{clientDate}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <Gavel className="w-3.5 h-3.5 text-[#C4933F]" />
+                      عدد القضايا
+                    </span>
+                    <span className="font-bold text-[#10233F]">3 قضايا</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <span className="text-[#64748B]">الحالة</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      نشط
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: 3 Form Cards (lg:col-span-9) */}
+            <div className="lg:col-span-9 space-y-5">
+              {/* Card 1: البيانات الأساسية */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <FileText className="w-4 h-4 text-[#C4933F]" />
+                  <h2 className="text-sm font-black text-[#10233F]">البيانات الأساسية</h2>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      الاسم الكامل <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      placeholder="أحمد محمد سالم"
+                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      نوع العميل <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
+                    >
+                      <option value="فرد">فرد</option>
+                      <option value="شركة">شركة</option>
+                      <option value="مؤسسة">مؤسسة</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      الجنسية
+                    </label>
+                    <select
+                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
+                    >
+                      <option value="فلسطيني">فلسطيني</option>
+                      <option value="سعودي">سعودي</option>
+                      <option value="أردني">أردني</option>
+                      <option value="مصري">مصري</option>
+                      <option value="أخرى">أخرى</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      رقم الهوية <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="900123456"
+                      defaultValue="900123456"
+                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      تاريخ الميلاد
+                    </label>
+                    <Input
+                      type="date"
+                      defaultValue="1990-05-12"
+                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      الجنس
+                    </label>
+                    <select
+                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
+                    >
+                      <option value="ذكر">ذكر</option>
+                      <option value="أنثى">أنثى</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: بيانات التواصل */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <Phone className="w-4 h-4 text-[#C4933F]" />
+                  <h2 className="text-sm font-black text-[#10233F]">بيانات التواصل</h2>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      رقم الهاتف <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={formPhone}
+                      onChange={(e) => setFormPhone(e.target.value)}
+                      placeholder="+970599123456"
+                      dir="ltr"
+                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 font-mono text-left"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      البريد الإلكتروني
+                    </label>
+                    <Input
+                      type="email"
+                      placeholder="ahmed@example.com"
+                      defaultValue="ahmed@example.com"
+                      dir="ltr"
+                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 text-left"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                      العنوان
+                    </label>
+                    <Input
+                      placeholder="غزة - الرمال"
+                      defaultValue="غزة - الرمال"
+                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: معلومات إضافية */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <AlertCircle className="w-4 h-4 text-[#C4933F]" />
+                  <h2 className="text-sm font-black text-[#10233F]">معلومات إضافية</h2>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-[#10233F]">
+                      ملاحظات
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {formNotes.length} / 500
+                    </span>
+                  </div>
+                  <Textarea
+                    value={formNotes}
+                    maxLength={500}
+                    onChange={(e) => setFormNotes(e.target.value)}
+                    placeholder="العميل يتابع عدة قضايا لدى المكتب..."
+                    rows={3}
+                    className="text-xs rounded-xl bg-slate-50/50 border-slate-200 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Bottom Action Bar */}
+              <div className="flex items-center gap-3 pt-2">
+                <Button
+                  type="submit"
+                  disabled={!formName.trim() || saving}
+                  className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'جارٍ الحفظ...' : 'حفظ'}</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setCreateOpen(false);
+                    setEditingClient(null);
+                  }}
+                  className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer"
+                >
+                  <X className="w-4 h-4 ml-1.5" />
+                  <span>إلغاء</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6" dir="rtl">
       {/* Page Header */}
@@ -621,85 +914,7 @@ export default function ClientsPage() {
         )}
       </Tabs>
 
-      {/* Add / Edit Client Dialog */}
-      <Dialog
-        open={createOpen || !!editingClient}
-        onOpenChange={(v) => {
-          if (!v) {
-            setCreateOpen(false);
-            setEditingClient(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-md w-full" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-primary" />
-              <span>{editingClient ? 'تعديل بيانات العميل' : 'إضافة عميل جديد'}</span>
-            </DialogTitle>
-          </DialogHeader>
 
-          <form onSubmit={handleSaveClient} className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="cl-name" className="text-xs font-semibold">
-                اسم العميل أو الجهة <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="cl-name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="مثال: شركة البركة للمقاولات أو فهد بن خالد"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="cl-phone" className="text-xs font-semibold">
-                رقم الجوال
-              </Label>
-              <Input
-                id="cl-phone"
-                value={formPhone}
-                onChange={(e) => setFormPhone(e.target.value)}
-                placeholder="05XXXXXXXX"
-                dir="ltr"
-                className="text-left font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="cl-notes" className="text-xs font-semibold">
-                ملاحظات أو تفاصيل إضافية
-              </Label>
-              <Textarea
-                id="cl-notes"
-                value={formNotes}
-                onChange={(e) => setFormNotes(e.target.value)}
-                placeholder="أي ملاحظات تتعلق بصفة الموكل أو متطلبات قضاياه..."
-                rows={3}
-              />
-            </div>
-
-            <DialogFooter className="gap-2 flex-row-reverse sm:flex-row-reverse pt-2">
-              <Button type="submit" disabled={!formName.trim() || saving}>
-                {saving && <Loader2 className="w-4 h-4 ml-1.5 animate-spin" />}
-                <span>{editingClient ? 'حفظ التعديلات' : 'إضافة العميل'}</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setCreateOpen(false);
-                  setEditingClient(null);
-                }}
-                disabled={saving}
-              >
-                إلغاء
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Alert */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>

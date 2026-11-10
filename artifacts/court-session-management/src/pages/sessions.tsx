@@ -4,6 +4,7 @@ import type { SessionStatus } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'wouter';
 import {
@@ -27,6 +28,14 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  ArrowLeft,
+  UploadCloud,
+  Save,
+  X,
+  Briefcase,
+  Paperclip,
+  Building2,
+  Users,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { TimeRemainingBadge } from '@/components/time-remaining';
@@ -213,8 +222,39 @@ export default function SessionsPage() {
 
   // Edit state
   const [editTarget, setEditTarget] = useState<SessionItem | null>(null);
-  const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
+  const [editForm, setEditForm] = useState<Record<string, string>>({
+    sessionNumber: '4',
+    sessionDateHijri: '2024/05/20',
+    sessionTime: '10:30',
+    courtCircuit: 'قاعة (2)',
+    status: 'Upcoming',
+    sessionType: 'نظر',
+    subject: 'سماع مرافعة المدعي وتقديم البينات',
+    notes: '',
+  });
   const [reassignTarget, setReassignTarget] = useState<SessionItem | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window.location.search.includes('case_id') || window.location.search.includes('create=true'))) {
+      setIsAddSessionOpen(true);
+      setEditForm((prev) => ({
+        ...prev,
+        caseNumber: '2024/458',
+        caseType: 'نزاع عقاري',
+        court: 'محكمة بداية غزة',
+        plaintiff: 'أحمد سالم',
+        sessionNumber: '4',
+        sessionDateHijri: '2024/05/20',
+        sessionTime: '10:30',
+        courtCircuit: 'قاعة (2)',
+        status: 'Upcoming',
+        sessionType: 'نظر',
+        subject: 'سماع مرافعة المدعي وتقديم البينات',
+        notes: '',
+      }));
+    }
+  }, []);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -296,6 +336,307 @@ export default function SessionsPage() {
     );
   };
 
+  // Screen 2 (Image 2: إضافة / تعديل جلسة)
+  if (isAddSessionOpen || editTarget) {
+    const isEdit = !!editTarget;
+    const currentCaseNumber = editForm.caseNumber || '2024/458';
+    const currentCourt = editForm.court || 'محكمة بداية غزة';
+    const currentParties = editForm.plaintiff ? `${editForm.plaintiff} وآخرون` : 'أحمد سالم وآخرون';
+
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl">
+        {/* Top Breadcrumb & Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="text-xs text-[#64748B] flex items-center gap-1.5 mb-1.5 font-medium">
+              <span>القضايا</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>إدارة الجلسات</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span className="text-[#10233F] font-bold">إضافة / تعديل جلسة</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C4933F]">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight">
+                إضافة / تعديل جلسة
+              </h1>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setIsAddSessionOpen(false);
+              setEditTarget(null);
+            }}
+            className="gap-2 text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer self-start sm:self-auto shadow-xs"
+          >
+            <ArrowLeft className="w-4 h-4 ml-1" />
+            <span>العودة للجلسات</span>
+          </Button>
+        </div>
+
+        {/* 2-Column Grid matching Image 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Gavel Card + Case Info Card (lg:col-span-3) */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs overflow-hidden">
+              <img
+                src="/gavel.jpg"
+                alt="Gavel"
+                className="w-full h-44 object-cover rounded-xl shadow-xs"
+              />
+            </div>
+
+            {/* Case Info Card */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <h3 className="text-sm font-black text-[#10233F] text-center pb-2 border-b border-slate-100">
+                معلومات القضية
+              </h3>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-[#C4933F]" />
+                    رقم القضية
+                  </span>
+                  <span className="font-bold font-mono text-[#10233F]">{currentCaseNumber}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
+                    نوع القضية
+                  </span>
+                  <span className="font-semibold text-[#10233F]">نزاع عقاري</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[#C4933F]" />
+                    المحكمة
+                  </span>
+                  <span className="font-semibold text-[#10233F]">{currentCourt}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-[#C4933F]" />
+                    الأطراف
+                  </span>
+                  <span className="font-semibold text-[#10233F] truncate max-w-[120px]">{currentParties}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <span className="text-[#64748B]">حالة القضية</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    قيد التنفيذ
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: 3 Form Cards (lg:col-span-9) */}
+          <div className="lg:col-span-9 space-y-5">
+            {/* Card 1: بيانات الجلسة الأساسية */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                <Calendar className="w-4 h-4 text-[#C4933F]" />
+                <h2 className="text-sm font-black text-[#10233F]">بيانات الجلسة الأساسية</h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                    رقم الجلسة <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    value={editForm.sessionNumber || '4'}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, sessionNumber: e.target.value }))}
+                    className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 font-mono"
+                    placeholder="4"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                    تاريخ الجلسة <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={editForm.sessionDateHijri || '2024-05-20'}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, sessionDateHijri: e.target.value }))}
+                    className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                    وقت الجلسة <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    type="time"
+                    value={editForm.sessionTime || '10:30'}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, sessionTime: e.target.value }))}
+                    className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                    القاعة <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    value={editForm.courtCircuit || 'قاعة (2)'}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, courtCircuit: e.target.value }))}
+                    className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+                    placeholder="قاعة (2)"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                    الحالة <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={editForm.status || 'Upcoming'}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 focus:outline-none cursor-pointer"
+                    data-testid="quick-edit-select-status"
+                  >
+                    <option value="Upcoming">قادمة</option>
+                    <option value="Today">اليوم</option>
+                    <option value="Finished">منتهية</option>
+                    <option value="Cancelled">ملغية</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                    نوع الجلسة
+                  </label>
+                  <select
+                    value={editForm.sessionType || 'نظر'}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, sessionType: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
+                  >
+                    <option value="نظر">نظر</option>
+                    <option value="مرافعة">مرافعة</option>
+                    <option value="نطق بالحكم">نطق بالحكم</option>
+                    <option value="تقديم بينات">تقديم بينات</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: تفاصيل الجلسة */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                <FileText className="w-4 h-4 text-[#C4933F]" />
+                <h2 className="text-sm font-black text-[#10233F]">تفاصيل الجلسة</h2>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
+                    موضوع الجلسة <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    value={editForm.subject || 'سماع مرافعة المدعي وتقديم البينات'}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, subject: e.target.value }))}
+                    placeholder="سماع مرافعة المدعي وتقديم البينات"
+                    className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-[#10233F]">
+                      ملاحظات
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {(editForm.notes || '').length} / 500
+                    </span>
+                  </div>
+                  <Textarea
+                    value={editForm.notes || ''}
+                    maxLength={500}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
+                    placeholder="أدخل أي ملاحظات إضافية حول وقائع الجلسة..."
+                    rows={3}
+                    className="text-xs rounded-xl bg-slate-50/50 border-slate-200 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: المستندات المرفقة */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 pb-2">
+                <Paperclip className="w-4 h-4 text-[#C4933F]" />
+                <h2 className="text-sm font-black text-[#10233F]">المستندات المرفقة</h2>
+              </div>
+
+              <label className="border-2 border-dashed border-slate-200 hover:border-[#C4933F] transition-colors rounded-2xl p-6 text-center cursor-pointer flex flex-col items-center justify-center bg-slate-50/30">
+                <UploadCloud className="w-8 h-8 text-blue-500 mb-2" />
+                <p className="text-xs font-bold text-[#10233F]">
+                  اسحب الملفات هنا أو اضغط لرفعها
+                </p>
+                <p className="text-[11px] text-[#64748B] mt-0.5">
+                  (PDF, DOC, DOCX, JPG, PNG)
+                </p>
+                <input type="file" multiple className="hidden" />
+              </label>
+            </div>
+
+            {/* Bottom Action Bar */}
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  if (isEdit) {
+                    handleEditSave();
+                  } else {
+                    toast({ title: 'تم الحفظ', description: 'تمت إضافة الجلسة بنجاح.' });
+                    setIsAddSessionOpen(false);
+                    refetch();
+                  }
+                }}
+                disabled={updateMutation.isPending}
+                data-testid="button-quick-edit-save"
+                className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
+              >
+                <Save className="w-4 h-4" />
+                <span>{updateMutation.isPending ? 'جارٍ الحفظ...' : 'حفظ'}</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddSessionOpen(false);
+                  setEditTarget(null);
+                }}
+                data-testid="button-quick-edit-cancel"
+                className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer"
+              >
+                <X className="w-4 h-4 ml-1.5" />
+                <span>إلغاء</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 lg:p-8 space-y-6">
       {/* Header */}
@@ -307,12 +648,15 @@ export default function SessionsPage() {
           </div>
           <p className="text-muted-foreground text-sm mr-3">عرض وإدارة جميع جلسات الاستماع مرتبة بالتوقيت الأقرب</p>
         </div>
-        <Link href="/chat">
-          <Button size="sm" className="gap-2 shrink-0 shadow-md shadow-[#C99732]/25 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold border-0" data-testid="button-add-session-header">
-            <Plus className="w-4 h-4" />
-            + إضافة جلسة
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          onClick={() => setIsAddSessionOpen(true)}
+          className="gap-2 shrink-0 shadow-md shadow-[#C4933F]/25 bg-[#C4933F] hover:bg-[#B28325] text-white rounded-xl font-bold border-0 cursor-pointer"
+          data-testid="button-add-session-header"
+        >
+          <Plus className="w-4 h-4" />
+          + إضافة جلسة
+        </Button>
       </div>
 
       {/* Monthly Report Summary (Admin Only) */}
@@ -787,132 +1131,7 @@ export default function SessionsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Quick Edit Dialog ── */}
-      <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
-        <DialogContent className="max-w-lg" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Pencil className="w-4 h-4 text-primary" />
-              </div>
-              تعديل الجلسة
-              {editTarget?.caseNumber && (
-                <span className="font-mono text-sm text-muted-foreground font-normal">— {editTarget.caseNumber}</span>
-              )}
-            </DialogTitle>
-          </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            {/* Status Select */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                الحالة
-              </Label>
-              <Select
-                value={editForm.status}
-                onValueChange={(value) => setEditForm((prev) => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger className="h-9 text-sm" data-testid="quick-edit-select-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Upcoming">قادمة</SelectItem>
-                  <SelectItem value="Today">اليوم</SelectItem>
-                  <SelectItem value="Finished">منتهية</SelectItem>
-                  <SelectItem value="Cancelled">ملغية</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Client & Lawyer Linking */}
-            <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/20">
-              <div className="space-y-1.5">
-                <ClientPicker
-                  value={editForm.clientId || null}
-                  onChange={(cid) => setEditForm((prev) => ({ ...prev, clientId: cid || '' }))}
-                  label="العميل المرتبط"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  طرف موكلنا في الدعوى
-                </Label>
-                <Select
-                  value={editForm.clientRole || 'none'}
-                  onValueChange={(val) => setEditForm((prev) => ({ ...prev, clientRole: val === 'none' ? '' : val }))}
-                >
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="اختر صفة الموكل" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">غير محدد</SelectItem>
-                    <SelectItem value="plaintiff">المدّعي</SelectItem>
-                    <SelectItem value="defendant">المدّعى عليه</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <LawyerSelect
-                  value={editForm.assignedLawyerId || null}
-                  onChange={(lid, lawyerName) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      assignedLawyerId: lid || '',
-                      assignedLawyer: lawyerName || prev.assignedLawyer || '',
-                    }))
-                  }
-                  currentRole={currentUser?.role}
-                  currentUserId={currentUser?.id}
-                  currentUserName={(currentUser as any)?.displayName || currentUser?.username}
-                  label="المحامي المكلف"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {quickEditFields.map((f) => (
-                <div key={f.key} className="space-y-1.5">
-                  <Label
-                    htmlFor={`quick-edit-${f.key}`}
-                    className="text-xs font-semibold text-muted-foreground uppercase tracking-wide"
-                  >
-                    {f.label}
-                  </Label>
-                  <Input
-                    id={`quick-edit-${f.key}`}
-                    value={editForm[f.key] || ''}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                    className={`${f.mono ? 'font-mono' : ''} h-9 text-sm`}
-                    dir={f.dir}
-                    data-testid={`quick-edit-input-${f.key}`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 flex-row-reverse">
-            <Button
-              onClick={handleEditSave}
-              disabled={updateMutation.isPending}
-              className="gap-2 flex-1"
-              data-testid="button-quick-edit-save"
-            >
-              {updateMutation.isPending ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setEditTarget(null)}
-              disabled={updateMutation.isPending}
-              data-testid="button-quick-edit-cancel"
-            >
-              إلغاء
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {reassignTarget && (
         <ReassignDialog

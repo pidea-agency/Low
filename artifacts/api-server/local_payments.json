@@ -1,65 +1,65 @@
 [
   {
-    "id": "pay-fc10ab36-657f-45f4-8c28-2405de227132",
-    "office_id": "e38fef5a-0ee1-4cce-8fe6-9233e1bf798e",
+    "id": "pay-53024a81-6600-4f43-be14-40aff6ea5fa6",
+    "office_id": "f34a91b0-d046-4ed8-9500-a0e56f5da0b4",
     "amount": 8888,
     "currency": "SAR",
     "payment_date": "2026-11-10",
     "method": "bank_transfer",
     "status": "pending",
     "notes": "فاتورة معلقة لا يجب أن تدخل في الإيراد المحصل",
-    "recorded_by": "4ec5b86e-e2c4-4fd3-9cb1-1bb58ecd5e74",
-    "created_at": "2026-11-10T10:30:07.355Z",
-    "updated_at": "2026-11-10T10:30:07.355Z"
+    "recorded_by": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "created_at": "2026-11-10T11:56:01.410Z",
+    "updated_at": "2026-11-10T11:56:01.410Z"
   },
   {
-    "id": "pay-042be067-2241-44df-818a-57dabd60cb7d",
-    "office_id": "adfb4cdb-5a56-4865-975d-7a43d864fbbd",
+    "id": "pay-b56e2b37-6164-48d8-a6b9-f18d8f046bc1",
+    "office_id": "f7fcc9f2-3374-40bf-9f8f-e20423419fe3",
     "amount": 9999,
     "currency": "SAR",
     "payment_date": "2026-11-10",
     "method": "bank_transfer",
     "status": "overdue",
     "notes": "فاتورة متأخرة لا يجب أن تدخل في الإيراد المحصل",
-    "recorded_by": "4ec5b86e-e2c4-4fd3-9cb1-1bb58ecd5e74",
-    "created_at": "2026-11-10T10:30:07.153Z",
-    "updated_at": "2026-11-10T10:30:07.153Z"
+    "recorded_by": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "created_at": "2026-11-10T11:56:01.222Z",
+    "updated_at": "2026-11-10T11:56:01.222Z"
   },
   {
-    "id": "pay-b4d7803e-1a05-41f2-80c3-03225c68343e",
-    "office_id": "adfb4cdb-5a56-4865-975d-7a43d864fbbd",
+    "id": "pay-7e038fcd-6819-4558-8c7c-f7520953d771",
+    "office_id": "f7fcc9f2-3374-40bf-9f8f-e20423419fe3",
     "amount": 3000,
     "currency": "SAR",
     "payment_date": "2026-11-10",
     "method": "bank_transfer",
     "status": "paid",
     "notes": "اشتراك باقة برو",
-    "recorded_by": "4ec5b86e-e2c4-4fd3-9cb1-1bb58ecd5e74",
-    "created_at": "2026-11-10T10:30:05.936Z",
-    "updated_at": "2026-11-10T10:30:05.936Z"
+    "recorded_by": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "created_at": "2026-11-10T11:55:59.906Z",
+    "updated_at": "2026-11-10T11:55:59.906Z"
   },
   {
-    "id": "pay-258c8380-a922-4fd9-b71c-580f91a2b9c3",
-    "office_id": "e38fef5a-0ee1-4cce-8fe6-9233e1bf798e",
+    "id": "pay-7c750e22-0b1f-45dc-8eba-f9882ba28bd7",
+    "office_id": "f34a91b0-d046-4ed8-9500-a0e56f5da0b4",
     "amount": 500,
     "currency": "SAR",
     "status": "paid",
     "notes": "تم استلام الدفعة النقدية وإيداعها",
-    "recorded_by": "4ec5b86e-e2c4-4fd3-9cb1-1bb58ecd5e74",
-    "created_at": "2026-11-10T10:30:05.760Z",
-    "updated_at": "2026-11-10T10:30:06.881Z"
+    "recorded_by": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "created_at": "2026-11-10T11:55:59.697Z",
+    "updated_at": "2026-11-10T11:56:01.032Z"
   },
   {
-    "id": "pay-0bacff39-6eae-4d66-a832-68b4c80257b7",
-    "office_id": "e38fef5a-0ee1-4cce-8fe6-9233e1bf798e",
+    "id": "pay-559b62b9-6158-4859-a913-2b0f9133f604",
+    "office_id": "f34a91b0-d046-4ed8-9500-a0e56f5da0b4",
     "amount": 1500,
     "currency": "SAR",
     "payment_date": "2026-11-10",
     "method": "bank_transfer",
     "status": "paid",
     "notes": "اشتراك باقة بلس سنوي",
-    "recorded_by": "4ec5b86e-e2c4-4fd3-9cb1-1bb58ecd5e74",
-    "created_at": "2026-11-10T10:30:05.485Z",
-    "updated_at": "2026-11-10T10:30:05.485Z"
+    "recorded_by": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "created_at": "2026-11-10T11:55:59.140Z",
+    "updated_at": "2026-11-10T11:55:59.140Z"
   }
 ]

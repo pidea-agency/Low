@@ -1,5 +1,265 @@
 [
   {
+    "id": "audit-f0bcbdb1-2140-4a6a-888f-fd87ea85fdd9",
+    "actor_username": "مشرف المنصة",
+    "action": "deleted_office",
+    "target_office_id": "38ac0c35-bcb4-43f3-8529-104bedd95a08",
+    "details": {
+      "office_id": "38ac0c35-bcb4-43f3-8529-104bedd95a08"
+    },
+    "created_at": "2026-11-10T11:56:20.281Z"
+  },
+  {
+    "id": "audit-91e99322-7ada-410a-b62f-5aaef485d0b2",
+    "actor_username": "مشرف المنصة",
+    "action": "extended_subscription",
+    "target_office_id": "38ac0c35-bcb4-43f3-8529-104bedd95a08",
+    "details": {
+      "office_name": "مكتب التدقيق للتجربة - معدل",
+      "period": "1m",
+      "subscription_end_date": "2026-12-10T11:56:19.247Z"
+    },
+    "created_at": "2026-11-10T11:56:19.712Z"
+  },
+  {
+    "id": "audit-d76c9b31-9c4a-4717-8ca6-5f3c812bf921",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_office",
+    "target_office_id": "38ac0c35-bcb4-43f3-8529-104bedd95a08",
+    "details": {
+      "office_name": "مكتب التدقيق للتجربة - معدل",
+      "changes": {
+        "office_name": "مكتب التدقيق للتجربة - معدل",
+        "ai_quota_limit": 250
+      }
+    },
+    "created_at": "2026-11-10T11:56:18.968Z"
+  },
+  {
+    "id": "audit-ab7591fc-b5fe-475f-83bb-9a2b25e5505a",
+    "actor_username": "مشرف المنصة",
+    "action": "created_office",
+    "target_office_id": "38ac0c35-bcb4-43f3-8529-104bedd95a08",
+    "details": {
+      "office_name": "مكتب التدقيق للتجربة",
+      "username": "audit_office_mwamwkcz",
+      "plan_tier": "plus",
+      "plan_id": "plan-plus"
+    },
+    "created_at": "2026-11-10T11:56:18.488Z"
+  },
+  {
+    "id": "audit-4469f318-5619-410f-8a26-8ac2df5b2981",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_platform_settings",
+    "target_office_id": null,
+    "details": {
+      "changes": {
+        "activation_link_expiry_hours": 72,
+        "new_office_registration_enabled": true,
+        "support_contact_email": "support@antigravity-legal.test",
+        "support_contact_phone": "+966500000000"
+      }
+    },
+    "created_at": "2026-11-10T11:56:17.423Z"
+  },
+  {
+    "id": "audit-5d7652ca-5c9f-46af-8135-3d60fc3f2515",
+    "actor_username": "مشرف المنصة",
+    "action": "created_office",
+    "target_office_id": "26a43e57-7403-4e02-ac35-fe9b202d1a34",
+    "details": {
+      "office_name": "مكتب النظام القديم",
+      "username": "legacy_mwamwc10",
+      "plan_tier": "pro",
+      "plan_id": "plan-pro"
+    },
+    "created_at": "2026-11-10T11:56:15.669Z"
+  },
+  {
+    "id": "audit-de6e643f-c8f5-448f-aad4-99ae8f312ac6",
+    "actor_username": "مشرف المنصة",
+    "action": "deleted_plan",
+    "target_office_id": null,
+    "details": {
+      "plan_id": "plan-test-plan-mwamwc10-mwamwel0"
+    },
+    "created_at": "2026-11-10T11:56:14.958Z"
+  },
+  {
+    "id": "audit-d8ead6e3-32e1-49b1-a8df-f33126234122",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_office",
+    "target_office_id": "665f4f9f-bb73-48a2-8eaf-e934b4aa7e61",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "changes": {
+        "plan_id": "plan-plus"
+      }
+    },
+    "created_at": "2026-11-10T11:56:14.376Z"
+  },
+  {
+    "id": "audit-0302ddcd-d802-42d7-85fb-2dc989b6eb7f",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_office",
+    "target_office_id": "665f4f9f-bb73-48a2-8eaf-e934b4aa7e61",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "changes": {
+        "ai_quota_limit_override": null
+      }
+    },
+    "created_at": "2026-11-10T11:56:12.820Z"
+  },
+  {
+    "id": "audit-d85c44f4-c607-43a9-aa80-266fc49170a6",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_office",
+    "target_office_id": "665f4f9f-bb73-48a2-8eaf-e934b4aa7e61",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "changes": {
+        "ai_quota_limit_override": 1500
+      }
+    },
+    "created_at": "2026-11-10T11:56:12.176Z"
+  },
+  {
+    "id": "audit-a04a2343-37af-404d-83c9-0bbb6e3389c3",
+    "actor_username": "مشرف المنصة",
+    "action": "created_office",
+    "target_office_id": "665f4f9f-bb73-48a2-8eaf-e934b4aa7e61",
+    "details": {
+      "office_name": "مكتب المحامي للاختبار",
+      "username": "law_off_mwamwc10",
+      "plan_tier": "plus",
+      "plan_id": "plan-test-plan-mwamwc10-mwamwel0"
+    },
+    "created_at": "2026-11-10T11:56:11.422Z"
+  },
+  {
+    "id": "audit-296380e9-3c1f-4afb-b402-a1cdcef27f44",
+    "actor_username": "مشرف المنصة",
+    "action": "updated_plan",
+    "target_office_id": null,
+    "details": {
+      "plan_id": "plan-test-plan-mwamwc10-mwamwel0",
+      "changes": {
+        "name": "باقة النخبة المحدثة",
+        "ai_quota_limit": 1000,
+        "price": "899 ر.س / شهرياً"
+      }
+    },
+    "created_at": "2026-11-10T11:56:10.563Z"
+  },
+  {
+    "id": "audit-27525f98-32b6-46c7-8e0f-98f1bb740707",
+    "actor_username": "مشرف المنصة",
+    "action": "created_plan",
+    "target_office_id": null,
+    "details": {
+      "plan_id": "plan-test-plan-mwamwc10-mwamwel0",
+      "name": "باقة النخبة التجريبية",
+      "slug": "test-plan-mwamwc10"
+    },
+    "created_at": "2026-11-10T11:56:10.071Z"
+  },
+  {
+    "id": "audit-54e27fff-c24f-4e43-9226-655e010d67b6",
+    "actor_id": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "actor_username": "sa_ext_1794311750432",
+    "action": "create_payment",
+    "target_office_id": "f34a91b0-d046-4ed8-9500-a0e56f5da0b4",
+    "details": {
+      "payment_id": "pay-53024a81-6600-4f43-be14-40aff6ea5fa6",
+      "amount": 8888,
+      "currency": "SAR",
+      "status": "pending",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-10"
+    },
+    "created_at": "2026-11-10T11:56:01.620Z"
+  },
+  {
+    "id": "audit-7afd2219-4bbf-493b-bb03-4a89cae8fc29",
+    "actor_id": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "actor_username": "sa_ext_1794311750432",
+    "action": "create_payment",
+    "target_office_id": "f7fcc9f2-3374-40bf-9f8f-e20423419fe3",
+    "details": {
+      "payment_id": "pay-b56e2b37-6164-48d8-a6b9-f18d8f046bc1",
+      "amount": 9999,
+      "currency": "SAR",
+      "status": "overdue",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-10"
+    },
+    "created_at": "2026-11-10T11:56:01.401Z"
+  },
+  {
+    "id": "audit-f18f5af9-e0a0-418e-b85b-db7b9f4b9637",
+    "actor_id": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "actor_username": "sa_ext_1794311750432",
+    "action": "update_payment",
+    "target_office_id": "f34a91b0-d046-4ed8-9500-a0e56f5da0b4",
+    "details": {
+      "payment_id": "pay-7c750e22-0b1f-45dc-8eba-f9882ba28bd7",
+      "new_status": "paid",
+      "notes": "تم استلام الدفعة النقدية وإيداعها",
+      "amount": 500
+    },
+    "created_at": "2026-11-10T11:56:01.200Z"
+  },
+  {
+    "id": "audit-9bff5baf-faa8-4fc2-bc54-51452c2a5ae5",
+    "actor_id": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "actor_username": "sa_ext_1794311750432",
+    "action": "create_payment",
+    "target_office_id": "f7fcc9f2-3374-40bf-9f8f-e20423419fe3",
+    "details": {
+      "payment_id": "pay-7e038fcd-6819-4558-8c7c-f7520953d771",
+      "amount": 3000,
+      "currency": "SAR",
+      "status": "paid",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-10"
+    },
+    "created_at": "2026-11-10T11:56:00.089Z"
+  },
+  {
+    "id": "audit-09c99895-f8a8-43fb-861a-33d627c610a4",
+    "actor_id": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "actor_username": "sa_ext_1794311750432",
+    "action": "create_payment",
+    "target_office_id": "f34a91b0-d046-4ed8-9500-a0e56f5da0b4",
+    "details": {
+      "payment_id": "pay-7c750e22-0b1f-45dc-8eba-f9882ba28bd7",
+      "amount": 500,
+      "currency": "SAR",
+      "status": "pending",
+      "method": "cash",
+      "payment_date": "2026-11-10"
+    },
+    "created_at": "2026-11-10T11:55:59.898Z"
+  },
+  {
+    "id": "audit-93e12f7f-596b-4a86-acfc-4a65a7b04b60",
+    "actor_id": "895ca897-1997-4017-9125-fe7b44262bf3",
+    "actor_username": "sa_ext_1794311750432",
+    "action": "create_payment",
+    "target_office_id": "f34a91b0-d046-4ed8-9500-a0e56f5da0b4",
+    "details": {
+      "payment_id": "pay-559b62b9-6158-4859-a913-2b0f9133f604",
+      "amount": 1500,
+      "currency": "SAR",
+      "status": "paid",
+      "method": "bank_transfer",
+      "payment_date": "2026-11-10"
+    },
+    "created_at": "2026-11-10T11:55:59.582Z"
+  },
+  {
     "id": "audit-01753124-4f02-4c88-a9dc-edd7807e7808",
     "actor_id": "4ec5b86e-e2c4-4fd3-9cb1-1bb58ecd5e74",
     "actor_username": "sa_ext_1794306599121",

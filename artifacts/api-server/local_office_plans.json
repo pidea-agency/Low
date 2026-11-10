@@ -262,5 +262,45 @@
   "legacy_mwajtm19": {
     "plan_id": "plan-pro",
     "ai_quota_limit_override": null
+  },
+  "f34a91b0-d046-4ed8-9500-a0e56f5da0b4": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "off_a_1794311753196": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "f7fcc9f2-3374-40bf-9f8f-e20423419fe3": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "off_b_1794311757282": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "665f4f9f-bb73-48a2-8eaf-e934b4aa7e61": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "law_off_mwamwc10": {
+    "plan_id": "plan-test-plan-mwamwc10-mwamwel0",
+    "ai_quota_limit_override": null
+  },
+  "26a43e57-7403-4e02-ac35-fe9b202d1a34": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "legacy_mwamwc10": {
+    "plan_id": "plan-pro",
+    "ai_quota_limit_override": null
+  },
+  "38ac0c35-bcb4-43f3-8529-104bedd95a08": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
+  },
+  "audit_office_mwamwkcz": {
+    "plan_id": "plan-plus",
+    "ai_quota_limit_override": null
   }
 }
