@@ -289,8 +289,16 @@ router.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid session id." });
     return;
   }
+  if (!req.authUser) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
+  const officeId = req.authUser.officeId || req.authUser.userId;
+  if (!officeId) {
+    res.status(401).json({ error: "غير مصرح." });
+    return;
+  }
   try {
-    const officeId = getOfficeId(req);
     const session = await getSessionById(id, officeId);
     if (!session || !canUserAccessRecord(session, req.authUser)) {
       res.status(404).json({ error: "Session not found." });

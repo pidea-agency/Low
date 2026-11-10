@@ -94,6 +94,7 @@ router.post("/tasks", async (req, res) => {
   }
 
   const clientId = body.clientId || body.client_id || null;
+  const caseId = body.caseId || body.case_id || null;
   let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
   let assignee = body.assignee?.trim() || "";
   const createdBy = req.authUser?.userId || null;
@@ -124,6 +125,7 @@ router.post("/tasks", async (req, res) => {
         status: (body.status as TaskRecord["status"]) || "قيد التنفيذ",
         notes: body.notes?.trim() || "",
         clientId,
+        caseId,
         assignedLawyerId,
         createdBy,
       },
@@ -161,6 +163,9 @@ router.put("/tasks/:id", async (req, res) => {
     const payload: any = { ...body };
     if (body.clientId !== undefined || body.client_id !== undefined) {
       payload.clientId = body.clientId !== undefined ? body.clientId : body.client_id;
+    }
+    if (body.caseId !== undefined || body.case_id !== undefined) {
+      payload.caseId = body.caseId !== undefined ? body.caseId : body.case_id;
     }
     if (req.authUser?.role === "staff") {
       delete payload.assignedLawyerId;

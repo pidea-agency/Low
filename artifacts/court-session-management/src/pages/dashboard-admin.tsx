@@ -138,6 +138,21 @@ export default function DashboardAdminPage() {
   const [calendarDate, setCalendarDate] = useState<Date>(new Date(2025, 0, 21));
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(21);
 
+  // Fetch Cases Statistics for live Case Status Donut breakdown
+  const { data: caseStats } = useQuery<{
+    total: number;
+    open: number;
+    closed: number;
+    postponed: number;
+  }>({
+    queryKey: ['/api/cases/stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/cases/stats', { credentials: 'include' });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
   const { data: poas = [], isLoading: isLoadingPoas } = useQuery<any[]>({
     queryKey: ['/api/poa'],
     queryFn: async () => {
@@ -482,6 +497,21 @@ export default function DashboardAdminPage() {
 
   // Case Status Donut Breakdown (حالة القضايا)
   const caseStatusDonut = useMemo(() => {
+    if (caseStats && caseStats.total > 0) {
+      const total = caseStats.total;
+      const inProgress = caseStats.open ?? 0;
+      const postponed = caseStats.postponed ?? 0;
+      const closed = caseStats.closed ?? 0;
+      const judged = Math.max(0, total - inProgress - postponed - closed);
+      const data = [
+        { name: 'قيد النظر', count: inProgress, pct: `${((inProgress / total) * 100).toFixed(1)}%`, fill: '#0B2A4A' },
+        { name: 'مؤجلة', count: postponed, pct: `${((postponed / total) * 100).toFixed(1)}%`, fill: '#3B82F6' },
+        { name: 'محكوم بها', count: judged, pct: `${((judged / total) * 100).toFixed(1)}%`, fill: '#C99732' },
+        { name: 'مغلقة', count: closed, pct: `${((closed / total) * 100).toFixed(1)}%`, fill: '#94A3B8' },
+      ];
+      return { total, data };
+    }
+
     const total = activeCasesTotal || 284;
     // Derive proportions matching reference (61.9% قيد النظر, 19.0% مؤجلة, 11.3% محكوم بها, 7.8% مغلقة)
     const inProgress = Math.round(total * 0.619) || 176;
@@ -496,7 +526,7 @@ export default function DashboardAdminPage() {
       { name: 'مغلقة', count: closed, pct: '7.8%', fill: '#94A3B8' },
     ];
     return { total, data };
-  }, [activeCasesTotal, statsData]);
+  }, [caseStats, activeCasesTotal, statsData]);
 
   if (statsError) {
     return (
@@ -543,14 +573,9 @@ export default function DashboardAdminPage() {
       <div className="fade-in-up rounded-2xl border border-[#D6E0EC] bg-white p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
         {/* Right side: Welcome Text with Gold Accent Line */}
         <div className="flex items-start gap-4 z-10 w-full md:w-auto">
-          <div className="w-1.5 h-14 rounded-full bg-[#C99732] shrink-0 mt-1" />
+          <div className="w-1.5 h-16 rounded-full bg-[#C99732] shrink-0 mt-0.5" />
           <div>
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-sm font-bold text-[#64748B]">مرحباً بك</span>
-              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#C99732]/15 text-[#C99732] border border-[#C99732]/30">
-                لوحة الإدارة والمكتب
-              </span>
-            </div>
+            <div className="text-sm font-bold text-[#64748B] mb-0.5">مرحباً بك</div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#10233F]">
               في نظام إدارة جلسات المحكمة
             </h1>
@@ -561,7 +586,7 @@ export default function DashboardAdminPage() {
         </div>
 
         {/* Left side: Classical Courthouse Architectural Illustration */}
-        <div className="h-28 sm:h-32 w-72 shrink-0 hidden sm:block relative">
+        <div className="h-28 sm:h-32 w-72 shrink-0 hidden sm:block relative rounded-xl overflow-hidden">
           <CourthouseBannerIllustration className="h-full w-full" />
         </div>
       </div>

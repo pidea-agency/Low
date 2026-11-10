@@ -831548,11 +831548,13 @@ function formatTask(r2) {
     status: r2.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
     notes: r2.notes || "",
     clientId: r2.clientId ?? r2.client_id ?? null,
+    caseId: r2.caseId ?? r2.case_id ?? null,
     assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
     createdBy: r2.createdBy ?? r2.created_by ?? null,
     createdAt: r2.createdAt ?? r2.created_at,
     updatedAt: r2.updatedAt ?? r2.updated_at,
     ...r2.clientId || r2.client_id ? { client_id: r2.clientId ?? r2.client_id } : {},
+    ...r2.caseId || r2.case_id ? { case_id: r2.caseId ?? r2.case_id } : {},
     ...r2.assignedLawyerId || r2.assigned_lawyer_id ? { assigned_lawyer_id: r2.assignedLawyerId ?? r2.assigned_lawyer_id } : {},
     ...r2.createdBy || r2.created_by ? { created_by: r2.createdBy ?? r2.created_by } : {}
   };
@@ -831617,6 +831619,7 @@ async function createTask(data, officeId) {
   const remaining = calcRemainingDays(data.dueDate || "");
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const clientId = data.clientId || data.client_id || null;
+  const caseId = data.caseId || data.case_id || null;
   const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
   const createdBy = data.createdBy || data.created_by || null;
   const client = getSupabaseClient();
@@ -831633,6 +831636,7 @@ async function createTask(data, officeId) {
           status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
           notes: data.notes || "",
           client_id: clientId,
+          case_id: caseId,
           assigned_lawyer_id: assignedLawyerId,
           created_by: createdBy
         }
@@ -831667,6 +831671,7 @@ async function createTask(data, officeId) {
     status: data.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
     notes: data.notes || "",
     clientId,
+    caseId,
     assignedLawyerId,
     createdBy,
     createdAt: now
@@ -831732,6 +831737,7 @@ async function updateTask(id, data, officeId) {
     status: data.status !== void 0 ? data.status : current.status,
     notes: data.notes !== void 0 ? data.notes : current.notes,
     clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    caseId: data.caseId !== void 0 ? data.caseId : data.case_id !== void 0 ? data.case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
@@ -831782,11 +831788,13 @@ function formatPoa(r2) {
     daysRemaining: r2.daysRemaining ?? r2.days_remaining ?? calcDaysFromHijri(r2.expiryDateHijri || r2.expiry_date_hijri),
     notes: r2.notes || "",
     clientId: r2.clientId ?? r2.client_id ?? null,
+    caseId: r2.caseId ?? r2.case_id ?? null,
     assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
     createdBy: r2.createdBy ?? r2.created_by ?? null,
     createdAt: r2.createdAt ?? r2.created_at,
     updatedAt: r2.updatedAt ?? r2.updated_at,
     ...r2.clientId || r2.client_id ? { client_id: r2.clientId ?? r2.client_id } : {},
+    ...r2.caseId || r2.case_id ? { case_id: r2.caseId ?? r2.case_id } : {},
     ...r2.assignedLawyerId || r2.assigned_lawyer_id ? { assigned_lawyer_id: r2.assignedLawyerId ?? r2.assigned_lawyer_id } : {},
     ...r2.createdBy || r2.created_by ? { created_by: r2.createdBy ?? r2.created_by } : {}
   };
@@ -831851,6 +831859,7 @@ async function createPoa(data, officeId) {
   const days = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri || "");
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const clientId = data.clientId || data.client_id || null;
+  const caseId = data.caseId || data.case_id || null;
   const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
   const createdBy = data.createdBy || data.created_by || null;
   const client = getSupabaseClient();
@@ -831866,6 +831875,7 @@ async function createPoa(data, officeId) {
           days_remaining: days,
           notes: data.notes || "",
           client_id: clientId,
+          case_id: caseId,
           assigned_lawyer_id: assignedLawyerId,
           created_by: createdBy
         }
@@ -831899,6 +831909,7 @@ async function createPoa(data, officeId) {
     daysRemaining: days,
     notes: data.notes || "",
     clientId,
+    caseId,
     assignedLawyerId,
     createdBy,
     createdAt: now
@@ -831962,6 +831973,7 @@ async function updatePoa(id, data, officeId) {
     daysRemaining: data.daysRemaining !== void 0 ? data.daysRemaining : data.expiryDateHijri !== void 0 ? calcDaysFromHijri(data.expiryDateHijri) : current.daysRemaining,
     notes: data.notes !== void 0 ? data.notes : current.notes,
     clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
+    caseId: data.caseId !== void 0 ? data.caseId : data.case_id !== void 0 ? data.case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
@@ -852263,8 +852275,16 @@ router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid session id." });
     return;
   }
+  if (!req.authUser) {
+    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
+    return;
+  }
+  const officeId = req.authUser.officeId || req.authUser.userId;
+  if (!officeId) {
+    res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D." });
+    return;
+  }
   try {
-    const officeId = getOfficeId(req);
     const session = await getSessionById2(id, officeId);
     if (!session || !canUserAccessRecord(session, req.authUser)) {
       res.status(404).json({ error: "Session not found." });
@@ -853566,6 +853586,7 @@ router9.post("/poa", async (req, res) => {
     return;
   }
   const clientId = body.clientId || body.client_id || null;
+  const caseId = body.caseId || body.case_id || null;
   if (!clientId) {
     res.status(400).json({ error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
     return;
@@ -853596,6 +853617,7 @@ router9.post("/poa", async (req, res) => {
         daysRemaining: body.daysRemaining !== void 0 ? Number(body.daysRemaining) : void 0,
         notes: body.notes?.trim() || "",
         clientId,
+        caseId,
         assignedLawyerId,
         createdBy
       },
@@ -853648,6 +853670,9 @@ router9.put("/poa/:rowId", async (req, res) => {
     }
     payload.clientId = targetClientId;
     payload.clientName = clientRecord.name;
+    if (body.caseId !== void 0 || body.case_id !== void 0) {
+      payload.caseId = body.caseId !== void 0 ? body.caseId : body.case_id;
+    }
     if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0)) {
       const targetLawyer = body.assignedLawyerId !== void 0 ? body.assignedLawyerId : body.assigned_lawyer_id;
       if (targetLawyer) {
@@ -854032,6 +854057,7 @@ router11.post("/tasks", async (req, res) => {
     return;
   }
   const clientId = body.clientId || body.client_id || null;
+  const caseId = body.caseId || body.case_id || null;
   let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
   let assignee = body.assignee?.trim() || "";
   const createdBy = req.authUser?.userId || null;
@@ -854060,6 +854086,7 @@ router11.post("/tasks", async (req, res) => {
         status: body.status || "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
         notes: body.notes?.trim() || "",
         clientId,
+        caseId,
         assignedLawyerId,
         createdBy
       },
@@ -854090,6 +854117,9 @@ router11.put("/tasks/:id", async (req, res) => {
     const payload = { ...body };
     if (body.clientId !== void 0 || body.client_id !== void 0) {
       payload.clientId = body.clientId !== void 0 ? body.clientId : body.client_id;
+    }
+    if (body.caseId !== void 0 || body.case_id !== void 0) {
+      payload.caseId = body.caseId !== void 0 ? body.caseId : body.case_id;
     }
     if (req.authUser?.role === "staff") {
       delete payload.assignedLawyerId;

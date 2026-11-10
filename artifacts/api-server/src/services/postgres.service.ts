@@ -97,6 +97,7 @@ export interface TaskRecord {
   status: "قيد التنفيذ" | "مكتملة" | "مؤجلة" | "معلقة";
   notes: string;
   clientId?: string | null;
+  caseId?: string | null;
   assignedLawyerId?: string | null;
   createdBy?: string | null;
   createdAt: string;
@@ -113,6 +114,7 @@ export interface PoaRecord {
   daysRemaining: number;
   notes?: string;
   clientId?: string | null;
+  caseId?: string | null;
   assignedLawyerId?: string | null;
   createdBy?: string | null;
   createdAt: string;
@@ -844,7 +846,7 @@ export async function updateSession(id: number, data: SessionUpdateData, officeI
       if (data.reminder6 !== undefined) updatePayload.reminder6 = data.reminder6;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
@@ -1185,11 +1187,13 @@ function formatTask(r: any): TaskRecord {
     status: r.status || "قيد التنفيذ",
     notes: r.notes || "",
     clientId: r.clientId ?? r.client_id ?? null,
+    caseId: r.caseId ?? r.case_id ?? null,
     assignedLawyerId: r.assignedLawyerId ?? r.assigned_lawyer_id ?? null,
     createdBy: r.createdBy ?? r.created_by ?? null,
     createdAt: r.createdAt ?? r.created_at,
     updatedAt: r.updatedAt ?? r.updated_at,
     ...(r.clientId || r.client_id ? { client_id: r.clientId ?? r.client_id } : {}),
+    ...(r.caseId || r.case_id ? { case_id: r.caseId ?? r.case_id } : {}),
     ...(r.assignedLawyerId || r.assigned_lawyer_id ? { assigned_lawyer_id: r.assignedLawyerId ?? r.assigned_lawyer_id } : {}),
     ...(r.createdBy || r.created_by ? { created_by: r.createdBy ?? r.created_by } : {}),
   } as any;
@@ -1274,6 +1278,7 @@ export async function createTask(
     status?: "قيد التنفيذ" | "مكتملة" | "مؤجلة" | "معلقة";
     notes?: string;
     clientId?: string | null;
+    caseId?: string | null;
     assignedLawyerId?: string | null;
     createdBy?: string | null;
   },
@@ -1282,6 +1287,7 @@ export async function createTask(
   const remaining = calcRemainingDays(data.dueDate || "");
   const now = new Date().toISOString();
   const clientId = data.clientId || (data as any).client_id || null;
+  const caseId = data.caseId || (data as any).case_id || null;
   const assignedLawyerId = data.assignedLawyerId || (data as any).assigned_lawyer_id || null;
   const createdBy = data.createdBy || (data as any).created_by || null;
 
@@ -1301,6 +1307,7 @@ export async function createTask(
             status: data.status || "قيد التنفيذ",
             notes: data.notes || "",
             client_id: clientId,
+            case_id: caseId,
             assigned_lawyer_id: assignedLawyerId,
             created_by: createdBy,
           },
@@ -1339,6 +1346,7 @@ export async function createTask(
     status: data.status || "قيد التنفيذ",
     notes: data.notes || "",
     clientId,
+    caseId,
     assignedLawyerId,
     createdBy,
     createdAt: now,
@@ -1370,7 +1378,7 @@ export async function updateTask(
       if (data.notes !== undefined) updatePayload.notes = data.notes;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
@@ -1420,6 +1428,7 @@ export async function updateTask(
     status: data.status !== undefined ? data.status : current.status,
     notes: data.notes !== undefined ? data.notes : current.notes,
     clientId: data.clientId !== undefined ? data.clientId : (data as any).client_id !== undefined ? (data as any).client_id : current.clientId,
+    caseId: data.caseId !== undefined ? data.caseId : (data as any).case_id !== undefined ? (data as any).case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== undefined ? data.assignedLawyerId : (data as any).assigned_lawyer_id !== undefined ? (data as any).assigned_lawyer_id : current.assignedLawyerId,
     updatedAt: new Date().toISOString(),
   };
@@ -1487,11 +1496,13 @@ function formatPoa(r: any): PoaRecord {
     daysRemaining: r.daysRemaining ?? r.days_remaining ?? calcDaysFromHijri(r.expiryDateHijri || r.expiry_date_hijri),
     notes: r.notes || "",
     clientId: r.clientId ?? r.client_id ?? null,
+    caseId: r.caseId ?? r.case_id ?? null,
     assignedLawyerId: r.assignedLawyerId ?? r.assigned_lawyer_id ?? null,
     createdBy: r.createdBy ?? r.created_by ?? null,
     createdAt: r.createdAt ?? r.created_at,
     updatedAt: r.updatedAt ?? r.updated_at,
     ...(r.clientId || r.client_id ? { client_id: r.clientId ?? r.client_id } : {}),
+    ...(r.caseId || r.case_id ? { case_id: r.caseId ?? r.case_id } : {}),
     ...(r.assignedLawyerId || r.assigned_lawyer_id ? { assigned_lawyer_id: r.assignedLawyerId ?? r.assigned_lawyer_id } : {}),
     ...(r.createdBy || r.created_by ? { created_by: r.createdBy ?? r.created_by } : {}),
   } as any;
@@ -1576,6 +1587,7 @@ export async function createPoa(
     daysRemaining?: number;
     notes?: string;
     clientId?: string | null;
+    caseId?: string | null;
     assignedLawyerId?: string | null;
     createdBy?: string | null;
   },
@@ -1584,6 +1596,7 @@ export async function createPoa(
   const days = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri || "");
   const now = new Date().toISOString();
   const clientId = data.clientId || (data as any).client_id || null;
+  const caseId = data.caseId || (data as any).case_id || null;
   const assignedLawyerId = data.assignedLawyerId || (data as any).assigned_lawyer_id || null;
   const createdBy = data.createdBy || (data as any).created_by || null;
 
@@ -1602,6 +1615,7 @@ export async function createPoa(
             days_remaining: days,
             notes: data.notes || "",
             client_id: clientId,
+            case_id: caseId,
             assigned_lawyer_id: assignedLawyerId,
             created_by: createdBy,
           },
@@ -1639,6 +1653,7 @@ export async function createPoa(
     daysRemaining: days,
     notes: data.notes || "",
     clientId,
+    caseId,
     assignedLawyerId,
     createdBy,
     createdAt: now,
@@ -1669,7 +1684,7 @@ export async function updatePoa(
       if (data.notes !== undefined) updatePayload.notes = data.notes;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
@@ -1723,6 +1738,7 @@ export async function updatePoa(
         : current.daysRemaining,
     notes: data.notes !== undefined ? data.notes : current.notes,
     clientId: data.clientId !== undefined ? data.clientId : (data as any).client_id !== undefined ? (data as any).client_id : current.clientId,
+    caseId: data.caseId !== undefined ? data.caseId : (data as any).case_id !== undefined ? (data as any).case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== undefined ? data.assignedLawyerId : (data as any).assigned_lawyer_id !== undefined ? (data as any).assigned_lawyer_id : current.assignedLawyerId,
     updatedAt: new Date().toISOString(),
   };
@@ -1992,7 +2008,7 @@ export async function updateJudgment(
       if (data.isFavorable !== undefined) updatePayload.is_favorable = data.isFavorable;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
+      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;

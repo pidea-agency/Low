@@ -90,6 +90,7 @@ router.post("/poa", async (req, res) => {
   }
 
   const clientId = body.clientId || body.client_id || null;
+  const caseId = body.caseId || body.case_id || null;
   if (!clientId) {
     res.status(400).json({ error: "يجب تحديد العميل المرتبط بالوكالة." });
     return;
@@ -124,6 +125,7 @@ router.post("/poa", async (req, res) => {
         daysRemaining: body.daysRemaining !== undefined ? Number(body.daysRemaining) : undefined,
         notes: body.notes?.trim() || "",
         clientId,
+        caseId,
         assignedLawyerId,
         createdBy,
       },
@@ -193,6 +195,9 @@ router.put("/poa/:rowId", async (req, res) => {
 
     payload.clientId = targetClientId;
     payload.clientName = clientRecord.name;
+    if (body.caseId !== undefined || body.case_id !== undefined) {
+      payload.caseId = body.caseId !== undefined ? body.caseId : body.case_id;
+    }
 
     if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== undefined || body.assigned_lawyer_id !== undefined)) {
       const targetLawyer = body.assignedLawyerId !== undefined ? body.assignedLawyerId : body.assigned_lawyer_id;

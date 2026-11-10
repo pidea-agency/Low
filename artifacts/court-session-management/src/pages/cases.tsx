@@ -108,6 +108,12 @@ export default function CasesPage() {
 
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('create=true')) {
+      setIsCreateOpen(true);
+    }
+  }, []);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isFullDetailOpen, setIsFullDetailOpen] = useState(false);
   const [reassignCaseTarget, setReassignCaseTarget] = useState<CaseItem | null>(null);
