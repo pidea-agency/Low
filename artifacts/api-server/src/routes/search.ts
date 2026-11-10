@@ -100,7 +100,7 @@ router.get("/search", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, officeId, q }, "Failed to execute global search");
-    res.status(500).json({ error: `فشل البحث في النظام. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل البحث في النظام");
   }
 });
 

@@ -7,7 +7,13 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { env } from "./config/env";
+import { env, isSupabaseConfigured } from "./config/env";
+
+// Startup check: Fail loudly if Supabase credentials are missing (outside tests)
+if (!isSupabaseConfigured() && process.env.NODE_ENV !== "test") {
+  logger.fatal("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
+  throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
+}
 
 // ESM and CJS safe directory resolution
 const currentFilename = typeof __filename !== "undefined" ? __filename : (typeof import.meta !== "undefined" && import.meta.url ? fileURLToPath(import.meta.url) : process.cwd());
@@ -90,6 +96,18 @@ if (distPath) {
 // Global Express error handler — ensures JSON responses instead of default HTML 500
 app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error({ err, path: req.path, method: req.method }, "Express request error");
+  if (
+    err?.statusCode === 503 ||
+    err?.code === "DATABASE_UNAVAILABLE" ||
+    err?.name === "DatabaseUnavailableError" ||
+    String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+  ) {
+    res.status(503).json({
+      error: "قاعدة البيانات غير متصلة حالياً",
+      code: "DATABASE_UNAVAILABLE",
+    });
+    return;
+  }
   res.status(err.status || 500).json({
     error: err.message || "Internal Server Error",
     stack: process.env.NODE_ENV !== "production" ? err.stack : undefined,

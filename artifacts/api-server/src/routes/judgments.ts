@@ -40,7 +40,7 @@ router.get("/judgments", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to list judgments");
-    res.status(500).json({ error: `فشل تحميل بيانات الأحكام. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل بيانات الأحكام");
   }
 });
 
@@ -66,7 +66,7 @@ router.get("/judgments/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to get judgment");
-    res.status(500).json({ error: `فشل تحميل بيانات الحكم. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل بيانات الحكم");
   }
 });
 
@@ -127,7 +127,7 @@ router.post("/judgments", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to create judgment");
-    res.status(500).json({ error: `فشل حفظ الحكم. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حفظ الحكم");
   }
 });
 
@@ -200,7 +200,7 @@ router.put("/judgments/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to update judgment");
-    res.status(500).json({ error: `فشل تحديث الحكم. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحديث الحكم");
   }
 });
 
@@ -244,7 +244,7 @@ router.patch("/judgments/:id/reassign", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to reassign judgment");
-    res.status(500).json({ error: `فشل إعادة تعيين الحكم. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل إعادة تعيين الحكم");
   }
 });
 
@@ -277,7 +277,7 @@ router.delete("/judgments/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to delete judgment");
-    res.status(500).json({ error: `فشل حذف الحكم. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حذف الحكم");
   }
 });
 

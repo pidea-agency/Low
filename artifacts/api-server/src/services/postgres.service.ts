@@ -236,6 +236,60 @@ export function resetInMemoryStore(): void {
   memoryCases.clear();
 }
 
+export class DatabaseUnavailableError extends Error {
+  public statusCode = 503;
+  public code = "DATABASE_UNAVAILABLE";
+  constructor(message = "قاعدة البيانات غير متصلة حالياً") {
+    super(message);
+    this.name = "DatabaseUnavailableError";
+  }
+}
+
+let _forceDisableMemoryStoreForTesting = false;
+
+export function setForceDisableMemoryStoreForTesting(disabled: boolean): void {
+  _forceDisableMemoryStoreForTesting = disabled;
+}
+
+export function isInMemoryFallbackAllowed(): boolean {
+  if (process.env.NODE_ENV !== "test") {
+    return false;
+  }
+  return !_forceDisableMemoryStoreForTesting;
+}
+
+export function handleSupabaseFailure(operation: string, err?: any): void {
+  if (err instanceof DatabaseUnavailableError) throw err;
+  logger.error({ err, operation }, `Supabase ${operation} failed`);
+  if (!isInMemoryFallbackAllowed()) {
+    throw new DatabaseUnavailableError(
+      `قاعدة البيانات غير متصلة حالياً (${operation}): ${err?.message || "فشل الاتصال بـ Supabase"}`
+    );
+  }
+}
+
+export function handleDatabaseOrServerError(
+  res: any,
+  err: any,
+  refId: string,
+  defaultMsg: string
+): void {
+  if (
+    err instanceof DatabaseUnavailableError ||
+    (err as any)?.statusCode === 503 ||
+    (err as any)?.code === "DATABASE_UNAVAILABLE" ||
+    String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+  ) {
+    res.status(503).json({
+      error: "قاعدة البيانات غير متصلة حالياً",
+      code: "DATABASE_UNAVAILABLE",
+      refId,
+    });
+    return;
+  }
+  res.status(500).json({ error: `${defaultMsg}. رقم المرجع: ${refId}`, refId });
+}
+
 // Helper: Hijri Remaining Days Calculation
 export function calcDaysFromHijri(hijriDateStr: string): number {
   if (!hijriDateStr?.trim()) return 0;
@@ -336,9 +390,14 @@ export async function listClients(officeId: string): Promise<ClientRecord[]> {
           updatedAt: r.updated_at,
         }));
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listClients failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listClients", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listClients", err);
     }
+  } else {
+    handleSupabaseFailure("listClients", new Error("Supabase client is not configured"));
   }
 
   return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
@@ -366,9 +425,22 @@ export async function getClientById(id: string, officeId: string): Promise<Clien
           updatedAt: data.updated_at,
         };
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getClientById failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryClients.get(officeId) || [];
+          const found = list.find((c) => c.id === id);
+          if (found) return { ...found };
+        }
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getClientById", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("getClientById", err);
     }
+  } else {
+    handleSupabaseFailure("getClientById", new Error("Supabase client is not configured"));
   }
 
   const list = memoryClients.get(officeId) || [];
@@ -413,9 +485,14 @@ export async function createClient(
           updatedAt: inserted.updated_at,
         };
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createClient failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("createClient", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createClient", err);
     }
+  } else {
+    handleSupabaseFailure("createClient", new Error("Supabase client is not configured"));
   }
 
   const record: ClientRecord = {
@@ -467,9 +544,17 @@ export async function updateClient(
           updatedAt: updated.updated_at,
         };
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase updateClient failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("updateClient", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("updateClient", err);
     }
+  } else {
+    handleSupabaseFailure("updateClient", new Error("Supabase client is not configured"));
   }
 
   const list = memoryClients.get(officeId) || [];
@@ -498,10 +583,17 @@ export async function deleteClient(id: string, officeId: string): Promise<boolea
         .eq("id", id)
         .eq("office_id", officeId);
 
-      if (!error && (count ?? 0) > 0) return true;
-    } catch (err) {
-      logger.warn({ err }, "Supabase deleteClient failed, falling back to memory");
+      if (!error) {
+        return (count ?? 0) > 0;
+      }
+      if (error) {
+        handleSupabaseFailure("deleteClient", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("deleteClient", err);
     }
+  } else {
+    handleSupabaseFailure("deleteClient", new Error("Supabase client is not configured"));
   }
 
   const list = memoryClients.get(officeId) || [];
@@ -550,9 +642,14 @@ export async function listSessions(officeId: string, statusFilter?: string): Pro
         const dbIds = new Set(dbSessions.map((s) => s.id));
         return [...dbSessions, ...memList.filter((m) => !dbIds.has(m.id))];
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase query failed in listSessions, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listSessions", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listSessions", err);
     }
+  } else {
+    handleSupabaseFailure("listSessions", new Error("Supabase client is not configured"));
   }
 
   return memList;
@@ -588,9 +685,20 @@ export async function getSessionById(id: number, officeId: string): Promise<Sess
         }
         return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase query failed in getSessionById, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed() && fromMem) {
+          return formatSession(fromMem);
+        }
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getSessionById", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("getSessionById", err);
     }
+  } else {
+    handleSupabaseFailure("getSessionById", new Error("Supabase client is not configured"));
   }
 
   if (!fromMem) return null;
@@ -670,9 +778,14 @@ export async function createSession(data: SessionCreateData, officeId: string): 
           created_by: createdBy,
         };
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase insert failed in createSession, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("createSession", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createSession", err);
     }
+  } else {
+    handleSupabaseFailure("createSession", new Error("Supabase client is not configured"));
   }
 
   const id = nextId();
@@ -731,7 +844,7 @@ export async function updateSession(id: number, data: SessionUpdateData, officeI
       if (data.reminder6 !== undefined) updatePayload.reminder6 = data.reminder6;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
@@ -754,9 +867,17 @@ export async function updateSession(id: number, data: SessionUpdateData, officeI
       if (!error && updated) {
         return formatSession(updated);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase update failed in updateSession, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("updateSession", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("updateSession", err);
     }
+  } else {
+    handleSupabaseFailure("updateSession", new Error("Supabase client is not configured"));
   }
 
   const list = memorySessions.get(officeId) || [];
@@ -804,10 +925,24 @@ export async function deleteSession(id: number, officeId: string): Promise<boole
         .delete({ count: "exact" })
         .eq("id", id)
         .eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
-    } catch (err) {
-      logger.warn({ err }, "Supabase delete failed in deleteSession, falling back to memory");
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list = memorySessions.get(officeId) || [];
+          const idx = list.findIndex((s) => s.id === id);
+          if (idx !== -1) list.splice(idx, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      if (error) {
+        handleSupabaseFailure("deleteSession", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("deleteSession", err);
     }
+  } else {
+    handleSupabaseFailure("deleteSession", new Error("Supabase client is not configured"));
   }
 
   const list = memorySessions.get(officeId) || [];
@@ -828,7 +963,7 @@ export async function getSessionReport(id: number, officeId: string): Promise<{ 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data } = await client
+      const { data, error } = await client
         .from("reports")
         .select("report")
         .eq("session_id", id)
@@ -840,19 +975,35 @@ export async function getSessionReport(id: number, officeId: string): Promise<{ 
         return { session, report: data[0].report };
       }
 
-      // Check report field on session row
-      const { data: sRow } = await client
-        .from("sessions")
-        .select("report")
-        .eq("id", id)
-        .eq("office_id", officeId)
-        .single();
-      if (sRow?.report) {
-        return { session, report: sRow.report };
+      if (error) {
+        handleSupabaseFailure("getSessionReport", error);
+      } else {
+        // Check report field on session row
+        const { data: sRow, error: sErr } = await client
+          .from("sessions")
+          .select("report")
+          .eq("id", id)
+          .eq("office_id", officeId)
+          .single();
+        if (sErr && sErr.code !== "PGRST116") {
+          handleSupabaseFailure("getSessionReport:sRow", sErr);
+        } else if (sRow?.report) {
+          return { session, report: sRow.report };
+        } else {
+          if (isInMemoryFallbackAllowed()) {
+            const reportsList = memoryReports.get(officeId) || [];
+            const found = reportsList.find((r) => r.sessionId === id);
+            if (found) return { session, report: found.report };
+            if ((session as any).report) return { session, report: (session as any).report };
+          }
+          return { session, report: null };
+        }
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getSessionReport failed, falling back to memory");
+    } catch (err: any) {
+      handleSupabaseFailure("getSessionReport", err);
     }
+  } else {
+    handleSupabaseFailure("getSessionReport", new Error("Supabase client is not configured"));
   }
 
   const reportsList = memoryReports.get(officeId) || [];
@@ -863,21 +1014,16 @@ export async function getSessionReport(id: number, officeId: string): Promise<{ 
 export async function getSessionReportStatusMap(officeId: string): Promise<Set<number>> {
   const reportedSet = new Set<number>();
 
-  const memReports = memoryReports.get(officeId) || [];
-  for (const r of memReports) {
-    if (r.report && r.sessionId) {
-      reportedSet.add(Number(r.sessionId));
-    }
-  }
-
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: rData } = await client
+      const { data: rData, error: rErr } = await client
         .from("reports")
         .select("session_id, report")
         .eq("office_id", officeId);
-      if (rData) {
+      if (rErr) {
+        handleSupabaseFailure("getSessionReportStatusMap:reports", rErr);
+      } else if (rData) {
         for (const row of rData) {
           if (row.report && row.session_id) {
             reportedSet.add(Number(row.session_id));
@@ -885,20 +1031,48 @@ export async function getSessionReportStatusMap(officeId: string): Promise<Set<n
         }
       }
 
-      const { data: sData } = await client
+      const { data: sData, error: sErr } = await client
         .from("sessions")
         .select("id, report")
         .eq("office_id", officeId)
         .not("report", "is", null);
-      if (sData) {
+      if (sErr) {
+        handleSupabaseFailure("getSessionReportStatusMap:sessions", sErr);
+      } else if (sData) {
         for (const row of sData) {
           if (row.report && row.id) {
             reportedSet.add(Number(row.id));
           }
         }
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase query in getSessionReportStatusMap failed, using memory only");
+
+      if (isInMemoryFallbackAllowed()) {
+        const memReports = memoryReports.get(officeId) || [];
+        for (const r of memReports) {
+          if (r.report && r.sessionId) {
+            reportedSet.add(Number(r.sessionId));
+          }
+        }
+        const memSessions = memorySessions.get(officeId) || [];
+        for (const s of memSessions) {
+          if ((s as any).report && s.id) {
+            reportedSet.add(Number(s.id));
+          }
+        }
+      }
+
+      return reportedSet;
+    } catch (err: any) {
+      handleSupabaseFailure("getSessionReportStatusMap", err);
+    }
+  } else {
+    handleSupabaseFailure("getSessionReportStatusMap", new Error("Supabase client is not configured"));
+  }
+
+  const memReports = memoryReports.get(officeId) || [];
+  for (const r of memReports) {
+    if (r.report && r.sessionId) {
+      reportedSet.add(Number(r.sessionId));
     }
   }
 
@@ -909,7 +1083,66 @@ export async function saveSessionReport(id: number, report: string, officeId: st
   const session = await getSessionById(id, officeId);
   if (!session) return null;
 
-  // Always update memory store for reliable fallback and fast lookups
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      // Upsert report in reports table
+      const { error: rErr } = await client.from("reports").insert([
+        {
+          office_id: officeId,
+          session_id: id,
+          report,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+      if (rErr) {
+        handleSupabaseFailure("saveSessionReport:reports", rErr);
+      }
+
+      // Also update session table report column
+      const { error: sErr } = await client
+        .from("sessions")
+        .update({ report, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("office_id", officeId);
+      if (sErr) {
+        handleSupabaseFailure("saveSessionReport:sessions", sErr);
+      }
+
+      if (isInMemoryFallbackAllowed()) {
+        const reportsList = memoryReports.get(officeId) || [];
+        const existingIdx = reportsList.findIndex((r) => r.sessionId === id);
+        if (existingIdx !== -1) {
+          reportsList[existingIdx].report = report;
+          reportsList[existingIdx].updatedAt = new Date().toISOString();
+        } else {
+          reportsList.push({
+            id: nextId(),
+            officeId,
+            sessionId: id,
+            report,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        memoryReports.set(officeId, reportsList);
+
+        const sList = memorySessions.get(officeId) || [];
+        const sIdx = sList.findIndex((s) => s.id === id);
+        if (sIdx !== -1) {
+          (sList[sIdx] as any).report = report;
+        }
+      }
+
+      return { session: { ...(session as any), report } as Session, report };
+    } catch (err: any) {
+      handleSupabaseFailure("saveSessionReport", err);
+    }
+  } else {
+    handleSupabaseFailure("saveSessionReport", new Error("Supabase client is not configured"));
+  }
+
   const reportsList = memoryReports.get(officeId) || [];
   const existingIdx = reportsList.findIndex((r) => r.sessionId === id);
   if (existingIdx !== -1) {
@@ -933,31 +1166,7 @@ export async function saveSessionReport(id: number, report: string, officeId: st
     (sList[sIdx] as any).report = report;
   }
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      // Upsert report in reports table
-      await client.from("reports").insert([
-        {
-          office_id: officeId,
-          session_id: id,
-          report,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ]);
-      // Also update session table report column
-      await client
-        .from("sessions")
-        .update({ report, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .eq("office_id", officeId);
-    } catch (err) {
-      logger.warn({ err }, "Supabase saveSessionReport failed, falling back to memory");
-    }
-  }
-
-  return { session, report };
+  return { session: { ...(session as any), report } as Session, report };
 }
 
 // ============================================================================
@@ -987,8 +1196,6 @@ function formatTask(r: any): TaskRecord {
 }
 
 export async function listTasks(officeId: string): Promise<TaskRecord[]> {
-  const memList = (memoryTasks.get(officeId) || []).map(formatTask);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -999,34 +1206,30 @@ export async function listTasks(officeId: string): Promise<TaskRecord[]> {
         .order("id", { ascending: false });
 
       if (!error && data) {
-        const dbTasks = data.map((d: any) => {
-          const formatted = formatTask(d);
-          const fromMem = (memoryTasks.get(officeId) || []).find((m) => m.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-            };
+        if (isInMemoryFallbackAllowed()) {
+          const mem = memoryTasks.get(officeId) || [];
+          if (mem.length > 0) {
+            const dbIds = new Set(data.map((d: any) => d.id));
+            const extra = mem.filter((m) => !dbIds.has(m.id)).map(formatTask);
+            return [...data.map(formatTask), ...extra];
           }
-          return formatted;
-        });
-        const dbIds = new Set(dbTasks.map((t) => t.id));
-        return [...dbTasks, ...memList.filter((m) => !dbIds.has(m.id))];
+        }
+        return data.map(formatTask);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listTasks failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listTasks", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listTasks", err);
     }
+  } else {
+    handleSupabaseFailure("listTasks", new Error("Supabase client is not configured"));
   }
 
-  return memList;
+  return (memoryTasks.get(officeId) || []).map(formatTask);
 }
 
 export async function getTaskById(id: number, officeId: string): Promise<TaskRecord | null> {
-  const memList = memoryTasks.get(officeId) || [];
-  const fromMem = memList.find((item) => item.id === id);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -1037,22 +1240,28 @@ export async function getTaskById(id: number, officeId: string): Promise<TaskRec
         .eq("office_id", officeId)
         .single();
       if (!error && data) {
-        const formatted = formatTask(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            clientId: fromMem.clientId || formatted.clientId,
-            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-            createdBy: fromMem.createdBy || formatted.createdBy,
-          };
-        }
-        return formatted;
+        return formatTask(data);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getTaskById failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const memList = memoryTasks.get(officeId) || [];
+          const fromMem = memList.find((item) => item.id === id);
+          if (fromMem) return formatTask(fromMem);
+        }
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getTaskById", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("getTaskById", err);
     }
+  } else {
+    handleSupabaseFailure("getTaskById", new Error("Supabase client is not configured"));
   }
 
+  const memList = memoryTasks.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   return fromMem ? formatTask(fromMem) : null;
 }
 
@@ -1101,22 +1310,21 @@ export async function createTask(
 
       if (!error && inserted) {
         const formatted = formatTask(inserted);
-        const memRecord: TaskRecord = {
-          ...formatted,
-          id: inserted.id,
-          officeId,
-          clientId,
-          assignedLawyerId,
-          createdBy,
-        };
-        const list = memoryTasks.get(officeId) || [];
-        list.unshift(memRecord);
-        memoryTasks.set(officeId, list);
-        return formatTask(memRecord);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryTasks.get(officeId) || [];
+          list.unshift(formatted);
+          memoryTasks.set(officeId, list);
+        }
+        return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createTask failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("createTask", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createTask", err);
     }
+  } else {
+    handleSupabaseFailure("createTask", new Error("Supabase client is not configured"));
   }
 
   const id = nextId();
@@ -1162,7 +1370,7 @@ export async function updateTask(
       if (data.notes !== undefined) updatePayload.notes = data.notes;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
@@ -1176,11 +1384,25 @@ export async function updateTask(
         .single();
 
       if (!error && updated) {
-        return formatTask(updated);
+        const formatted = formatTask(updated);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryTasks.get(officeId) || [];
+          const idx = list.findIndex((t) => t.id === id);
+          if (idx !== -1) list[idx] = { ...list[idx], ...formatted };
+        }
+        return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase updateTask failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error && error.code !== "PGRST116") {
+        handleSupabaseFailure("updateTask", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("updateTask", err);
     }
+  } else {
+    handleSupabaseFailure("updateTask", new Error("Supabase client is not configured"));
   }
 
   const list = memoryTasks.get(officeId) || [];
@@ -1225,10 +1447,22 @@ export async function deleteTask(id: number, officeId: string): Promise<boolean>
         .delete({ count: "exact" })
         .eq("id", id)
         .eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
-    } catch (err) {
-      logger.warn({ err }, "Supabase deleteTask failed, falling back to memory");
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryTasks.get(officeId) || [];
+          const idx = list.findIndex((t) => t.id === id);
+          if (idx !== -1) list.splice(idx, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      handleSupabaseFailure("deleteTask", error);
+    } catch (err: any) {
+      handleSupabaseFailure("deleteTask", err);
     }
+  } else {
+    handleSupabaseFailure("deleteTask", new Error("Supabase client is not configured"));
   }
 
   const list = memoryTasks.get(officeId) || [];
@@ -1264,8 +1498,6 @@ function formatPoa(r: any): PoaRecord {
 }
 
 export async function listPoa(officeId: string): Promise<PoaRecord[]> {
-  const memList = (memoryPoa.get(officeId) || []).map(formatPoa);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -1276,34 +1508,30 @@ export async function listPoa(officeId: string): Promise<PoaRecord[]> {
         .order("id", { ascending: false });
 
       if (!error && data) {
-        const dbPoa = data.map((d: any) => {
-          const formatted = formatPoa(d);
-          const fromMem = (memoryPoa.get(officeId) || []).find((m) => m.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-            };
+        if (isInMemoryFallbackAllowed()) {
+          const mem = memoryPoa.get(officeId) || [];
+          if (mem.length > 0) {
+            const dbIds = new Set(data.map((d: any) => d.id));
+            const extra = mem.filter((m) => !dbIds.has(m.id)).map(formatPoa);
+            return [...data.map(formatPoa), ...extra];
           }
-          return formatted;
-        });
-        const dbIds = new Set(dbPoa.map((p) => p.id));
-        return [...dbPoa, ...memList.filter((m) => !dbIds.has(m.id))];
+        }
+        return data.map(formatPoa);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listPoa failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listPoa", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listPoa", err);
     }
+  } else {
+    handleSupabaseFailure("listPoa", new Error("Supabase client is not configured"));
   }
 
-  return memList;
+  return (memoryPoa.get(officeId) || []).map(formatPoa);
 }
 
 export async function getPoaById(id: number, officeId: string): Promise<PoaRecord | null> {
-  const memList = memoryPoa.get(officeId) || [];
-  const fromMem = memList.find((item) => item.id === id);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -1314,22 +1542,28 @@ export async function getPoaById(id: number, officeId: string): Promise<PoaRecor
         .eq("office_id", officeId)
         .single();
       if (!error && data) {
-        const formatted = formatPoa(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            clientId: fromMem.clientId || formatted.clientId,
-            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-            createdBy: fromMem.createdBy || formatted.createdBy,
-          };
-        }
-        return formatted;
+        return formatPoa(data);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getPoaById failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const memList = memoryPoa.get(officeId) || [];
+          const fromMem = memList.find((item) => item.id === id);
+          if (fromMem) return formatPoa(fromMem);
+        }
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getPoaById", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("getPoaById", err);
     }
+  } else {
+    handleSupabaseFailure("getPoaById", new Error("Supabase client is not configured"));
   }
 
+  const memList = memoryPoa.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   return fromMem ? formatPoa(fromMem) : null;
 }
 
@@ -1377,22 +1611,21 @@ export async function createPoa(
 
       if (!error && inserted) {
         const formatted = formatPoa(inserted);
-        const memRecord: PoaRecord = {
-          ...formatted,
-          id: inserted.id,
-          officeId,
-          clientId,
-          assignedLawyerId,
-          createdBy,
-        };
-        const list = memoryPoa.get(officeId) || [];
-        list.unshift(memRecord);
-        memoryPoa.set(officeId, list);
-        return formatPoa(memRecord);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryPoa.get(officeId) || [];
+          list.unshift(formatted);
+          memoryPoa.set(officeId, list);
+        }
+        return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createPoa failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("createPoa", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createPoa", err);
     }
+  } else {
+    handleSupabaseFailure("createPoa", new Error("Supabase client is not configured"));
   }
 
   const id = nextId();
@@ -1436,7 +1669,7 @@ export async function updatePoa(
       if (data.notes !== undefined) updatePayload.notes = data.notes;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
@@ -1450,11 +1683,25 @@ export async function updatePoa(
         .single();
 
       if (!error && updated) {
-        return formatPoa(updated);
+        const formatted = formatPoa(updated);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryPoa.get(officeId) || [];
+          const idx = list.findIndex((p) => p.id === id);
+          if (idx !== -1) list[idx] = { ...list[idx], ...formatted };
+        }
+        return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase updatePoa failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error && error.code !== "PGRST116") {
+        handleSupabaseFailure("updatePoa", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("updatePoa", err);
     }
+  } else {
+    handleSupabaseFailure("updatePoa", new Error("Supabase client is not configured"));
   }
 
   const list = memoryPoa.get(officeId) || [];
@@ -1500,10 +1747,22 @@ export async function deletePoa(id: number, officeId: string): Promise<boolean> 
         .delete({ count: "exact" })
         .eq("id", id)
         .eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
-    } catch (err) {
-      logger.warn({ err }, "Supabase deletePoa failed, falling back to memory");
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryPoa.get(officeId) || [];
+          const idx = list.findIndex((p) => p.id === id);
+          if (idx !== -1) list.splice(idx, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      handleSupabaseFailure("deletePoa", error);
+    } catch (err: any) {
+      handleSupabaseFailure("deletePoa", err);
     }
+  } else {
+    handleSupabaseFailure("deletePoa", new Error("Supabase client is not configured"));
   }
 
   const list = memoryPoa.get(officeId) || [];
@@ -1546,8 +1805,6 @@ function formatJudgment(r: any): JudgmentRecord {
 }
 
 export async function listJudgments(officeId: string): Promise<JudgmentRecord[]> {
-  const memList = (memoryJudgments.get(officeId) || []).map(formatJudgment);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -1558,35 +1815,30 @@ export async function listJudgments(officeId: string): Promise<JudgmentRecord[]>
         .order("id", { ascending: false });
 
       if (!error && data) {
-        const dbJudgments = data.map((d: any) => {
-          const formatted = formatJudgment(d);
-          const fromMem = (memoryJudgments.get(officeId) || []).find((m) => m.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              clientRole: fromMem.clientRole || formatted.clientRole,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-            };
+        if (isInMemoryFallbackAllowed()) {
+          const mem = memoryJudgments.get(officeId) || [];
+          if (mem.length > 0) {
+            const dbIds = new Set(data.map((d: any) => d.id));
+            const extra = mem.filter((m) => !dbIds.has(m.id)).map(formatJudgment);
+            return [...data.map(formatJudgment), ...extra];
           }
-          return formatted;
-        });
-        const dbIds = new Set(dbJudgments.map((j) => j.id));
-        return [...dbJudgments, ...memList.filter((m) => !dbIds.has(m.id))];
+        }
+        return data.map(formatJudgment);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listJudgments failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listJudgments", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listJudgments", err);
     }
+  } else {
+    handleSupabaseFailure("listJudgments", new Error("Supabase client is not configured"));
   }
 
-  return memList;
+  return (memoryJudgments.get(officeId) || []).map(formatJudgment);
 }
 
 export async function getJudgmentById(id: number, officeId: string): Promise<JudgmentRecord | null> {
-  const memList = memoryJudgments.get(officeId) || [];
-  const fromMem = memList.find((item) => item.id === id);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -1597,23 +1849,28 @@ export async function getJudgmentById(id: number, officeId: string): Promise<Jud
         .eq("office_id", officeId)
         .single();
       if (!error && data) {
-        const formatted = formatJudgment(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            clientId: fromMem.clientId || formatted.clientId,
-            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-            clientRole: fromMem.clientRole || formatted.clientRole,
-            createdBy: fromMem.createdBy || formatted.createdBy,
-          };
-        }
-        return formatted;
+        return formatJudgment(data);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getJudgmentById failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const memList = memoryJudgments.get(officeId) || [];
+          const fromMem = memList.find((item) => item.id === id);
+          if (fromMem) return formatJudgment(fromMem);
+        }
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getJudgmentById", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("getJudgmentById", err);
     }
+  } else {
+    handleSupabaseFailure("getJudgmentById", new Error("Supabase client is not configured"));
   }
 
+  const memList = memoryJudgments.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   return fromMem ? formatJudgment(fromMem) : null;
 }
 
@@ -1671,24 +1928,21 @@ export async function createJudgment(
 
       if (!error && inserted) {
         const formatted = formatJudgment(inserted);
-        const memRecord: JudgmentRecord = {
-          ...formatted,
-          id: inserted.id,
-          officeId,
-          clientId,
-          caseId,
-          assignedLawyerId,
-          clientRole,
-          createdBy,
-        };
-        const list = memoryJudgments.get(officeId) || [];
-        list.unshift(memRecord);
-        memoryJudgments.set(officeId, list);
-        return formatJudgment(memRecord);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryJudgments.get(officeId) || [];
+          list.unshift(formatted);
+          memoryJudgments.set(officeId, list);
+        }
+        return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createJudgment failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("createJudgment", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createJudgment", err);
     }
+  } else {
+    handleSupabaseFailure("createJudgment", new Error("Supabase client is not configured"));
   }
 
   const id = nextId();
@@ -1738,7 +1992,7 @@ export async function updateJudgment(
       if (data.isFavorable !== undefined) updatePayload.is_favorable = data.isFavorable;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
-      if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
+      if ((data as any).caseId !== undefined) updatePayload.case_id = (data as any).caseId;
       if ((data as any).case_id !== undefined) updatePayload.case_id = (data as any).case_id;
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
@@ -1754,11 +2008,25 @@ export async function updateJudgment(
         .single();
 
       if (!error && updated) {
-        return formatJudgment(updated);
+        const formatted = formatJudgment(updated);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryJudgments.get(officeId) || [];
+          const idx = list.findIndex((j) => j.id === id);
+          if (idx !== -1) list[idx] = { ...list[idx], ...formatted };
+        }
+        return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase updateJudgment failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error && error.code !== "PGRST116") {
+        handleSupabaseFailure("updateJudgment", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("updateJudgment", err);
     }
+  } else {
+    handleSupabaseFailure("updateJudgment", new Error("Supabase client is not configured"));
   }
 
   const list = memoryJudgments.get(officeId) || [];
@@ -1807,10 +2075,22 @@ export async function deleteJudgment(id: number, officeId: string): Promise<bool
         .delete({ count: "exact" })
         .eq("id", id)
         .eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
-    } catch (err) {
-      logger.warn({ err }, "Supabase deleteJudgment failed, falling back to memory");
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryJudgments.get(officeId) || [];
+          const idx = list.findIndex((j) => j.id === id);
+          if (idx !== -1) list.splice(idx, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      handleSupabaseFailure("deleteJudgment", error);
+    } catch (err: any) {
+      handleSupabaseFailure("deleteJudgment", err);
     }
+  } else {
+    handleSupabaseFailure("deleteJudgment", new Error("Supabase client is not configured"));
   }
 
   const list = memoryJudgments.get(officeId) || [];
@@ -1926,18 +2206,26 @@ export async function listNotifications(
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { count: totalCount } = await client
+      const { count: totalCount, error: countErr } = await client
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("office_id", officeId)
         .eq("user_id", userId);
 
-      const { count: unreadCount } = await client
+      if (countErr) {
+        handleSupabaseFailure("listNotifications:totalCount", countErr);
+      }
+
+      const { count: unreadCount, error: unreadErr } = await client
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("office_id", officeId)
         .eq("user_id", userId)
         .eq("is_read", false);
+
+      if (unreadErr) {
+        handleSupabaseFailure("listNotifications:unreadCount", unreadErr);
+      }
 
       const { data, error } = await client
         .from("notifications")
@@ -1954,9 +2242,14 @@ export async function listNotifications(
           total: totalCount ?? data.length,
         };
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listNotifications failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listNotifications", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listNotifications", err);
     }
+  } else {
+    handleSupabaseFailure("listNotifications", new Error("Supabase client is not configured"));
   }
 
   const officeList = memoryNotifications.get(officeId) || [];
@@ -2019,14 +2312,21 @@ export async function createNotification(data: {
 
       if (!error && inserted) {
         const formatted = formatNotification(inserted);
-        const officeList = memoryNotifications.get(data.officeId) || [];
-        officeList.unshift(formatted);
-        memoryNotifications.set(data.officeId, officeList);
+        if (isInMemoryFallbackAllowed()) {
+          const officeList = memoryNotifications.get(data.officeId) || [];
+          officeList.unshift(formatted);
+          memoryNotifications.set(data.officeId, officeList);
+        }
         return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createNotification failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("createNotification", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createNotification", err);
     }
+  } else {
+    handleSupabaseFailure("createNotification", new Error("Supabase client is not configured"));
   }
 
   const officeList = memoryNotifications.get(data.officeId) || [];
@@ -2055,9 +2355,14 @@ export async function markNotificationRead(
       if (!error && data && data.length > 0) {
         dbSuccess = true;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase markNotificationRead failed");
+      if (error) {
+        handleSupabaseFailure("markNotificationRead", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("markNotificationRead", err);
     }
+  } else {
+    handleSupabaseFailure("markNotificationRead", new Error("Supabase client is not configured"));
   }
 
   const officeList = memoryNotifications.get(officeId) || [];
@@ -2089,9 +2394,14 @@ export async function markAllNotificationsRead(
       if (!error && data) {
         countUpdated = data.length;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase markAllNotificationsRead failed");
+      if (error) {
+        handleSupabaseFailure("markAllNotificationsRead", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("markAllNotificationsRead", err);
     }
+  } else {
+    handleSupabaseFailure("markAllNotificationsRead", new Error("Supabase client is not configured"));
   }
 
   const officeList = memoryNotifications.get(officeId) || [];
@@ -2130,9 +2440,14 @@ export async function hasRecentNotification(
       if (!error && data && data.length > 0) {
         return true;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase hasRecentNotification failed, checking memory");
+      if (error) {
+        handleSupabaseFailure("hasRecentNotification", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("hasRecentNotification", err);
     }
+  } else {
+    handleSupabaseFailure("hasRecentNotification", new Error("Supabase client is not configured"));
   }
 
   const officeList = memoryNotifications.get(officeId) || [];
@@ -2217,14 +2532,21 @@ export async function createAttachment(data: {
 
       if (!error && inserted) {
         const formatted = formatAttachment({ ...inserted, uploaderName: data.uploaderName });
-        const list = memoryAttachments.get(data.officeId) || [];
-        list.unshift(formatted);
-        memoryAttachments.set(data.officeId, list);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryAttachments.get(data.officeId) || [];
+          list.unshift(formatted);
+          memoryAttachments.set(data.officeId, list);
+        }
         return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createAttachment failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("createAttachment", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createAttachment", err);
     }
+  } else {
+    handleSupabaseFailure("createAttachment", new Error("Supabase client is not configured"));
   }
 
   const list = memoryAttachments.get(data.officeId) || [];
@@ -2252,9 +2574,14 @@ export async function listAttachments(
       if (!error && data) {
         return data.map(formatAttachment);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listAttachments failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listAttachments", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listAttachments", err);
     }
+  } else {
+    handleSupabaseFailure("listAttachments", new Error("Supabase client is not configured"));
   }
 
   const list = memoryAttachments.get(officeId) || [];
@@ -2284,9 +2611,17 @@ export async function getAttachmentById(
       if (!error && data) {
         return formatAttachment(data);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getAttachmentById failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getAttachmentById", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("getAttachmentById", err);
     }
+  } else {
+    handleSupabaseFailure("getAttachmentById", new Error("Supabase client is not configured"));
   }
 
   const list = memoryAttachments.get(officeId) || [];
@@ -2295,29 +2630,36 @@ export async function getAttachmentById(
 }
 
 export async function deleteAttachment(id: string, officeId: string): Promise<boolean> {
-  let dbSuccess = false;
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client
+      const { error, count } = await client
         .from("attachments")
-        .delete()
+        .delete({ count: "exact" })
         .eq("id", id)
         .eq("office_id", officeId);
 
       if (!error) {
-        dbSuccess = true;
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryAttachments.get(officeId) || [];
+          const updated = list.filter((a) => a.id !== id);
+          memoryAttachments.set(officeId, updated);
+        }
+        return (count ?? 0) > 0;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase deleteAttachment failed, falling back to memory");
+      handleSupabaseFailure("deleteAttachment", error);
+    } catch (err: any) {
+      handleSupabaseFailure("deleteAttachment", err);
     }
+  } else {
+    handleSupabaseFailure("deleteAttachment", new Error("Supabase client is not configured"));
   }
 
   const list = memoryAttachments.get(officeId) || [];
   const updated = list.filter((a) => a.id !== id);
   memoryAttachments.set(officeId, updated);
 
-  return dbSuccess || list.length !== updated.length;
+  return list.length !== updated.length;
 }
 
 // ============================================================================
@@ -2327,10 +2669,6 @@ export async function deleteAttachment(id: string, officeId: string): Promise<bo
 export async function searchClients(officeId: string, query: string): Promise<ClientRecord[]> {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-
-  const memMatches = (memoryClients.get(officeId) || []).filter(
-    (c) => (c.name && c.name.toLowerCase().includes(term)) || (c.phone && c.phone.toLowerCase().includes(term)),
-  );
 
   const client = getSupabaseClient();
   if (client) {
@@ -2342,7 +2680,7 @@ export async function searchClients(officeId: string, query: string): Promise<Cl
       }
       const { data, error } = await dbQuery.order("created_at", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbClients: ClientRecord[] = data.map((r: any) => ({
+        return data.map((r: any) => ({
           id: r.id,
           officeId: r.office_id,
           name: r.name,
@@ -2351,29 +2689,26 @@ export async function searchClients(officeId: string, query: string): Promise<Cl
           createdAt: r.created_at,
           updatedAt: r.updated_at,
         }));
-        const dbIds = new Set(dbClients.map((c) => c.id));
-        return [...dbClients, ...memMatches.filter((m) => !dbIds.has(m.id))];
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase searchClients failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("searchClients", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("searchClients", err);
     }
+  } else {
+    handleSupabaseFailure("searchClients", new Error("Supabase client is not configured"));
   }
 
+  const memMatches = (memoryClients.get(officeId) || []).filter(
+    (c) => (c.name && c.name.toLowerCase().includes(term)) || (c.phone && c.phone.toLowerCase().includes(term)),
+  );
   return memMatches;
 }
 
 export async function searchSessions(officeId: string, query: string): Promise<Session[]> {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-
-  const memMatches = (memorySessions.get(officeId) || [])
-    .filter(
-      (s) =>
-        (s.caseNumber && s.caseNumber.toLowerCase().includes(term)) ||
-        (s.plaintiff && s.plaintiff.toLowerCase().includes(term)) ||
-        (s.defendant && s.defendant.toLowerCase().includes(term)),
-    )
-    .map(formatSession);
 
   const client = getSupabaseClient();
   if (client) {
@@ -2385,46 +2720,45 @@ export async function searchSessions(officeId: string, query: string): Promise<S
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbSessions = data.map((d: any) => {
-          const formatted = formatSession(d);
-          const fromMem = (memorySessions.get(officeId) || []).find((m) => m.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              client_id: fromMem.clientId || formatted.client_id,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              assigned_lawyer_id: fromMem.assignedLawyerId || formatted.assigned_lawyer_id,
-              clientRole: fromMem.clientRole || formatted.clientRole,
-              client_role: fromMem.clientRole || formatted.client_role,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-              created_by: fromMem.createdBy || formatted.created_by,
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbSessions.map((s) => s.id));
-        return [...dbSessions, ...memMatches.filter((m) => !dbIds.has(m.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches = (memorySessions.get(officeId) || [])
+            .filter(
+              (s) =>
+                (s.caseNumber && s.caseNumber.toLowerCase().includes(term)) ||
+                (s.plaintiff && s.plaintiff.toLowerCase().includes(term)) ||
+                (s.defendant && s.defendant.toLowerCase().includes(term)),
+            )
+            .map(formatSession);
+          const dbIds = new Set(data.map((d: any) => d.id));
+          const extra = memMatches.filter((m) => !dbIds.has(m.id));
+          return [...data.map(formatSession), ...extra];
+        }
+        return data.map(formatSession);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase searchSessions failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("searchSessions", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("searchSessions", err);
     }
+  } else {
+    handleSupabaseFailure("searchSessions", new Error("Supabase client is not configured"));
   }
 
+  const memMatches = (memorySessions.get(officeId) || [])
+    .filter(
+      (s) =>
+        (s.caseNumber && s.caseNumber.toLowerCase().includes(term)) ||
+        (s.plaintiff && s.plaintiff.toLowerCase().includes(term)) ||
+        (s.defendant && s.defendant.toLowerCase().includes(term)),
+    )
+    .map(formatSession);
   return memMatches;
 }
 
 export async function searchPoa(officeId: string, query: string): Promise<PoaRecord[]> {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-
-  const memMatches = (memoryPoa.get(officeId) || [])
-    .filter(
-      (p) =>
-        (p.clientName && p.clientName.toLowerCase().includes(term)) ||
-        (p.poaNumber && p.poaNumber.toLowerCase().includes(term)),
-    )
-    .map(formatPoa);
 
   const client = getSupabaseClient();
   if (client) {
@@ -2436,42 +2770,43 @@ export async function searchPoa(officeId: string, query: string): Promise<PoaRec
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbPoas = data.map((d: any) => {
-          const formatted = formatPoa(d);
-          const fromMem = (memoryPoa.get(officeId) || []).find((m) => m.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbPoas.map((p) => p.id));
-        return [...dbPoas, ...memMatches.filter((m) => !dbIds.has(m.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches = (memoryPoa.get(officeId) || [])
+            .filter(
+              (p) =>
+                (p.clientName && p.clientName.toLowerCase().includes(term)) ||
+                (p.poaNumber && p.poaNumber.toLowerCase().includes(term)),
+            )
+            .map(formatPoa);
+          const dbIds = new Set(data.map((d: any) => d.id));
+          const extra = memMatches.filter((m) => !dbIds.has(m.id));
+          return [...data.map(formatPoa), ...extra];
+        }
+        return data.map(formatPoa);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase searchPoa failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("searchPoa", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("searchPoa", err);
     }
+  } else {
+    handleSupabaseFailure("searchPoa", new Error("Supabase client is not configured"));
   }
 
+  const memMatches = (memoryPoa.get(officeId) || [])
+    .filter(
+      (p) =>
+        (p.clientName && p.clientName.toLowerCase().includes(term)) ||
+        (p.poaNumber && p.poaNumber.toLowerCase().includes(term)),
+    )
+    .map(formatPoa);
   return memMatches;
 }
 
 export async function searchJudgments(officeId: string, query: string): Promise<JudgmentRecord[]> {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-
-  const memMatches = (memoryJudgments.get(officeId) || [])
-    .filter(
-      (j) =>
-        (j.caseNumber && j.caseNumber.toLowerCase().includes(term)) ||
-        (j.plaintiff && j.plaintiff.toLowerCase().includes(term)) ||
-        (j.defendant && j.defendant.toLowerCase().includes(term)),
-    )
-    .map(formatJudgment);
 
   const client = getSupabaseClient();
   if (client) {
@@ -2483,38 +2818,45 @@ export async function searchJudgments(officeId: string, query: string): Promise<
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbJudgments = data.map((d: any) => {
-          const formatted = formatJudgment(d);
-          const fromMem = (memoryJudgments.get(officeId) || []).find((m) => m.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              clientRole: fromMem.clientRole || formatted.clientRole,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbJudgments.map((j) => j.id));
-        return [...dbJudgments, ...memMatches.filter((m) => !dbIds.has(m.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches = (memoryJudgments.get(officeId) || [])
+            .filter(
+              (j) =>
+                (j.caseNumber && j.caseNumber.toLowerCase().includes(term)) ||
+                (j.plaintiff && j.plaintiff.toLowerCase().includes(term)) ||
+                (j.defendant && j.defendant.toLowerCase().includes(term)),
+            )
+            .map(formatJudgment);
+          const dbIds = new Set(data.map((d: any) => d.id));
+          const extra = memMatches.filter((m) => !dbIds.has(m.id));
+          return [...data.map(formatJudgment), ...extra];
+        }
+        return data.map(formatJudgment);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase searchJudgments failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("searchJudgments", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("searchJudgments", err);
     }
+  } else {
+    handleSupabaseFailure("searchJudgments", new Error("Supabase client is not configured"));
   }
 
+  const memMatches = (memoryJudgments.get(officeId) || [])
+    .filter(
+      (j) =>
+        (j.caseNumber && j.caseNumber.toLowerCase().includes(term)) ||
+        (j.plaintiff && j.plaintiff.toLowerCase().includes(term)) ||
+        (j.defendant && j.defendant.toLowerCase().includes(term)),
+    )
+    .map(formatJudgment);
   return memMatches;
 }
 
 export async function searchTasks(officeId: string, query: string): Promise<TaskRecord[]> {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-
-  const memMatches = (memoryTasks.get(officeId) || [])
-    .filter((t) => t.title && t.title.toLowerCase().includes(term))
-    .map(formatTask);
 
   const client = getSupabaseClient();
   if (client) {
@@ -2526,27 +2868,29 @@ export async function searchTasks(officeId: string, query: string): Promise<Task
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbTasks = data.map((d: any) => {
-          const formatted = formatTask(d);
-          const fromMem = (memoryTasks.get(officeId) || []).find((m) => m.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbTasks.map((t) => t.id));
-        return [...dbTasks, ...memMatches.filter((m) => !dbIds.has(m.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches = (memoryTasks.get(officeId) || [])
+            .filter((t) => t.title && t.title.toLowerCase().includes(term))
+            .map(formatTask);
+          const dbIds = new Set(data.map((d: any) => d.id));
+          const extra = memMatches.filter((m) => !dbIds.has(m.id));
+          return [...data.map(formatTask), ...extra];
+        }
+        return data.map(formatTask);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase searchTasks failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("searchTasks", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("searchTasks", err);
     }
+  } else {
+    handleSupabaseFailure("searchTasks", new Error("Supabase client is not configured"));
   }
 
+  const memMatches = (memoryTasks.get(officeId) || [])
+    .filter((t) => t.title && t.title.toLowerCase().includes(term))
+    .map(formatTask);
   return memMatches;
 }
 
@@ -2555,7 +2899,6 @@ export async function searchTasks(officeId: string, query: string): Promise<Task
 // ============================================================================
 
 export async function listClientNotes(clientId: string, officeId: string): Promise<ClientNoteRecord[]> {
-  const memList = (memoryClientNotes.get(officeId) || []).filter((n) => n.clientId === clientId);
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -2567,7 +2910,7 @@ export async function listClientNotes(clientId: string, officeId: string): Promi
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        const dbNotes: ClientNoteRecord[] = data.map((r: any) => ({
+        return data.map((r: any) => ({
           id: r.id,
           officeId: r.office_id,
           clientId: r.client_id,
@@ -2575,15 +2918,18 @@ export async function listClientNotes(clientId: string, officeId: string): Promi
           body: r.body,
           createdAt: r.created_at,
         }));
-        const dbIds = new Set(dbNotes.map((n) => n.id));
-        return [...dbNotes, ...memList.filter((m) => !dbIds.has(m.id))].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listClientNotes failed, falling back to memory");
+      if (error) {
+        handleSupabaseFailure("listClientNotes", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("listClientNotes", err);
     }
+  } else {
+    handleSupabaseFailure("listClientNotes", new Error("Supabase client is not configured"));
   }
+
+  const memList = (memoryClientNotes.get(officeId) || []).filter((n) => n.clientId === clientId);
   return [...memList].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -2621,12 +2967,29 @@ export async function createClientNote(data: {
         .single();
 
       if (!error && dbData) {
-        newNote.id = dbData.id;
-        newNote.createdAt = dbData.created_at;
+        const result: ClientNoteRecord = {
+          id: dbData.id,
+          officeId: data.officeId,
+          clientId: data.clientId,
+          authorId: data.authorId,
+          body: data.body,
+          createdAt: dbData.created_at,
+        };
+        if (isInMemoryFallbackAllowed()) {
+          const existing = memoryClientNotes.get(data.officeId) || [];
+          existing.unshift(result);
+          memoryClientNotes.set(data.officeId, existing);
+        }
+        return result;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createClientNote failed, saving to memory");
+      if (error) {
+        handleSupabaseFailure("createClientNote", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createClientNote", err);
     }
+  } else {
+    handleSupabaseFailure("createClientNote", new Error("Supabase client is not configured"));
   }
 
   const existing = memoryClientNotes.get(data.officeId) || [];
@@ -2670,8 +3033,7 @@ export async function listCases(
     dateTo?: string;
   }
 ): Promise<CaseRecord[]> {
-  const memList = (memoryCases.get(officeId) || []).map(formatCase);
-  let allCases = memList;
+  let allCases: CaseRecord[] = [];
 
   const client = getSupabaseClient();
   if (client) {
@@ -2683,13 +3045,19 @@ export async function listCases(
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        const dbCases = data.map(formatCase);
-        const dbIds = new Set(dbCases.map((c) => c.id));
-        allCases = [...dbCases, ...memList.filter((m) => !dbIds.has(m.id))];
+        allCases = data.map(formatCase);
+      } else if (error) {
+        handleSupabaseFailure("listCases", error);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listCases failed, falling back to memory");
+    } catch (err: any) {
+      handleSupabaseFailure("listCases", err);
     }
+  } else {
+    handleSupabaseFailure("listCases", new Error("Supabase client is not configured"));
+  }
+
+  if (allCases.length === 0 && isInMemoryFallbackAllowed()) {
+    allCases = (memoryCases.get(officeId) || []).map(formatCase);
   }
 
   // Resolve client names
@@ -2734,9 +3102,6 @@ export async function listCases(
 }
 
 export async function getCaseById(id: string, officeId: string): Promise<CaseRecord | null> {
-  const memList = memoryCases.get(officeId) || [];
-  const fromMem = memList.find((c) => c.id === id);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -2748,20 +3113,23 @@ export async function getCaseById(id: string, officeId: string): Promise<CaseRec
         .single();
 
       if (!error && data) {
-        const formatted = formatCase(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            assignedLawyerId: fromMem.assignedLawyerId !== undefined ? fromMem.assignedLawyerId : formatted.assignedLawyerId,
-          };
-        }
-        return formatted;
+        return formatCase(data);
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getCaseById failed, falling back to memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getCaseById", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("getCaseById", err);
     }
+  } else {
+    handleSupabaseFailure("getCaseById", new Error("Supabase client is not configured"));
   }
 
+  const memList = memoryCases.get(officeId) || [];
+  const fromMem = memList.find((c) => c.id === id);
   return fromMem ? formatCase(fromMem) : null;
 }
 
@@ -2821,14 +3189,21 @@ export async function createCase(
 
       if (!error && inserted) {
         const formatted = formatCase(inserted);
-        const list = memoryCases.get(officeId) || [];
-        list.unshift(record);
-        memoryCases.set(officeId, list);
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryCases.get(officeId) || [];
+          list.unshift(record);
+          memoryCases.set(officeId, list);
+        }
         return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase createCase failed, saving to memory");
+      if (error) {
+        handleSupabaseFailure("createCase", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("createCase", err);
     }
+  } else {
+    handleSupabaseFailure("createCase", new Error("Supabase client is not configured"));
   }
 
   const list = memoryCases.get(officeId) || [];
@@ -2864,14 +3239,24 @@ export async function updateCase(
 
       if (!error && updated) {
         const formatted = formatCase(updated);
-        const list = memoryCases.get(officeId) || [];
-        const idx = list.findIndex((c) => c.id === id);
-        if (idx !== -1) list[idx] = { ...list[idx], ...formatted };
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryCases.get(officeId) || [];
+          const idx = list.findIndex((c) => c.id === id);
+          if (idx !== -1) list[idx] = { ...list[idx], ...formatted };
+        }
         return formatted;
       }
-    } catch (err) {
-      logger.warn({ err }, "Supabase updateCase failed, updating in memory");
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("updateCase", error);
+      }
+    } catch (err: any) {
+      handleSupabaseFailure("updateCase", err);
     }
+  } else {
+    handleSupabaseFailure("updateCase", new Error("Supabase client is not configured"));
   }
 
   const list = memoryCases.get(officeId) || [];
@@ -2912,10 +3297,20 @@ export async function deleteCase(id: string, officeId: string): Promise<boolean>
         .delete({ count: "exact" })
         .eq("id", id)
         .eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
-    } catch (err) {
-      logger.warn({ err }, "Supabase deleteCase failed, falling back to memory");
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list = memoryCases.get(officeId) || [];
+          const idx = list.findIndex((c) => c.id === id);
+          if (idx !== -1) list.splice(idx, 1);
+        }
+        return (count ?? 0) > 0;
+      }
+      handleSupabaseFailure("deleteCase", error);
+    } catch (err: any) {
+      handleSupabaseFailure("deleteCase", err);
     }
+  } else {
+    handleSupabaseFailure("deleteCase", new Error("Supabase client is not configured"));
   }
 
   const list = memoryCases.get(officeId) || [];

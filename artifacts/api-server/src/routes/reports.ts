@@ -32,6 +32,15 @@ router.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
     }
     res.json(report);
   } catch (err: any) {
+    if (
+      err?.statusCode === 503 ||
+      err?.code === "DATABASE_UNAVAILABLE" ||
+      err?.name === "DatabaseUnavailableError" ||
+      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+    ) {
+      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in GET /sessions/:id/report");
       res.status(err.statusCode).json({
@@ -64,6 +73,15 @@ router.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
     logger.info({ id }, "Session report saved successfully");
     res.json(updated);
   } catch (err: any) {
+    if (
+      err?.statusCode === 503 ||
+      err?.code === "DATABASE_UNAVAILABLE" ||
+      err?.name === "DatabaseUnavailableError" ||
+      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+    ) {
+      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in PUT /sessions/:id/report");
       res.status(err.statusCode).json({

@@ -74,7 +74,7 @@ router.get("/clients/legacy-unassigned", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to get legacy unassigned records");
-    res.status(500).json({ error: `فشل استرجاع السجلات غير المعينة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع السجلات غير المعينة");
   }
 });
 
@@ -153,7 +153,7 @@ router.post("/clients/triage-link", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to triage link record");
-    res.status(500).json({ error: `فشل ربط السجل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل ربط السجل");
   }
 });
 
@@ -175,7 +175,7 @@ router.get("/clients", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to list clients");
-    res.status(500).json({ error: `فشل تحميل قائمة العملاء. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل قائمة العملاء");
   }
 });
 
@@ -204,7 +204,7 @@ router.post("/clients", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to create client");
-    res.status(500).json({ error: `فشل حفظ العميل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حفظ العميل");
   }
 });
 
@@ -235,7 +235,7 @@ router.get("/clients/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to get client");
-    res.status(500).json({ error: `فشل استرجاع بيانات العميل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع بيانات العميل");
   }
 });
 
@@ -276,7 +276,7 @@ router.patch("/clients/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to update client");
-    res.status(500).json({ error: `فشل تحديث بيانات العميل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحديث بيانات العميل");
   }
 });
 
@@ -307,7 +307,7 @@ router.delete("/clients/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to delete client");
-    res.status(500).json({ error: `فشل حذف العميل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حذف العميل");
   }
 });
 
@@ -362,7 +362,7 @@ router.get("/clients/:id/timeline", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to get client timeline");
-    res.status(500).json({ error: `فشل استرجاع سجل العميل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع سجل العميل");
   }
 });
 
@@ -413,7 +413,7 @@ router.get("/clients/:id/notes", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to list client notes");
-    res.status(500).json({ error: `فشل استرجاع ملاحظات العميل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع ملاحظات العميل");
   }
 });
 
@@ -469,7 +469,7 @@ router.post("/clients/:id/notes", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to create client note");
-    res.status(500).json({ error: `فشل حفظ ملاحظة العميل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حفظ ملاحظة العميل");
   }
 });
 

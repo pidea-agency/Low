@@ -104,7 +104,7 @@ router.get("/workload", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, officeId }, "Failed to fetch office workload");
-    res.status(500).json({ error: `فشل استرجاع بيانات عبء العمل. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع بيانات عبء العمل");
   }
 });
 

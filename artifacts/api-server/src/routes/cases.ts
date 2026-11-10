@@ -42,7 +42,7 @@ router.get("/cases/stats", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to get cases stats");
-    res.status(500).json({ error: `فشل استرجاع إحصائيات القضايا. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع إحصائيات القضايا");
   }
 });
 
@@ -74,7 +74,7 @@ router.get("/cases", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to list cases");
-    res.status(500).json({ error: `فشل تحميل قائمة القضايا. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل قائمة القضايا");
   }
 });
 
@@ -138,7 +138,7 @@ router.post("/cases", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to create case");
-    res.status(500).json({ error: `فشل إنشاء القضية. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل إنشاء القضية");
   }
 });
 
@@ -178,7 +178,7 @@ router.get("/cases/:id/detail", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to get case detail");
-    res.status(500).json({ error: `فشل استرجاع تفاصيل القضية. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع تفاصيل القضية");
   }
 });
 
@@ -206,7 +206,7 @@ router.get("/cases/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to get case");
-    res.status(500).json({ error: `فشل استرجاع القضية. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل استرجاع القضية");
   }
 });
 
@@ -281,7 +281,7 @@ router.patch("/cases/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to update case");
-    res.status(500).json({ error: `فشل تعديل القضية. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تعديل القضية");
   }
 });
 
@@ -318,7 +318,7 @@ router.patch("/cases/:id/reassign", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to reassign case");
-    res.status(500).json({ error: `فشل إعادة إسناد القضية. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل إعادة إسناد القضية");
   }
 });
 
@@ -347,7 +347,7 @@ router.delete("/cases/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to delete case");
-    res.status(500).json({ error: `فشل حذف القضية. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حذف القضية");
   }
 });
 

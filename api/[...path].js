@@ -57825,6 +57825,33 @@ async function findUserByIdOrUsername(identifier) {
       throw new AccountSourceUnavailableError(`Account database error: ${error.message}`);
     }
     if (!data || data.length === 0) {
+      const local = loadLocalUsers();
+      const localUser = local.find(
+        (u2) => u2.id.toLowerCase() === clean || u2.username.toLowerCase() === clean
+      );
+      if (localUser) {
+        const result2 = {
+          id: localUser.id,
+          username: localUser.username,
+          email: localUser.email,
+          role: localUser.role || "staff",
+          admin_id: localUser.admin_id || null,
+          office_name: localUser.office_name || null,
+          display_name: localUser.display_name,
+          status: localUser.status || "active",
+          subscription_end_date: localUser.subscription_end_date || null,
+          subscription_notes: localUser.subscription_notes || null,
+          plan_tier: localUser.plan_tier,
+          billing_cycle: localUser.billing_cycle,
+          ai_quota_limit: localUser.ai_quota_limit,
+          ai_usage_count: localUser.ai_usage_count || 0,
+          google_spreadsheet_id: localUser.google_spreadsheet_id,
+          google_sheet_name: localUser.google_sheet_name,
+          created_at: localUser.created_at
+        };
+        userAuthCache.set(clean, { user: result2, cachedAt: Date.now() });
+        return result2;
+      }
       userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
       return null;
     }
@@ -830677,6 +830704,7 @@ var init_googleSheets_service = __esm({
 // src/services/postgres.service.ts
 var postgres_service_exports = {};
 __export(postgres_service_exports, {
+  DatabaseUnavailableError: () => DatabaseUnavailableError,
   calcDaysFromHijri: () => calcDaysFromHijri,
   createAttachment: () => createAttachment,
   createCase: () => createCase,
@@ -830706,7 +830734,10 @@ __export(postgres_service_exports, {
   getSessionReport: () => getSessionReport,
   getSessionReportStatusMap: () => getSessionReportStatusMap,
   getTaskById: () => getTaskById,
+  handleDatabaseOrServerError: () => handleDatabaseOrServerError,
+  handleSupabaseFailure: () => handleSupabaseFailure,
   hasRecentNotification: () => hasRecentNotification,
+  isInMemoryFallbackAllowed: () => isInMemoryFallbackAllowed,
   listAttachments: () => listAttachments,
   listCases: () => listCases,
   listClientNotes: () => listClientNotes,
@@ -830730,6 +830761,7 @@ __export(postgres_service_exports, {
   searchPoa: () => searchPoa,
   searchSessions: () => searchSessions,
   searchTasks: () => searchTasks,
+  setForceDisableMemoryStoreForTesting: () => setForceDisableMemoryStoreForTesting,
   updateCase: () => updateCase,
   updateClient: () => updateClient,
   updateJudgment: () => updateJudgment,
@@ -830751,6 +830783,35 @@ function resetInMemoryStore() {
   memoryAttachments.clear();
   memoryClientNotes.clear();
   memoryCases.clear();
+}
+function setForceDisableMemoryStoreForTesting(disabled) {
+  _forceDisableMemoryStoreForTesting = disabled;
+}
+function isInMemoryFallbackAllowed() {
+  if (true) {
+    return false;
+  }
+  return !_forceDisableMemoryStoreForTesting;
+}
+function handleSupabaseFailure(operation, err) {
+  if (err instanceof DatabaseUnavailableError) throw err;
+  logger.error({ err, operation }, `Supabase ${operation} failed`);
+  if (!isInMemoryFallbackAllowed()) {
+    throw new DatabaseUnavailableError(
+      `\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B (${operation}): ${err?.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Supabase"}`
+    );
+  }
+}
+function handleDatabaseOrServerError(res, err, refId, defaultMsg) {
+  if (err instanceof DatabaseUnavailableError || err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+    res.status(503).json({
+      error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B",
+      code: "DATABASE_UNAVAILABLE",
+      refId
+    });
+    return;
+  }
+  res.status(500).json({ error: `${defaultMsg}. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
 }
 function calcDaysFromHijri(hijriDateStr) {
   if (!hijriDateStr?.trim()) return 0;
@@ -830838,9 +830899,14 @@ async function listClients(officeId) {
           updatedAt: r2.updated_at
         }));
       }
+      if (error) {
+        handleSupabaseFailure("listClients", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase listClients failed, falling back to memory");
+      handleSupabaseFailure("listClients", err);
     }
+  } else {
+    handleSupabaseFailure("listClients", new Error("Supabase client is not configured"));
   }
   return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
 }
@@ -830860,9 +830926,22 @@ async function getClientById(id, officeId) {
           updatedAt: data.updated_at
         };
       }
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryClients.get(officeId) || [];
+          const found2 = list2.find((c) => c.id === id);
+          if (found2) return { ...found2 };
+        }
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getClientById", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase getClientById failed, falling back to memory");
+      handleSupabaseFailure("getClientById", err);
     }
+  } else {
+    handleSupabaseFailure("getClientById", new Error("Supabase client is not configured"));
   }
   const list = memoryClients.get(officeId) || [];
   const found = list.find((c) => c.id === id);
@@ -830896,9 +830975,14 @@ async function createClient2(data, officeId) {
           updatedAt: inserted.updated_at
         };
       }
+      if (error) {
+        handleSupabaseFailure("createClient", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase createClient failed, falling back to memory");
+      handleSupabaseFailure("createClient", err);
     }
+  } else {
+    handleSupabaseFailure("createClient", new Error("Supabase client is not configured"));
   }
   const record = {
     id,
@@ -830935,9 +831019,17 @@ async function updateClient(id, data, officeId) {
           updatedAt: updated2.updated_at
         };
       }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("updateClient", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase updateClient failed, falling back to memory");
+      handleSupabaseFailure("updateClient", err);
     }
+  } else {
+    handleSupabaseFailure("updateClient", new Error("Supabase client is not configured"));
   }
   const list = memoryClients.get(officeId) || [];
   const idx = list.findIndex((c) => c.id === id);
@@ -830958,10 +831050,17 @@ async function deleteClient(id, officeId) {
   if (client) {
     try {
       const { error, count } = await client.from("clients").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
+      if (!error) {
+        return (count ?? 0) > 0;
+      }
+      if (error) {
+        handleSupabaseFailure("deleteClient", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase deleteClient failed, falling back to memory");
+      handleSupabaseFailure("deleteClient", err);
     }
+  } else {
+    handleSupabaseFailure("deleteClient", new Error("Supabase client is not configured"));
   }
   const list = memoryClients.get(officeId) || [];
   const idx = list.findIndex((c) => c.id === id);
@@ -831001,9 +831100,14 @@ async function listSessions(officeId, statusFilter) {
         const dbIds = new Set(dbSessions.map((s3) => s3.id));
         return [...dbSessions, ...memList.filter((m2) => !dbIds.has(m2.id))];
       }
+      if (error) {
+        handleSupabaseFailure("listSessions", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase query failed in listSessions, falling back to memory");
+      handleSupabaseFailure("listSessions", err);
     }
+  } else {
+    handleSupabaseFailure("listSessions", new Error("Supabase client is not configured"));
   }
   return memList;
 }
@@ -831031,9 +831135,20 @@ async function getSessionById(id, officeId) {
         }
         return formatted;
       }
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed() && fromMem) {
+          return formatSession(fromMem);
+        }
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getSessionById", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase query failed in getSessionById, falling back to memory");
+      handleSupabaseFailure("getSessionById", err);
     }
+  } else {
+    handleSupabaseFailure("getSessionById", new Error("Supabase client is not configured"));
   }
   if (!fromMem) return null;
   return formatSession(fromMem);
@@ -831104,9 +831219,14 @@ async function createSession(data, officeId) {
           created_by: createdBy
         };
       }
+      if (error) {
+        handleSupabaseFailure("createSession", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase insert failed in createSession, falling back to memory");
+      handleSupabaseFailure("createSession", err);
     }
+  } else {
+    handleSupabaseFailure("createSession", new Error("Supabase client is not configured"));
   }
   const id = nextId();
   const record = {
@@ -831175,9 +831295,17 @@ async function updateSession(id, data, officeId) {
       if (!error && updated2) {
         return formatSession(updated2);
       }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("updateSession", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase update failed in updateSession, falling back to memory");
+      handleSupabaseFailure("updateSession", err);
     }
+  } else {
+    handleSupabaseFailure("updateSession", new Error("Supabase client is not configured"));
   }
   const list = memorySessions.get(officeId) || [];
   const idx = list.findIndex((s3) => s3.id === id);
@@ -831216,10 +831344,24 @@ async function deleteSession(id, officeId) {
   if (client) {
     try {
       const { error, count } = await client.from("sessions").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memorySessions.get(officeId) || [];
+          const idx2 = list2.findIndex((s3) => s3.id === id);
+          if (idx2 !== -1) list2.splice(idx2, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      if (error) {
+        handleSupabaseFailure("deleteSession", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase delete failed in deleteSession, falling back to memory");
+      handleSupabaseFailure("deleteSession", err);
     }
+  } else {
+    handleSupabaseFailure("deleteSession", new Error("Supabase client is not configured"));
   }
   const list = memorySessions.get(officeId) || [];
   const idx = list.findIndex((s3) => s3.id === id);
@@ -831233,17 +831375,33 @@ async function getSessionReport(id, officeId) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data } = await client.from("reports").select("report").eq("session_id", id).eq("office_id", officeId).order("id", { ascending: false }).limit(1);
+      const { data, error } = await client.from("reports").select("report").eq("session_id", id).eq("office_id", officeId).order("id", { ascending: false }).limit(1);
       if (data && data.length > 0) {
         return { session, report: data[0].report };
       }
-      const { data: sRow } = await client.from("sessions").select("report").eq("id", id).eq("office_id", officeId).single();
-      if (sRow?.report) {
-        return { session, report: sRow.report };
+      if (error) {
+        handleSupabaseFailure("getSessionReport", error);
+      } else {
+        const { data: sRow, error: sErr } = await client.from("sessions").select("report").eq("id", id).eq("office_id", officeId).single();
+        if (sErr && sErr.code !== "PGRST116") {
+          handleSupabaseFailure("getSessionReport:sRow", sErr);
+        } else if (sRow?.report) {
+          return { session, report: sRow.report };
+        } else {
+          if (isInMemoryFallbackAllowed()) {
+            const reportsList2 = memoryReports.get(officeId) || [];
+            const found2 = reportsList2.find((r2) => r2.sessionId === id);
+            if (found2) return { session, report: found2.report };
+            if (session.report) return { session, report: session.report };
+          }
+          return { session, report: null };
+        }
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase getSessionReport failed, falling back to memory");
+      handleSupabaseFailure("getSessionReport", err);
     }
+  } else {
+    handleSupabaseFailure("getSessionReport", new Error("Supabase client is not configured"));
   }
   const reportsList = memoryReports.get(officeId) || [];
   const found = reportsList.find((r2) => r2.sessionId === id);
@@ -831251,33 +831409,54 @@ async function getSessionReport(id, officeId) {
 }
 async function getSessionReportStatusMap(officeId) {
   const reportedSet = /* @__PURE__ */ new Set();
-  const memReports = memoryReports.get(officeId) || [];
-  for (const r2 of memReports) {
-    if (r2.report && r2.sessionId) {
-      reportedSet.add(Number(r2.sessionId));
-    }
-  }
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: rData } = await client.from("reports").select("session_id, report").eq("office_id", officeId);
-      if (rData) {
+      const { data: rData, error: rErr } = await client.from("reports").select("session_id, report").eq("office_id", officeId);
+      if (rErr) {
+        handleSupabaseFailure("getSessionReportStatusMap:reports", rErr);
+      } else if (rData) {
         for (const row of rData) {
           if (row.report && row.session_id) {
             reportedSet.add(Number(row.session_id));
           }
         }
       }
-      const { data: sData } = await client.from("sessions").select("id, report").eq("office_id", officeId).not("report", "is", null);
-      if (sData) {
+      const { data: sData, error: sErr } = await client.from("sessions").select("id, report").eq("office_id", officeId).not("report", "is", null);
+      if (sErr) {
+        handleSupabaseFailure("getSessionReportStatusMap:sessions", sErr);
+      } else if (sData) {
         for (const row of sData) {
           if (row.report && row.id) {
             reportedSet.add(Number(row.id));
           }
         }
       }
+      if (isInMemoryFallbackAllowed()) {
+        const memReports2 = memoryReports.get(officeId) || [];
+        for (const r2 of memReports2) {
+          if (r2.report && r2.sessionId) {
+            reportedSet.add(Number(r2.sessionId));
+          }
+        }
+        const memSessions = memorySessions.get(officeId) || [];
+        for (const s3 of memSessions) {
+          if (s3.report && s3.id) {
+            reportedSet.add(Number(s3.id));
+          }
+        }
+      }
+      return reportedSet;
     } catch (err) {
-      logger.warn({ err }, "Supabase query in getSessionReportStatusMap failed, using memory only");
+      handleSupabaseFailure("getSessionReportStatusMap", err);
+    }
+  } else {
+    handleSupabaseFailure("getSessionReportStatusMap", new Error("Supabase client is not configured"));
+  }
+  const memReports = memoryReports.get(officeId) || [];
+  for (const r2 of memReports) {
+    if (r2.report && r2.sessionId) {
+      reportedSet.add(Number(r2.sessionId));
     }
   }
   return reportedSet;
@@ -831285,6 +831464,55 @@ async function getSessionReportStatusMap(officeId) {
 async function saveSessionReport(id, report, officeId) {
   const session = await getSessionById(id, officeId);
   if (!session) return null;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error: rErr } = await client.from("reports").insert([
+        {
+          office_id: officeId,
+          session_id: id,
+          report,
+          created_at: (/* @__PURE__ */ new Date()).toISOString(),
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      ]);
+      if (rErr) {
+        handleSupabaseFailure("saveSessionReport:reports", rErr);
+      }
+      const { error: sErr } = await client.from("sessions").update({ report, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id).eq("office_id", officeId);
+      if (sErr) {
+        handleSupabaseFailure("saveSessionReport:sessions", sErr);
+      }
+      if (isInMemoryFallbackAllowed()) {
+        const reportsList2 = memoryReports.get(officeId) || [];
+        const existingIdx2 = reportsList2.findIndex((r2) => r2.sessionId === id);
+        if (existingIdx2 !== -1) {
+          reportsList2[existingIdx2].report = report;
+          reportsList2[existingIdx2].updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+        } else {
+          reportsList2.push({
+            id: nextId(),
+            officeId,
+            sessionId: id,
+            report,
+            createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          });
+        }
+        memoryReports.set(officeId, reportsList2);
+        const sList2 = memorySessions.get(officeId) || [];
+        const sIdx2 = sList2.findIndex((s3) => s3.id === id);
+        if (sIdx2 !== -1) {
+          sList2[sIdx2].report = report;
+        }
+      }
+      return { session: { ...session, report }, report };
+    } catch (err) {
+      handleSupabaseFailure("saveSessionReport", err);
+    }
+  } else {
+    handleSupabaseFailure("saveSessionReport", new Error("Supabase client is not configured"));
+  }
   const reportsList = memoryReports.get(officeId) || [];
   const existingIdx = reportsList.findIndex((r2) => r2.sessionId === id);
   if (existingIdx !== -1) {
@@ -831306,24 +831534,7 @@ async function saveSessionReport(id, report, officeId) {
   if (sIdx !== -1) {
     sList[sIdx].report = report;
   }
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      await client.from("reports").insert([
-        {
-          office_id: officeId,
-          session_id: id,
-          report,
-          created_at: (/* @__PURE__ */ new Date()).toISOString(),
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        }
-      ]);
-      await client.from("sessions").update({ report, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id).eq("office_id", officeId);
-    } catch (err) {
-      logger.warn({ err }, "Supabase saveSessionReport failed, falling back to memory");
-    }
-  }
-  return { session, report };
+  return { session: { ...session, report }, report };
 }
 function formatTask(r2) {
   return {
@@ -831347,57 +831558,59 @@ function formatTask(r2) {
   };
 }
 async function listTasks(officeId) {
-  const memList = (memoryTasks.get(officeId) || []).map(formatTask);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("tasks").select("*").eq("office_id", officeId).order("id", { ascending: false });
       if (!error && data) {
-        const dbTasks = data.map((d) => {
-          const formatted = formatTask(d);
-          const fromMem = (memoryTasks.get(officeId) || []).find((m2) => m2.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy
-            };
+        if (isInMemoryFallbackAllowed()) {
+          const mem = memoryTasks.get(officeId) || [];
+          if (mem.length > 0) {
+            const dbIds = new Set(data.map((d) => d.id));
+            const extra = mem.filter((m2) => !dbIds.has(m2.id)).map(formatTask);
+            return [...data.map(formatTask), ...extra];
           }
-          return formatted;
-        });
-        const dbIds = new Set(dbTasks.map((t2) => t2.id));
-        return [...dbTasks, ...memList.filter((m2) => !dbIds.has(m2.id))];
+        }
+        return data.map(formatTask);
+      }
+      if (error) {
+        handleSupabaseFailure("listTasks", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase listTasks failed, falling back to memory");
+      handleSupabaseFailure("listTasks", err);
     }
+  } else {
+    handleSupabaseFailure("listTasks", new Error("Supabase client is not configured"));
   }
-  return memList;
+  return (memoryTasks.get(officeId) || []).map(formatTask);
 }
 async function getTaskById(id, officeId) {
-  const memList = memoryTasks.get(officeId) || [];
-  const fromMem = memList.find((item) => item.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("tasks").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        const formatted = formatTask(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            clientId: fromMem.clientId || formatted.clientId,
-            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-            createdBy: fromMem.createdBy || formatted.createdBy
-          };
+        return formatTask(data);
+      }
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const memList2 = memoryTasks.get(officeId) || [];
+          const fromMem2 = memList2.find((item) => item.id === id);
+          if (fromMem2) return formatTask(fromMem2);
         }
-        return formatted;
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getTaskById", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase getTaskById failed, falling back to memory");
+      handleSupabaseFailure("getTaskById", err);
     }
+  } else {
+    handleSupabaseFailure("getTaskById", new Error("Supabase client is not configured"));
   }
+  const memList = memoryTasks.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   return fromMem ? formatTask(fromMem) : null;
 }
 async function createTask(data, officeId) {
@@ -831426,22 +831639,21 @@ async function createTask(data, officeId) {
       ]).select().single();
       if (!error && inserted) {
         const formatted = formatTask(inserted);
-        const memRecord = {
-          ...formatted,
-          id: inserted.id,
-          officeId,
-          clientId,
-          assignedLawyerId,
-          createdBy
-        };
-        const list2 = memoryTasks.get(officeId) || [];
-        list2.unshift(memRecord);
-        memoryTasks.set(officeId, list2);
-        return formatTask(memRecord);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryTasks.get(officeId) || [];
+          list2.unshift(formatted);
+          memoryTasks.set(officeId, list2);
+        }
+        return formatted;
+      }
+      if (error) {
+        handleSupabaseFailure("createTask", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase createTask failed, falling back to memory");
+      handleSupabaseFailure("createTask", err);
     }
+  } else {
+    handleSupabaseFailure("createTask", new Error("Supabase client is not configured"));
   }
   const id = nextId();
   const record = {
@@ -831486,11 +831698,25 @@ async function updateTask(id, data, officeId) {
       if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       const { data: updated2, error } = await client.from("tasks").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated2) {
-        return formatTask(updated2);
+        const formatted = formatTask(updated2);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryTasks.get(officeId) || [];
+          const idx2 = list2.findIndex((t2) => t2.id === id);
+          if (idx2 !== -1) list2[idx2] = { ...list2[idx2], ...formatted };
+        }
+        return formatted;
+      }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error && error.code !== "PGRST116") {
+        handleSupabaseFailure("updateTask", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase updateTask failed, falling back to memory");
+      handleSupabaseFailure("updateTask", err);
     }
+  } else {
+    handleSupabaseFailure("updateTask", new Error("Supabase client is not configured"));
   }
   const list = memoryTasks.get(officeId) || [];
   const idx = list.findIndex((t2) => t2.id === id);
@@ -831522,10 +831748,22 @@ async function deleteTask(id, officeId) {
   if (client) {
     try {
       const { error, count } = await client.from("tasks").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryTasks.get(officeId) || [];
+          const idx2 = list2.findIndex((t2) => t2.id === id);
+          if (idx2 !== -1) list2.splice(idx2, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      handleSupabaseFailure("deleteTask", error);
     } catch (err) {
-      logger.warn({ err }, "Supabase deleteTask failed, falling back to memory");
+      handleSupabaseFailure("deleteTask", err);
     }
+  } else {
+    handleSupabaseFailure("deleteTask", new Error("Supabase client is not configured"));
   }
   const list = memoryTasks.get(officeId) || [];
   const idx = list.findIndex((t2) => t2.id === id);
@@ -831554,57 +831792,59 @@ function formatPoa(r2) {
   };
 }
 async function listPoa(officeId) {
-  const memList = (memoryPoa.get(officeId) || []).map(formatPoa);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("poa").select("*").eq("office_id", officeId).order("id", { ascending: false });
       if (!error && data) {
-        const dbPoa = data.map((d) => {
-          const formatted = formatPoa(d);
-          const fromMem = (memoryPoa.get(officeId) || []).find((m2) => m2.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy
-            };
+        if (isInMemoryFallbackAllowed()) {
+          const mem = memoryPoa.get(officeId) || [];
+          if (mem.length > 0) {
+            const dbIds = new Set(data.map((d) => d.id));
+            const extra = mem.filter((m2) => !dbIds.has(m2.id)).map(formatPoa);
+            return [...data.map(formatPoa), ...extra];
           }
-          return formatted;
-        });
-        const dbIds = new Set(dbPoa.map((p) => p.id));
-        return [...dbPoa, ...memList.filter((m2) => !dbIds.has(m2.id))];
+        }
+        return data.map(formatPoa);
+      }
+      if (error) {
+        handleSupabaseFailure("listPoa", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase listPoa failed, falling back to memory");
+      handleSupabaseFailure("listPoa", err);
     }
+  } else {
+    handleSupabaseFailure("listPoa", new Error("Supabase client is not configured"));
   }
-  return memList;
+  return (memoryPoa.get(officeId) || []).map(formatPoa);
 }
 async function getPoaById(id, officeId) {
-  const memList = memoryPoa.get(officeId) || [];
-  const fromMem = memList.find((item) => item.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("poa").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        const formatted = formatPoa(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            clientId: fromMem.clientId || formatted.clientId,
-            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-            createdBy: fromMem.createdBy || formatted.createdBy
-          };
+        return formatPoa(data);
+      }
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const memList2 = memoryPoa.get(officeId) || [];
+          const fromMem2 = memList2.find((item) => item.id === id);
+          if (fromMem2) return formatPoa(fromMem2);
         }
-        return formatted;
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getPoaById", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase getPoaById failed, falling back to memory");
+      handleSupabaseFailure("getPoaById", err);
     }
+  } else {
+    handleSupabaseFailure("getPoaById", new Error("Supabase client is not configured"));
   }
+  const memList = memoryPoa.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   return fromMem ? formatPoa(fromMem) : null;
 }
 async function createPoa(data, officeId) {
@@ -831632,22 +831872,21 @@ async function createPoa(data, officeId) {
       ]).select().single();
       if (!error && inserted) {
         const formatted = formatPoa(inserted);
-        const memRecord = {
-          ...formatted,
-          id: inserted.id,
-          officeId,
-          clientId,
-          assignedLawyerId,
-          createdBy
-        };
-        const list2 = memoryPoa.get(officeId) || [];
-        list2.unshift(memRecord);
-        memoryPoa.set(officeId, list2);
-        return formatPoa(memRecord);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryPoa.get(officeId) || [];
+          list2.unshift(formatted);
+          memoryPoa.set(officeId, list2);
+        }
+        return formatted;
+      }
+      if (error) {
+        handleSupabaseFailure("createPoa", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase createPoa failed, falling back to memory");
+      handleSupabaseFailure("createPoa", err);
     }
+  } else {
+    handleSupabaseFailure("createPoa", new Error("Supabase client is not configured"));
   }
   const id = nextId();
   const record = {
@@ -831690,11 +831929,25 @@ async function updatePoa(id, data, officeId) {
       if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
       const { data: updated2, error } = await client.from("poa").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated2) {
-        return formatPoa(updated2);
+        const formatted = formatPoa(updated2);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryPoa.get(officeId) || [];
+          const idx2 = list2.findIndex((p) => p.id === id);
+          if (idx2 !== -1) list2[idx2] = { ...list2[idx2], ...formatted };
+        }
+        return formatted;
+      }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error && error.code !== "PGRST116") {
+        handleSupabaseFailure("updatePoa", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase updatePoa failed, falling back to memory");
+      handleSupabaseFailure("updatePoa", err);
     }
+  } else {
+    handleSupabaseFailure("updatePoa", new Error("Supabase client is not configured"));
   }
   const list = memoryPoa.get(officeId) || [];
   const idx = list.findIndex((p) => p.id === id);
@@ -831723,10 +831976,22 @@ async function deletePoa(id, officeId) {
   if (client) {
     try {
       const { error, count } = await client.from("poa").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryPoa.get(officeId) || [];
+          const idx2 = list2.findIndex((p) => p.id === id);
+          if (idx2 !== -1) list2.splice(idx2, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      handleSupabaseFailure("deletePoa", error);
     } catch (err) {
-      logger.warn({ err }, "Supabase deletePoa failed, falling back to memory");
+      handleSupabaseFailure("deletePoa", err);
     }
+  } else {
+    handleSupabaseFailure("deletePoa", new Error("Supabase client is not configured"));
   }
   const list = memoryPoa.get(officeId) || [];
   const idx = list.findIndex((p) => p.id === id);
@@ -831762,59 +832027,59 @@ function formatJudgment(r2) {
   };
 }
 async function listJudgments(officeId) {
-  const memList = (memoryJudgments.get(officeId) || []).map(formatJudgment);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("judgments").select("*").eq("office_id", officeId).order("id", { ascending: false });
       if (!error && data) {
-        const dbJudgments = data.map((d) => {
-          const formatted = formatJudgment(d);
-          const fromMem = (memoryJudgments.get(officeId) || []).find((m2) => m2.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              clientRole: fromMem.clientRole || formatted.clientRole,
-              createdBy: fromMem.createdBy || formatted.createdBy
-            };
+        if (isInMemoryFallbackAllowed()) {
+          const mem = memoryJudgments.get(officeId) || [];
+          if (mem.length > 0) {
+            const dbIds = new Set(data.map((d) => d.id));
+            const extra = mem.filter((m2) => !dbIds.has(m2.id)).map(formatJudgment);
+            return [...data.map(formatJudgment), ...extra];
           }
-          return formatted;
-        });
-        const dbIds = new Set(dbJudgments.map((j) => j.id));
-        return [...dbJudgments, ...memList.filter((m2) => !dbIds.has(m2.id))];
+        }
+        return data.map(formatJudgment);
+      }
+      if (error) {
+        handleSupabaseFailure("listJudgments", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase listJudgments failed, falling back to memory");
+      handleSupabaseFailure("listJudgments", err);
     }
+  } else {
+    handleSupabaseFailure("listJudgments", new Error("Supabase client is not configured"));
   }
-  return memList;
+  return (memoryJudgments.get(officeId) || []).map(formatJudgment);
 }
 async function getJudgmentById(id, officeId) {
-  const memList = memoryJudgments.get(officeId) || [];
-  const fromMem = memList.find((item) => item.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("judgments").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        const formatted = formatJudgment(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            clientId: fromMem.clientId || formatted.clientId,
-            assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-            clientRole: fromMem.clientRole || formatted.clientRole,
-            createdBy: fromMem.createdBy || formatted.createdBy
-          };
+        return formatJudgment(data);
+      }
+      if (error && error.code === "PGRST116") {
+        if (isInMemoryFallbackAllowed()) {
+          const memList2 = memoryJudgments.get(officeId) || [];
+          const fromMem2 = memList2.find((item) => item.id === id);
+          if (fromMem2) return formatJudgment(fromMem2);
         }
-        return formatted;
+        return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getJudgmentById", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase getJudgmentById failed, falling back to memory");
+      handleSupabaseFailure("getJudgmentById", err);
     }
+  } else {
+    handleSupabaseFailure("getJudgmentById", new Error("Supabase client is not configured"));
   }
+  const memList = memoryJudgments.get(officeId) || [];
+  const fromMem = memList.find((item) => item.id === id);
   return fromMem ? formatJudgment(fromMem) : null;
 }
 async function createJudgment(data, officeId) {
@@ -831848,24 +832113,21 @@ async function createJudgment(data, officeId) {
       ]).select().single();
       if (!error && inserted) {
         const formatted = formatJudgment(inserted);
-        const memRecord = {
-          ...formatted,
-          id: inserted.id,
-          officeId,
-          clientId,
-          caseId,
-          assignedLawyerId,
-          clientRole,
-          createdBy
-        };
-        const list2 = memoryJudgments.get(officeId) || [];
-        list2.unshift(memRecord);
-        memoryJudgments.set(officeId, list2);
-        return formatJudgment(memRecord);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryJudgments.get(officeId) || [];
+          list2.unshift(formatted);
+          memoryJudgments.set(officeId, list2);
+        }
+        return formatted;
+      }
+      if (error) {
+        handleSupabaseFailure("createJudgment", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase createJudgment failed, falling back to memory");
+      handleSupabaseFailure("createJudgment", err);
     }
+  } else {
+    handleSupabaseFailure("createJudgment", new Error("Supabase client is not configured"));
   }
   const id = nextId();
   const record = {
@@ -831916,11 +832178,25 @@ async function updateJudgment(id, data, officeId) {
       if (data.client_role !== void 0) updatePayload.client_role = data.client_role;
       const { data: updated2, error } = await client.from("judgments").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated2) {
-        return formatJudgment(updated2);
+        const formatted = formatJudgment(updated2);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryJudgments.get(officeId) || [];
+          const idx2 = list2.findIndex((j) => j.id === id);
+          if (idx2 !== -1) list2[idx2] = { ...list2[idx2], ...formatted };
+        }
+        return formatted;
+      }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error && error.code !== "PGRST116") {
+        handleSupabaseFailure("updateJudgment", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase updateJudgment failed, falling back to memory");
+      handleSupabaseFailure("updateJudgment", err);
     }
+  } else {
+    handleSupabaseFailure("updateJudgment", new Error("Supabase client is not configured"));
   }
   const list = memoryJudgments.get(officeId) || [];
   const idx = list.findIndex((j) => j.id === id);
@@ -831956,10 +832232,22 @@ async function deleteJudgment(id, officeId) {
   if (client) {
     try {
       const { error, count } = await client.from("judgments").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryJudgments.get(officeId) || [];
+          const idx2 = list2.findIndex((j) => j.id === id);
+          if (idx2 !== -1) list2.splice(idx2, 1);
+        }
+        if ((count ?? 0) > 0) return true;
+        if (isInMemoryFallbackAllowed()) return true;
+        return false;
+      }
+      handleSupabaseFailure("deleteJudgment", error);
     } catch (err) {
-      logger.warn({ err }, "Supabase deleteJudgment failed, falling back to memory");
+      handleSupabaseFailure("deleteJudgment", err);
     }
+  } else {
+    handleSupabaseFailure("deleteJudgment", new Error("Supabase client is not configured"));
   }
   const list = memoryJudgments.get(officeId) || [];
   const idx = list.findIndex((j) => j.id === id);
@@ -832045,8 +832333,14 @@ async function listNotifications(officeId, userId, options) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { count: totalCount } = await client.from("notifications").select("id", { count: "exact", head: true }).eq("office_id", officeId).eq("user_id", userId);
-      const { count: unreadCount2 } = await client.from("notifications").select("id", { count: "exact", head: true }).eq("office_id", officeId).eq("user_id", userId).eq("is_read", false);
+      const { count: totalCount, error: countErr } = await client.from("notifications").select("id", { count: "exact", head: true }).eq("office_id", officeId).eq("user_id", userId);
+      if (countErr) {
+        handleSupabaseFailure("listNotifications:totalCount", countErr);
+      }
+      const { count: unreadCount2, error: unreadErr } = await client.from("notifications").select("id", { count: "exact", head: true }).eq("office_id", officeId).eq("user_id", userId).eq("is_read", false);
+      if (unreadErr) {
+        handleSupabaseFailure("listNotifications:unreadCount", unreadErr);
+      }
       const { data, error } = await client.from("notifications").select("*").eq("office_id", officeId).eq("user_id", userId).order("created_at", { ascending: false }).range(offset, offset + limit - 1);
       if (!error && data) {
         return {
@@ -832055,9 +832349,14 @@ async function listNotifications(officeId, userId, options) {
           total: totalCount ?? data.length
         };
       }
+      if (error) {
+        handleSupabaseFailure("listNotifications", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase listNotifications failed, falling back to memory");
+      handleSupabaseFailure("listNotifications", err);
     }
+  } else {
+    handleSupabaseFailure("listNotifications", new Error("Supabase client is not configured"));
   }
   const officeList = memoryNotifications.get(officeId) || [];
   const userList = officeList.filter((n) => n.userId === userId);
@@ -832103,14 +832402,21 @@ async function createNotification(data) {
       ]).select().single();
       if (!error && inserted) {
         const formatted = formatNotification(inserted);
-        const officeList2 = memoryNotifications.get(data.officeId) || [];
-        officeList2.unshift(formatted);
-        memoryNotifications.set(data.officeId, officeList2);
+        if (isInMemoryFallbackAllowed()) {
+          const officeList2 = memoryNotifications.get(data.officeId) || [];
+          officeList2.unshift(formatted);
+          memoryNotifications.set(data.officeId, officeList2);
+        }
         return formatted;
       }
+      if (error) {
+        handleSupabaseFailure("createNotification", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase createNotification failed, falling back to memory");
+      handleSupabaseFailure("createNotification", err);
     }
+  } else {
+    handleSupabaseFailure("createNotification", new Error("Supabase client is not configured"));
   }
   const officeList = memoryNotifications.get(data.officeId) || [];
   officeList.unshift(newRecord);
@@ -832126,9 +832432,14 @@ async function markNotificationRead(id, officeId, userId) {
       if (!error && data && data.length > 0) {
         dbSuccess = true;
       }
+      if (error) {
+        handleSupabaseFailure("markNotificationRead", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase markNotificationRead failed");
+      handleSupabaseFailure("markNotificationRead", err);
     }
+  } else {
+    handleSupabaseFailure("markNotificationRead", new Error("Supabase client is not configured"));
   }
   const officeList = memoryNotifications.get(officeId) || [];
   const item = officeList.find((n) => n.id === id && n.userId === userId);
@@ -832147,9 +832458,14 @@ async function markAllNotificationsRead(officeId, userId) {
       if (!error && data) {
         countUpdated = data.length;
       }
+      if (error) {
+        handleSupabaseFailure("markAllNotificationsRead", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase markAllNotificationsRead failed");
+      handleSupabaseFailure("markAllNotificationsRead", err);
     }
+  } else {
+    handleSupabaseFailure("markAllNotificationsRead", new Error("Supabase client is not configured"));
   }
   const officeList = memoryNotifications.get(officeId) || [];
   let memCount = 0;
@@ -832170,9 +832486,14 @@ async function hasRecentNotification(officeId, type, relatedRecordType, relatedR
       if (!error && data && data.length > 0) {
         return true;
       }
+      if (error) {
+        handleSupabaseFailure("hasRecentNotification", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase hasRecentNotification failed, checking memory");
+      handleSupabaseFailure("hasRecentNotification", err);
     }
+  } else {
+    handleSupabaseFailure("hasRecentNotification", new Error("Supabase client is not configured"));
   }
   const officeList = memoryNotifications.get(officeId) || [];
   const cutoffTime = Date.now() - withinHours * 3600 * 1e3;
@@ -832230,14 +832551,21 @@ async function createAttachment(data) {
       ]).select().single();
       if (!error && inserted) {
         const formatted = formatAttachment({ ...inserted, uploaderName: data.uploaderName });
-        const list2 = memoryAttachments.get(data.officeId) || [];
-        list2.unshift(formatted);
-        memoryAttachments.set(data.officeId, list2);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryAttachments.get(data.officeId) || [];
+          list2.unshift(formatted);
+          memoryAttachments.set(data.officeId, list2);
+        }
         return formatted;
       }
+      if (error) {
+        handleSupabaseFailure("createAttachment", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase createAttachment failed, falling back to memory");
+      handleSupabaseFailure("createAttachment", err);
     }
+  } else {
+    handleSupabaseFailure("createAttachment", new Error("Supabase client is not configured"));
   }
   const list = memoryAttachments.get(data.officeId) || [];
   list.unshift(record);
@@ -832252,9 +832580,14 @@ async function listAttachments(officeId, relatedRecordType, relatedRecordId) {
       if (!error && data) {
         return data.map(formatAttachment);
       }
+      if (error) {
+        handleSupabaseFailure("listAttachments", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase listAttachments failed, falling back to memory");
+      handleSupabaseFailure("listAttachments", err);
     }
+  } else {
+    handleSupabaseFailure("listAttachments", new Error("Supabase client is not configured"));
   }
   const list = memoryAttachments.get(officeId) || [];
   return list.filter(
@@ -832269,38 +832602,50 @@ async function getAttachmentById(id, officeId) {
       if (!error && data) {
         return formatAttachment(data);
       }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getAttachmentById", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase getAttachmentById failed, falling back to memory");
+      handleSupabaseFailure("getAttachmentById", err);
     }
+  } else {
+    handleSupabaseFailure("getAttachmentById", new Error("Supabase client is not configured"));
   }
   const list = memoryAttachments.get(officeId) || [];
   const found = list.find((a) => a.id === id);
   return found || null;
 }
 async function deleteAttachment(id, officeId) {
-  let dbSuccess = false;
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from("attachments").delete().eq("id", id).eq("office_id", officeId);
+      const { error, count } = await client.from("attachments").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
       if (!error) {
-        dbSuccess = true;
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryAttachments.get(officeId) || [];
+          const updated2 = list2.filter((a) => a.id !== id);
+          memoryAttachments.set(officeId, updated2);
+        }
+        return (count ?? 0) > 0;
       }
+      handleSupabaseFailure("deleteAttachment", error);
     } catch (err) {
-      logger.warn({ err }, "Supabase deleteAttachment failed, falling back to memory");
+      handleSupabaseFailure("deleteAttachment", err);
     }
+  } else {
+    handleSupabaseFailure("deleteAttachment", new Error("Supabase client is not configured"));
   }
   const list = memoryAttachments.get(officeId) || [];
   const updated = list.filter((a) => a.id !== id);
   memoryAttachments.set(officeId, updated);
-  return dbSuccess || list.length !== updated.length;
+  return list.length !== updated.length;
 }
 async function searchClients(officeId, query) {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-  const memMatches = (memoryClients.get(officeId) || []).filter(
-    (c) => c.name && c.name.toLowerCase().includes(term) || c.phone && c.phone.toLowerCase().includes(term)
-  );
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -832311,7 +832656,7 @@ async function searchClients(officeId, query) {
       }
       const { data, error } = await dbQuery.order("created_at", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbClients = data.map((r2) => ({
+        return data.map((r2) => ({
           id: r2.id,
           officeId: r2.office_id,
           name: r2.name,
@@ -832320,21 +832665,24 @@ async function searchClients(officeId, query) {
           createdAt: r2.created_at,
           updatedAt: r2.updated_at
         }));
-        const dbIds = new Set(dbClients.map((c) => c.id));
-        return [...dbClients, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+      }
+      if (error) {
+        handleSupabaseFailure("searchClients", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase searchClients failed, falling back to memory");
+      handleSupabaseFailure("searchClients", err);
     }
+  } else {
+    handleSupabaseFailure("searchClients", new Error("Supabase client is not configured"));
   }
+  const memMatches = (memoryClients.get(officeId) || []).filter(
+    (c) => c.name && c.name.toLowerCase().includes(term) || c.phone && c.phone.toLowerCase().includes(term)
+  );
   return memMatches;
 }
 async function searchSessions(officeId, query) {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-  const memMatches = (memorySessions.get(officeId) || []).filter(
-    (s3) => s3.caseNumber && s3.caseNumber.toLowerCase().includes(term) || s3.plaintiff && s3.plaintiff.toLowerCase().includes(term) || s3.defendant && s3.defendant.toLowerCase().includes(term)
-  ).map(formatSession);
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -832345,39 +832693,33 @@ async function searchSessions(officeId, query) {
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbSessions = data.map((d) => {
-          const formatted = formatSession(d);
-          const fromMem = (memorySessions.get(officeId) || []).find((m2) => m2.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              client_id: fromMem.clientId || formatted.client_id,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              assigned_lawyer_id: fromMem.assignedLawyerId || formatted.assigned_lawyer_id,
-              clientRole: fromMem.clientRole || formatted.clientRole,
-              client_role: fromMem.clientRole || formatted.client_role,
-              createdBy: fromMem.createdBy || formatted.createdBy,
-              created_by: fromMem.createdBy || formatted.created_by
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbSessions.map((s3) => s3.id));
-        return [...dbSessions, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches2 = (memorySessions.get(officeId) || []).filter(
+            (s3) => s3.caseNumber && s3.caseNumber.toLowerCase().includes(term) || s3.plaintiff && s3.plaintiff.toLowerCase().includes(term) || s3.defendant && s3.defendant.toLowerCase().includes(term)
+          ).map(formatSession);
+          const dbIds = new Set(data.map((d) => d.id));
+          const extra = memMatches2.filter((m2) => !dbIds.has(m2.id));
+          return [...data.map(formatSession), ...extra];
+        }
+        return data.map(formatSession);
+      }
+      if (error) {
+        handleSupabaseFailure("searchSessions", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase searchSessions failed, falling back to memory");
+      handleSupabaseFailure("searchSessions", err);
     }
+  } else {
+    handleSupabaseFailure("searchSessions", new Error("Supabase client is not configured"));
   }
+  const memMatches = (memorySessions.get(officeId) || []).filter(
+    (s3) => s3.caseNumber && s3.caseNumber.toLowerCase().includes(term) || s3.plaintiff && s3.plaintiff.toLowerCase().includes(term) || s3.defendant && s3.defendant.toLowerCase().includes(term)
+  ).map(formatSession);
   return memMatches;
 }
 async function searchPoa(officeId, query) {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-  const memMatches = (memoryPoa.get(officeId) || []).filter(
-    (p) => p.clientName && p.clientName.toLowerCase().includes(term) || p.poaNumber && p.poaNumber.toLowerCase().includes(term)
-  ).map(formatPoa);
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -832388,34 +832730,33 @@ async function searchPoa(officeId, query) {
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbPoas = data.map((d) => {
-          const formatted = formatPoa(d);
-          const fromMem = (memoryPoa.get(officeId) || []).find((m2) => m2.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbPoas.map((p) => p.id));
-        return [...dbPoas, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches2 = (memoryPoa.get(officeId) || []).filter(
+            (p) => p.clientName && p.clientName.toLowerCase().includes(term) || p.poaNumber && p.poaNumber.toLowerCase().includes(term)
+          ).map(formatPoa);
+          const dbIds = new Set(data.map((d) => d.id));
+          const extra = memMatches2.filter((m2) => !dbIds.has(m2.id));
+          return [...data.map(formatPoa), ...extra];
+        }
+        return data.map(formatPoa);
+      }
+      if (error) {
+        handleSupabaseFailure("searchPoa", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase searchPoa failed, falling back to memory");
+      handleSupabaseFailure("searchPoa", err);
     }
+  } else {
+    handleSupabaseFailure("searchPoa", new Error("Supabase client is not configured"));
   }
+  const memMatches = (memoryPoa.get(officeId) || []).filter(
+    (p) => p.clientName && p.clientName.toLowerCase().includes(term) || p.poaNumber && p.poaNumber.toLowerCase().includes(term)
+  ).map(formatPoa);
   return memMatches;
 }
 async function searchJudgments(officeId, query) {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-  const memMatches = (memoryJudgments.get(officeId) || []).filter(
-    (j) => j.caseNumber && j.caseNumber.toLowerCase().includes(term) || j.plaintiff && j.plaintiff.toLowerCase().includes(term) || j.defendant && j.defendant.toLowerCase().includes(term)
-  ).map(formatJudgment);
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -832426,33 +832767,33 @@ async function searchJudgments(officeId, query) {
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbJudgments = data.map((d) => {
-          const formatted = formatJudgment(d);
-          const fromMem = (memoryJudgments.get(officeId) || []).find((m2) => m2.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              clientRole: fromMem.clientRole || formatted.clientRole,
-              createdBy: fromMem.createdBy || formatted.createdBy
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbJudgments.map((j) => j.id));
-        return [...dbJudgments, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches2 = (memoryJudgments.get(officeId) || []).filter(
+            (j) => j.caseNumber && j.caseNumber.toLowerCase().includes(term) || j.plaintiff && j.plaintiff.toLowerCase().includes(term) || j.defendant && j.defendant.toLowerCase().includes(term)
+          ).map(formatJudgment);
+          const dbIds = new Set(data.map((d) => d.id));
+          const extra = memMatches2.filter((m2) => !dbIds.has(m2.id));
+          return [...data.map(formatJudgment), ...extra];
+        }
+        return data.map(formatJudgment);
+      }
+      if (error) {
+        handleSupabaseFailure("searchJudgments", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase searchJudgments failed, falling back to memory");
+      handleSupabaseFailure("searchJudgments", err);
     }
+  } else {
+    handleSupabaseFailure("searchJudgments", new Error("Supabase client is not configured"));
   }
+  const memMatches = (memoryJudgments.get(officeId) || []).filter(
+    (j) => j.caseNumber && j.caseNumber.toLowerCase().includes(term) || j.plaintiff && j.plaintiff.toLowerCase().includes(term) || j.defendant && j.defendant.toLowerCase().includes(term)
+  ).map(formatJudgment);
   return memMatches;
 }
 async function searchTasks(officeId, query) {
   const term = query.trim().toLowerCase();
   if (!term) return [];
-  const memMatches = (memoryTasks.get(officeId) || []).filter((t2) => t2.title && t2.title.toLowerCase().includes(term)).map(formatTask);
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -832463,36 +832804,33 @@ async function searchTasks(officeId, query) {
       }
       const { data, error } = await dbQuery.order("id", { ascending: false }).limit(50);
       if (!error && data) {
-        const dbTasks = data.map((d) => {
-          const formatted = formatTask(d);
-          const fromMem = (memoryTasks.get(officeId) || []).find((m2) => m2.id === d.id);
-          if (fromMem) {
-            return {
-              ...formatted,
-              clientId: fromMem.clientId || formatted.clientId,
-              assignedLawyerId: fromMem.assignedLawyerId || formatted.assignedLawyerId,
-              createdBy: fromMem.createdBy || formatted.createdBy
-            };
-          }
-          return formatted;
-        });
-        const dbIds = new Set(dbTasks.map((t2) => t2.id));
-        return [...dbTasks, ...memMatches.filter((m2) => !dbIds.has(m2.id))];
+        if (isInMemoryFallbackAllowed()) {
+          const memMatches2 = (memoryTasks.get(officeId) || []).filter((t2) => t2.title && t2.title.toLowerCase().includes(term)).map(formatTask);
+          const dbIds = new Set(data.map((d) => d.id));
+          const extra = memMatches2.filter((m2) => !dbIds.has(m2.id));
+          return [...data.map(formatTask), ...extra];
+        }
+        return data.map(formatTask);
+      }
+      if (error) {
+        handleSupabaseFailure("searchTasks", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase searchTasks failed, falling back to memory");
+      handleSupabaseFailure("searchTasks", err);
     }
+  } else {
+    handleSupabaseFailure("searchTasks", new Error("Supabase client is not configured"));
   }
+  const memMatches = (memoryTasks.get(officeId) || []).filter((t2) => t2.title && t2.title.toLowerCase().includes(term)).map(formatTask);
   return memMatches;
 }
 async function listClientNotes(clientId, officeId) {
-  const memList = (memoryClientNotes.get(officeId) || []).filter((n) => n.clientId === clientId);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("client_notes").select("*").eq("office_id", officeId).eq("client_id", clientId).order("created_at", { ascending: false });
       if (!error && data) {
-        const dbNotes = data.map((r2) => ({
+        return data.map((r2) => ({
           id: r2.id,
           officeId: r2.office_id,
           clientId: r2.client_id,
@@ -832500,15 +832838,17 @@ async function listClientNotes(clientId, officeId) {
           body: r2.body,
           createdAt: r2.created_at
         }));
-        const dbIds = new Set(dbNotes.map((n) => n.id));
-        return [...dbNotes, ...memList.filter((m2) => !dbIds.has(m2.id))].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
+      }
+      if (error) {
+        handleSupabaseFailure("listClientNotes", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase listClientNotes failed, falling back to memory");
+      handleSupabaseFailure("listClientNotes", err);
     }
+  } else {
+    handleSupabaseFailure("listClientNotes", new Error("Supabase client is not configured"));
   }
+  const memList = (memoryClientNotes.get(officeId) || []).filter((n) => n.clientId === clientId);
   return [...memList].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 async function createClientNote(data) {
@@ -832534,12 +832874,29 @@ async function createClientNote(data) {
         created_at: now
       }).select().single();
       if (!error && dbData) {
-        newNote.id = dbData.id;
-        newNote.createdAt = dbData.created_at;
+        const result = {
+          id: dbData.id,
+          officeId: data.officeId,
+          clientId: data.clientId,
+          authorId: data.authorId,
+          body: data.body,
+          createdAt: dbData.created_at
+        };
+        if (isInMemoryFallbackAllowed()) {
+          const existing2 = memoryClientNotes.get(data.officeId) || [];
+          existing2.unshift(result);
+          memoryClientNotes.set(data.officeId, existing2);
+        }
+        return result;
+      }
+      if (error) {
+        handleSupabaseFailure("createClientNote", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase createClientNote failed, saving to memory");
+      handleSupabaseFailure("createClientNote", err);
     }
+  } else {
+    handleSupabaseFailure("createClientNote", new Error("Supabase client is not configured"));
   }
   const existing = memoryClientNotes.get(data.officeId) || [];
   existing.unshift(newNote);
@@ -832565,20 +832922,24 @@ function formatCase(r2) {
   };
 }
 async function listCases(officeId, filters) {
-  const memList = (memoryCases.get(officeId) || []).map(formatCase);
-  let allCases = memList;
+  let allCases = [];
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("cases").select("*").eq("office_id", officeId).order("created_at", { ascending: false });
       if (!error && data) {
-        const dbCases = data.map(formatCase);
-        const dbIds = new Set(dbCases.map((c) => c.id));
-        allCases = [...dbCases, ...memList.filter((m2) => !dbIds.has(m2.id))];
+        allCases = data.map(formatCase);
+      } else if (error) {
+        handleSupabaseFailure("listCases", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase listCases failed, falling back to memory");
+      handleSupabaseFailure("listCases", err);
     }
+  } else {
+    handleSupabaseFailure("listCases", new Error("Supabase client is not configured"));
+  }
+  if (allCases.length === 0 && isInMemoryFallbackAllowed()) {
+    allCases = (memoryCases.get(officeId) || []).map(formatCase);
   }
   const clients = await listClients(officeId);
   const clientMap = new Map(clients.map((c) => [c.id, c.name]));
@@ -832612,26 +832973,27 @@ async function listCases(officeId, filters) {
   return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 async function getCaseById(id, officeId) {
-  const memList = memoryCases.get(officeId) || [];
-  const fromMem = memList.find((c) => c.id === id);
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("cases").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        const formatted = formatCase(data);
-        if (fromMem) {
-          return {
-            ...formatted,
-            assignedLawyerId: fromMem.assignedLawyerId !== void 0 ? fromMem.assignedLawyerId : formatted.assignedLawyerId
-          };
-        }
-        return formatted;
+        return formatCase(data);
+      }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("getCaseById", error);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase getCaseById failed, falling back to memory");
+      handleSupabaseFailure("getCaseById", err);
     }
+  } else {
+    handleSupabaseFailure("getCaseById", new Error("Supabase client is not configured"));
   }
+  const memList = memoryCases.get(officeId) || [];
+  const fromMem = memList.find((c) => c.id === id);
   return fromMem ? formatCase(fromMem) : null;
 }
 async function createCase(data, officeId) {
@@ -832671,14 +833033,21 @@ async function createCase(data, officeId) {
       }).select().single();
       if (!error && inserted) {
         const formatted = formatCase(inserted);
-        const list2 = memoryCases.get(officeId) || [];
-        list2.unshift(record);
-        memoryCases.set(officeId, list2);
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryCases.get(officeId) || [];
+          list2.unshift(record);
+          memoryCases.set(officeId, list2);
+        }
         return formatted;
       }
+      if (error) {
+        handleSupabaseFailure("createCase", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase createCase failed, saving to memory");
+      handleSupabaseFailure("createCase", err);
     }
+  } else {
+    handleSupabaseFailure("createCase", new Error("Supabase client is not configured"));
   }
   const list = memoryCases.get(officeId) || [];
   list.unshift(record);
@@ -832700,14 +833069,24 @@ async function updateCase(id, data, officeId) {
       const { data: updated, error } = await client.from("cases").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated) {
         const formatted = formatCase(updated);
-        const list2 = memoryCases.get(officeId) || [];
-        const idx2 = list2.findIndex((c) => c.id === id);
-        if (idx2 !== -1) list2[idx2] = { ...list2[idx2], ...formatted };
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryCases.get(officeId) || [];
+          const idx2 = list2.findIndex((c) => c.id === id);
+          if (idx2 !== -1) list2[idx2] = { ...list2[idx2], ...formatted };
+        }
         return formatted;
       }
+      if (error && error.code === "PGRST116") {
+        if (!isInMemoryFallbackAllowed()) return null;
+      }
+      if (error) {
+        handleSupabaseFailure("updateCase", error);
+      }
     } catch (err) {
-      logger.warn({ err }, "Supabase updateCase failed, updating in memory");
+      handleSupabaseFailure("updateCase", err);
     }
+  } else {
+    handleSupabaseFailure("updateCase", new Error("Supabase client is not configured"));
   }
   const list = memoryCases.get(officeId) || [];
   const idx = list.findIndex((c) => c.id === id);
@@ -832735,10 +833114,20 @@ async function deleteCase(id, officeId) {
   if (client) {
     try {
       const { error, count } = await client.from("cases").delete({ count: "exact" }).eq("id", id).eq("office_id", officeId);
-      if (!error && (count ?? 0) > 0) return true;
+      if (!error) {
+        if (isInMemoryFallbackAllowed()) {
+          const list2 = memoryCases.get(officeId) || [];
+          const idx2 = list2.findIndex((c) => c.id === id);
+          if (idx2 !== -1) list2.splice(idx2, 1);
+        }
+        return (count ?? 0) > 0;
+      }
+      handleSupabaseFailure("deleteCase", error);
     } catch (err) {
-      logger.warn({ err }, "Supabase deleteCase failed, falling back to memory");
+      handleSupabaseFailure("deleteCase", err);
     }
+  } else {
+    handleSupabaseFailure("deleteCase", new Error("Supabase client is not configured"));
   }
   const list = memoryCases.get(officeId) || [];
   const idx = list.findIndex((c) => c.id === id);
@@ -832798,7 +833187,7 @@ async function getCaseStats(officeId, filterRecords) {
     postponed
   };
 }
-var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, _nextId;
+var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, _nextId, DatabaseUnavailableError, _forceDisableMemoryStoreForTesting;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -832818,6 +833207,15 @@ var init_postgres_service = __esm({
     memoryClientNotes = /* @__PURE__ */ new Map();
     memoryCases = /* @__PURE__ */ new Map();
     _nextId = 1e3;
+    DatabaseUnavailableError = class extends Error {
+      statusCode = 503;
+      code = "DATABASE_UNAVAILABLE";
+      constructor(message = "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B") {
+        super(message);
+        this.name = "DatabaseUnavailableError";
+      }
+    };
+    _forceDisableMemoryStoreForTesting = false;
   }
 });
 
@@ -851654,6 +852052,13 @@ function getOfficeId(req) {
 }
 router5.use("/sessions", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 function handleRouteError(res, err, defaultMsg) {
+  if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+    res.status(503).json({
+      error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B",
+      code: "DATABASE_UNAVAILABLE"
+    });
+    return;
+  }
   if (err instanceof GoogleBindingMissingError) {
     res.status(409).json({
       error: "\u0631\u0628\u0637 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644. \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0634\u0631\u0641",
@@ -851859,7 +852264,7 @@ router5.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const officeId = getOfficeId(req);
     const session = await getSessionById2(id, officeId);
     if (!session || !canUserAccessRecord(session, req.authUser)) {
       res.status(404).json({ error: "Session not found." });
@@ -852459,6 +852864,10 @@ router7.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
     }
     res.json(report);
   } catch (err) {
+    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in GET /sessions/:id/report");
       res.status(err.statusCode).json({
@@ -852489,6 +852898,10 @@ router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
     logger.info({ id }, "Session report saved successfully");
     res.json(updated);
   } catch (err) {
+    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in PUT /sessions/:id/report");
       res.status(err.statusCode).json({
@@ -853122,7 +853535,7 @@ router9.get("/poa", async (req, res) => {
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to list POA records");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0627\u062A. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0627\u062A");
   }
 });
 router9.get("/poa/:rowId", async (req, res) => {
@@ -853142,7 +853555,7 @@ router9.get("/poa/:rowId", async (req, res) => {
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to get POA record");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0629");
   }
 });
 router9.post("/poa", async (req, res) => {
@@ -853157,23 +853570,23 @@ router9.post("/poa", async (req, res) => {
     res.status(400).json({ error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
     return;
   }
-  const clientRecord = await getClientById(clientId, officeId);
-  if (!clientRecord) {
-    res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
-    return;
-  }
-  let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
-  const createdBy = req.authUser?.userId || null;
-  if (req.authUser?.role === "staff") {
-    assignedLawyerId = req.authUser.userId;
-  } else if (assignedLawyerId) {
-    const val = await validateOfficeLawyer(assignedLawyerId, officeId);
-    if (!val.valid) {
-      res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+  try {
+    const clientRecord = await getClientById(clientId, officeId);
+    if (!clientRecord) {
+      res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
       return;
     }
-  }
-  try {
+    let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+    const createdBy = req.authUser?.userId || null;
+    if (req.authUser?.role === "staff") {
+      assignedLawyerId = req.authUser.userId;
+    } else if (assignedLawyerId) {
+      const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+      if (!val.valid) {
+        res.status(400).json({ error: val.error || "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+        return;
+      }
+    }
     const created = await createPoa(
       {
         clientName: clientRecord.name,
@@ -853193,7 +853606,7 @@ router9.post("/poa", async (req, res) => {
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to create POA record");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0648\u0643\u0627\u0644\u0629");
   }
 });
 router9.put("/poa/:rowId", async (req, res) => {
@@ -853256,7 +853669,7 @@ router9.put("/poa/:rowId", async (req, res) => {
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to update POA record");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629");
   }
 });
 router9.patch("/poa/:id/reassign", async (req, res) => {
@@ -853293,7 +853706,7 @@ router9.patch("/poa/:id/reassign", async (req, res) => {
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to reassign POA");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0648\u0643\u0627\u0644\u0629");
   }
 });
 router9.delete("/poa/:rowId", async (req, res) => {
@@ -853319,7 +853732,7 @@ router9.delete("/poa/:rowId", async (req, res) => {
   } catch (err) {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to delete POA record");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629");
   }
 });
 var poa_default = router9;
@@ -853351,7 +853764,7 @@ router10.get("/judgments", async (req, res) => {
   } catch (err) {
     const refId = generateRefId2();
     logger.error({ refId, err }, "Failed to list judgments");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u062D\u0643\u0627\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u062D\u0643\u0627\u0645");
   }
 });
 router10.get("/judgments/:id", async (req, res) => {
@@ -853371,7 +853784,7 @@ router10.get("/judgments/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId2();
     logger.error({ refId, err, id }, "Failed to get judgment");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0643\u0645");
   }
 });
 router10.post("/judgments", async (req, res) => {
@@ -853423,7 +853836,7 @@ router10.post("/judgments", async (req, res) => {
   } catch (err) {
     const refId = generateRefId2();
     logger.error({ refId, err }, "Failed to create judgment");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0643\u0645");
   }
 });
 router10.put("/judgments/:id", async (req, res) => {
@@ -853484,7 +853897,7 @@ router10.put("/judgments/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId2();
     logger.error({ refId, err, id }, "Failed to update judgment");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645");
   }
 });
 router10.patch("/judgments/:id/reassign", async (req, res) => {
@@ -853519,7 +853932,7 @@ router10.patch("/judgments/:id/reassign", async (req, res) => {
   } catch (err) {
     const refId = generateRefId2();
     logger.error({ refId, err, id }, "Failed to reassign judgment");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u062D\u0643\u0645");
   }
 });
 router10.delete("/judgments/:id", async (req, res) => {
@@ -853545,7 +853958,7 @@ router10.delete("/judgments/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId2();
     logger.error({ refId, err, id }, "Failed to delete judgment");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u0643\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u0643\u0645");
   }
 });
 var judgments_default = router10;
@@ -853588,7 +854001,7 @@ router11.get("/tasks", async (req, res) => {
   } catch (err) {
     const refId = generateRefId3();
     logger.error({ refId, err }, "Failed to list tasks");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0647\u0627\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0647\u0627\u0645");
   }
 });
 router11.get("/tasks/:id", async (req, res) => {
@@ -853608,7 +854021,7 @@ router11.get("/tasks/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId3();
     logger.error({ refId, err, id }, "Failed to get task");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0645\u0629");
   }
 });
 router11.post("/tasks", async (req, res) => {
@@ -853624,7 +854037,9 @@ router11.post("/tasks", async (req, res) => {
   const createdBy = req.authUser?.userId || null;
   if (req.authUser?.role === "staff") {
     assignedLawyerId = req.authUser.userId;
-    assignee = req.authUser.displayName || req.authUser.username;
+    if (!assignee) {
+      assignee = req.authUser.displayName || req.authUser.username;
+    }
   } else if (assignedLawyerId) {
     const val = await validateOfficeLawyer(assignedLawyerId, officeId);
     if (!val.valid) {
@@ -853655,7 +854070,7 @@ router11.post("/tasks", async (req, res) => {
   } catch (err) {
     const refId = generateRefId3();
     logger.error({ refId, err }, "Failed to create task");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629");
   }
 });
 router11.put("/tasks/:id", async (req, res) => {
@@ -853703,7 +854118,7 @@ router11.put("/tasks/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId3();
     logger.error({ refId, err, id }, "Failed to update task");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629");
   }
 });
 router11.patch("/tasks/:id/reassign", async (req, res) => {
@@ -853738,7 +854153,7 @@ router11.patch("/tasks/:id/reassign", async (req, res) => {
   } catch (err) {
     const refId = generateRefId3();
     logger.error({ refId, err, id }, "Failed to reassign task");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0645\u0647\u0645\u0629");
   }
 });
 router11.delete("/tasks/:id", async (req, res) => {
@@ -853764,7 +854179,7 @@ router11.delete("/tasks/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId3();
     logger.error({ refId, err, id }, "Failed to delete task");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629");
   }
 });
 var tasks_default = router11;
@@ -854577,7 +854992,7 @@ router15.get("/clients/legacy-unassigned", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err }, "Failed to get legacy unassigned records");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u063A\u064A\u0631 \u0627\u0644\u0645\u0639\u064A\u0646\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u063A\u064A\u0631 \u0627\u0644\u0645\u0639\u064A\u0646\u0629");
   }
 });
 router15.post("/clients/triage-link", async (req, res) => {
@@ -854643,7 +855058,7 @@ router15.post("/clients/triage-link", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err }, "Failed to triage link record");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0631\u0628\u0637 \u0627\u0644\u0633\u062C\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0631\u0628\u0637 \u0627\u0644\u0633\u062C\u0644");
   }
 });
 router15.get("/clients", async (req, res) => {
@@ -854658,7 +855073,7 @@ router15.get("/clients", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err }, "Failed to list clients");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621");
   }
 });
 router15.post("/clients", async (req, res) => {
@@ -854681,7 +855096,7 @@ router15.post("/clients", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err }, "Failed to create client");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0639\u0645\u064A\u0644");
   }
 });
 router15.get("/clients/:id", async (req, res) => {
@@ -854704,7 +855119,7 @@ router15.get("/clients/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err, id }, "Failed to get client");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644");
   }
 });
 router15.patch("/clients/:id", async (req, res) => {
@@ -854736,7 +855151,7 @@ router15.patch("/clients/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err, id }, "Failed to update client");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644");
   }
 });
 router15.delete("/clients/:id", async (req, res) => {
@@ -854759,7 +855174,7 @@ router15.delete("/clients/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err, id }, "Failed to delete client");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0639\u0645\u064A\u0644");
   }
 });
 router15.get("/clients/:id/timeline", async (req, res) => {
@@ -854801,7 +855216,7 @@ router15.get("/clients/:id/timeline", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err, id }, "Failed to get client timeline");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0633\u062C\u0644 \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0633\u062C\u0644 \u0627\u0644\u0639\u0645\u064A\u0644");
   }
 });
 router15.get("/clients/:id/notes", async (req, res) => {
@@ -854841,7 +855256,7 @@ router15.get("/clients/:id/notes", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err, id }, "Failed to list client notes");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644");
   }
 });
 router15.post("/clients/:id/notes", async (req, res) => {
@@ -854886,7 +855301,7 @@ router15.post("/clients/:id/notes", async (req, res) => {
   } catch (err) {
     const refId = generateRefId4();
     logger.error({ refId, err, id }, "Failed to create client note");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0641\u0638 \u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0639\u0645\u064A\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0639\u0645\u064A\u0644");
   }
 });
 var clients_default = router15;
@@ -854927,6 +855342,10 @@ router16.get("/notifications", async (req, res) => {
     });
   } catch (err) {
     logger.error({ err, userId: req.authUser?.userId }, "Failed to list notifications");
+    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A." });
   }
 });
@@ -854947,6 +855366,10 @@ router16.post("/notifications/:id/read", async (req, res) => {
     res.json({ ok: true, id: notificationId });
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to mark notification as read");
+    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631." });
   }
 });
@@ -854958,6 +855381,10 @@ router16.post("/notifications/read-all", async (req, res) => {
     res.json({ ok: true, count });
   } catch (err) {
     logger.error({ err, userId: req.authUser?.userId }, "Failed to mark all notifications as read");
+    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A." });
   }
 });
@@ -856570,6 +856997,10 @@ router17.post("/attachments", async (req, res) => {
     res.status(201).json(attachment);
   } catch (err) {
     logger.error({ err }, "Failed to save attachment");
+    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0631\u0641\u0642 \u0648\u062A\u062E\u0632\u064A\u0646\u0647." });
   }
 });
@@ -856711,7 +857142,7 @@ router18.get("/search", async (req, res) => {
   } catch (err) {
     const refId = generateRefId5();
     logger.error({ refId, err, officeId, q }, "Failed to execute global search");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0644\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0644\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645");
   }
 });
 var search_default = router18;
@@ -856792,7 +857223,7 @@ router19.get("/workload", async (req, res) => {
   } catch (err) {
     const refId = generateRefId6();
     logger.error({ refId, err, officeId }, "Failed to fetch office workload");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u064A\u0627\u0646\u0627\u062A \u0639\u0628\u0621 \u0627\u0644\u0639\u0645\u0644. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u064A\u0627\u0646\u0627\u062A \u0639\u0628\u0621 \u0627\u0644\u0639\u0645\u0644");
   }
 });
 var workload_default = router19;
@@ -856825,7 +857256,7 @@ router20.get("/cases/stats", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to get cases stats");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0642\u0636\u0627\u064A\u0627. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0642\u0636\u0627\u064A\u0627");
   }
 });
 router20.get("/cases", async (req, res) => {
@@ -856848,7 +857279,7 @@ router20.get("/cases", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to list cases");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0642\u0636\u0627\u064A\u0627. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0642\u0636\u0627\u064A\u0627");
   }
 });
 router20.post("/cases", async (req, res) => {
@@ -856900,7 +857331,7 @@ router20.post("/cases", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to create case");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0642\u0636\u064A\u0629");
   }
 });
 router20.get("/cases/:id/detail", async (req, res) => {
@@ -856929,7 +857360,7 @@ router20.get("/cases/:id/detail", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to get case detail");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0642\u0636\u064A\u0629");
   }
 });
 router20.get("/cases/:id", async (req, res) => {
@@ -856949,7 +857380,7 @@ router20.get("/cases/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to get case");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0627\u0644\u0642\u0636\u064A\u0629");
   }
 });
 router20.patch("/cases/:id", async (req, res) => {
@@ -857015,7 +857446,7 @@ router20.patch("/cases/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to update case");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0642\u0636\u064A\u0629");
   }
 });
 router20.patch("/cases/:id/reassign", async (req, res) => {
@@ -857044,7 +857475,7 @@ router20.patch("/cases/:id/reassign", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to reassign case");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0625\u0633\u0646\u0627\u062F \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0625\u0633\u0646\u0627\u062F \u0627\u0644\u0642\u0636\u064A\u0629");
   }
 });
 router20.delete("/cases/:id", async (req, res) => {
@@ -857065,7 +857496,7 @@ router20.delete("/cases/:id", async (req, res) => {
   } catch (err) {
     const refId = generateRefId7();
     logger.error({ refId, err }, "Failed to delete case");
-    res.status(500).json({ error: `\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0642\u0636\u064A\u0629. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0642\u0636\u064A\u0629");
   }
 });
 var cases_default = router20;
@@ -857098,6 +857529,10 @@ var routes_default = router21;
 init_logger();
 init_env();
 var import_meta = {};
+if (!isSupabaseConfigured() && true) {
+  logger.fatal("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
+  throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
+}
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path6.default.dirname(currentFilename);
 var app = (0, import_express22.default)();
@@ -857162,6 +857597,13 @@ if (distPath) {
 }
 app.use((err, req, res, _next) => {
   logger.error({ err, path: req.path, method: req.method }, "Express request error");
+  if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+    res.status(503).json({
+      error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B",
+      code: "DATABASE_UNAVAILABLE"
+    });
+    return;
+  }
   res.status(err.status || 500).json({
     error: err.message || "Internal Server Error",
     stack: false ? err.stack : void 0

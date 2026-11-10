@@ -1,7 +1,15 @@
 import app from "./app";
-import { env } from "./config/env";
+import { env, isSupabaseConfigured } from "./config/env";
 import { logger } from "./lib/logger";
 import { startReminderScheduler } from "./scheduler/reminderScheduler";
+
+// Startup check: Fail loudly if Supabase credentials are missing
+if (!isSupabaseConfigured()) {
+  logger.fatal("FATAL: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY) are not configured. The server cannot boot in degraded in-memory mode.");
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("FATAL: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for database connectivity.");
+  }
+}
 
 // Validate required secrets on startup in production
 if (env.isProduction && !process.env.VERCEL) {

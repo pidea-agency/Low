@@ -58,6 +58,15 @@ router.get("/notifications", async (req, res) => {
     });
   } catch (err: any) {
     logger.error({ err, userId: req.authUser?.userId }, "Failed to list notifications");
+    if (
+      err?.statusCode === 503 ||
+      err?.code === "DATABASE_UNAVAILABLE" ||
+      err?.name === "DatabaseUnavailableError" ||
+      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+    ) {
+      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "فشل تحميل الإشعارات." });
   }
 });
@@ -87,6 +96,15 @@ router.post("/notifications/:id/read", async (req, res) => {
     res.json({ ok: true, id: notificationId });
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to mark notification as read");
+    if (
+      err?.statusCode === 503 ||
+      err?.code === "DATABASE_UNAVAILABLE" ||
+      err?.name === "DatabaseUnavailableError" ||
+      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+    ) {
+      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "فشل تحديث حالة الإشعار." });
   }
 });
@@ -104,6 +122,15 @@ router.post("/notifications/read-all", async (req, res) => {
     res.json({ ok: true, count });
   } catch (err: any) {
     logger.error({ err, userId: req.authUser?.userId }, "Failed to mark all notifications as read");
+    if (
+      err?.statusCode === 503 ||
+      err?.code === "DATABASE_UNAVAILABLE" ||
+      err?.name === "DatabaseUnavailableError" ||
+      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+    ) {
+      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "فشل تحديث حالة الإشعارات." });
   }
 });

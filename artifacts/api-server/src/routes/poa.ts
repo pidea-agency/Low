@@ -45,7 +45,7 @@ router.get("/poa", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to list POA records");
-    res.status(500).json({ error: `فشل تحميل بيانات الوكالات. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل بيانات الوكالات");
   }
 });
 
@@ -71,7 +71,7 @@ router.get("/poa/:rowId", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to get POA record");
-    res.status(500).json({ error: `فشل تحميل بيانات الوكالة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل بيانات الوكالة");
   }
 });
 
@@ -95,26 +95,26 @@ router.post("/poa", async (req, res) => {
     return;
   }
 
-  const clientRecord = await postgresService.getClientById(clientId, officeId);
-  if (!clientRecord) {
-    res.status(400).json({ error: "العميل المحدد غير موجود في هذا المكتب." });
-    return;
-  }
-
-  let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
-  const createdBy = req.authUser?.userId || null;
-
-  if (req.authUser?.role === "staff") {
-    assignedLawyerId = req.authUser.userId;
-  } else if (assignedLawyerId) {
-    const val = await validateOfficeLawyer(assignedLawyerId, officeId);
-    if (!val.valid) {
-      res.status(400).json({ error: val.error || "المحامي غير صالح." });
+  try {
+    const clientRecord = await postgresService.getClientById(clientId, officeId);
+    if (!clientRecord) {
+      res.status(400).json({ error: "العميل المحدد غير موجود في هذا المكتب." });
       return;
     }
-  }
 
-  try {
+    let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
+    const createdBy = req.authUser?.userId || null;
+
+    if (req.authUser?.role === "staff") {
+      assignedLawyerId = req.authUser.userId;
+    } else if (assignedLawyerId) {
+      const val = await validateOfficeLawyer(assignedLawyerId, officeId);
+      if (!val.valid) {
+        res.status(400).json({ error: val.error || "المحامي غير صالح." });
+        return;
+      }
+    }
+
     const created = await postgresService.createPoa(
       {
         clientName: clientRecord.name,
@@ -134,7 +134,7 @@ router.post("/poa", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to create POA record");
-    res.status(500).json({ error: `فشل حفظ الوكالة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حفظ الوكالة");
   }
 });
 
@@ -218,7 +218,7 @@ router.put("/poa/:rowId", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to update POA record");
-    res.status(500).json({ error: `فشل تحديث الوكالة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحديث الوكالة");
   }
 });
 
@@ -264,7 +264,7 @@ router.patch("/poa/:id/reassign", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to reassign POA");
-    res.status(500).json({ error: `فشل إعادة تعيين الوكالة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل إعادة تعيين الوكالة");
   }
 });
 
@@ -297,7 +297,7 @@ router.delete("/poa/:rowId", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to delete POA record");
-    res.status(500).json({ error: `فشل حذف الوكالة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حذف الوكالة");
   }
 });
 

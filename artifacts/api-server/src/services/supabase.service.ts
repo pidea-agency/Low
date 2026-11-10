@@ -1053,6 +1053,36 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
     }
 
     if (!data || data.length === 0) {
+      const local = loadLocalUsers();
+      const localUser = local.find(
+        (u) =>
+          u.id.toLowerCase() === clean ||
+          u.username.toLowerCase() === clean,
+      );
+      if (localUser) {
+        const result: AppUser = {
+          id: localUser.id,
+          username: localUser.username,
+          email: localUser.email,
+          role: (localUser.role as any) || "staff",
+          admin_id: localUser.admin_id || null,
+          office_name: localUser.office_name || null,
+          display_name: localUser.display_name,
+          status: localUser.status || "active",
+          subscription_end_date: localUser.subscription_end_date || null,
+          subscription_notes: localUser.subscription_notes || null,
+          plan_tier: localUser.plan_tier,
+          billing_cycle: localUser.billing_cycle,
+          ai_quota_limit: localUser.ai_quota_limit,
+          ai_usage_count: localUser.ai_usage_count || 0,
+          google_spreadsheet_id: localUser.google_spreadsheet_id,
+          google_sheet_name: localUser.google_sheet_name,
+          created_at: localUser.created_at,
+        };
+        userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
+        return result;
+      }
+
       userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
       return null;
     }

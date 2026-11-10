@@ -51,7 +51,7 @@ router.get("/tasks", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to list tasks");
-    res.status(500).json({ error: `فشل تحميل قائمة المهام. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل قائمة المهام");
   }
 });
 
@@ -77,7 +77,7 @@ router.get("/tasks/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to get task");
-    res.status(500).json({ error: `فشل تحميل بيانات المهمة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحميل بيانات المهمة");
   }
 });
 
@@ -100,7 +100,9 @@ router.post("/tasks", async (req, res) => {
 
   if (req.authUser?.role === "staff") {
     assignedLawyerId = req.authUser.userId;
-    assignee = req.authUser.displayName || req.authUser.username;
+    if (!assignee) {
+      assignee = req.authUser.displayName || req.authUser.username;
+    }
   } else if (assignedLawyerId) {
     const val = await validateOfficeLawyer(assignedLawyerId, officeId);
     if (!val.valid) {
@@ -132,7 +134,7 @@ router.post("/tasks", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err }, "Failed to create task");
-    res.status(500).json({ error: `فشل حفظ المهمة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حفظ المهمة");
   }
 });
 
@@ -188,7 +190,7 @@ router.put("/tasks/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to update task");
-    res.status(500).json({ error: `فشل تحديث المهمة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحديث المهمة");
   }
 });
 
@@ -232,7 +234,7 @@ router.patch("/tasks/:id/reassign", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to reassign task");
-    res.status(500).json({ error: `فشل إعادة تعيين المهمة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل إعادة تعيين المهمة");
   }
 });
 
@@ -265,7 +267,7 @@ router.delete("/tasks/:id", async (req, res) => {
   } catch (err: any) {
     const refId = generateRefId();
     logger.error({ refId, err, id }, "Failed to delete task");
-    res.status(500).json({ error: `فشل حذف المهمة. رقم المرجع: ${refId}`, refId });
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حذف المهمة");
   }
 });
 

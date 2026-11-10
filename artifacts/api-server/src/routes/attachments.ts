@@ -234,6 +234,15 @@ router.post("/attachments", async (req, res) => {
     res.status(201).json(attachment);
   } catch (err: any) {
     logger.error({ err }, "Failed to save attachment");
+    if (
+      err?.statusCode === 503 ||
+      err?.code === "DATABASE_UNAVAILABLE" ||
+      err?.name === "DatabaseUnavailableError" ||
+      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+    ) {
+      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
+      return;
+    }
     res.status(500).json({ error: "فشل حفظ المرفق وتخزينه." });
   }
 });

@@ -41,6 +41,18 @@ function getOfficeId(req: any): string {
 router.use("/sessions", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription);
 
 function handleRouteError(res: Response, err: any, defaultMsg: string): void {
+  if (
+    err?.statusCode === 503 ||
+    err?.code === "DATABASE_UNAVAILABLE" ||
+    err?.name === "DatabaseUnavailableError" ||
+    String(err?.message || "").includes("قاعدة البيانات غير متصلة")
+  ) {
+    res.status(503).json({
+      error: "قاعدة البيانات غير متصلة حالياً",
+      code: "DATABASE_UNAVAILABLE",
+    });
+    return;
+  }
   if (err instanceof GoogleBindingMissingError) {
     res.status(409).json({
       error: "ربط المكتب غير مكتمل. تواصل مع المشرف",
@@ -278,7 +290,7 @@ router.get("/sessions/:id", attachAuthUser, requireAuth, async (req, res) => {
     return;
   }
   try {
-    const officeId = req.authUser?.officeId || req.authUser?.userId;
+    const officeId = getOfficeId(req);
     const session = await getSessionById(id, officeId);
     if (!session || !canUserAccessRecord(session, req.authUser)) {
       res.status(404).json({ error: "Session not found." });
