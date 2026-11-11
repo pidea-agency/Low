@@ -6,13 +6,10 @@ import {
   deleteJudgmentRow,
   JUDGMENT_SHEET_COLUMNS,
 } from "../artifacts/api-server/src/services/judgment.sheets.service";
-import { loadLocalUsers } from "../artifacts/api-server/src/services/supabase.service";
-
 async function main() {
   console.log("=== Diagnosing Judgment Save Path ===");
 
-  const localUsers = loadLocalUsers();
-  const targetUser = localUsers.find((u) => u.username === "12345") || localUsers[0];
+  const targetUser = { id: "local-lawyer-default", username: "12345", role: "staff" };
   console.log(`Testing with user: ${targetUser.username} (${targetUser.id})`);
 
 

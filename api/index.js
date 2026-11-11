@@ -5350,10 +5350,10 @@ var require_raw_body = __commonJS({
       if (done) {
         return readStream(stream, encoding, length, limit, wrap(done));
       }
-      return new Promise(function executor(resolve4, reject) {
+      return new Promise(function executor(resolve3, reject) {
         readStream(stream, encoding, length, limit, function onRead(err, buf) {
           if (err) return reject(err);
-          resolve4(buf);
+          resolve3(buf);
         });
       });
     }
@@ -18786,7 +18786,7 @@ var require_view = __commonJS({
     var basename2 = path6.basename;
     var extname = path6.extname;
     var join = path6.join;
-    var resolve4 = path6.resolve;
+    var resolve3 = path6.resolve;
     module2.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -18820,7 +18820,7 @@ var require_view = __commonJS({
       debug('lookup "%s"', name);
       for (var i2 = 0; i2 < roots.length && !path7; i2++) {
         var root = roots[i2];
-        var loc = resolve4(root, name);
+        var loc = resolve3(root, name);
         var dir = dirname2(loc);
         var file = basename2(loc);
         path7 = this.resolve(dir, file);
@@ -18845,7 +18845,7 @@ var require_view = __commonJS({
       });
       sync = false;
     };
-    View.prototype.resolve = function resolve5(dir, file) {
+    View.prototype.resolve = function resolve4(dir, file) {
       var ext = this.ext;
       var path7 = join(dir, file);
       var stat2 = tryStat(path7);
@@ -21104,7 +21104,7 @@ var require_application = __commonJS({
     var compileETag = require_utils3().compileETag;
     var compileQueryParser = require_utils3().compileQueryParser;
     var compileTrust = require_utils3().compileTrust;
-    var resolve4 = require("node:path").resolve;
+    var resolve3 = require("node:path").resolve;
     var once2 = require_once();
     var Router22 = require_router();
     var slice2 = Array.prototype.slice;
@@ -21158,7 +21158,7 @@ var require_application = __commonJS({
       this.mountpath = "/";
       this.locals.settings = this.settings;
       this.set("view", View);
-      this.set("views", resolve4("views"));
+      this.set("views", resolve3("views"));
       this.set("jsonp callback name", "callback");
       if (env3 === "production") {
         this.enable("view cache");
@@ -22675,7 +22675,7 @@ var require_send = __commonJS({
     var extname = path6.extname;
     var join = path6.join;
     var normalize = path6.normalize;
-    var resolve4 = path6.resolve;
+    var resolve3 = path6.resolve;
     var sep = path6.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
@@ -22704,7 +22704,7 @@ var require_send = __commonJS({
       this._maxage = opts.maxAge || opts.maxage;
       this._maxage = typeof this._maxage === "string" ? ms(this._maxage) : Number(this._maxage);
       this._maxage = !isNaN(this._maxage) ? Math.min(Math.max(0, this._maxage), MAX_MAXAGE) : 0;
-      this._root = opts.root ? resolve4(opts.root) : null;
+      this._root = opts.root ? resolve3(opts.root) : null;
     }
     util2.inherits(SendStream, Stream4);
     SendStream.prototype.error = function error(status, err) {
@@ -22853,7 +22853,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = normalize(path7).split(sep);
-        path7 = resolve4(path7);
+        path7 = resolve3(path7);
       }
       if (containsDotFile(parts)) {
         debug('%s dotfile "%s"', this._dotfiles, path7);
@@ -23231,7 +23231,7 @@ var require_response = __commonJS({
     var cookie = require_cookie();
     var send = require_send();
     var extname = path6.extname;
-    var resolve4 = path6.resolve;
+    var resolve3 = path6.resolve;
     var vary = require_vary();
     var { Buffer: Buffer4 } = require("node:buffer");
     var res = Object.create(http3.ServerResponse.prototype);
@@ -23437,7 +23437,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve4(path7) : path7;
+      var fullPath = !opts.root ? resolve3(path7) : path7;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type) {
@@ -23686,7 +23686,7 @@ var require_serve_static = __commonJS({
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
     var parseUrl = require_parseurl();
-    var resolve4 = require("path").resolve;
+    var resolve3 = require("path").resolve;
     var send = require_send();
     var url = require("url");
     module2.exports = serveStatic;
@@ -23705,7 +23705,7 @@ var require_serve_static = __commonJS({
         throw new TypeError("option setHeaders must be function");
       }
       opts.maxage = opts.maxage || opts.maxAge || 0;
-      opts.root = resolve4(root);
+      opts.root = resolve3(root);
       var onDirectory = redirect ? createRedirectDirectoryListener() : createNotFoundDirectoryListener();
       return function serveStatic2(req, res, next) {
         if (req.method !== "GET" && req.method !== "HEAD") {
@@ -33355,11 +33355,11 @@ function __metadata(metadataKey, metadataValue) {
 }
 function __awaiter(thisArg, _arguments, P, generator) {
   function adopt(value) {
-    return value instanceof P ? value : new P(function(resolve4) {
-      resolve4(value);
+    return value instanceof P ? value : new P(function(resolve3) {
+      resolve3(value);
     });
   }
-  return new (P || (P = Promise))(function(resolve4, reject) {
+  return new (P || (P = Promise))(function(resolve3, reject) {
     function fulfilled(value) {
       try {
         step(generator.next(value));
@@ -33375,7 +33375,7 @@ function __awaiter(thisArg, _arguments, P, generator) {
       }
     }
     function step(result) {
-      result.done ? resolve4(result.value) : adopt(result.value).then(fulfilled, rejected);
+      result.done ? resolve3(result.value) : adopt(result.value).then(fulfilled, rejected);
     }
     step((generator = generator.apply(thisArg, _arguments || [])).next());
   });
@@ -33566,14 +33566,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve4, reject) {
-        v = o[n](v), settle(resolve4, reject, v.done, v.value);
+      return new Promise(function(resolve3, reject) {
+        v = o[n](v), settle(resolve3, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve4, reject, d, v) {
+  function settle(resolve3, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve4({ value: v2, done: d });
+      resolve3({ value: v2, done: d });
     }, reject);
   }
 }
@@ -34205,18 +34205,18 @@ function _objectSpread2(e2) {
   return e2;
 }
 function sleep(ms, signal) {
-  return new Promise((resolve4) => {
+  return new Promise((resolve3) => {
     if (signal === null || signal === void 0 ? void 0 : signal.aborted) {
-      resolve4();
+      resolve3();
       return;
     }
     const id = setTimeout(() => {
       signal === null || signal === void 0 || signal.removeEventListener("abort", onAbort);
-      resolve4();
+      resolve3();
     }, ms);
     function onAbort() {
       clearTimeout(id);
-      resolve4();
+      resolve3();
     }
     signal === null || signal === void 0 || signal.addEventListener("abort", onAbort);
   });
@@ -41247,15 +41247,15 @@ var require_RealtimeChannel = __commonJS({
             }
           }
         } else {
-          return new Promise((resolve4) => {
+          return new Promise((resolve3) => {
             var _a2, _b2, _c;
             const push = this.channelAdapter.push(args.type, args, opts.timeout || this.timeout);
             if (args.type === "broadcast" && !((_c = (_b2 = (_a2 = this.params) === null || _a2 === void 0 ? void 0 : _a2.config) === null || _b2 === void 0 ? void 0 : _b2.broadcast) === null || _c === void 0 ? void 0 : _c.ack)) {
-              resolve4("ok");
+              resolve3("ok");
             }
-            push.receive("ok", () => resolve4("ok"));
-            push.receive("error", () => resolve4("error"));
-            push.receive("timeout", () => resolve4("timed out"));
+            push.receive("ok", () => resolve3("ok"));
+            push.receive("error", () => resolve3("error"));
+            push.receive("timeout", () => resolve3("timed out"));
           });
         }
       }
@@ -41280,8 +41280,8 @@ var require_RealtimeChannel = __commonJS({
        * @category Realtime
        */
       async unsubscribe(timeout = this.timeout) {
-        return new Promise((resolve4) => {
-          this.channelAdapter.unsubscribe(timeout).receive("ok", () => resolve4("ok")).receive("timeout", () => resolve4("timed out")).receive("error", () => resolve4("error"));
+        return new Promise((resolve3) => {
+          this.channelAdapter.unsubscribe(timeout).receive("ok", () => resolve3("ok")).receive("timeout", () => resolve3("timed out")).receive("error", () => resolve3("error"));
         });
       }
       /**
@@ -41508,11 +41508,11 @@ var require_socketAdapter = __commonJS({
         this.socket.connect();
       }
       disconnect(callback, code, reason, timeout = 1e4) {
-        return new Promise((resolve4) => {
-          setTimeout(() => resolve4("timeout"), timeout);
+        return new Promise((resolve3) => {
+          setTimeout(() => resolve3("timeout"), timeout);
           this.socket.disconnect(() => {
             callback();
-            resolve4("ok");
+            resolve3("ok");
           }, code, reason);
         });
       }
@@ -42879,7 +42879,7 @@ function normalizeHeaders(headers) {
   return result;
 }
 async function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve3, reject) => {
     fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
       if (!result.ok) throw result;
       if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
@@ -42889,7 +42889,7 @@ async function _handleRequest(fetcher, method, url, options, parameters, body, n
         if (!contentType || !contentType.includes("application/json")) return {};
       }
       return result.json();
-    }).then((data) => resolve4(data)).catch((error) => handleError(error, reject, options, namespace));
+    }).then((data) => resolve3(data)).catch((error) => handleError(error, reject, options, namespace));
   });
 }
 function createFetchApi(namespace = "storage") {
@@ -54839,13 +54839,13 @@ var require_bcrypt = __commonJS({
             throw Error("Illegal callback: " + typeof callback);
           _async(callback);
         } else
-          return new Promise(function(resolve4, reject) {
+          return new Promise(function(resolve3, reject) {
             _async(function(err, res) {
               if (err) {
                 reject(err);
                 return;
               }
-              resolve4(res);
+              resolve3(res);
             });
           });
       };
@@ -54874,13 +54874,13 @@ var require_bcrypt = __commonJS({
             throw Error("Illegal callback: " + typeof callback);
           _async(callback);
         } else
-          return new Promise(function(resolve4, reject) {
+          return new Promise(function(resolve3, reject) {
             _async(function(err, res) {
               if (err) {
                 reject(err);
                 return;
               }
-              resolve4(res);
+              resolve3(res);
             });
           });
       };
@@ -54925,13 +54925,13 @@ var require_bcrypt = __commonJS({
             throw Error("Illegal callback: " + typeof callback);
           _async(callback);
         } else
-          return new Promise(function(resolve4, reject) {
+          return new Promise(function(resolve3, reject) {
             _async(function(err, res) {
               if (err) {
                 reject(err);
                 return;
               }
-              resolve4(res);
+              resolve3(res);
             });
           });
       };
@@ -56745,6 +56745,7 @@ __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
   DEFAULT_PLATFORM_SETTINGS: () => DEFAULT_PLATFORM_SETTINGS,
   DEFAULT_SUBSCRIPTION_PLANS: () => DEFAULT_SUBSCRIPTION_PLANS,
+  DatabaseUnavailableError: () => DatabaseUnavailableError,
   OfficeMemberNotFoundError: () => OfficeMemberNotFoundError,
   QuotaExceededError: () => QuotaExceededError,
   UserPendingActivationError: () => UserPendingActivationError,
@@ -56795,12 +56796,6 @@ __export(supabase_service_exports, {
   listSupabaseUsers: () => listSupabaseUsers,
   listSuperAdminUsers: () => listSuperAdminUsers,
   listUnlinkedMembers: () => listUnlinkedMembers,
-  loadLocalAuditLogs: () => loadLocalAuditLogs,
-  loadLocalOfficePlans: () => loadLocalOfficePlans,
-  loadLocalPayments: () => loadLocalPayments,
-  loadLocalPlans: () => loadLocalPlans,
-  loadLocalPlatformSettings: () => loadLocalPlatformSettings,
-  loadLocalUsers: () => loadLocalUsers,
   recordAuditLog: () => recordAuditLog,
   resendOfficeMemberActivation: () => resendOfficeMemberActivation,
   resetAdminAiUsage: () => resetAdminAiUsage,
@@ -56808,12 +56803,6 @@ __export(supabase_service_exports, {
   resetUserAiUsage: () => resetUserAiUsage,
   revokeUserSessions: () => revokeUserSessions,
   saveFallbackActivationToken: () => saveFallbackActivationToken,
-  saveLocalAuditLogs: () => saveLocalAuditLogs,
-  saveLocalOfficePlans: () => saveLocalOfficePlans,
-  saveLocalPayments: () => saveLocalPayments,
-  saveLocalPlans: () => saveLocalPlans,
-  saveLocalPlatformSettings: () => saveLocalPlatformSettings,
-  saveLocalUsers: () => saveLocalUsers,
   saveOfficeGoogleBinding: () => saveOfficeGoogleBinding,
   setupFirstSuperAdmin: () => setupFirstSuperAdmin,
   toggleAdminStatus: () => toggleAdminStatus,
@@ -56859,317 +56848,7 @@ function invalidateUserGoogleCache(userId) {
     userGoogleCredsCache.clear();
   }
 }
-function loadLocalUsers() {
-  if (_localUsersCache) {
-    return _localUsersCache;
-  }
-  const paths = [LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE];
-  for (const p of paths) {
-    try {
-      if ((0, import_fs.existsSync)(p)) {
-        const raw = (0, import_fs.readFileSync)(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list) && list.length > 0) {
-          let hasAdmin = false;
-          let hasSuperAdmin = false;
-          const normalized = list.map((u) => {
-            let role = u.role || "staff";
-            if (role === "admin" && (u.id === "local-admin" || u.username === "123456")) {
-              role = "super_admin";
-            }
-            if (role === "super_admin") hasSuperAdmin = true;
-            if (role === "admin") hasAdmin = true;
-            const isOfficeAdmin = role === "admin";
-            const isSuper = role === "super_admin";
-            const planTier = u.plan_tier || (isSuper ? "pro" : isOfficeAdmin ? "plus" : void 0);
-            const planId = u.plan_id || (isOfficeAdmin ? planTier === "pro" ? "plan-pro" : planTier === "basic" ? "plan-basic" : "plan-plus" : null);
-            const quotaOverride = u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null;
-            const quota = u.ai_quota_limit !== void 0 ? u.ai_quota_limit : isSuper ? -1 : isOfficeAdmin ? planTier === "pro" ? 300 : 100 : void 0;
-            return {
-              ...u,
-              role,
-              admin_id: u.admin_id || null,
-              office_name: u.office_name || (isOfficeAdmin ? "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A" : null),
-              plan_tier: isSuper || isOfficeAdmin ? planTier : void 0,
-              plan_id: isOfficeAdmin ? planId : null,
-              ai_quota_limit_override: isOfficeAdmin ? quotaOverride : null,
-              billing_cycle: isSuper || isOfficeAdmin ? u.billing_cycle || "annual" : void 0,
-              ai_quota_limit: isSuper || isOfficeAdmin ? quota : void 0,
-              ai_usage_count: isSuper || isOfficeAdmin ? u.ai_usage_count || 0 : void 0
-            };
-          });
-          if (!hasAdmin) {
-            const adminHash = import_bcryptjs.default.hashSync("123456", 10);
-            const oneYearFromNow2 = /* @__PURE__ */ new Date();
-            oneYearFromNow2.setFullYear(oneYearFromNow2.getFullYear() + 1);
-            normalized.push({
-              id: "local-office-admin",
-              username: "admin1",
-              email: "office.admin@law.local",
-              role: "admin",
-              display_name: "\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 (\u0623\u062F\u0645\u0646)",
-              office_name: "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A",
-              status: "active",
-              subscription_end_date: oneYearFromNow2.toISOString(),
-              subscription_notes: "\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A \u0645\u0639\u062A\u0645\u062F \u0644\u0644\u0645\u0643\u062A\u0628",
-              plan_tier: "plus",
-              billing_cycle: "annual",
-              ai_quota_limit: 100,
-              ai_usage_count: 0,
-              password_hash: adminHash,
-              admin_id: null,
-              created_at: (/* @__PURE__ */ new Date()).toISOString()
-            });
-          }
-          for (const u of normalized) {
-            if (u.role === "staff" && !u.admin_id && (u.id === "local-lawyer-default" || u.username === "12345")) {
-              u.admin_id = "local-office-admin";
-            }
-          }
-          _localUsersCache = normalized;
-          return normalized;
-        }
-      }
-    } catch {
-    }
-  }
-  const superHash = import_bcryptjs.default.hashSync("123456", 10);
-  const officeAdminHash = import_bcryptjs.default.hashSync("admin123", 10);
-  const lawyerHash = import_bcryptjs.default.hashSync("12345", 10);
-  const oneYearFromNow = /* @__PURE__ */ new Date();
-  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-  const initial = [
-    {
-      id: "local-admin",
-      username: "123456",
-      email: "admin@law.internal",
-      role: "super_admin",
-      display_name: "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629 (Super Admin)",
-      status: "active",
-      subscription_end_date: null,
-      subscription_notes: "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u062F\u0627\u0626\u0645 \u0644\u0644\u0645\u0646\u0638\u0648\u0645\u0629",
-      plan_tier: "pro",
-      billing_cycle: "annual",
-      ai_quota_limit: -1,
-      ai_usage_count: 0,
-      admin_id: null,
-      office_name: null,
-      password_hash: superHash,
-      created_at: (/* @__PURE__ */ new Date()).toISOString()
-    },
-    {
-      id: "local-office-admin",
-      username: "admin1",
-      email: "office.admin@law.local",
-      role: "admin",
-      display_name: "\u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 (\u0623\u062F\u0645\u0646)",
-      office_name: "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A",
-      status: "active",
-      subscription_end_date: oneYearFromNow.toISOString(),
-      subscription_notes: "\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A \u0645\u0639\u062A\u0645\u062F \u0644\u0644\u0645\u0643\u062A\u0628",
-      plan_tier: "plus",
-      billing_cycle: "annual",
-      ai_quota_limit: 100,
-      ai_usage_count: 0,
-      admin_id: null,
-      password_hash: officeAdminHash,
-      created_at: (/* @__PURE__ */ new Date()).toISOString()
-    },
-    {
-      id: "local-lawyer-default",
-      username: "12345",
-      email: "lawyer@law.internal",
-      role: "staff",
-      display_name: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
-      status: "active",
-      admin_id: "local-office-admin",
-      password_hash: lawyerHash,
-      created_at: (/* @__PURE__ */ new Date()).toISOString()
-    }
-  ];
-  saveLocalUsers(initial);
-  return initial;
-}
-function saveLocalUsers(users) {
-  _localUsersCache = users;
-  const content = JSON.stringify(users, null, 2);
-  const paths = [LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE];
-  for (const p of paths) {
-    try {
-      (0, import_fs.writeFileSync)(p, content, "utf-8");
-    } catch {
-    }
-  }
-}
-function loadLocalPlans() {
-  if (_localPlansCache) {
-    return _localPlansCache;
-  }
-  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      if ((0, import_fs.existsSync)(p)) {
-        const raw = (0, import_fs.readFileSync)(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list) && list.length > 0) {
-          _localPlansCache = list;
-          return list;
-        }
-      }
-    } catch {
-    }
-  }
-  _localPlansCache = [...DEFAULT_SUBSCRIPTION_PLANS];
-  saveLocalPlans(_localPlansCache);
-  return _localPlansCache;
-}
-function saveLocalPlans(plans) {
-  _localPlansCache = plans;
-  const content = JSON.stringify(plans, null, 2);
-  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      (0, import_fs.writeFileSync)(p, content, "utf-8");
-    } catch {
-    }
-  }
-}
-function loadLocalOfficePlans() {
-  if (_localOfficePlansCache) {
-    return _localOfficePlansCache;
-  }
-  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      if ((0, import_fs.existsSync)(p)) {
-        const raw = (0, import_fs.readFileSync)(p, "utf-8");
-        const data = JSON.parse(raw);
-        if (typeof data === "object" && data !== null) {
-          _localOfficePlansCache = data;
-          return data;
-        }
-      }
-    } catch {
-    }
-  }
-  _localOfficePlansCache = {};
-  return _localOfficePlansCache;
-}
-function saveLocalOfficePlans(data) {
-  _localOfficePlansCache = data;
-  const content = JSON.stringify(data, null, 2);
-  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      (0, import_fs.writeFileSync)(p, content, "utf-8");
-    } catch {
-    }
-  }
-}
-function loadLocalAuditLogs() {
-  if (_localAuditLogCache) {
-    return _localAuditLogCache;
-  }
-  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
-  for (const p of paths) {
-    try {
-      if ((0, import_fs.existsSync)(p)) {
-        const raw = (0, import_fs.readFileSync)(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          _localAuditLogCache = list;
-          return list;
-        }
-      }
-    } catch {
-    }
-  }
-  _localAuditLogCache = [];
-  return _localAuditLogCache;
-}
-function saveLocalAuditLogs(logs) {
-  _localAuditLogCache = logs;
-  const content = JSON.stringify(logs, null, 2);
-  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
-  for (const p of paths) {
-    try {
-      (0, import_fs.writeFileSync)(p, content, "utf-8");
-    } catch {
-    }
-  }
-}
-function loadLocalPlatformSettings() {
-  if (_localPlatformSettingsCache) {
-    return _localPlatformSettingsCache;
-  }
-  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
-  for (const p of paths) {
-    try {
-      if ((0, import_fs.existsSync)(p)) {
-        const raw = (0, import_fs.readFileSync)(p, "utf-8");
-        const data = JSON.parse(raw);
-        if (typeof data === "object" && data !== null) {
-          const loaded = {
-            ...DEFAULT_PLATFORM_SETTINGS,
-            ...data
-          };
-          _localPlatformSettingsCache = loaded;
-          return loaded;
-        }
-      }
-    } catch {
-    }
-  }
-  const fallback = { ...DEFAULT_PLATFORM_SETTINGS };
-  _localPlatformSettingsCache = fallback;
-  return fallback;
-}
-function saveLocalPlatformSettings(settings) {
-  _localPlatformSettingsCache = settings;
-  const content = JSON.stringify(settings, null, 2);
-  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
-  for (const p of paths) {
-    try {
-      (0, import_fs.writeFileSync)(p, content, "utf-8");
-    } catch {
-    }
-  }
-}
-function loadLocalPayments() {
-  if (_localPaymentsCache) {
-    return _localPaymentsCache;
-  }
-  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
-  for (const p of paths) {
-    try {
-      if ((0, import_fs.existsSync)(p)) {
-        const raw = (0, import_fs.readFileSync)(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          _localPaymentsCache = list;
-          return list;
-        }
-      }
-    } catch {
-    }
-  }
-  _localPaymentsCache = [];
-  return _localPaymentsCache;
-}
-function saveLocalPayments(payments) {
-  _localPaymentsCache = payments;
-  const content = JSON.stringify(payments, null, 2);
-  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
-  for (const p of paths) {
-    try {
-      (0, import_fs.writeFileSync)(p, content, "utf-8");
-    } catch {
-    }
-  }
-}
 function resetInMemoryPayments() {
-  _localPaymentsCache = [];
-  saveLocalPayments([]);
 }
 function getSupabaseClient() {
   if (!isSupabaseConfigured()) {
@@ -57277,44 +56956,7 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
   const cleanIdentifier = usernameOrEmail.trim().toLowerCase();
   const client = getSupabaseClient();
   if (!client) {
-    const localUsers = loadLocalUsers();
-    const user = localUsers.find(
-      (u) => u.username.toLowerCase() === cleanIdentifier || u.email && u.email.toLowerCase() === cleanIdentifier
-    );
-    if (!user) return null;
-    if (user.status === "pending_activation") {
-      throw new UserPendingActivationError();
-    }
-    if (!user.password_hash) return null;
-    let isValid2 = false;
-    if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
-      isValid2 = await import_bcryptjs.default.compare(plainPassword, user.password_hash);
-      if (!isValid2 && cleanIdentifier === "admin1" && (plainPassword === "admin123" || plainPassword === "123456")) {
-        isValid2 = true;
-      }
-    } else {
-      isValid2 = user.password_hash === plainPassword;
-    }
-    if (!isValid2) return null;
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role || "staff",
-      admin_id: user.admin_id || null,
-      office_name: user.office_name || null,
-      display_name: user.display_name,
-      status: user.status || "active",
-      subscription_end_date: user.subscription_end_date || null,
-      subscription_notes: user.subscription_notes || null,
-      plan_tier: user.plan_tier,
-      billing_cycle: user.billing_cycle,
-      ai_quota_limit: user.ai_quota_limit,
-      ai_usage_count: user.ai_usage_count || 0,
-      google_spreadsheet_id: user.google_spreadsheet_id,
-      google_sheet_name: user.google_sheet_name,
-      created_at: user.created_at
-    };
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   try {
     const tableName = env.supabaseTableName;
@@ -57453,35 +57095,7 @@ async function findUserByIdOrUsername(identifier) {
   }
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    const user = local.find(
-      (u) => u.id.toLowerCase() === clean || u.username.toLowerCase() === clean
-    );
-    if (!user) {
-      userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
-      return null;
-    }
-    const result = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role || "staff",
-      admin_id: user.admin_id || null,
-      office_name: user.office_name || null,
-      display_name: user.display_name,
-      status: user.status || "active",
-      subscription_end_date: user.subscription_end_date || null,
-      subscription_notes: user.subscription_notes || null,
-      plan_tier: user.plan_tier,
-      billing_cycle: user.billing_cycle,
-      ai_quota_limit: user.ai_quota_limit,
-      ai_usage_count: user.ai_usage_count || 0,
-      google_spreadsheet_id: user.google_spreadsheet_id,
-      google_sheet_name: user.google_sheet_name,
-      created_at: user.created_at
-    };
-    userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
-    return result;
+    throw new AccountSourceUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   try {
     const tableName = env.supabaseTableName;
@@ -57498,33 +57112,6 @@ async function findUserByIdOrUsername(identifier) {
       throw new AccountSourceUnavailableError(`Account database error: ${error.message}`);
     }
     if (!data || data.length === 0) {
-      const local = loadLocalUsers();
-      const localUser = local.find(
-        (u2) => u2.id.toLowerCase() === clean || u2.username.toLowerCase() === clean
-      );
-      if (localUser) {
-        const result2 = {
-          id: localUser.id,
-          username: localUser.username,
-          email: localUser.email,
-          role: localUser.role || "staff",
-          admin_id: localUser.admin_id || null,
-          office_name: localUser.office_name || null,
-          display_name: localUser.display_name,
-          status: localUser.status || "active",
-          subscription_end_date: localUser.subscription_end_date || null,
-          subscription_notes: localUser.subscription_notes || null,
-          plan_tier: localUser.plan_tier,
-          billing_cycle: localUser.billing_cycle,
-          ai_quota_limit: localUser.ai_quota_limit,
-          ai_usage_count: localUser.ai_usage_count || 0,
-          google_spreadsheet_id: localUser.google_spreadsheet_id,
-          google_sheet_name: localUser.google_sheet_name,
-          created_at: localUser.created_at
-        };
-        userAuthCache.set(clean, { user: result2, cachedAt: Date.now() });
-        return result2;
-      }
       userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
       return null;
     }
@@ -57593,12 +57180,7 @@ async function getUserGoogleCredentials(userId) {
   let spreadsheetId = null;
   let sheetName = null;
   if (!client) {
-    const local = loadLocalUsers();
-    const adminRecord = local.find((u) => u.id === targetAdminId || u.username === targetAdminId);
-    if (!adminRecord) return null;
-    rawJson = adminRecord.google_service_account_json || null;
-    spreadsheetId = adminRecord.google_spreadsheet_id?.trim() || null;
-    sheetName = adminRecord.google_sheet_name?.trim() || "Sessions";
+    throw new AccountSourceUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   } else {
     try {
       const tableName = env.supabaseTableName;
@@ -57662,8 +57244,8 @@ async function checkAndIncrementOfficeAiUsage(userId) {
   const currentLock = officeAiLocks.get(targetAdminId) || Promise.resolve();
   let releaseLock = () => {
   };
-  const nextLock = new Promise((resolve4) => {
-    releaseLock = resolve4;
+  const nextLock = new Promise((resolve3) => {
+    releaseLock = resolve3;
   });
   officeAiLocks.set(targetAdminId, currentLock.then(() => nextLock));
   await currentLock;
@@ -57911,30 +57493,7 @@ function clearFallbackActivationToken(userId) {
 async function listSupabaseUsers() {
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    return local.map((u) => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      role: u.role || "staff",
-      admin_id: u.admin_id || null,
-      office_name: u.office_name || null,
-      display_name: u.display_name,
-      status: u.status || "active",
-      phone: u.phone || null,
-      subscription_end_date: u.subscription_end_date || null,
-      subscription_notes: u.subscription_notes || null,
-      plan_tier: u.plan_tier,
-      plan_id: u.plan_id || null,
-      ai_quota_limit_override: u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null,
-      billing_cycle: u.billing_cycle,
-      ai_quota_limit: u.ai_quota_limit,
-      ai_usage_count: u.ai_usage_count || 0,
-      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-      google_spreadsheet_id: u.google_spreadsheet_id || null,
-      google_sheet_name: u.google_sheet_name || null,
-      created_at: u.created_at
-    }));
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const tableName = env.supabaseTableName;
   const hasPhone = await checkHasPhoneColumn(client);
@@ -57942,31 +57501,8 @@ async function listSupabaseUsers() {
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
   const { data, error } = await client.from(tableName).select(selectCols).order("created_at", { ascending: false });
   if (error) {
-    logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
-    const local = loadLocalUsers();
-    return local.map((u) => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      role: u.role || "staff",
-      admin_id: u.admin_id || null,
-      office_name: u.office_name || null,
-      display_name: u.display_name,
-      status: u.status || "active",
-      phone: u.phone || null,
-      subscription_end_date: u.subscription_end_date || null,
-      subscription_notes: u.subscription_notes || null,
-      plan_tier: u.plan_tier,
-      plan_id: u.plan_id || null,
-      ai_quota_limit_override: u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null,
-      billing_cycle: u.billing_cycle,
-      ai_quota_limit: u.ai_quota_limit,
-      ai_usage_count: u.ai_usage_count || 0,
-      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-      google_spreadsheet_id: u.google_spreadsheet_id || null,
-      google_sheet_name: u.google_sheet_name || null,
-      created_at: u.created_at
-    }));
+    logger.error({ error }, "Failed to list users from Supabase");
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   return (data || []).map((u) => ({
     id: u.id,
@@ -57994,49 +57530,51 @@ async function listSupabaseUsers() {
 }
 async function listSubscriptionPlans() {
   const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+  }
   let plans = [];
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        const { data, error } = await client.from("subscription_plans").select("*").order("ai_quota_limit", { ascending: true });
-        if (!error && Array.isArray(data) && data.length > 0) {
-          plans = data.map((row) => ({
-            id: row.id,
-            name: row.name,
-            slug: row.slug,
-            ai_quota_limit: Number(row.ai_quota_limit),
-            price: row.price || "",
-            features: typeof row.features === "object" && row.features !== null ? row.features : {},
-            created_at: row.created_at,
-            updated_at: row.updated_at
-          }));
-        } else if (!error && Array.isArray(data) && data.length === 0) {
-          for (const dp of DEFAULT_SUBSCRIPTION_PLANS) {
-            try {
-              await client.from("subscription_plans").insert([{
-                id: dp.id,
-                name: dp.name,
-                slug: dp.slug,
-                ai_quota_limit: dp.ai_quota_limit,
-                price: dp.price,
-                features: dp.features
-              }]);
-            } catch {
-            }
-          }
-          plans = [...DEFAULT_SUBSCRIPTION_PLANS];
-        } else {
-          plans = loadLocalPlans();
-        }
-      } else {
-        plans = loadLocalPlans();
+  try {
+    const hasTable = await checkHasSubscriptionPlansTable(client);
+    if (hasTable) {
+      const { data, error } = await client.from("subscription_plans").select("*").order("ai_quota_limit", { ascending: true });
+      if (error) {
+        throw new Error(`\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u0627\u0642\u0627\u062A \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643: ${error.message}`);
       }
-    } catch {
-      plans = loadLocalPlans();
+      if (Array.isArray(data) && data.length > 0) {
+        plans = data.map((row) => ({
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          ai_quota_limit: Number(row.ai_quota_limit),
+          price: row.price || "",
+          features: typeof row.features === "object" && row.features !== null ? row.features : {},
+          created_at: row.created_at,
+          updated_at: row.updated_at
+        }));
+      } else if (Array.isArray(data) && data.length === 0) {
+        for (const dp of DEFAULT_SUBSCRIPTION_PLANS) {
+          try {
+            await client.from("subscription_plans").insert([{
+              id: dp.id,
+              name: dp.name,
+              slug: dp.slug,
+              ai_quota_limit: dp.ai_quota_limit,
+              price: dp.price,
+              features: dp.features
+            }]);
+          } catch {
+          }
+        }
+        plans = [...DEFAULT_SUBSCRIPTION_PLANS];
+      }
+    } else {
+      plans = [...DEFAULT_SUBSCRIPTION_PLANS];
     }
-  } else {
-    plans = loadLocalPlans();
+  } catch (err) {
+    if (err instanceof DatabaseUnavailableError) throw err;
+    logger.warn({ err }, "Supabase listSubscriptionPlans failed, defaulting to default plans");
+    plans = [...DEFAULT_SUBSCRIPTION_PLANS];
   }
   try {
     const allUsers = await listSupabaseUsers();
@@ -58092,36 +57630,30 @@ async function createSubscriptionPlan(input) {
     updated_at: now
   };
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        const { data, error } = await client.from("subscription_plans").insert([{
-          id,
-          name,
-          slug,
-          ai_quota_limit: quotaLimit,
-          price,
-          features,
-          created_at: now,
-          updated_at: now
-        }]).select().single();
-        if (!error && data) {
-          const local2 = loadLocalPlans();
-          saveLocalPlans([...local2, newPlan]);
-          return {
-            ...newPlan,
-            id: data.id || id
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase insert into subscription_plans failed, using local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  const local = loadLocalPlans();
-  saveLocalPlans([...local, newPlan]);
-  return newPlan;
+  const hasTable = await checkHasSubscriptionPlansTable(client);
+  if (!hasTable) {
+    throw new Error("\u062C\u062F\u0648\u0644 \u0628\u0627\u0642\u0627\u062A \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.");
+  }
+  const { data, error } = await client.from("subscription_plans").insert([{
+    id,
+    name,
+    slug,
+    ai_quota_limit: quotaLimit,
+    price,
+    features,
+    created_at: now,
+    updated_at: now
+  }]).select().single();
+  if (error || !data) {
+    throw new Error(`\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643: ${error?.message || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}`);
+  }
+  return {
+    ...newPlan,
+    id: data.id || id
+  };
 }
 async function updateSubscriptionPlan(id, input) {
   const existingPlans = await listSubscriptionPlans();
@@ -58153,31 +57685,24 @@ async function updateSubscriptionPlan(id, input) {
   }
   plan.updated_at = (/* @__PURE__ */ new Date()).toISOString();
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        await client.from("subscription_plans").update({
-          name: plan.name,
-          slug: plan.slug,
-          ai_quota_limit: plan.ai_quota_limit,
-          price: plan.price,
-          features: plan.features,
-          updated_at: plan.updated_at
-        }).eq("id", id);
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase update subscription_plans failed, updating local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  const local = loadLocalPlans();
-  const idx = local.findIndex((p) => p.id === id);
-  if (idx !== -1) {
-    local[idx] = { ...plan };
-  } else {
-    local.push(plan);
+  const hasTable = await checkHasSubscriptionPlansTable(client);
+  if (!hasTable) {
+    throw new Error("\u062C\u062F\u0648\u0644 \u0628\u0627\u0642\u0627\u062A \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.");
   }
-  saveLocalPlans(local);
+  const { error } = await client.from("subscription_plans").update({
+    name: plan.name,
+    slug: plan.slug,
+    ai_quota_limit: plan.ai_quota_limit,
+    price: plan.price,
+    features: plan.features,
+    updated_at: plan.updated_at
+  }).eq("id", id);
+  if (error) {
+    throw new Error(`\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643: ${error.message}`);
+  }
   return plan;
 }
 async function deleteSubscriptionPlan(id) {
@@ -58196,19 +57721,16 @@ async function deleteSubscriptionPlan(id) {
     );
   }
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        await client.from("subscription_plans").delete().eq("id", id);
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase delete subscription_plans failed");
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+  }
+  const hasTable = await checkHasSubscriptionPlansTable(client);
+  if (hasTable) {
+    const { error } = await client.from("subscription_plans").delete().eq("id", id);
+    if (error) {
+      throw new Error(`\u0641\u0634\u0644 \u062D\u0630\u0641 \u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643: ${error.message}`);
     }
   }
-  const local = loadLocalPlans();
-  const filtered = local.filter((p) => p.id !== id);
-  saveLocalPlans(filtered);
 }
 async function getOfficeFeatures(officeId) {
   const user = await findUserByIdOrUsername(officeId);
@@ -58233,10 +57755,8 @@ async function getOfficeFeatures(officeId) {
       features: { ...defaultPlan.features }
     };
   }
-  const officePlans = loadLocalOfficePlans();
-  const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
-  const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
-  const resolvedOverride = admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== void 0 ? admin.ai_quota_limit_override : fallbackAssignment?.ai_quota_limit_override ?? null;
+  const resolvedPlanId = admin.plan_id || null;
+  const resolvedOverride = admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== void 0 ? admin.ai_quota_limit_override : null;
   const plans = await listSubscriptionPlans();
   let plan = plans.find((p) => p.id === resolvedPlanId) || null;
   if (!plan && admin.plan_tier) {
@@ -58267,12 +57787,10 @@ async function listSupabaseAdmins() {
   ]);
   const officeAdmins = allUsers.filter((u) => u.role === "admin");
   const staffUsers = allUsers.filter((u) => u.role === "staff");
-  const officePlans = loadLocalOfficePlans();
   return officeAdmins.map((admin) => {
     const memberCount = staffUsers.filter((s3) => s3.admin_id === admin.id).length;
-    const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
-    const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
-    const resolvedOverride = admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== void 0 ? admin.ai_quota_limit_override : fallbackAssignment?.ai_quota_limit_override ?? null;
+    const resolvedPlanId = admin.plan_id || null;
+    const resolvedOverride = admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== void 0 ? admin.ai_quota_limit_override : null;
     let plan = plans.find((p) => p.id === resolvedPlanId) || null;
     if (!plan && admin.plan_tier) {
       plan = plans.find((p) => p.slug === admin.plan_tier || p.id === `plan-${admin.plan_tier}`) || null;
@@ -58339,16 +57857,6 @@ async function createSupabaseAdmin(input) {
     ai_quota_limit: quota,
     ai_quota_limit_override: quotaOverride
   });
-  const officePlans = loadLocalOfficePlans();
-  officePlans[createdUser.id] = {
-    plan_id: planId,
-    ai_quota_limit_override: quotaOverride
-  };
-  officePlans[username] = {
-    plan_id: planId,
-    ai_quota_limit_override: quotaOverride
-  };
-  saveLocalOfficePlans(officePlans);
   return {
     ...createdUser,
     plan_id: planId,
@@ -58359,12 +57867,11 @@ async function createSupabaseAdmin(input) {
 }
 async function updateSupabaseAdmin(id, input) {
   const plans = await listSubscriptionPlans();
-  const officePlans = loadLocalOfficePlans();
-  const existingAssignment = officePlans[id];
-  let planId = input.plan_id ?? existingAssignment?.plan_id;
+  const existingUser = await findUserByIdOrUsername(id);
+  let planId = input.plan_id ?? existingUser?.plan_id ?? void 0;
   let planTier = input.plan_tier;
   let quota = input.ai_quota_limit;
-  let quotaOverride = input.ai_quota_limit_override !== void 0 ? input.ai_quota_limit_override : existingAssignment?.ai_quota_limit_override;
+  let quotaOverride = input.ai_quota_limit_override !== void 0 ? input.ai_quota_limit_override : existingUser?.ai_quota_limit_override ?? null;
   let selectedPlan = null;
   if (input.plan_id) {
     selectedPlan = plans.find((p) => p.id === input.plan_id || p.slug === input.plan_id) || null;
@@ -58390,8 +57897,7 @@ async function updateSupabaseAdmin(id, input) {
         quota = quotaOverride;
       }
     } else {
-      const existingUser = await findUserByIdOrUsername(id);
-      if (existingUser && !existingUser.ai_quota_limit_override && existingAssignment?.ai_quota_limit_override === null) {
+      if (existingUser && !existingUser.ai_quota_limit_override) {
         quota = selectedPlan.ai_quota_limit;
       }
     }
@@ -58407,7 +57913,7 @@ async function updateSupabaseAdmin(id, input) {
       planTier = input.plan_tier === "pro" ? "pro" : "plus";
     }
   } else if (input.ai_quota_limit_override !== void 0) {
-    const currentPlanId = planId || existingAssignment?.plan_id;
+    const currentPlanId = planId || existingUser?.plan_id;
     selectedPlan = plans.find((p) => p.id === currentPlanId) || DEFAULT_SUBSCRIPTION_PLANS[1];
     if (input.ai_quota_limit_override === null) {
       quotaOverride = null;
@@ -58425,19 +57931,14 @@ async function updateSupabaseAdmin(id, input) {
   if (quota !== void 0) updatePayload.ai_quota_limit = quota;
   if (quotaOverride !== void 0) updatePayload.ai_quota_limit_override = quotaOverride;
   const updatedUser = await updateSupabaseUser(id, updatePayload);
-  officePlans[id] = {
-    plan_id: planId ?? officePlans[id]?.plan_id ?? null,
-    ai_quota_limit_override: quotaOverride !== void 0 ? quotaOverride : officePlans[id]?.ai_quota_limit_override ?? null
-  };
-  saveLocalOfficePlans(officePlans);
   if (!selectedPlan) {
-    selectedPlan = plans.find((p) => p.id === (planId || officePlans[id]?.plan_id)) || null;
+    selectedPlan = plans.find((p) => p.id === (planId || updatedUser.plan_id)) || null;
   }
   return {
     ...updatedUser,
-    plan_id: planId || officePlans[id]?.plan_id || null,
+    plan_id: planId || updatedUser.plan_id || null,
     ai_quota_limit: quota ?? updatedUser.ai_quota_limit,
-    ai_quota_limit_override: quotaOverride !== void 0 ? quotaOverride : officePlans[id]?.ai_quota_limit_override ?? null,
+    ai_quota_limit_override: quotaOverride !== void 0 ? quotaOverride : updatedUser.ai_quota_limit_override ?? null,
     plan: selectedPlan
   };
 }
@@ -58706,15 +58207,9 @@ async function recordAuditLog(entry) {
         ]);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase audit_log insert failed, persisting locally");
+      logger.warn({ err }, "Supabase audit_log insert failed");
     }
   }
-  const localLogs = loadLocalAuditLogs();
-  localLogs.unshift(newLog);
-  if (localLogs.length > 1e3) {
-    localLogs.length = 1e3;
-  }
-  saveLocalAuditLogs(localLogs);
 }
 async function listAuditLogs(options) {
   const page = Math.max(1, Number(options?.page) || 1);
@@ -58722,36 +58217,30 @@ async function listAuditLogs(options) {
   const offset = (page - 1) * limit;
   const officeId = options?.office_id?.trim();
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasAuditLogTable(client);
-      if (hasTable) {
-        let query = client.from("audit_log").select("*", { count: "exact" });
-        if (officeId) {
-          query = query.eq("target_office_id", officeId);
-        }
-        const { data, count, error } = await query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
-        if (!error && Array.isArray(data)) {
-          const total2 = count ?? data.length;
-          return {
-            logs: data,
-            total: total2,
-            page,
-            limit,
-            total_pages: Math.ceil(total2 / limit) || 1
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listAuditLogs failed, reading from local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  const local = loadLocalAuditLogs();
-  const filtered = officeId ? local.filter((l) => l.target_office_id === officeId) : local;
-  const total = filtered.length;
-  const sliced = filtered.slice(offset, offset + limit);
+  const hasTable = await checkHasAuditLogTable(client);
+  if (!hasTable) {
+    return {
+      logs: [],
+      total: 0,
+      page,
+      limit,
+      total_pages: 1
+    };
+  }
+  let query = client.from("audit_log").select("*", { count: "exact" });
+  if (officeId) {
+    query = query.eq("target_office_id", officeId);
+  }
+  const { data, count, error } = await query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+  if (error) {
+    throw new Error(`\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0633\u062C\u0644 \u0627\u0644\u062A\u062F\u0642\u064A\u0642: ${error.message}`);
+  }
+  const total = count ?? (data?.length || 0);
   return {
-    logs: sliced,
+    logs: data || [],
     total,
     page,
     limit,
@@ -58760,28 +58249,25 @@ async function listAuditLogs(options) {
 }
 async function getPlatformSettings() {
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPlatformSettingsTable(client);
-      if (hasTable) {
-        const { data, error } = await client.from("platform_settings").select("value, updated_at").eq("key", "general").single();
-        if (!error && data?.value) {
-          return {
-            ...DEFAULT_PLATFORM_SETTINGS,
-            ...data.value,
-            updated_at: data.updated_at
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getPlatformSettings failed, reading local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  const local = loadLocalPlatformSettings();
-  return {
-    ...DEFAULT_PLATFORM_SETTINGS,
-    ...local
-  };
+  const hasTable = await checkHasPlatformSettingsTable(client);
+  if (!hasTable) {
+    return { ...DEFAULT_PLATFORM_SETTINGS };
+  }
+  const { data, error } = await client.from("platform_settings").select("value, updated_at").eq("key", "general").maybeSingle();
+  if (error) {
+    throw new Error(`\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629: ${error.message}`);
+  }
+  if (data?.value) {
+    return {
+      ...DEFAULT_PLATFORM_SETTINGS,
+      ...data.value,
+      updated_at: data.updated_at
+    };
+  }
+  return { ...DEFAULT_PLATFORM_SETTINGS };
 }
 async function updatePlatformSettings(updates) {
   const current = await getPlatformSettings();
@@ -58795,26 +58281,25 @@ async function updatePlatformSettings(updates) {
     updated_at: (/* @__PURE__ */ new Date()).toISOString()
   };
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPlatformSettingsTable(client);
-      if (hasTable) {
-        await client.from("platform_settings").upsert({
-          key: "general",
-          value: {
-            activation_link_expiry_hours: merged.activation_link_expiry_hours,
-            new_office_registration_enabled: merged.new_office_registration_enabled,
-            support_contact_email: merged.support_contact_email,
-            support_contact_phone: merged.support_contact_phone
-          },
-          updated_at: merged.updated_at
-        });
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase update platform_settings failed, persisting locally");
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+  }
+  const hasTable = await checkHasPlatformSettingsTable(client);
+  if (hasTable) {
+    const { error } = await client.from("platform_settings").upsert({
+      key: "general",
+      value: {
+        activation_link_expiry_hours: merged.activation_link_expiry_hours,
+        new_office_registration_enabled: merged.new_office_registration_enabled,
+        support_contact_email: merged.support_contact_email,
+        support_contact_phone: merged.support_contact_phone
+      },
+      updated_at: merged.updated_at
+    });
+    if (error) {
+      throw new Error(`\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629: ${error.message}`);
     }
   }
-  saveLocalPlatformSettings(merged);
   return merged;
 }
 async function checkHasPaymentsTable(client) {
@@ -58826,6 +58311,10 @@ async function checkHasPaymentsTable(client) {
   }
 }
 async function createPayment(data) {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+  }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const paymentDate = data.payment_date || now.split("T")[0];
   const newPayment = {
@@ -58841,119 +58330,104 @@ async function createPayment(data) {
     created_at: now,
     updated_at: now
   };
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPaymentsTable(client);
-      if (hasTable) {
-        const { data: inserted, error } = await client.from("payments").insert([
-          {
-            id: newPayment.id,
-            office_id: newPayment.office_id,
-            amount: newPayment.amount,
-            currency: newPayment.currency,
-            payment_date: newPayment.payment_date,
-            method: newPayment.method,
-            status: newPayment.status,
-            notes: newPayment.notes,
-            recorded_by: newPayment.recorded_by,
-            created_at: newPayment.created_at,
-            updated_at: newPayment.updated_at
-          }
-        ]).select().single();
-        if (!error && inserted) {
-          newPayment.id = inserted.id;
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase payments insert failed, persisting locally");
-    }
+  const hasTable = await checkHasPaymentsTable(client);
+  if (!hasTable) {
+    throw new Error("\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u062F\u0641\u0648\u0639\u0627\u062A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.");
   }
-  const local = loadLocalPayments();
-  local.unshift(newPayment);
-  saveLocalPayments(local);
+  const { data: inserted, error } = await client.from("payments").insert([
+    {
+      id: newPayment.id,
+      office_id: newPayment.office_id,
+      amount: newPayment.amount,
+      currency: newPayment.currency,
+      payment_date: newPayment.payment_date,
+      method: newPayment.method,
+      status: newPayment.status,
+      notes: newPayment.notes,
+      recorded_by: newPayment.recorded_by,
+      created_at: newPayment.created_at,
+      updated_at: newPayment.updated_at
+    }
+  ]).select().single();
+  if (error || !inserted) {
+    throw new Error(`\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0633\u062C\u0644 \u0627\u0644\u062F\u0641\u0639: ${error?.message || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}`);
+  }
+  newPayment.id = inserted.id;
   return newPayment;
 }
 async function updatePayment(id, updates) {
-  const local = loadLocalPayments();
-  const idx = local.findIndex((p) => p.id === id);
-  if (idx === -1) {
-    return null;
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  const current = local[idx];
-  const updated = {
-    ...current,
-    ...updates,
-    amount: updates.amount !== void 0 ? Number(updates.amount) : current.amount,
+  const hasTable = await checkHasPaymentsTable(client);
+  if (!hasTable) {
+    throw new Error("\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u062F\u0641\u0648\u0639\u0627\u062A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.");
+  }
+  const updateData = {
+    ...updates.amount !== void 0 ? { amount: Number(updates.amount) } : {},
+    ...updates.currency !== void 0 ? { currency: updates.currency } : {},
+    ...updates.payment_date !== void 0 ? { payment_date: updates.payment_date } : {},
+    ...updates.method !== void 0 ? { method: updates.method } : {},
+    ...updates.status !== void 0 ? { status: updates.status } : {},
+    ...updates.notes !== void 0 ? { notes: updates.notes } : {},
     updated_at: (/* @__PURE__ */ new Date()).toISOString()
   };
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPaymentsTable(client);
-      if (hasTable) {
-        await client.from("payments").update({
-          ...updates.amount !== void 0 ? { amount: updated.amount } : {},
-          ...updates.currency !== void 0 ? { currency: updated.currency } : {},
-          ...updates.payment_date !== void 0 ? { payment_date: updated.payment_date } : {},
-          ...updates.method !== void 0 ? { method: updated.method } : {},
-          ...updates.status !== void 0 ? { status: updated.status } : {},
-          ...updates.notes !== void 0 ? { notes: updated.notes } : {},
-          updated_at: updated.updated_at
-        }).eq("id", id);
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase update payments failed, updating local");
-    }
+  const { data, error } = await client.from("payments").update(updateData).eq("id", id).select().maybeSingle();
+  if (error) {
+    throw new Error(`\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0627\u0644\u062F\u0641\u0639: ${error.message}`);
   }
-  local[idx] = updated;
-  saveLocalPayments(local);
-  return updated;
+  if (!data) return null;
+  return {
+    id: data.id,
+    office_id: data.office_id,
+    amount: Number(data.amount) || 0,
+    currency: data.currency || "SAR",
+    payment_date: data.payment_date,
+    method: data.method || "bank_transfer",
+    status: data.status || "paid",
+    notes: data.notes || null,
+    recorded_by: data.recorded_by || null,
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  };
 }
 async function listPayments(options) {
   const admins = await listSupabaseAdmins();
   const adminMap = new Map(admins.map((a) => [a.id, a]));
   const client = getSupabaseClient();
-  let items = [];
-  if (client) {
-    try {
-      const hasTable = await checkHasPaymentsTable(client);
-      if (hasTable) {
-        let q = client.from("payments").select("*").order("created_at", { ascending: false });
-        if (options?.office_id) {
-          q = q.eq("office_id", options.office_id);
-        }
-        if (options?.status) {
-          q = q.eq("status", options.status);
-        }
-        const { data, error } = await q;
-        if (!error && Array.isArray(data)) {
-          items = data.map((d) => ({
-            id: d.id,
-            office_id: d.office_id,
-            amount: Number(d.amount) || 0,
-            currency: d.currency || "SAR",
-            payment_date: d.payment_date,
-            method: d.method || "bank_transfer",
-            status: d.status || "paid",
-            notes: d.notes || null,
-            recorded_by: d.recorded_by || null,
-            created_at: d.created_at,
-            updated_at: d.updated_at
-          }));
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listPayments failed, reading local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  if (items.length === 0) {
-    const local = loadLocalPayments();
-    items = local.filter((p) => {
-      if (options?.office_id && p.office_id !== options.office_id) return false;
-      if (options?.status && p.status !== options.status) return false;
-      return true;
-    });
+  let items = [];
+  const hasTable = await checkHasPaymentsTable(client);
+  if (hasTable) {
+    let q = client.from("payments").select("*").order("created_at", { ascending: false });
+    if (options?.office_id) {
+      q = q.eq("office_id", options.office_id);
+    }
+    if (options?.status) {
+      q = q.eq("status", options.status);
+    }
+    const { data, error } = await q;
+    if (error) {
+      throw new Error(`\u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0627\u0644\u0645\u062F\u0641\u0648\u0639\u0627\u062A: ${error.message}`);
+    }
+    if (Array.isArray(data)) {
+      items = data.map((d) => ({
+        id: d.id,
+        office_id: d.office_id,
+        amount: Number(d.amount) || 0,
+        currency: d.currency || "SAR",
+        payment_date: d.payment_date,
+        method: d.method || "bank_transfer",
+        status: d.status || "paid",
+        notes: d.notes || null,
+        recorded_by: d.recorded_by || null,
+        created_at: d.created_at,
+        updated_at: d.updated_at
+      }));
+    }
   }
   return items.map((p) => {
     const office = adminMap.get(p.office_id);
@@ -59656,64 +59130,7 @@ async function createSupabaseUser(input) {
   const ai_usage_count = 0;
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    if (local.some((u) => u.username.toLowerCase() === username)) {
-      throw new Error(`\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 "${username}" \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B.`);
-    }
-    const newUser = {
-      id: `local-${import_crypto2.default.randomUUID()}`,
-      username,
-      email: input.email?.trim() || null,
-      role,
-      admin_id: role === "staff" ? input.admin_id || null : null,
-      office_name: isOfficeAdmin ? input.office_name?.trim() || null : null,
-      display_name: input.display_name?.trim() || username,
-      status,
-      phone: input.phone?.trim() || null,
-      subscription_end_date,
-      subscription_notes,
-      plan_tier,
-      plan_id: isOfficeAdmin ? input.plan_id || null : null,
-      ai_quota_limit_override: isOfficeAdmin ? input.ai_quota_limit_override !== void 0 ? input.ai_quota_limit_override : null : null,
-      billing_cycle,
-      ai_quota_limit,
-      ai_usage_count,
-      google_service_account_json: encryptedGoogleJson,
-      google_spreadsheet_id: isOfficeAdmin ? input.google_spreadsheet_id?.trim() || null : null,
-      google_sheet_name: isOfficeAdmin ? input.google_sheet_name?.trim() || null : null,
-      has_google_service: Boolean(encryptedGoogleJson),
-      password_hash,
-      activation_token_hash: input.activation_token_hash || null,
-      activation_token_expires_at: input.activation_token_expires_at || null,
-      created_at: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    local.unshift(newUser);
-    saveLocalUsers(local);
-    return {
-      id: newUser.id,
-      username: newUser.username,
-      email: newUser.email,
-      role: newUser.role,
-      admin_id: newUser.admin_id,
-      office_name: newUser.office_name,
-      display_name: newUser.display_name,
-      status: newUser.status,
-      phone: newUser.phone,
-      subscription_end_date: newUser.subscription_end_date,
-      subscription_notes: newUser.subscription_notes,
-      plan_tier: newUser.plan_tier,
-      plan_id: newUser.plan_id,
-      ai_quota_limit_override: newUser.ai_quota_limit_override,
-      billing_cycle: newUser.billing_cycle,
-      ai_quota_limit: newUser.ai_quota_limit,
-      ai_usage_count: newUser.ai_usage_count,
-      activation_token_hash: newUser.activation_token_hash,
-      activation_token_expires_at: newUser.activation_token_expires_at,
-      has_google_service: newUser.has_google_service,
-      google_spreadsheet_id: newUser.google_spreadsheet_id,
-      google_sheet_name: newUser.google_sheet_name,
-      created_at: newUser.created_at
-    };
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const tableName = env.supabaseTableName;
   const { data: existing } = await client.from(tableName).select("id").ilike("username", username).limit(1);
@@ -59803,45 +59220,23 @@ async function createSupabaseUser(input) {
 async function countActiveAdmins(excludeUserId) {
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  try {
-    const tableName = env.supabaseTableName;
-    let query = client.from(tableName).select("id", { count: "exact", head: true }).in("role", ["admin", "super_admin"]).eq("status", "active");
-    if (excludeUserId) {
-      query = query.neq("id", excludeUserId);
-    }
-    const { count, error } = await query;
-    if (error || count === null) {
-      const local = loadLocalUsers();
-      return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
-    }
-    return count;
-  } catch {
-    const local = loadLocalUsers();
-    return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
+  const tableName = env.supabaseTableName;
+  let query = client.from(tableName).select("id", { count: "exact", head: true }).in("role", ["admin", "super_admin"]).eq("status", "active");
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId);
   }
+  const { count, error } = await query;
+  if (error || count === null) {
+    throw new Error(`\u0641\u0634\u0644 \u0627\u0633\u062A\u0639\u0644\u0627\u0645 \u0627\u0644\u0645\u0634\u0631\u0641\u064A\u0646 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: ${error?.message || "unknown"}`);
+  }
+  return count;
 }
 async function deleteSupabaseUser(id) {
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    const userToDelete = local.find((u) => u.id === id);
-    if (!userToDelete) {
-      throw new Error("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.");
-    }
-    if ((userToDelete.role === "admin" || userToDelete.role === "super_admin") && userToDelete.status === "active") {
-      const otherAdmins = await countActiveAdmins(id);
-      if (otherAdmins === 0) {
-        throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0627\u0644\u0645\u0634\u0631\u0641 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0646\u0638\u0648\u0645\u0629 \u0644\u0636\u0645\u0627\u0646 \u0627\u0633\u062A\u0645\u0631\u0627\u0631\u064A\u0629 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645.");
-      }
-    }
-    const filtered = local.filter((u) => u.id !== id);
-    saveLocalUsers(filtered);
-    clearUserAuthCache(id);
-    revokeUserSessions(id);
-    return;
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   invalidateUserGoogleCache(id);
   const tableName = env.supabaseTableName;
@@ -59862,17 +59257,13 @@ async function deleteSupabaseUser(id) {
 }
 async function updateSupabaseUser(id, input) {
   const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+  }
+  const tableName = env.supabaseTableName;
   if (input.role === "staff" || input.status === "suspended") {
-    let isCurrentlyActiveSuper = false;
-    if (!client) {
-      const local = loadLocalUsers();
-      const user = local.find((u) => u.id === id);
-      isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
-    } else {
-      const tableName2 = env.supabaseTableName;
-      const { data: user } = await client.from(tableName2).select("role, status").eq("id", id).maybeSingle();
-      isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
-    }
+    const { data: user } = await client.from(tableName).select("role, status").eq("id", id).maybeSingle();
+    const isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
     if (isCurrentlyActiveSuper) {
       const remainingAdmins = await countActiveAdmins(id);
       if (remainingAdmins === 0) {
@@ -59880,87 +59271,6 @@ async function updateSupabaseUser(id, input) {
       }
     }
   }
-  if (!client) {
-    const local = loadLocalUsers();
-    const index = local.findIndex((u) => u.id === id);
-    if (index === -1) {
-      throw new Error("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.");
-    }
-    const user = local[index];
-    if (input.password_hash) {
-      user.password_hash = input.password_hash;
-    } else if (input.password && input.password.trim()) {
-      const passwordValidation = validatePassword(input.password, {
-        username: user.username,
-        email: input.email !== void 0 ? input.email : user.email
-      });
-      if (!passwordValidation.isValid) {
-        throw new Error(passwordValidation.message);
-      }
-      user.password_hash = await import_bcryptjs.default.hash(input.password.trim(), 10);
-    }
-    if (input.role) user.role = input.role;
-    if (input.admin_id !== void 0) user.admin_id = input.admin_id;
-    if (input.office_name !== void 0) user.office_name = input.office_name ? input.office_name.trim() : null;
-    if (input.display_name !== void 0) user.display_name = input.display_name.trim() || null;
-    if (input.email !== void 0) user.email = input.email.trim() || null;
-    if (input.phone !== void 0) user.phone = input.phone ? input.phone.trim() : null;
-    if (input.status !== void 0) user.status = input.status;
-    if (input.activation_token_hash !== void 0) user.activation_token_hash = input.activation_token_hash;
-    if (input.activation_token_expires_at !== void 0) user.activation_token_expires_at = input.activation_token_expires_at;
-    if (input.subscription_end_date !== void 0) user.subscription_end_date = input.subscription_end_date;
-    if (input.subscription_notes !== void 0) user.subscription_notes = input.subscription_notes;
-    if (input.plan_tier !== void 0) user.plan_tier = input.plan_tier;
-    if (input.plan_id !== void 0) user.plan_id = input.plan_id;
-    if (input.ai_quota_limit_override !== void 0) user.ai_quota_limit_override = input.ai_quota_limit_override;
-    if (input.billing_cycle !== void 0) user.billing_cycle = input.billing_cycle;
-    if (input.ai_quota_limit !== void 0) user.ai_quota_limit = input.ai_quota_limit;
-    if (input.ai_usage_count !== void 0) user.ai_usage_count = input.ai_usage_count;
-    if (input.google_service_account_json !== void 0) {
-      if (!input.google_service_account_json) {
-        user.google_service_account_json = null;
-        user.has_google_service = false;
-      } else if (isEncrypted(input.google_service_account_json)) {
-        user.google_service_account_json = input.google_service_account_json;
-        user.has_google_service = true;
-      } else {
-        const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
-        user.google_service_account_json = sanitized ? encryptSecret(sanitized) : null;
-        user.has_google_service = Boolean(sanitized);
-      }
-    }
-    if (input.google_spreadsheet_id !== void 0) user.google_spreadsheet_id = input.google_spreadsheet_id ? input.google_spreadsheet_id.trim() : null;
-    if (input.google_sheet_name !== void 0) user.google_sheet_name = input.google_sheet_name ? input.google_sheet_name.trim() : null;
-    saveLocalUsers(local);
-    clearUserAuthCache(id);
-    if (input.password && input.password.trim()) {
-      revokeUserSessions(id);
-    }
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      admin_id: user.admin_id,
-      office_name: user.office_name,
-      display_name: user.display_name,
-      status: user.status,
-      phone: user.phone,
-      subscription_end_date: user.subscription_end_date,
-      subscription_notes: user.subscription_notes,
-      plan_tier: user.plan_tier,
-      plan_id: user.plan_id || null,
-      ai_quota_limit_override: user.ai_quota_limit_override !== void 0 ? user.ai_quota_limit_override : null,
-      billing_cycle: user.billing_cycle,
-      ai_quota_limit: user.ai_quota_limit,
-      ai_usage_count: user.ai_usage_count,
-      has_google_service: user.has_google_service,
-      google_spreadsheet_id: user.google_spreadsheet_id,
-      google_sheet_name: user.google_sheet_name,
-      created_at: user.created_at
-    };
-  }
-  const tableName = env.supabaseTableName;
   const updates = {};
   if (input.password_hash) {
     updates.password_hash = input.password_hash;
@@ -60098,14 +59408,12 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs, import_path, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, DEFAULT_SUBSCRIPTION_PLANS, LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE, _localPlansCache, LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE, _localOfficePlansCache, DEFAULT_PLATFORM_SETTINGS, LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE, _localAuditLogCache, LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE, _localPlatformSettingsCache, LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE, _localPaymentsCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
     init_dist4();
     import_bcryptjs = __toESM(require_bcryptjs(), 1);
-    import_fs = require("fs");
-    import_path = require("path");
     import_crypto2 = __toESM(require("crypto"), 1);
     init_src();
     init_env();
@@ -60123,9 +59431,19 @@ var init_supabase_service = __esm({
     _lastUrl = void 0;
     _lastKey = void 0;
     AccountSourceUnavailableError = class extends Error {
-      constructor(message = "Account database is unreachable") {
+      code = "DATABASE_UNAVAILABLE";
+      statusCode = 503;
+      constructor(message = "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B") {
         super(message);
         this.name = "AccountSourceUnavailableError";
+      }
+    };
+    DatabaseUnavailableError = class extends Error {
+      code = "DATABASE_UNAVAILABLE";
+      statusCode = 503;
+      constructor(message = "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B") {
+        super(message);
+        this.name = "DatabaseUnavailableError";
       }
     };
     userSessionVersions = /* @__PURE__ */ new Map();
@@ -60133,10 +59451,6 @@ var init_supabase_service = __esm({
     userAuthCache = /* @__PURE__ */ new Map();
     userGoogleCredsCache = /* @__PURE__ */ new Map();
     CACHE_TTL_MS = 60 * 1e3;
-    LOCAL_USERS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_users.json");
-    ALT_LOCAL_USERS_FILE = (0, import_path.resolve)(process.cwd(), "local_users.json");
-    TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
-    _localUsersCache = null;
     DEFAULT_SUBSCRIPTION_PLANS = [
       {
         id: "plan-basic",
@@ -60190,32 +59504,12 @@ var init_supabase_service = __esm({
         updated_at: "2026-01-01T00:00:00.000Z"
       }
     ];
-    LOCAL_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_plans.json");
-    ALT_LOCAL_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "local_plans.json");
-    TMP_LOCAL_PLANS_FILE = "/tmp/local_plans.json";
-    _localPlansCache = null;
-    LOCAL_OFFICE_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_office_plans.json");
-    ALT_LOCAL_OFFICE_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "local_office_plans.json");
-    TMP_LOCAL_OFFICE_PLANS_FILE = "/tmp/local_office_plans.json";
-    _localOfficePlansCache = null;
     DEFAULT_PLATFORM_SETTINGS = {
       activation_link_expiry_hours: 48,
       new_office_registration_enabled: true,
       support_contact_email: "support@law.local",
       support_contact_phone: "+966500000000"
     };
-    LOCAL_AUDIT_LOG_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_audit_log.json");
-    ALT_LOCAL_AUDIT_LOG_FILE = (0, import_path.resolve)(process.cwd(), "local_audit_log.json");
-    TMP_LOCAL_AUDIT_LOG_FILE = "/tmp/local_audit_log.json";
-    _localAuditLogCache = null;
-    LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_platform_settings.json");
-    ALT_LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path.resolve)(process.cwd(), "local_platform_settings.json");
-    TMP_LOCAL_PLATFORM_SETTINGS_FILE = "/tmp/local_platform_settings.json";
-    _localPlatformSettingsCache = null;
-    LOCAL_PAYMENTS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_payments.json");
-    ALT_LOCAL_PAYMENTS_FILE = (0, import_path.resolve)(process.cwd(), "local_payments.json");
-    TMP_LOCAL_PAYMENTS_FILE = "/tmp/local_payments.json";
-    _localPaymentsCache = null;
     officeAiLocks = /* @__PURE__ */ new Map();
     hasPhoneColumnCache = null;
     lastPhoneCheck = 0;
@@ -60253,15 +59547,15 @@ function loadFromDisk() {
   const pathsToTry = [
     LOCAL_SETTINGS_PATH,
     ALT_SETTINGS_PATH,
-    (0, import_path2.resolve)(currentDirname, "..", "..", "settings.json"),
-    (0, import_path2.resolve)(currentDirname, "..", "..", "..", "settings.json"),
+    (0, import_path.resolve)(currentDirname, "..", "..", "settings.json"),
+    (0, import_path.resolve)(currentDirname, "..", "..", "..", "settings.json"),
     TMP_SETTINGS_PATH
   ];
   let result = {};
   for (const p of pathsToTry) {
     try {
-      if ((0, import_fs2.existsSync)(p)) {
-        const raw = (0, import_fs2.readFileSync)(p, "utf-8");
+      if ((0, import_fs.existsSync)(p)) {
+        const raw = (0, import_fs.readFileSync)(p, "utf-8");
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
           const decrypted = decryptSettings(parsed);
@@ -60277,12 +59571,12 @@ function saveToDisk(settings) {
   const encrypted = encryptSettings(settings);
   const content = JSON.stringify(encrypted, null, 2);
   try {
-    (0, import_fs2.writeFileSync)(TMP_SETTINGS_PATH, content, "utf-8");
+    (0, import_fs.writeFileSync)(TMP_SETTINGS_PATH, content, "utf-8");
     return;
   } catch {
   }
   try {
-    (0, import_fs2.writeFileSync)(LOCAL_SETTINGS_PATH, content, "utf-8");
+    (0, import_fs.writeFileSync)(LOCAL_SETTINGS_PATH, content, "utf-8");
   } catch (err) {
     logger.warn({ err }, "Failed to persist settings.json to any path");
   }
@@ -60397,12 +59691,12 @@ async function saveSettings(patch) {
   saveToDisk(_cache);
   return getSettings();
 }
-var import_fs2, import_path2, import_url, currentDirname, SENSITIVE_KEYS, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache;
+var import_fs, import_path, import_url, currentDirname, SENSITIVE_KEYS, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache;
 var init_settings_store = __esm({
   "src/config/settings-store.ts"() {
     "use strict";
-    import_fs2 = require("fs");
-    import_path2 = require("path");
+    import_fs = require("fs");
+    import_path = require("path");
     import_url = require("url");
     init_logger();
     init_supabase_service();
@@ -60415,9 +59709,9 @@ var init_settings_store = __esm({
       "aiApiKey",
       "hfApiToken"
     ];
-    TMP_SETTINGS_PATH = (0, import_path2.resolve)("/tmp", "settings.json");
-    LOCAL_SETTINGS_PATH = (0, import_path2.resolve)(process.cwd(), "settings.json");
-    ALT_SETTINGS_PATH = (0, import_path2.resolve)(process.cwd(), "artifacts", "api-server", "settings.json");
+    TMP_SETTINGS_PATH = (0, import_path.resolve)("/tmp", "settings.json");
+    LOCAL_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "settings.json");
+    ALT_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "settings.json");
     _cache = loadFromDisk();
   }
 });
@@ -60426,15 +59720,15 @@ var init_settings_store = __esm({
 function parseDotEnvFile() {
   try {
     const candidates = [
-      import_path3.default.resolve(process.cwd(), ".env"),
-      import_path3.default.resolve(process.cwd(), "..", ".env"),
-      import_path3.default.resolve(process.cwd(), "..", "..", ".env"),
-      import_path3.default.resolve(currentDirname2, "..", "..", ".env"),
-      import_path3.default.resolve(currentDirname2, "..", "..", "..", ".env")
+      import_path2.default.resolve(process.cwd(), ".env"),
+      import_path2.default.resolve(process.cwd(), "..", ".env"),
+      import_path2.default.resolve(process.cwd(), "..", "..", ".env"),
+      import_path2.default.resolve(currentDirname2, "..", "..", ".env"),
+      import_path2.default.resolve(currentDirname2, "..", "..", "..", ".env")
     ];
     for (const p of candidates) {
-      if (import_fs3.default.existsSync(p)) {
-        const content = import_fs3.default.readFileSync(p, "utf-8");
+      if (import_fs2.default.existsSync(p)) {
+        const content = import_fs2.default.readFileSync(p, "utf-8");
         const parsed = {};
         for (const line of content.split("\n")) {
           const trimmed = line.trim();
@@ -60481,14 +59775,14 @@ function isGoogleSheetsConfigured() {
   if (!hasServiceAccount) {
     try {
       const candidates = [
-        import_path3.default.resolve(process.cwd(), "service-account.json"),
-        import_path3.default.resolve(process.cwd(), "..", "service-account.json"),
-        import_path3.default.resolve(process.cwd(), "..", "..", "service-account.json"),
-        import_path3.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
-        import_path3.default.resolve(currentDirname2, "..", "..", "service-account.json"),
-        import_path3.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
+        import_path2.default.resolve(process.cwd(), "service-account.json"),
+        import_path2.default.resolve(process.cwd(), "..", "service-account.json"),
+        import_path2.default.resolve(process.cwd(), "..", "..", "service-account.json"),
+        import_path2.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
+        import_path2.default.resolve(currentDirname2, "..", "..", "service-account.json"),
+        import_path2.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
       ];
-      hasServiceAccount = candidates.some((p) => import_fs3.default.existsSync(p));
+      hasServiceAccount = candidates.some((p) => import_fs2.default.existsSync(p));
     } catch (e2) {
     }
   }
@@ -60502,12 +59796,12 @@ function isSupabaseConfigured() {
   const hasKey = Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
   return hasUrl && hasKey;
 }
-var import_fs3, import_path3, import_url2, currentDirname2, MissingEnvVarError, env;
+var import_fs2, import_path2, import_url2, currentDirname2, MissingEnvVarError, env;
 var init_env = __esm({
   "src/config/env.ts"() {
     "use strict";
-    import_fs3 = __toESM(require("fs"), 1);
-    import_path3 = __toESM(require("path"), 1);
+    import_fs2 = __toESM(require("fs"), 1);
+    import_path2 = __toESM(require("path"), 1);
     import_url2 = require("url");
     init_settings_store();
     currentDirname2 = typeof __dirname !== "undefined" ? __dirname : (0, import_url2.fileURLToPath)(new URL(".", __bannerImportMetaUrl));
@@ -60543,16 +59837,16 @@ var init_env = __esm({
       get googleServiceAccountJson() {
         try {
           const candidates = [
-            import_path3.default.resolve(process.cwd(), "service-account.json"),
-            import_path3.default.resolve(process.cwd(), "..", "service-account.json"),
-            import_path3.default.resolve(process.cwd(), "..", "..", "service-account.json"),
-            import_path3.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
-            import_path3.default.resolve(currentDirname2, "..", "..", "service-account.json"),
-            import_path3.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
+            import_path2.default.resolve(process.cwd(), "service-account.json"),
+            import_path2.default.resolve(process.cwd(), "..", "service-account.json"),
+            import_path2.default.resolve(process.cwd(), "..", "..", "service-account.json"),
+            import_path2.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
+            import_path2.default.resolve(currentDirname2, "..", "..", "service-account.json"),
+            import_path2.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
           ];
           for (const p of candidates) {
-            if (import_fs3.default.existsSync(p)) {
-              return JSON.parse(import_fs3.default.readFileSync(p, "utf-8"));
+            if (import_fs2.default.existsSync(p)) {
+              return JSON.parse(import_fs2.default.readFileSync(p, "utf-8"));
             }
           }
         } catch (e2) {
@@ -67899,8 +67193,8 @@ var require_retry = __commonJS({
       }
       const delay2 = getNextRetryDelay(config);
       err.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config.retryBackoff ? config.retryBackoff(err, delay2) : new Promise((resolve4) => {
-        setTimeout(resolve4, delay2);
+      const backoff = config.retryBackoff ? config.retryBackoff(err, delay2) : new Promise((resolve3) => {
+        setTimeout(resolve3, delay2);
       });
       if (config.onRetryAttempt) {
         await config.onRetryAttempt(err);
@@ -68028,8 +67322,8 @@ var require_helpers2 = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http3).request(url, opts);
-      const promise = new Promise((resolve4, reject) => {
-        req2.once("response", resolve4).once("error", reject).end();
+      const promise = new Promise((resolve3, reject) => {
+        req2.once("response", resolve3).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -68206,7 +67500,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault2(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve4, reject) => {
+      return new Promise((resolve3, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read() {
@@ -68272,7 +67566,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve4({
+          resolve3({
             connect: {
               statusCode,
               statusText,
@@ -68514,7 +67808,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve4) => resolve4(value));
+        return newPromise((resolve3) => resolve3(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -68684,8 +67978,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve4, reject) => {
-          reader._closedPromise_resolve = resolve4;
+        reader._closedPromise = newPromise((resolve3, reject) => {
+          reader._closedPromise_resolve = resolve3;
           reader._closedPromise_reject = reject;
         });
       }
@@ -68859,8 +68153,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve4, reject) => {
-            resolvePromise = resolve4;
+          const promise = newPromise((resolve3, reject) => {
+            resolvePromise = resolve3;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -68965,8 +68259,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve4, reject) => {
-            resolvePromise = resolve4;
+          const promise = newPromise((resolve3, reject) => {
+            resolvePromise = resolve3;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -69985,8 +69279,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve4, reject) => {
-            resolvePromise = resolve4;
+          const promise = newPromise((resolve3, reject) => {
+            resolvePromise = resolve3;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -70298,10 +69592,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve4, reject) => {
+        const promise = newPromise((resolve3, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve4,
+            _resolve: resolve3,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -70318,9 +69612,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve4, reject) => {
+        const promise = newPromise((resolve3, reject) => {
           const closeRequest = {
-            _resolve: resolve4,
+            _resolve: resolve3,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -70333,9 +69627,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve4, reject) => {
+        const promise = newPromise((resolve3, reject) => {
           const writeRequest = {
-            _resolve: resolve4,
+            _resolve: resolve3,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -70951,8 +70245,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve4, reject) => {
-          writer._closedPromise_resolve = resolve4;
+        writer._closedPromise = newPromise((resolve3, reject) => {
+          writer._closedPromise_resolve = resolve3;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -70988,8 +70282,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve4, reject) => {
-          writer._readyPromise_resolve = resolve4;
+        writer._readyPromise = newPromise((resolve3, reject) => {
+          writer._readyPromise_resolve = resolve3;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -71076,7 +70370,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve4, reject) => {
+        return newPromise((resolve3, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -71221,7 +70515,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error);
             } else {
-              resolve4(void 0);
+              resolve3(void 0);
             }
             return null;
           }
@@ -71502,8 +70796,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve4) => {
-          resolveCancelPromise = resolve4;
+        const cancelPromise = newPromise((resolve3) => {
+          resolveCancelPromise = resolve3;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -71594,8 +70888,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve4) => {
-          resolveCancelPromise = resolve4;
+        const cancelPromise = newPromise((resolve3) => {
+          resolveCancelPromise = resolve3;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -72375,8 +71669,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve4) => {
-            startPromise_resolve = resolve4;
+          const startPromise = newPromise((resolve3) => {
+            startPromise_resolve = resolve3;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -72469,8 +71763,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve4) => {
-          stream._backpressureChangePromise_resolve = resolve4;
+        stream._backpressureChangePromise = newPromise((resolve3) => {
+          stream._backpressureChangePromise_resolve = resolve3;
         });
         stream._backpressure = backpressure;
       }
@@ -72638,8 +71932,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve4, reject) => {
-          controller._finishPromise_resolve = resolve4;
+        controller._finishPromise = newPromise((resolve3, reject) => {
+          controller._finishPromise_resolve = resolve3;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -72665,8 +71959,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve4, reject) => {
-          controller._finishPromise_resolve = resolve4;
+        controller._finishPromise = newPromise((resolve3, reject) => {
+          controller._finishPromise_resolve = resolve3;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -72696,8 +71990,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve4, reject) => {
-          controller._finishPromise_resolve = resolve4;
+        controller._finishPromise = newPromise((resolve3, reject) => {
+          controller._finishPromise_resolve = resolve3;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -74643,7 +73937,7 @@ __export(src_exports, {
   isRedirect: () => isRedirect
 });
 async function fetch2(url, options_) {
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve3, reject) => {
     const request2 = new Request(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request2);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -74652,7 +73946,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request2.url);
       const response2 = new Response(data, { headers: { "Content-Type": data.typeFull } });
-      resolve4(response2);
+      resolve3(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? import_node_https.default : import_node_http2.default).request;
@@ -74774,7 +74068,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions.referrerPolicy = responseReferrerPolicy;
             }
-            resolve4(fetch2(new Request(locationURL, requestOptions)));
+            resolve3(fetch2(new Request(locationURL, requestOptions)));
             finalize();
             return;
           }
@@ -74807,7 +74101,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request2.compress || request2.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response(body, responseOptions);
-        resolve4(response);
+        resolve3(response);
         return;
       }
       const zlibOptions = {
@@ -74821,7 +74115,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response(body, responseOptions);
-        resolve4(response);
+        resolve3(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -74845,12 +74139,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response(body, responseOptions);
-          resolve4(response);
+          resolve3(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response(body, responseOptions);
-            resolve4(response);
+            resolve3(response);
           }
         });
         return;
@@ -74862,11 +74156,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response(body, responseOptions);
-        resolve4(response);
+        resolve3(response);
         return;
       }
       response = new Response(body, responseOptions);
-      resolve4(response);
+      resolve3(response);
     });
     writeToStream(request_, request2).catch(reject);
   });
@@ -81164,7 +80458,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -81173,7 +80467,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s3);
               this.fromJSON(data);
-              resolve4();
+              resolve3();
             } catch (err) {
               reject(err);
             }
@@ -81411,7 +80705,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -81420,7 +80714,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s3);
               this.fromJSON(data);
-              resolve4();
+              resolve3();
             } catch (e2) {
               reject(e2);
             }
@@ -81552,7 +80846,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -81561,7 +80855,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s3);
               this.fromJSON(data);
-              return resolve4();
+              return resolve3();
             } catch (err) {
               return reject(err);
             }
@@ -83386,7 +82680,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -83408,7 +82702,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve4(response);
+                return resolve3(response);
               } catch (error) {
                 if (error instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error);
@@ -84310,7 +83604,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -84320,7 +83614,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve4(r2);
+                return resolve3(r2);
               } catch (err) {
                 if (!this.keyFilename)
                   throw err;
@@ -84330,7 +83624,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve4(client);
+                return resolve3(client);
               }
             } catch (err) {
               return reject(err);
@@ -84366,17 +83660,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve4) => {
+        return new Promise((resolve3) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err, stdout) => {
             if (!err && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve4(projectId);
+                resolve3(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve4(null);
+            resolve3(null);
           });
         });
       }
@@ -85274,7 +84568,7 @@ var require_http2 = __commonJS({
       const chunks = [];
       const session = sessionData.session;
       let req;
-      return new Promise((resolve4, reject) => {
+      return new Promise((resolve3, reject) => {
         try {
           req = session.request(headers).on("response", (responseHeaders) => {
             Object.assign(res, {
@@ -85287,7 +84581,7 @@ var require_http2 = __commonJS({
             }
             if (opts.responseType === "stream") {
               res.data = stream;
-              resolve4(res);
+              resolve3(res);
               return;
             }
             stream.on("data", (d) => {
@@ -85321,7 +84615,7 @@ var require_http2 = __commonJS({
                 }
                 reject(new Error(message, { cause: res }));
               }
-              resolve4(res);
+              resolve3(res);
               return;
             });
           }).on("error", (e2) => {
@@ -85918,7 +85212,7 @@ var require_discovery = __commonJS({
     exports2.Discovery = void 0;
     var fs6 = require("fs");
     var gaxios_1 = require_src2();
-    var resolve4 = require("url");
+    var resolve3 = require("url");
     var util2 = require("util");
     var apirequest_1 = require_apirequest();
     var endpoint_1 = require_endpoint();
@@ -86007,7 +85301,7 @@ var require_discovery = __commonJS({
        */
       async discoverAPI(apiDiscoveryUrl) {
         if (typeof apiDiscoveryUrl === "string") {
-          const parts = resolve4.parse(apiDiscoveryUrl);
+          const parts = resolve3.parse(apiDiscoveryUrl);
           if (apiDiscoveryUrl && !parts.protocol) {
             this.log("Reading from file " + apiDiscoveryUrl);
             const file = await readFile(apiDiscoveryUrl, { encoding: "utf8" });
@@ -820814,8 +820108,8 @@ var require_retry2 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config);
       err.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config.retryBackoff ? config.retryBackoff(err, delay2) : new Promise((resolve4) => {
-        setTimeout(resolve4, delay2);
+      const backoff = config.retryBackoff ? config.retryBackoff(err, delay2) : new Promise((resolve3) => {
+        setTimeout(resolve3, delay2);
       });
       if (config.onRetryAttempt) {
         await config.onRetryAttempt(err);
@@ -823894,7 +823188,7 @@ var require_jwtaccess2 = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -823903,7 +823197,7 @@ var require_jwtaccess2 = __commonJS({
             try {
               const data = JSON.parse(s3);
               this.fromJSON(data);
-              resolve4();
+              resolve3();
             } catch (err) {
               reject(err);
             }
@@ -824142,7 +823436,7 @@ var require_jwtclient2 = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -824151,7 +823445,7 @@ var require_jwtclient2 = __commonJS({
             try {
               const data = JSON.parse(s3);
               this.fromJSON(data);
-              resolve4();
+              resolve3();
             } catch (e2) {
               reject(e2);
             }
@@ -824284,7 +823578,7 @@ var require_refreshclient2 = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -824293,7 +823587,7 @@ var require_refreshclient2 = __commonJS({
             try {
               const data = JSON.parse(s3);
               this.fromJSON(data);
-              return resolve4();
+              return resolve3();
             } catch (err) {
               return reject(err);
             }
@@ -826126,7 +825420,7 @@ var require_pluggable_auth_handler2 = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -826148,7 +825442,7 @@ var require_pluggable_auth_handler2 = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve4(response);
+                return resolve3(response);
               } catch (error) {
                 if (error instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error);
@@ -827338,7 +826632,7 @@ var require_googleauth2 = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve3, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -827348,7 +826642,7 @@ var require_googleauth2 = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve4(r2);
+                return resolve3(r2);
               } catch (err) {
                 if (!this.keyFilename)
                   throw err;
@@ -827358,7 +826652,7 @@ var require_googleauth2 = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve4(client);
+                return resolve3(client);
               }
             } catch (err) {
               return reject(err);
@@ -827394,17 +826688,17 @@ var require_googleauth2 = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve4) => {
+        return new Promise((resolve3) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err, stdout) => {
             if (!err && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve4(projectId);
+                resolve3(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve4(null);
+            resolve3(null);
           });
         });
       }
@@ -830786,7 +830080,7 @@ var init_googleSheets_service = __esm({
 // src/services/postgres.service.ts
 var postgres_service_exports = {};
 __export(postgres_service_exports, {
-  DatabaseUnavailableError: () => DatabaseUnavailableError,
+  DatabaseUnavailableError: () => DatabaseUnavailableError2,
   calcDaysFromHijri: () => calcDaysFromHijri,
   createAttachment: () => createAttachment,
   createCase: () => createCase,
@@ -830876,16 +830170,16 @@ function isInMemoryFallbackAllowed() {
   return !_forceDisableMemoryStoreForTesting;
 }
 function handleSupabaseFailure(operation, err) {
-  if (err instanceof DatabaseUnavailableError) throw err;
+  if (err instanceof DatabaseUnavailableError2) throw err;
   logger.error({ err, operation }, `Supabase ${operation} failed`);
   if (!isInMemoryFallbackAllowed()) {
-    throw new DatabaseUnavailableError(
+    throw new DatabaseUnavailableError2(
       `\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B (${operation}): ${err?.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Supabase"}`
     );
   }
 }
 function handleDatabaseOrServerError(res, err, refId, defaultMsg) {
-  if (err instanceof DatabaseUnavailableError || err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+  if (err instanceof DatabaseUnavailableError2 || err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
     res.status(503).json({
       error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B",
       code: "DATABASE_UNAVAILABLE",
@@ -833281,7 +832575,7 @@ async function getCaseStats(officeId, filterRecords) {
     postponed
   };
 }
-var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, _nextId, DatabaseUnavailableError, _forceDisableMemoryStoreForTesting;
+var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, _nextId, DatabaseUnavailableError2, _forceDisableMemoryStoreForTesting;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -833301,7 +832595,7 @@ var init_postgres_service = __esm({
     memoryClientNotes = /* @__PURE__ */ new Map();
     memoryCases = /* @__PURE__ */ new Map();
     _nextId = 1e3;
-    DatabaseUnavailableError = class extends Error {
+    DatabaseUnavailableError2 = class extends Error {
       statusCode = 503;
       code = "DATABASE_UNAVAILABLE";
       constructor(message = "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B") {
@@ -834094,8 +833388,8 @@ var import_express22 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
-var import_path6 = __toESM(require("path"), 1);
-var import_fs4 = __toESM(require("fs"), 1);
+var import_path5 = __toESM(require("path"), 1);
+var import_fs3 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
@@ -836541,12 +835835,12 @@ function delay(ms, signal) {
   if (signal?.aborted) {
     return Promise.reject(createAbortError(signal));
   }
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve3, reject) => {
     let cleanup = () => {
     };
     const timeout = setTimeout(() => {
       cleanup();
-      resolve4();
+      resolve3();
     }, ms);
     timeout.unref?.();
     if (!signal) {
@@ -853203,7 +852497,7 @@ init_logger();
 var MAX_DAYS = 366 * 100;
 
 // ../../node_modules/.pnpm/node-cron@4.6.0/node_modules/node-cron/dist/node-cron.js
-var import_path4 = __toESM(require("path"), 1);
+var import_path3 = __toESM(require("path"), 1);
 var import_url3 = require("url");
 var tasks2 = /* @__PURE__ */ new Map();
 var TaskRegistry = class {
@@ -853235,7 +852529,7 @@ var TaskRegistry = class {
     tasks2.forEach((id) => this.remove(id));
   }
 };
-var daemonPath = (0, import_path4.resolve)((0, import_path4.dirname)((0, import_url3.fileURLToPath)(__bannerImportMetaUrl)), "daemon.js");
+var daemonPath = (0, import_path3.resolve)((0, import_path3.dirname)((0, import_url3.fileURLToPath)(__bannerImportMetaUrl)), "daemon.js");
 var moduleFilename = (0, import_url3.fileURLToPath)(__bannerImportMetaUrl);
 var registry = new TaskRegistry();
 var getTasks = registry.all;
@@ -856426,8 +855720,8 @@ var decorateForceSequential = function(promiseCreator) {
     const promiseWeAreWaitingFor = lastPromise;
     let currentPromise;
     let callback;
-    lastPromise = new Promise(function(resolve4) {
-      callback = resolve4;
+    lastPromise = new Promise(function(resolve3) {
+      callback = resolve3;
     });
     await promiseWeAreWaitingFor;
     currentPromise = promiseCreator(...x2);
@@ -856527,8 +855821,8 @@ var IncomingForm = class extends import_node_events3.EventEmitter {
     if (!cb) {
       let resolveRef;
       let rejectRef;
-      promise = new Promise((resolve4, reject) => {
-        resolveRef = resolve4;
+      promise = new Promise((resolve3, reject) => {
+        resolveRef = resolve3;
         rejectRef = reject;
       });
       cb = (err, fields, files2) => {
@@ -856955,7 +856249,7 @@ var src_default = formidable;
 
 // src/routes/attachments.ts
 var import_promises2 = __toESM(require("fs/promises"), 1);
-var import_path5 = __toESM(require("path"), 1);
+var import_path4 = __toESM(require("path"), 1);
 init_postgres_service();
 
 // src/services/storage.service.ts
@@ -857095,7 +856389,7 @@ router17.post("/attachments", async (req, res) => {
     return;
   }
   const originalFilename = uploadedFile.originalFilename || "document";
-  const ext = import_path5.default.extname(originalFilename).toLowerCase();
+  const ext = import_path4.default.extname(originalFilename).toLowerCase();
   const mimeType = uploadedFile.mimetype || "application/octet-stream";
   const fileSize = uploadedFile.size;
   if (fileSize > MAX_FILE_SIZE) {
@@ -857734,7 +857028,7 @@ void refreshSettingsFromSupabase().catch((err) => {
   logger.warn({ err }, "Initial settings sync from Supabase encountered error, falling back to disk/env");
 });
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
-var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path6.default.dirname(currentFilename);
+var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path5.default.dirname(currentFilename);
 var app = (0, import_express22.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
@@ -857774,15 +857068,15 @@ app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
 var possibleDistPaths = [
-  import_path6.default.resolve(process.cwd(), "dist"),
-  import_path6.default.resolve(process.cwd(), "artifacts/court-session-management/dist"),
-  import_path6.default.resolve(currentDirname3, "../../court-session-management/dist"),
-  import_path6.default.resolve(currentDirname3, "../dist"),
-  import_path6.default.resolve(currentDirname3, "../../dist")
+  import_path5.default.resolve(process.cwd(), "dist"),
+  import_path5.default.resolve(process.cwd(), "artifacts/court-session-management/dist"),
+  import_path5.default.resolve(currentDirname3, "../../court-session-management/dist"),
+  import_path5.default.resolve(currentDirname3, "../dist"),
+  import_path5.default.resolve(currentDirname3, "../../dist")
 ];
 var distPath = possibleDistPaths.find((p) => {
   try {
-    return import_fs4.default.existsSync(import_path6.default.join(p, "index.html"));
+    return import_fs3.default.existsSync(import_path5.default.join(p, "index.html"));
   } catch {
     return false;
   }
@@ -857792,7 +857086,7 @@ if (distPath) {
   app.use(import_express22.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
-    res.sendFile(import_path6.default.join(distPath, "index.html"));
+    res.sendFile(import_path5.default.join(distPath, "index.html"));
   });
 }
 app.use((err, req, res, _next) => {

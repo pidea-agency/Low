@@ -192,10 +192,6 @@ describe("Subscription Middleware Fail-Closed Enforcement (requireActiveSubscrip
       new AccountSourceUnavailableError("Database connection timeout"),
     );
 
-    vi.spyOn(supabaseService, "loadLocalUsers").mockImplementation(() => {
-      throw new Error("Disk / DB read failed");
-    });
-
     await requireActiveSubscription(mockReq, mockRes, mockNext);
 
     expect(nextCalled).toBe(false);

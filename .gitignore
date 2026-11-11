@@ -52,6 +52,8 @@ Thumbs.db
 service-account.json
 settings.json
 artifacts/api-server/settings.json
+local_*.json
+artifacts/api-server/local_*.json
 local_users.json
 artifacts/api-server/local_users.json
 scripts/local_users.json

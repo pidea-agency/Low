@@ -9,16 +9,10 @@ import {
   deleteTaskRow,
   TASK_SHEET_COLUMNS,
 } from "../artifacts/api-server/src/services/task.sheets.service";
-import { loadLocalUsers } from "../artifacts/api-server/src/services/supabase.service";
-
 async function main() {
   console.log("=== Diagnosing Task Save Path ===");
 
-  const localUsers = loadLocalUsers();
-  console.log("Local users loaded:", localUsers.map((u) => ({ id: u.id, username: u.username, role: u.role, binding: Boolean(u.google_spreadsheet_id) })));
-
-  // Pick the test user that is typically used (e.g. lawyer or local-lawyer-default or lawyer_2)
-  const targetUser = localUsers.find((u) => u.username === "lawyer_2") || localUsers[0];
+  const targetUser = { id: "local-lawyer-default", username: "lawyer_2", role: "staff" };
   console.log(`Testing with user: ${targetUser.username} (${targetUser.id})`);
 
 

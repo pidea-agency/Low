@@ -95,9 +95,22 @@ let _lastUrl: string | undefined = undefined;
 let _lastKey: string | undefined = undefined;
 
 export class AccountSourceUnavailableError extends Error {
-  constructor(message = "Account database is unreachable") {
+  public readonly code = "DATABASE_UNAVAILABLE";
+  public readonly statusCode = 503;
+
+  constructor(message = "قاعدة البيانات غير متصلة حالياً") {
     super(message);
     this.name = "AccountSourceUnavailableError";
+  }
+}
+
+export class DatabaseUnavailableError extends Error {
+  public readonly code = "DATABASE_UNAVAILABLE";
+  public readonly statusCode = 503;
+
+  constructor(message = "قاعدة البيانات غير متصلة حالياً") {
+    super(message);
+    this.name = "DatabaseUnavailableError";
   }
 }
 
@@ -151,170 +164,8 @@ export function invalidateUserGoogleCache(userId?: string): void {
   }
 }
 
-const LOCAL_USERS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_users.json");
-const ALT_LOCAL_USERS_FILE = resolve(process.cwd(), "local_users.json");
-const TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
-
-let _localUsersCache: AppUserWithHash[] | null = null;
-
-export function loadLocalUsers(): AppUserWithHash[] {
-  if (_localUsersCache) {
-    return _localUsersCache;
-  }
-  const paths = [LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE];
-  for (const p of paths) {
-    try {
-      if (existsSync(p)) {
-        const raw = readFileSync(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list) && list.length > 0) {
-          // Normalize existing users with 3-tier roles and quota fields
-          let hasAdmin = false;
-          let hasSuperAdmin = false;
-          const normalized = list.map((u: any) => {
-            let role: "super_admin" | "admin" | "staff" = u.role || "staff";
-            if (role === "admin" && (u.id === "local-admin" || u.username === "123456")) {
-              role = "super_admin";
-            }
-            if (role === "super_admin") hasSuperAdmin = true;
-            if (role === "admin") hasAdmin = true;
-
-            const isOfficeAdmin = role === "admin";
-            const isSuper = role === "super_admin";
-            const planTier = u.plan_tier || (isSuper ? "pro" : isOfficeAdmin ? "plus" : undefined);
-            const planId = u.plan_id || (isOfficeAdmin ? (planTier === "pro" ? "plan-pro" : (planTier === "basic" ? "plan-basic" : "plan-plus")) : null);
-            const quotaOverride = u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null;
-            const quota = u.ai_quota_limit !== undefined
-              ? u.ai_quota_limit
-              : (isSuper ? -1 : isOfficeAdmin ? (planTier === "pro" ? 300 : 100) : undefined);
-
-            return {
-              ...u,
-              role,
-              admin_id: u.admin_id || null,
-              office_name: u.office_name || (isOfficeAdmin ? "مكتب المحاماة الرئيسي" : null),
-              plan_tier: isSuper || isOfficeAdmin ? planTier : undefined,
-              plan_id: isOfficeAdmin ? planId : null,
-              ai_quota_limit_override: isOfficeAdmin ? quotaOverride : null,
-              billing_cycle: isSuper || isOfficeAdmin ? (u.billing_cycle || "annual") : undefined,
-              ai_quota_limit: isSuper || isOfficeAdmin ? quota : undefined,
-              ai_usage_count: isSuper || isOfficeAdmin ? (u.ai_usage_count || 0) : undefined,
-            };
-          });
-
-          // Ensure at least one office admin exists for local testing
-          if (!hasAdmin) {
-            const adminHash = bcrypt.hashSync("123456", 10);
-            const oneYearFromNow = new Date();
-            oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-            normalized.push({
-              id: "local-office-admin",
-              username: "admin1",
-              email: "office.admin@law.local",
-              role: "admin",
-              display_name: "مدير المكتب (أدمن)",
-              office_name: "مكتب المحاماة الرئيسي",
-              status: "active",
-              subscription_end_date: oneYearFromNow.toISOString(),
-              subscription_notes: "اشتراك سنوي معتمد للمكتب",
-              plan_tier: "plus",
-              billing_cycle: "annual",
-              ai_quota_limit: 100,
-              ai_usage_count: 0,
-              password_hash: adminHash,
-              admin_id: null,
-              created_at: new Date().toISOString(),
-            });
-          }
-
-          // Link default staff if unlinked
-          for (const u of normalized) {
-            if (u.role === "staff" && !u.admin_id && (u.id === "local-lawyer-default" || u.username === "12345")) {
-              u.admin_id = "local-office-admin";
-            }
-          }
-
-          _localUsersCache = normalized;
-          return normalized;
-        }
-      }
-    } catch {}
-  }
-
-  // Seed default super_admin, office admin and staff if no file exists
-  const superHash = bcrypt.hashSync("123456", 10);
-  const officeAdminHash = bcrypt.hashSync("admin123", 10);
-  const lawyerHash = bcrypt.hashSync("12345", 10);
-  const oneYearFromNow = new Date();
-  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-
-  const initial: AppUserWithHash[] = [
-    {
-      id: "local-admin",
-      username: "123456",
-      email: "admin@law.internal",
-      role: "super_admin",
-      display_name: "مشرف المنصة (Super Admin)",
-      status: "active",
-      subscription_end_date: null,
-      subscription_notes: "حساب المشرف العام الدائم للمنظومة",
-      plan_tier: "pro",
-      billing_cycle: "annual",
-      ai_quota_limit: -1,
-      ai_usage_count: 0,
-      admin_id: null,
-      office_name: null,
-      password_hash: superHash,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "local-office-admin",
-      username: "admin1",
-      email: "office.admin@law.local",
-      role: "admin",
-      display_name: "مدير المكتب (أدمن)",
-      office_name: "مكتب المحاماة الرئيسي",
-      status: "active",
-      subscription_end_date: oneYearFromNow.toISOString(),
-      subscription_notes: "اشتراك سنوي معتمد للمكتب",
-      plan_tier: "plus",
-      billing_cycle: "annual",
-      ai_quota_limit: 100,
-      ai_usage_count: 0,
-      admin_id: null,
-      password_hash: officeAdminHash,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "local-lawyer-default",
-      username: "12345",
-      email: "lawyer@law.internal",
-      role: "staff",
-      display_name: "المحامي الافتراضي",
-      status: "active",
-      admin_id: "local-office-admin",
-      password_hash: lawyerHash,
-      created_at: new Date().toISOString(),
-    },
-  ];
-
-  saveLocalUsers(initial);
-  return initial;
-}
-
-export function saveLocalUsers(users: AppUserWithHash[]): void {
-  _localUsersCache = users;
-  const content = JSON.stringify(users, null, 2);
-  const paths = [LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE];
-  for (const p of paths) {
-    try {
-      writeFileSync(p, content, "utf-8");
-    } catch {}
-  }
-}
-
 // ============================================================================
-// Subscription Plans Local & Fallback Store
+// Subscription Plans Default Definitions
 // ============================================================================
 
 export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
@@ -371,92 +222,10 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
 ];
 
-const LOCAL_PLANS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_plans.json");
-const ALT_LOCAL_PLANS_FILE = resolve(process.cwd(), "local_plans.json");
-const TMP_LOCAL_PLANS_FILE = "/tmp/local_plans.json";
-
-let _localPlansCache: SubscriptionPlan[] | null = null;
-
-export function loadLocalPlans(): SubscriptionPlan[] {
-  if (_localPlansCache) {
-    return _localPlansCache;
-  }
-  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      if (existsSync(p)) {
-        const raw = readFileSync(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list) && list.length > 0) {
-          _localPlansCache = list;
-          return list;
-        }
-      }
-    } catch {}
-  }
-
-  _localPlansCache = [...DEFAULT_SUBSCRIPTION_PLANS];
-  saveLocalPlans(_localPlansCache);
-  return _localPlansCache;
-}
-
-export function saveLocalPlans(plans: SubscriptionPlan[]): void {
-  _localPlansCache = plans;
-  const content = JSON.stringify(plans, null, 2);
-  const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      writeFileSync(p, content, "utf-8");
-    } catch {}
-  }
-}
-
 interface OfficePlanOverride {
   plan_id: string | null;
   ai_quota_limit_override: number | null;
 }
-
-const LOCAL_OFFICE_PLANS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_office_plans.json");
-const ALT_LOCAL_OFFICE_PLANS_FILE = resolve(process.cwd(), "local_office_plans.json");
-const TMP_LOCAL_OFFICE_PLANS_FILE = "/tmp/local_office_plans.json";
-
-let _localOfficePlansCache: Record<string, OfficePlanOverride> | null = null;
-
-export function loadLocalOfficePlans(): Record<string, OfficePlanOverride> {
-  if (_localOfficePlansCache) {
-    return _localOfficePlansCache;
-  }
-  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      if (existsSync(p)) {
-        const raw = readFileSync(p, "utf-8");
-        const data = JSON.parse(raw);
-        if (typeof data === "object" && data !== null) {
-          _localOfficePlansCache = data;
-          return data;
-        }
-      }
-    } catch {}
-  }
-  _localOfficePlansCache = {};
-  return _localOfficePlansCache;
-}
-
-export function saveLocalOfficePlans(data: Record<string, OfficePlanOverride>): void {
-  _localOfficePlansCache = data;
-  const content = JSON.stringify(data, null, 2);
-  const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
-  for (const p of paths) {
-    try {
-      writeFileSync(p, content, "utf-8");
-    } catch {}
-  }
-}
-
-// ============================================================================
-// Super Admin Platform Governance (Audit Log & Platform Settings)
-// ============================================================================
 
 export interface AuditLogEntry {
   id: string;
@@ -474,6 +243,9 @@ export interface PlatformSettings {
   support_contact_email: string;
   support_contact_phone: string;
   updated_at?: string;
+  maintenance_mode?: boolean;
+  platform_name?: string;
+  support_email?: string;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -482,91 +254,6 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   support_contact_email: "support@law.local",
   support_contact_phone: "+966500000000",
 };
-
-const LOCAL_AUDIT_LOG_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_audit_log.json");
-const ALT_LOCAL_AUDIT_LOG_FILE = resolve(process.cwd(), "local_audit_log.json");
-const TMP_LOCAL_AUDIT_LOG_FILE = "/tmp/local_audit_log.json";
-
-let _localAuditLogCache: AuditLogEntry[] | null = null;
-
-export function loadLocalAuditLogs(): AuditLogEntry[] {
-  if (_localAuditLogCache) {
-    return _localAuditLogCache;
-  }
-  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
-  for (const p of paths) {
-    try {
-      if (existsSync(p)) {
-        const raw = readFileSync(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          _localAuditLogCache = list;
-          return list;
-        }
-      }
-    } catch {}
-  }
-  _localAuditLogCache = [];
-  return _localAuditLogCache;
-}
-
-export function saveLocalAuditLogs(logs: AuditLogEntry[]): void {
-  _localAuditLogCache = logs;
-  const content = JSON.stringify(logs, null, 2);
-  const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
-  for (const p of paths) {
-    try {
-      writeFileSync(p, content, "utf-8");
-    } catch {}
-  }
-}
-
-const LOCAL_PLATFORM_SETTINGS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_platform_settings.json");
-const ALT_LOCAL_PLATFORM_SETTINGS_FILE = resolve(process.cwd(), "local_platform_settings.json");
-const TMP_LOCAL_PLATFORM_SETTINGS_FILE = "/tmp/local_platform_settings.json";
-
-let _localPlatformSettingsCache: PlatformSettings | null = null;
-
-export function loadLocalPlatformSettings(): PlatformSettings {
-  if (_localPlatformSettingsCache) {
-    return _localPlatformSettingsCache;
-  }
-  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
-  for (const p of paths) {
-    try {
-      if (existsSync(p)) {
-        const raw = readFileSync(p, "utf-8");
-        const data = JSON.parse(raw);
-        if (typeof data === "object" && data !== null) {
-          const loaded: PlatformSettings = {
-            ...DEFAULT_PLATFORM_SETTINGS,
-            ...data,
-          };
-          _localPlatformSettingsCache = loaded;
-          return loaded;
-        }
-      }
-    } catch {}
-  }
-  const fallback: PlatformSettings = { ...DEFAULT_PLATFORM_SETTINGS };
-  _localPlatformSettingsCache = fallback;
-  return fallback;
-}
-
-export function saveLocalPlatformSettings(settings: PlatformSettings): void {
-  _localPlatformSettingsCache = settings;
-  const content = JSON.stringify(settings, null, 2);
-  const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
-  for (const p of paths) {
-    try {
-      writeFileSync(p, content, "utf-8");
-    } catch {}
-  }
-}
-
-// ============================================================================
-// Payments Local Persistence & Cache
-// ============================================================================
 
 export interface PaymentRecord {
   id: string;
@@ -584,47 +271,8 @@ export interface PaymentRecord {
   updated_at: string;
 }
 
-const LOCAL_PAYMENTS_FILE = resolve(process.cwd(), "artifacts", "api-server", "local_payments.json");
-const ALT_LOCAL_PAYMENTS_FILE = resolve(process.cwd(), "local_payments.json");
-const TMP_LOCAL_PAYMENTS_FILE = "/tmp/local_payments.json";
-
-let _localPaymentsCache: PaymentRecord[] | null = null;
-
-export function loadLocalPayments(): PaymentRecord[] {
-  if (_localPaymentsCache) {
-    return _localPaymentsCache;
-  }
-  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
-  for (const p of paths) {
-    try {
-      if (existsSync(p)) {
-        const raw = readFileSync(p, "utf-8");
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          _localPaymentsCache = list;
-          return list;
-        }
-      }
-    } catch {}
-  }
-  _localPaymentsCache = [];
-  return _localPaymentsCache;
-}
-
-export function saveLocalPayments(payments: PaymentRecord[]): void {
-  _localPaymentsCache = payments;
-  const content = JSON.stringify(payments, null, 2);
-  const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
-  for (const p of paths) {
-    try {
-      writeFileSync(p, content, "utf-8");
-    } catch {}
-  }
-}
-
 export function resetInMemoryPayments(): void {
-  _localPaymentsCache = [];
-  saveLocalPayments([]);
+  // No-op in production Supabase mode
 }
 
 export function getSupabaseClient(): SupabaseClient | null {
@@ -775,50 +423,7 @@ export async function verifySupabaseUser(
   const client = getSupabaseClient();
 
   if (!client) {
-    const localUsers = loadLocalUsers();
-    const user = localUsers.find(
-      (u) =>
-        u.username.toLowerCase() === cleanIdentifier ||
-        (u.email && u.email.toLowerCase() === cleanIdentifier),
-    );
-    if (!user) return null;
-    if (user.status === "pending_activation") {
-      throw new UserPendingActivationError();
-    }
-    if (!user.password_hash) return null;
-
-    let isValid = false;
-    if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
-      isValid = await bcrypt.compare(plainPassword, user.password_hash);
-      // Also accept admin123 or 123456 for office admin testing if hash matched
-      if (!isValid && cleanIdentifier === "admin1" && (plainPassword === "admin123" || plainPassword === "123456")) {
-        isValid = true;
-      }
-    } else {
-      isValid = user.password_hash === plainPassword;
-    }
-
-    if (!isValid) return null;
-
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: (user.role as any) || "staff",
-      admin_id: user.admin_id || null,
-      office_name: user.office_name || null,
-      display_name: user.display_name,
-      status: user.status || "active",
-      subscription_end_date: user.subscription_end_date || null,
-      subscription_notes: user.subscription_notes || null,
-      plan_tier: user.plan_tier,
-      billing_cycle: user.billing_cycle,
-      ai_quota_limit: user.ai_quota_limit,
-      ai_usage_count: user.ai_usage_count || 0,
-      google_spreadsheet_id: user.google_spreadsheet_id,
-      google_sheet_name: user.google_sheet_name,
-      created_at: user.created_at,
-    };
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
   try {
@@ -997,38 +602,7 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
   const client = getSupabaseClient();
 
   if (!client) {
-    const local = loadLocalUsers();
-    const user = local.find(
-      (u) =>
-        u.id.toLowerCase() === clean ||
-        u.username.toLowerCase() === clean,
-    );
-    if (!user) {
-      userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
-      return null;
-    }
-
-    const result: AppUser = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: (user.role as any) || "staff",
-      admin_id: user.admin_id || null,
-      office_name: user.office_name || null,
-      display_name: user.display_name,
-      status: user.status || "active",
-      subscription_end_date: user.subscription_end_date || null,
-      subscription_notes: user.subscription_notes || null,
-      plan_tier: user.plan_tier,
-      billing_cycle: user.billing_cycle,
-      ai_quota_limit: user.ai_quota_limit,
-      ai_usage_count: user.ai_usage_count || 0,
-      google_spreadsheet_id: user.google_spreadsheet_id,
-      google_sheet_name: user.google_sheet_name,
-      created_at: user.created_at,
-    };
-    userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
-    return result;
+    throw new AccountSourceUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
   try {
@@ -1053,36 +627,6 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
     }
 
     if (!data || data.length === 0) {
-      const local = loadLocalUsers();
-      const localUser = local.find(
-        (u) =>
-          u.id.toLowerCase() === clean ||
-          u.username.toLowerCase() === clean,
-      );
-      if (localUser) {
-        const result: AppUser = {
-          id: localUser.id,
-          username: localUser.username,
-          email: localUser.email,
-          role: (localUser.role as any) || "staff",
-          admin_id: localUser.admin_id || null,
-          office_name: localUser.office_name || null,
-          display_name: localUser.display_name,
-          status: localUser.status || "active",
-          subscription_end_date: localUser.subscription_end_date || null,
-          subscription_notes: localUser.subscription_notes || null,
-          plan_tier: localUser.plan_tier,
-          billing_cycle: localUser.billing_cycle,
-          ai_quota_limit: localUser.ai_quota_limit,
-          ai_usage_count: localUser.ai_usage_count || 0,
-          google_spreadsheet_id: localUser.google_spreadsheet_id,
-          google_sheet_name: localUser.google_sheet_name,
-          created_at: localUser.created_at,
-        };
-        userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
-        return result;
-      }
-
       userAuthCache.set(clean, { user: null, cachedAt: Date.now() });
       return null;
     }
@@ -1168,12 +712,7 @@ export async function getUserGoogleCredentials(userId?: string): Promise<UserGoo
   let sheetName: string | null = null;
 
   if (!client) {
-    const local = loadLocalUsers();
-    const adminRecord = local.find((u) => u.id === targetAdminId || u.username === targetAdminId);
-    if (!adminRecord) return null;
-    rawJson = adminRecord.google_service_account_json || null;
-    spreadsheetId = adminRecord.google_spreadsheet_id?.trim() || null;
-    sheetName = adminRecord.google_sheet_name?.trim() || "Sessions";
+    throw new AccountSourceUnavailableError("قاعدة البيانات غير متصلة حالياً");
   } else {
     try {
       const tableName = env.supabaseTableName;
@@ -1580,30 +1119,7 @@ export function clearFallbackActivationToken(userId: string): void {
 export async function listSupabaseUsers(): Promise<AppUser[]> {
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    return local.map((u) => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      role: (u.role as any) || "staff",
-      admin_id: u.admin_id || null,
-      office_name: u.office_name || null,
-      display_name: u.display_name,
-      status: u.status || "active",
-      phone: u.phone || null,
-      subscription_end_date: u.subscription_end_date || null,
-      subscription_notes: u.subscription_notes || null,
-      plan_tier: u.plan_tier,
-      plan_id: u.plan_id || null,
-      ai_quota_limit_override: u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null,
-      billing_cycle: u.billing_cycle,
-      ai_quota_limit: u.ai_quota_limit,
-      ai_usage_count: u.ai_usage_count || 0,
-      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-      google_spreadsheet_id: u.google_spreadsheet_id || null,
-      google_sheet_name: u.google_sheet_name || null,
-      created_at: u.created_at,
-    }));
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
   const tableName = env.supabaseTableName;
@@ -1616,31 +1132,8 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    logger.error({ error }, "Failed to list users from Supabase, falling back to local users");
-    const local = loadLocalUsers();
-    return local.map((u) => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      role: (u.role as any) || "staff",
-      admin_id: u.admin_id || null,
-      office_name: u.office_name || null,
-      display_name: u.display_name,
-      status: u.status || "active",
-      phone: u.phone || null,
-      subscription_end_date: u.subscription_end_date || null,
-      subscription_notes: u.subscription_notes || null,
-      plan_tier: u.plan_tier,
-      plan_id: u.plan_id || null,
-      ai_quota_limit_override: u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null,
-      billing_cycle: u.billing_cycle,
-      ai_quota_limit: u.ai_quota_limit,
-      ai_usage_count: u.ai_usage_count || 0,
-      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-      google_spreadsheet_id: u.google_spreadsheet_id || null,
-      google_sheet_name: u.google_sheet_name || null,
-      created_at: u.created_at,
-    }));
+    logger.error({ error }, "Failed to list users from Supabase");
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
   return (data || []).map((u: any) => ({
@@ -1674,53 +1167,55 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
 
 export async function listSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
+  }
   let plans: SubscriptionPlan[] = [];
 
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        const { data, error } = await client
-          .from("subscription_plans")
-          .select("*")
-          .order("ai_quota_limit", { ascending: true });
-        if (!error && Array.isArray(data) && data.length > 0) {
-          plans = data.map((row: any) => ({
-            id: row.id,
-            name: row.name,
-            slug: row.slug,
-            ai_quota_limit: Number(row.ai_quota_limit),
-            price: row.price || "",
-            features: typeof row.features === "object" && row.features !== null ? row.features : {},
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-          }));
-        } else if (!error && Array.isArray(data) && data.length === 0) {
-          // Table exists but is empty, seed defaults
-          for (const dp of DEFAULT_SUBSCRIPTION_PLANS) {
-            try {
-              await client.from("subscription_plans").insert([{
-                id: dp.id,
-                name: dp.name,
-                slug: dp.slug,
-                ai_quota_limit: dp.ai_quota_limit,
-                price: dp.price,
-                features: dp.features,
-              }]);
-            } catch {}
-          }
-          plans = [...DEFAULT_SUBSCRIPTION_PLANS];
-        } else {
-          plans = loadLocalPlans();
-        }
-      } else {
-        plans = loadLocalPlans();
+  try {
+    const hasTable = await checkHasSubscriptionPlansTable(client);
+    if (hasTable) {
+      const { data, error } = await client
+        .from("subscription_plans")
+        .select("*")
+        .order("ai_quota_limit", { ascending: true });
+      if (error) {
+        throw new Error(`فشل استرجاع باقات الاشتراك: ${error.message}`);
       }
-    } catch {
-      plans = loadLocalPlans();
+      if (Array.isArray(data) && data.length > 0) {
+        plans = data.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          ai_quota_limit: Number(row.ai_quota_limit),
+          price: row.price || "",
+          features: typeof row.features === "object" && row.features !== null ? row.features : {},
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        }));
+      } else if (Array.isArray(data) && data.length === 0) {
+        // Table exists but is empty, seed defaults
+        for (const dp of DEFAULT_SUBSCRIPTION_PLANS) {
+          try {
+            await client.from("subscription_plans").insert([{
+              id: dp.id,
+              name: dp.name,
+              slug: dp.slug,
+              ai_quota_limit: dp.ai_quota_limit,
+              price: dp.price,
+              features: dp.features,
+            }]);
+          } catch {}
+        }
+        plans = [...DEFAULT_SUBSCRIPTION_PLANS];
+      }
+    } else {
+      plans = [...DEFAULT_SUBSCRIPTION_PLANS];
     }
-  } else {
-    plans = loadLocalPlans();
+  } catch (err: any) {
+    if (err instanceof DatabaseUnavailableError) throw err;
+    logger.warn({ err }, "Supabase listSubscriptionPlans failed, defaulting to default plans");
+    plans = [...DEFAULT_SUBSCRIPTION_PLANS];
   }
 
   // Calculate office_count for each plan
@@ -1790,41 +1285,38 @@ export async function createSubscriptionPlan(input: {
   };
 
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        const { data, error } = await client
-          .from("subscription_plans")
-          .insert([{
-            id,
-            name,
-            slug,
-            ai_quota_limit: quotaLimit,
-            price,
-            features,
-            created_at: now,
-            updated_at: now,
-          }])
-          .select()
-          .single();
-        if (!error && data) {
-          const local = loadLocalPlans();
-          saveLocalPlans([...local, newPlan]);
-          return {
-            ...newPlan,
-            id: data.id || id,
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase insert into subscription_plans failed, using local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  const local = loadLocalPlans();
-  saveLocalPlans([...local, newPlan]);
-  return newPlan;
+  const hasTable = await checkHasSubscriptionPlansTable(client);
+  if (!hasTable) {
+    throw new Error("جدول باقات الاشتراك غير موجود في قاعدة البيانات.");
+  }
+
+  const { data, error } = await client
+    .from("subscription_plans")
+    .insert([{
+      id,
+      name,
+      slug,
+      ai_quota_limit: quotaLimit,
+      price,
+      features,
+      created_at: now,
+      updated_at: now,
+    }])
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(`فشل إنشاء باقة الاشتراك: ${error?.message || "خطأ غير معروف"}`);
+  }
+
+  return {
+    ...newPlan,
+    id: data.id || id,
+  };
 }
 
 export async function updateSubscriptionPlan(
@@ -1869,35 +1361,31 @@ export async function updateSubscriptionPlan(
   plan.updated_at = new Date().toISOString();
 
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        await client
-          .from("subscription_plans")
-          .update({
-            name: plan.name,
-            slug: plan.slug,
-            ai_quota_limit: plan.ai_quota_limit,
-            price: plan.price,
-            features: plan.features,
-            updated_at: plan.updated_at,
-          })
-          .eq("id", id);
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase update subscription_plans failed, updating local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  const local = loadLocalPlans();
-  const idx = local.findIndex((p) => p.id === id);
-  if (idx !== -1) {
-    local[idx] = { ...plan };
-  } else {
-    local.push(plan);
+  const hasTable = await checkHasSubscriptionPlansTable(client);
+  if (!hasTable) {
+    throw new Error("جدول باقات الاشتراك غير موجود في قاعدة البيانات.");
   }
-  saveLocalPlans(local);
+
+  const { error } = await client
+    .from("subscription_plans")
+    .update({
+      name: plan.name,
+      slug: plan.slug,
+      ai_quota_limit: plan.ai_quota_limit,
+      price: plan.price,
+      features: plan.features,
+      updated_at: plan.updated_at,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`فشل تحديث باقة الاشتراك: ${error.message}`);
+  }
+
   return plan;
 }
 
@@ -1920,20 +1408,17 @@ export async function deleteSubscriptionPlan(id: string): Promise<void> {
   }
 
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasSubscriptionPlansTable(client);
-      if (hasTable) {
-        await client.from("subscription_plans").delete().eq("id", id);
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase delete subscription_plans failed");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  const local = loadLocalPlans();
-  const filtered = local.filter((p) => p.id !== id);
-  saveLocalPlans(filtered);
+  const hasTable = await checkHasSubscriptionPlansTable(client);
+  if (hasTable) {
+    const { error } = await client.from("subscription_plans").delete().eq("id", id);
+    if (error) {
+      throw new Error(`فشل حذف باقة الاشتراك: ${error.message}`);
+    }
+  }
 }
 
 export async function getOfficeFeatures(officeId: string): Promise<OfficeFeaturesResolved> {
@@ -1962,13 +1447,11 @@ export async function getOfficeFeatures(officeId: string): Promise<OfficeFeature
     };
   }
 
-  const officePlans = loadLocalOfficePlans();
-  const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
-  const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
+  const resolvedPlanId = admin.plan_id || null;
   const resolvedOverride =
     admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== undefined
       ? admin.ai_quota_limit_override
-      : (fallbackAssignment?.ai_quota_limit_override ?? null);
+      : null;
 
   const plans = await listSubscriptionPlans();
   let plan = plans.find((p) => p.id === resolvedPlanId) || null;
@@ -2009,16 +1492,14 @@ export async function listSupabaseAdmins(): Promise<AppUser[]> {
   ]);
   const officeAdmins = allUsers.filter((u) => u.role === "admin");
   const staffUsers = allUsers.filter((u) => u.role === "staff");
-  const officePlans = loadLocalOfficePlans();
 
   return officeAdmins.map((admin) => {
     const memberCount = staffUsers.filter((s) => s.admin_id === admin.id).length;
-    const fallbackAssignment = officePlans[admin.id] || officePlans[admin.username];
-    const resolvedPlanId = admin.plan_id || fallbackAssignment?.plan_id || null;
+    const resolvedPlanId = admin.plan_id || null;
     const resolvedOverride =
       admin.ai_quota_limit_override !== null && admin.ai_quota_limit_override !== undefined
         ? admin.ai_quota_limit_override
-        : (fallbackAssignment?.ai_quota_limit_override ?? null);
+        : null;
 
     let plan = plans.find((p) => p.id === resolvedPlanId) || null;
     if (!plan && admin.plan_tier) {
@@ -2115,17 +1596,6 @@ export async function createSupabaseAdmin(input: {
     ai_quota_limit_override: quotaOverride,
   });
 
-  const officePlans = loadLocalOfficePlans();
-  officePlans[createdUser.id] = {
-    plan_id: planId,
-    ai_quota_limit_override: quotaOverride,
-  };
-  officePlans[username] = {
-    plan_id: planId,
-    ai_quota_limit_override: quotaOverride,
-  };
-  saveLocalOfficePlans(officePlans);
-
   return {
     ...createdUser,
     plan_id: planId,
@@ -2155,12 +1625,11 @@ export async function updateSupabaseAdmin(
   },
 ): Promise<AppUser> {
   const plans = await listSubscriptionPlans();
-  const officePlans = loadLocalOfficePlans();
-  const existingAssignment = officePlans[id];
-  let planId = input.plan_id ?? existingAssignment?.plan_id;
+  const existingUser = await findUserByIdOrUsername(id);
+  let planId = input.plan_id ?? existingUser?.plan_id ?? undefined;
   let planTier = input.plan_tier;
   let quota = input.ai_quota_limit;
-  let quotaOverride = input.ai_quota_limit_override !== undefined ? input.ai_quota_limit_override : existingAssignment?.ai_quota_limit_override;
+  let quotaOverride = input.ai_quota_limit_override !== undefined ? input.ai_quota_limit_override : (existingUser?.ai_quota_limit_override ?? null);
   let selectedPlan: SubscriptionPlan | null = null;
 
   if (input.plan_id) {
@@ -2188,8 +1657,7 @@ export async function updateSupabaseAdmin(
         quota = quotaOverride;
       }
     } else {
-      const existingUser = await findUserByIdOrUsername(id);
-      if (existingUser && !existingUser.ai_quota_limit_override && existingAssignment?.ai_quota_limit_override === null) {
+      if (existingUser && !existingUser.ai_quota_limit_override) {
         quota = selectedPlan.ai_quota_limit;
       }
     }
@@ -2205,7 +1673,7 @@ export async function updateSupabaseAdmin(
       planTier = input.plan_tier === "pro" ? "pro" : "plus";
     }
   } else if (input.ai_quota_limit_override !== undefined) {
-    const currentPlanId = planId || existingAssignment?.plan_id;
+    const currentPlanId = planId || existingUser?.plan_id;
     selectedPlan = plans.find((p) => p.id === currentPlanId) || DEFAULT_SUBSCRIPTION_PLANS[1];
     if (input.ai_quota_limit_override === null) {
       quotaOverride = null;
@@ -2226,21 +1694,15 @@ export async function updateSupabaseAdmin(
 
   const updatedUser = await updateSupabaseUser(id, updatePayload);
 
-  officePlans[id] = {
-    plan_id: planId ?? officePlans[id]?.plan_id ?? null,
-    ai_quota_limit_override: quotaOverride !== undefined ? quotaOverride : (officePlans[id]?.ai_quota_limit_override ?? null),
-  };
-  saveLocalOfficePlans(officePlans);
-
   if (!selectedPlan) {
-    selectedPlan = plans.find((p) => p.id === (planId || officePlans[id]?.plan_id)) || null;
+    selectedPlan = plans.find((p) => p.id === (planId || updatedUser.plan_id)) || null;
   }
 
   return {
     ...updatedUser,
-    plan_id: planId || officePlans[id]?.plan_id || null,
+    plan_id: planId || updatedUser.plan_id || null,
     ai_quota_limit: quota ?? updatedUser.ai_quota_limit,
-    ai_quota_limit_override: quotaOverride !== undefined ? quotaOverride : (officePlans[id]?.ai_quota_limit_override ?? null),
+    ai_quota_limit_override: quotaOverride !== undefined ? quotaOverride : (updatedUser.ai_quota_limit_override ?? null),
     plan: selectedPlan,
   };
 }
@@ -2641,16 +2103,9 @@ export async function recordAuditLog(entry: {
         ]);
       }
     } catch (err) {
-      logger.warn({ err }, "Supabase audit_log insert failed, persisting locally");
+      logger.warn({ err }, "Supabase audit_log insert failed");
     }
   }
-
-  const localLogs = loadLocalAuditLogs();
-  localLogs.unshift(newLog);
-  if (localLogs.length > 1000) {
-    localLogs.length = 1000;
-  }
-  saveLocalAuditLogs(localLogs);
 }
 
 /**
@@ -2673,44 +2128,36 @@ export async function listAuditLogs(options?: {
   const officeId = options?.office_id?.trim();
 
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasAuditLogTable(client);
-      if (hasTable) {
-        let query = client.from("audit_log").select("*", { count: "exact" });
-        if (officeId) {
-          query = query.eq("target_office_id", officeId);
-        }
-        const { data, count, error } = await query
-          .order("created_at", { ascending: false })
-          .range(offset, offset + limit - 1);
-
-        if (!error && Array.isArray(data)) {
-          const total = count ?? data.length;
-          return {
-            logs: data,
-            total,
-            page,
-            limit,
-            total_pages: Math.ceil(total / limit) || 1,
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listAuditLogs failed, reading from local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  const local = loadLocalAuditLogs();
-  const filtered = officeId
-    ? local.filter((l) => l.target_office_id === officeId)
-    : local;
+  const hasTable = await checkHasAuditLogTable(client);
+  if (!hasTable) {
+    return {
+      logs: [],
+      total: 0,
+      page,
+      limit,
+      total_pages: 1,
+    };
+  }
 
-  const total = filtered.length;
-  const sliced = filtered.slice(offset, offset + limit);
+  let query = client.from("audit_log").select("*", { count: "exact" });
+  if (officeId) {
+    query = query.eq("target_office_id", officeId);
+  }
+  const { data, count, error } = await query
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
+  if (error) {
+    throw new Error(`فشل استرجاع سجل التدقيق: ${error.message}`);
+  }
+
+  const total = count ?? (data?.length || 0);
   return {
-    logs: sliced,
+    logs: data || [],
     total,
     page,
     limit,
@@ -2723,34 +2170,34 @@ export async function listAuditLogs(options?: {
  */
 export async function getPlatformSettings(): Promise<PlatformSettings> {
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPlatformSettingsTable(client);
-      if (hasTable) {
-        const { data, error } = await client
-          .from("platform_settings")
-          .select("value, updated_at")
-          .eq("key", "general")
-          .single();
-
-        if (!error && data?.value) {
-          return {
-            ...DEFAULT_PLATFORM_SETTINGS,
-            ...data.value,
-            updated_at: data.updated_at,
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase getPlatformSettings failed, reading local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  const local = loadLocalPlatformSettings();
-  return {
-    ...DEFAULT_PLATFORM_SETTINGS,
-    ...local,
-  };
+  const hasTable = await checkHasPlatformSettingsTable(client);
+  if (!hasTable) {
+    return { ...DEFAULT_PLATFORM_SETTINGS };
+  }
+
+  const { data, error } = await client
+    .from("platform_settings")
+    .select("value, updated_at")
+    .eq("key", "general")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`فشل استرجاع إعدادات المنصة: ${error.message}`);
+  }
+
+  if (data?.value) {
+    return {
+      ...DEFAULT_PLATFORM_SETTINGS,
+      ...data.value,
+      updated_at: data.updated_at,
+    };
+  }
+
+  return { ...DEFAULT_PLATFORM_SETTINGS };
 }
 
 /**
@@ -2783,27 +2230,27 @@ export async function updatePlatformSettings(
   };
 
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPlatformSettingsTable(client);
-      if (hasTable) {
-        await client.from("platform_settings").upsert({
-          key: "general",
-          value: {
-            activation_link_expiry_hours: merged.activation_link_expiry_hours,
-            new_office_registration_enabled: merged.new_office_registration_enabled,
-            support_contact_email: merged.support_contact_email,
-            support_contact_phone: merged.support_contact_phone,
-          },
-          updated_at: merged.updated_at,
-        });
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase update platform_settings failed, persisting locally");
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
+  }
+
+  const hasTable = await checkHasPlatformSettingsTable(client);
+  if (hasTable) {
+    const { error } = await client.from("platform_settings").upsert({
+      key: "general",
+      value: {
+        activation_link_expiry_hours: merged.activation_link_expiry_hours,
+        new_office_registration_enabled: merged.new_office_registration_enabled,
+        support_contact_email: merged.support_contact_email,
+        support_contact_phone: merged.support_contact_phone,
+      },
+      updated_at: merged.updated_at,
+    });
+    if (error) {
+      throw new Error(`فشل تحديث إعدادات المنصة: ${error.message}`);
     }
   }
 
-  saveLocalPlatformSettings(merged);
   return merged;
 }
 
@@ -2830,6 +2277,11 @@ export async function createPayment(data: {
   notes?: string | null;
   recorded_by?: string | null;
 }): Promise<PaymentRecord> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
+  }
+
   const now = new Date().toISOString();
   const paymentDate = data.payment_date || now.split("T")[0];
   const newPayment: PaymentRecord = {
@@ -2846,44 +2298,36 @@ export async function createPayment(data: {
     updated_at: now,
   };
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPaymentsTable(client);
-      if (hasTable) {
-        const { data: inserted, error } = await client
-          .from("payments")
-          .insert([
-            {
-              id: newPayment.id,
-              office_id: newPayment.office_id,
-              amount: newPayment.amount,
-              currency: newPayment.currency,
-              payment_date: newPayment.payment_date,
-              method: newPayment.method,
-              status: newPayment.status,
-              notes: newPayment.notes,
-              recorded_by: newPayment.recorded_by,
-              created_at: newPayment.created_at,
-              updated_at: newPayment.updated_at,
-            },
-          ])
-          .select()
-          .single();
-
-        if (!error && inserted) {
-          newPayment.id = inserted.id;
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase payments insert failed, persisting locally");
-    }
+  const hasTable = await checkHasPaymentsTable(client);
+  if (!hasTable) {
+    throw new Error("جدول المدفوعات غير موجود في قاعدة البيانات.");
   }
 
-  const local = loadLocalPayments();
-  local.unshift(newPayment);
-  saveLocalPayments(local);
+  const { data: inserted, error } = await client
+    .from("payments")
+    .insert([
+      {
+        id: newPayment.id,
+        office_id: newPayment.office_id,
+        amount: newPayment.amount,
+        currency: newPayment.currency,
+        payment_date: newPayment.payment_date,
+        method: newPayment.method,
+        status: newPayment.status,
+        notes: newPayment.notes,
+        recorded_by: newPayment.recorded_by,
+        created_at: newPayment.created_at,
+        updated_at: newPayment.updated_at,
+      },
+    ])
+    .select()
+    .single();
 
+  if (error || !inserted) {
+    throw new Error(`فشل إنشاء سجل الدفع: ${error?.message || "خطأ غير معروف"}`);
+  }
+
+  newPayment.id = inserted.id;
   return newPayment;
 }
 
@@ -2891,46 +2335,52 @@ export async function updatePayment(
   id: string,
   updates: Partial<Pick<PaymentRecord, "amount" | "currency" | "payment_date" | "method" | "status" | "notes">>
 ): Promise<PaymentRecord | null> {
-  const local = loadLocalPayments();
-  const idx = local.findIndex((p) => p.id === id);
-  if (idx === -1) {
-    return null;
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  const current = local[idx];
-  const updated: PaymentRecord = {
-    ...current,
-    ...updates,
-    amount: updates.amount !== undefined ? Number(updates.amount) : current.amount,
+  const hasTable = await checkHasPaymentsTable(client);
+  if (!hasTable) {
+    throw new Error("جدول المدفوعات غير موجود في قاعدة البيانات.");
+  }
+
+  const updateData: any = {
+    ...(updates.amount !== undefined ? { amount: Number(updates.amount) } : {}),
+    ...(updates.currency !== undefined ? { currency: updates.currency } : {}),
+    ...(updates.payment_date !== undefined ? { payment_date: updates.payment_date } : {}),
+    ...(updates.method !== undefined ? { method: updates.method } : {}),
+    ...(updates.status !== undefined ? { status: updates.status } : {}),
+    ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
     updated_at: new Date().toISOString(),
   };
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const hasTable = await checkHasPaymentsTable(client);
-      if (hasTable) {
-        await client
-          .from("payments")
-          .update({
-            ...(updates.amount !== undefined ? { amount: updated.amount } : {}),
-            ...(updates.currency !== undefined ? { currency: updated.currency } : {}),
-            ...(updates.payment_date !== undefined ? { payment_date: updated.payment_date } : {}),
-            ...(updates.method !== undefined ? { method: updated.method } : {}),
-            ...(updates.status !== undefined ? { status: updated.status } : {}),
-            ...(updates.notes !== undefined ? { notes: updated.notes } : {}),
-            updated_at: updated.updated_at,
-          })
-          .eq("id", id);
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase update payments failed, updating local");
-    }
+  const { data, error } = await client
+    .from("payments")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`فشل تحديث سجل الدفع: ${error.message}`);
   }
 
-  local[idx] = updated;
-  saveLocalPayments(local);
-  return updated;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    office_id: data.office_id,
+    amount: Number(data.amount) || 0,
+    currency: data.currency || "SAR",
+    payment_date: data.payment_date,
+    method: data.method || "bank_transfer",
+    status: data.status || "paid",
+    notes: data.notes || null,
+    recorded_by: data.recorded_by || null,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
 }
 
 export async function listPayments(options?: {
@@ -2941,48 +2391,40 @@ export async function listPayments(options?: {
   const adminMap = new Map(admins.map((a) => [a.id, a]));
 
   const client = getSupabaseClient();
-  let items: PaymentRecord[] = [];
-
-  if (client) {
-    try {
-      const hasTable = await checkHasPaymentsTable(client);
-      if (hasTable) {
-        let q = client.from("payments").select("*").order("created_at", { ascending: false });
-        if (options?.office_id) {
-          q = q.eq("office_id", options.office_id);
-        }
-        if (options?.status) {
-          q = q.eq("status", options.status);
-        }
-        const { data, error } = await q;
-        if (!error && Array.isArray(data)) {
-          items = data.map((d) => ({
-            id: d.id,
-            office_id: d.office_id,
-            amount: Number(d.amount) || 0,
-            currency: d.currency || "SAR",
-            payment_date: d.payment_date,
-            method: d.method || "bank_transfer",
-            status: d.status || "paid",
-            notes: d.notes || null,
-            recorded_by: d.recorded_by || null,
-            created_at: d.created_at,
-            updated_at: d.updated_at,
-          }));
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "Supabase listPayments failed, reading local");
-    }
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  if (items.length === 0) {
-    const local = loadLocalPayments();
-    items = local.filter((p) => {
-      if (options?.office_id && p.office_id !== options.office_id) return false;
-      if (options?.status && p.status !== options.status) return false;
-      return true;
-    });
+  let items: PaymentRecord[] = [];
+
+  const hasTable = await checkHasPaymentsTable(client);
+  if (hasTable) {
+    let q = client.from("payments").select("*").order("created_at", { ascending: false });
+    if (options?.office_id) {
+      q = q.eq("office_id", options.office_id);
+    }
+    if (options?.status) {
+      q = q.eq("status", options.status);
+    }
+    const { data, error } = await q;
+    if (error) {
+      throw new Error(`فشل استرجاع المدفوعات: ${error.message}`);
+    }
+    if (Array.isArray(data)) {
+      items = data.map((d) => ({
+        id: d.id,
+        office_id: d.office_id,
+        amount: Number(d.amount) || 0,
+        currency: d.currency || "SAR",
+        payment_date: d.payment_date,
+        method: d.method || "bank_transfer",
+        status: d.status || "paid",
+        notes: d.notes || null,
+        recorded_by: d.recorded_by || null,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+      }));
+    }
   }
 
   // Enrich with office_name
@@ -4031,67 +3473,7 @@ export async function createSupabaseUser(input: {
 
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    if (local.some((u) => u.username.toLowerCase() === username)) {
-      throw new Error(`اسم المستخدم "${username}" مسجل مسبقاً.`);
-    }
-
-    const newUser: AppUserWithHash = {
-      id: `local-${crypto.randomUUID()}`,
-      username,
-      email: input.email?.trim() || null,
-      role,
-      admin_id: role === "staff" ? (input.admin_id || null) : null,
-      office_name: isOfficeAdmin ? (input.office_name?.trim() || null) : null,
-      display_name: input.display_name?.trim() || username,
-      status,
-      phone: input.phone?.trim() || null,
-      subscription_end_date,
-      subscription_notes,
-      plan_tier,
-      plan_id: isOfficeAdmin ? (input.plan_id || null) : null,
-      ai_quota_limit_override: isOfficeAdmin ? (input.ai_quota_limit_override !== undefined ? input.ai_quota_limit_override : null) : null,
-      billing_cycle,
-      ai_quota_limit,
-      ai_usage_count,
-      google_service_account_json: encryptedGoogleJson,
-      google_spreadsheet_id: isOfficeAdmin ? (input.google_spreadsheet_id?.trim() || null) : null,
-      google_sheet_name: isOfficeAdmin ? (input.google_sheet_name?.trim() || null) : null,
-      has_google_service: Boolean(encryptedGoogleJson),
-      password_hash,
-      activation_token_hash: input.activation_token_hash || null,
-      activation_token_expires_at: input.activation_token_expires_at || null,
-      created_at: new Date().toISOString(),
-    };
-
-    local.unshift(newUser);
-    saveLocalUsers(local);
-
-    return {
-      id: newUser.id,
-      username: newUser.username,
-      email: newUser.email,
-      role: newUser.role,
-      admin_id: newUser.admin_id,
-      office_name: newUser.office_name,
-      display_name: newUser.display_name,
-      status: newUser.status,
-      phone: newUser.phone,
-      subscription_end_date: newUser.subscription_end_date,
-      subscription_notes: newUser.subscription_notes,
-      plan_tier: newUser.plan_tier,
-      plan_id: newUser.plan_id,
-      ai_quota_limit_override: newUser.ai_quota_limit_override,
-      billing_cycle: newUser.billing_cycle,
-      ai_quota_limit: newUser.ai_quota_limit,
-      ai_usage_count: newUser.ai_usage_count,
-      activation_token_hash: newUser.activation_token_hash,
-      activation_token_expires_at: newUser.activation_token_expires_at,
-      has_google_service: newUser.has_google_service,
-      google_spreadsheet_id: newUser.google_spreadsheet_id,
-      google_sheet_name: newUser.google_sheet_name,
-      created_at: newUser.created_at,
-    };
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
   const tableName = env.supabaseTableName;
@@ -4209,50 +3591,28 @@ export async function createSupabaseUser(input: {
 export async function countActiveAdmins(excludeUserId?: string): Promise<number> {
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
-  try {
-    const tableName = env.supabaseTableName;
-    let query = client
-      .from(tableName)
-      .select("id", { count: "exact", head: true })
-      .in("role", ["admin", "super_admin"])
-      .eq("status", "active");
-    if (excludeUserId) {
-      query = query.neq("id", excludeUserId);
-    }
-    const { count, error } = await query;
-    if (error || count === null) {
-      const local = loadLocalUsers();
-      return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
-    }
-    return count;
-  } catch {
-    const local = loadLocalUsers();
-    return local.filter((u) => (u.role === "admin" || u.role === "super_admin") && u.status === "active" && u.id !== excludeUserId).length;
+  const tableName = env.supabaseTableName;
+  let query = client
+    .from(tableName)
+    .select("id", { count: "exact", head: true })
+    .in("role", ["admin", "super_admin"])
+    .eq("status", "active");
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId);
   }
+  const { count, error } = await query;
+  if (error || count === null) {
+    throw new Error(`فشل استعلام المشرفين من قاعدة البيانات: ${error?.message || "unknown"}`);
+  }
+  return count;
 }
 
 export async function deleteSupabaseUser(id: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) {
-    const local = loadLocalUsers();
-    const userToDelete = local.find((u) => u.id === id);
-    if (!userToDelete) {
-      throw new Error("المستخدم غير موجود.");
-    }
-    if ((userToDelete.role === "admin" || userToDelete.role === "super_admin") && userToDelete.status === "active") {
-      const otherAdmins = await countActiveAdmins(id);
-      if (otherAdmins === 0) {
-        throw new Error("لا يمكن حذف المشرف الوحيد النشط في المنظومة لضمان استمرارية لوحة التحكم.");
-      }
-    }
-    const filtered = local.filter((u) => u.id !== id);
-    saveLocalUsers(filtered);
-    clearUserAuthCache(id);
-    revokeUserSessions(id);
-    return;
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
   invalidateUserGoogleCache(id);
@@ -4305,18 +3665,15 @@ export async function updateSupabaseUser(
   },
 ): Promise<AppUser> {
   const client = getSupabaseClient();
+  if (!client) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
+  }
+
+  const tableName = env.supabaseTableName;
 
   if (input.role === "staff" || input.status === "suspended") {
-    let isCurrentlyActiveSuper = false;
-    if (!client) {
-      const local = loadLocalUsers();
-      const user = local.find((u) => u.id === id);
-      isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
-    } else {
-      const tableName = env.supabaseTableName;
-      const { data: user } = await client.from(tableName).select("role, status").eq("id", id).maybeSingle();
-      isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
-    }
+    const { data: user } = await client.from(tableName).select("role, status").eq("id", id).maybeSingle();
+    const isCurrentlyActiveSuper = user?.role === "super_admin" && user?.status === "active";
 
     if (isCurrentlyActiveSuper) {
       const remainingAdmins = await countActiveAdmins(id);
@@ -4326,90 +3683,6 @@ export async function updateSupabaseUser(
     }
   }
 
-  if (!client) {
-    const local = loadLocalUsers();
-    const index = local.findIndex((u) => u.id === id);
-    if (index === -1) {
-      throw new Error("المستخدم غير موجود.");
-    }
-    const user = local[index];
-    if (input.password_hash) {
-      user.password_hash = input.password_hash;
-    } else if (input.password && input.password.trim()) {
-      const passwordValidation = validatePassword(input.password, {
-        username: user.username,
-        email: input.email !== undefined ? input.email : user.email,
-      });
-      if (!passwordValidation.isValid) {
-        throw new Error(passwordValidation.message);
-      }
-      user.password_hash = await bcrypt.hash(input.password.trim(), 10);
-    }
-    if (input.role) user.role = input.role;
-    if (input.admin_id !== undefined) user.admin_id = input.admin_id;
-    if (input.office_name !== undefined) user.office_name = input.office_name ? input.office_name.trim() : null;
-    if (input.display_name !== undefined) user.display_name = input.display_name.trim() || null;
-    if (input.email !== undefined) user.email = input.email.trim() || null;
-    if (input.phone !== undefined) user.phone = input.phone ? input.phone.trim() : null;
-    if (input.status !== undefined) user.status = input.status;
-    if (input.activation_token_hash !== undefined) user.activation_token_hash = input.activation_token_hash;
-    if (input.activation_token_expires_at !== undefined) user.activation_token_expires_at = input.activation_token_expires_at;
-    if (input.subscription_end_date !== undefined) user.subscription_end_date = input.subscription_end_date;
-    if (input.subscription_notes !== undefined) user.subscription_notes = input.subscription_notes;
-    if (input.plan_tier !== undefined) user.plan_tier = input.plan_tier;
-    if (input.plan_id !== undefined) user.plan_id = input.plan_id;
-    if (input.ai_quota_limit_override !== undefined) user.ai_quota_limit_override = input.ai_quota_limit_override;
-    if (input.billing_cycle !== undefined) user.billing_cycle = input.billing_cycle;
-    if (input.ai_quota_limit !== undefined) user.ai_quota_limit = input.ai_quota_limit;
-    if (input.ai_usage_count !== undefined) user.ai_usage_count = input.ai_usage_count;
-
-    if (input.google_service_account_json !== undefined) {
-      if (!input.google_service_account_json) {
-        user.google_service_account_json = null;
-        user.has_google_service = false;
-      } else if (isEncrypted(input.google_service_account_json)) {
-        user.google_service_account_json = input.google_service_account_json;
-        user.has_google_service = true;
-      } else {
-        const sanitized = sanitizeGoogleServiceJson(input.google_service_account_json);
-        user.google_service_account_json = sanitized ? encryptSecret(sanitized) : null;
-        user.has_google_service = Boolean(sanitized);
-      }
-    }
-    if (input.google_spreadsheet_id !== undefined) user.google_spreadsheet_id = input.google_spreadsheet_id ? input.google_spreadsheet_id.trim() : null;
-    if (input.google_sheet_name !== undefined) user.google_sheet_name = input.google_sheet_name ? input.google_sheet_name.trim() : null;
-
-    saveLocalUsers(local);
-    clearUserAuthCache(id);
-    if (input.password && input.password.trim()) {
-      revokeUserSessions(id);
-    }
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      admin_id: user.admin_id,
-      office_name: user.office_name,
-      display_name: user.display_name,
-      status: user.status,
-      phone: user.phone,
-      subscription_end_date: user.subscription_end_date,
-      subscription_notes: user.subscription_notes,
-      plan_tier: user.plan_tier,
-      plan_id: user.plan_id || null,
-      ai_quota_limit_override: user.ai_quota_limit_override !== undefined ? user.ai_quota_limit_override : null,
-      billing_cycle: user.billing_cycle,
-      ai_quota_limit: user.ai_quota_limit,
-      ai_usage_count: user.ai_usage_count,
-      has_google_service: user.has_google_service,
-      google_spreadsheet_id: user.google_spreadsheet_id,
-      google_sheet_name: user.google_sheet_name,
-      created_at: user.created_at,
-    };
-  }
-
-  const tableName = env.supabaseTableName;
   const updates: Record<string, unknown> = {};
 
   if (input.password_hash) {
