@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ShieldCheck,
+  ShieldAlert,
   Plus,
   Trash2,
   Calendar as CalendarIcon,
@@ -146,7 +147,8 @@ export default function PowerOfAttorneyPage() {
   const { data: currentUser, isLoading: isUserLoading } = useGetCurrentUser();
   const userId = currentUser?.id || (currentUser as any)?.userId;
   const officeId = (currentUser as any)?.officeId || userId;
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const isAdmin = currentUser?.role === 'admin';
+  const isSuperAdmin = currentUser?.role === 'super_admin';
 
   const [records, setRecords] = useState<PowerOfAttorney[]>([]);
   const [clientsMap, setClientsMap] = useState<Record<string, string>>({});
@@ -245,10 +247,10 @@ export default function PowerOfAttorneyPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (isUserLoading || !officeId || !userId) return;
+    if (isUserLoading || !officeId || !userId || isSuperAdmin) return;
     fetchClients();
     loadRecords();
-  }, [isUserLoading, officeId, userId, fetchClients, loadRecords]);
+  }, [isUserLoading, officeId, userId, isSuperAdmin, fetchClients, loadRecords]);
 
   // Derived client name helper
   const getClientDisplayName = useCallback((record: PowerOfAttorney) => {
@@ -276,6 +278,14 @@ export default function PowerOfAttorneyPage() {
   const handleOpenModal = (record?: PowerOfAttorney) => {
     setFormError(null);
     if (record) {
+      if (!isAdmin) {
+        toast({
+          title: 'غير مصرح',
+          description: 'تعديل بيانات الوكالة مقتصر على مدير المكتب فقط.',
+          variant: 'destructive',
+        });
+        return;
+      }
       setEditingRecord(record);
       setClientId(record.clientId || (record as any).client_id || null);
       setAssignedLawyerId(record.assignedLawyerId || (record as any).assigned_lawyer_id || null);
@@ -359,6 +369,16 @@ export default function PowerOfAttorneyPage() {
       let res: Response;
       const targetId = editingRecord?.sheetRowId || editingRecord?.id;
       if (editingRecord && targetId) {
+        if (!isAdmin) {
+          clearTimeout(timeoutId);
+          toast({
+            title: 'غير مصرح',
+            description: 'تعديل بيانات الوكالة مقتصر على مدير المكتب فقط.',
+            variant: 'destructive',
+          });
+          setIsSaving(false);
+          return;
+        }
         res = await fetch(`/api/poa/${targetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -420,6 +440,15 @@ export default function PowerOfAttorneyPage() {
     const record = deleteTarget;
     setDeleteTarget(null);
     if (!record) return;
+
+    if (!isAdmin) {
+      toast({
+        title: 'غير مصرح',
+        description: 'حذف الوكالة مقتصر على مدير المكتب فقط.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
       const id = record.sheetRowId || record.id;
@@ -510,6 +539,27 @@ export default function PowerOfAttorneyPage() {
   const totalItems = filteredRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // ── Super Admin Guard View ────────────────────────────────────────────────
+  if (!isUserLoading && isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center" dir="rtl">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-600 shadow-sm">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold mb-2 text-foreground">غير مصرح لمشرف المنصة بالوصول</h2>
+        <p className="text-sm text-muted-foreground mb-6 max-w-md leading-relaxed">
+          غير مصرح لمشرف المنصة بالوصول إلى بيانات وقضايا المكاتب الخاصة حفاظاً على خصوصية وسرية بيانات الموكلين. دورك كمشرف منصة مقتصر على إدارة الاشتراكات والمكاتب.
+        </p>
+        <Button
+          onClick={() => { window.location.href = '/super-admin'; }}
+          className="gap-2 font-medium bg-[#0B2A4A] hover:bg-[#071D34] text-white"
+        >
+          الانتقال إلى لوحة تحكم المشرف العام
+        </Button>
+      </div>
+    );
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -839,20 +889,24 @@ export default function PowerOfAttorneyPage() {
                       >
                         <Paperclip className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleOpenModal(record)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        title="تعديل"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(record)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleOpenModal(record)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          title="تعديل"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => setDeleteTarget(record)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
 

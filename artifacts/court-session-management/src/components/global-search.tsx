@@ -72,6 +72,12 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
       return;
     }
 
+    if ((currentUser as any)?.role === 'super_admin') {
+      setIsLoading(false);
+      setResults(emptyResults);
+      return;
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }

@@ -7,6 +7,8 @@ import * as postgresService from "../services/postgres.service";
 describe("POA Save Path & Client Link Enforcement (/api/poa)", { timeout: 45000 }, () => {
   let adminUser: any;
   let authCookie: string;
+  let staffUser: any;
+  let staffCookie: string;
   let officeId: string;
   let client1: any;
   let client2: any;
@@ -32,10 +34,26 @@ describe("POA Save Path & Client Link Enforcement (/api/poa)", { timeout: 45000 
     authCookie = loginRes.headers["set-cookie"]?.[0] || "";
     officeId = adminUser.officeId || adminUser.id;
 
+    // Create staff user in same office
+    const staffUname = `poa_staff_${Date.now()}`;
+    staffUser = await supabaseService.createSupabaseUser({
+      username: staffUname,
+      password: "StaffPass123!",
+      role: "staff",
+      status: "active",
+      admin_id: adminUser.id,
+    });
+
+    const staffLoginRes = await request(app)
+      .post("/api/auth/login")
+      .send({ username: staffUname, password: "StaffPass123!" });
+
+    staffCookie = staffLoginRes.headers["set-cookie"]?.[0] || "";
+
     // Create 2 clients for this office
     client1 = await postgresService.createClient({ name: "شركة الأفق للاستثمار", phone: "0501112233" }, officeId);
     client2 = await postgresService.createClient({ name: "مؤسسة النور للتجارة", phone: "0504445566" }, officeId);
-  });
+  }, 30000);
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -156,6 +174,48 @@ describe("POA Save Path & Client Link Enforcement (/api/poa)", { timeout: 45000 
         .set("Cookie", authCookie);
 
       expect(deleteRes.status).toBe(204);
+    });
+
+    it("forbids staff lawyer from editing a POA with 403", async () => {
+      const createRes = await request(app)
+        .post("/api/poa")
+        .set("Cookie", authCookie)
+        .send({
+          clientId: client1.id,
+          poaNumber: "1446/POA/STAFF_EDIT_DENIED",
+        });
+
+      const rowId = createRes.body.sheetRowId || createRes.body.id;
+
+      const updateRes = await request(app)
+        .put(`/api/poa/${rowId}`)
+        .set("Cookie", staffCookie)
+        .send({
+          clientId: client2.id,
+          notes: "محاولة تعديل من قبل الموظف",
+        });
+
+      expect(updateRes.status).toBe(403);
+      expect(updateRes.body.error).toBe("تعديل بيانات الوكالة مقتصر على مدير المكتب فقط.");
+    });
+
+    it("forbids staff lawyer from deleting a POA with 403", async () => {
+      const createRes = await request(app)
+        .post("/api/poa")
+        .set("Cookie", authCookie)
+        .send({
+          clientId: client1.id,
+          poaNumber: "1446/POA/STAFF_DELETE_DENIED",
+        });
+
+      const rowId = createRes.body.sheetRowId || createRes.body.id;
+
+      const deleteRes = await request(app)
+        .delete(`/api/poa/${rowId}`)
+        .set("Cookie", staffCookie);
+
+      expect(deleteRes.status).toBe(403);
+      expect(deleteRes.body.error).toBe("حذف الوكالة مقتصر على مدير المكتب فقط.");
     });
   });
 });

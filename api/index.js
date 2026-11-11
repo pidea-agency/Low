@@ -853632,6 +853632,10 @@ router9.post("/poa", async (req, res) => {
   }
 });
 router9.put("/poa/:rowId", async (req, res) => {
+  if (req.authUser?.role !== "admin") {
+    res.status(403).json({ error: "\u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0642\u062A\u0635\u0631 \u0639\u0644\u0649 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0641\u0642\u0637." });
+    return;
+  }
   const officeId = getOfficeId2(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
@@ -853640,7 +853644,7 @@ router9.put("/poa/:rowId", async (req, res) => {
   }
   try {
     const existing = await getPoaById(rowId, officeId);
-    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+    if (!existing) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
@@ -853673,7 +853677,7 @@ router9.put("/poa/:rowId", async (req, res) => {
     if (body.caseId !== void 0 || body.case_id !== void 0) {
       payload.caseId = body.caseId !== void 0 ? body.caseId : body.case_id;
     }
-    if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0)) {
+    if (body.assignedLawyerId !== void 0 || body.assigned_lawyer_id !== void 0) {
       const targetLawyer = body.assignedLawyerId !== void 0 ? body.assignedLawyerId : body.assigned_lawyer_id;
       if (targetLawyer) {
         const val = await validateOfficeLawyer(targetLawyer, officeId);
@@ -853735,6 +853739,10 @@ router9.patch("/poa/:id/reassign", async (req, res) => {
   }
 });
 router9.delete("/poa/:rowId", async (req, res) => {
+  if (req.authUser?.role !== "admin") {
+    res.status(403).json({ error: "\u062D\u0630\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0642\u062A\u0635\u0631 \u0639\u0644\u0649 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0641\u0642\u0637." });
+    return;
+  }
   const officeId = getOfficeId2(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
@@ -853743,7 +853751,7 @@ router9.delete("/poa/:rowId", async (req, res) => {
   }
   try {
     const existing = await getPoaById(rowId, officeId);
-    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+    if (!existing) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }

@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useGetCurrentUser } from '@workspace/api-client-react';
 
 export interface AppNotification {
   id: string;
@@ -56,6 +57,8 @@ export function NotificationsDropdown({ className, buttonClassName }: Notificati
   const [open, setOpen] = useState(false);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { data: currentUser } = useGetCurrentUser();
+  const isSuperAdmin = (currentUser as any)?.role === 'super_admin';
 
   const { data, isLoading } = useQuery<NotificationsResponse>({
     queryKey: ['/api/notifications'],
@@ -66,7 +69,8 @@ export function NotificationsDropdown({ className, buttonClassName }: Notificati
       }
       return res.json();
     },
-    refetchInterval: 30000, // Poll every 30s
+    enabled: !isSuperAdmin && !!currentUser,
+    refetchInterval: isSuperAdmin ? false : 30000, // Poll every 30s only for office users
   });
 
   const markReadMutation = useMutation({

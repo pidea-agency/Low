@@ -142,10 +142,16 @@ router.post("/poa", async (req, res) => {
 
 /**
  * PUT /api/poa/:rowId
- * Updates an existing POA record. Verifies office ownership and scoping, returning 404 if not found.
+ * Updates an existing POA record. Restricted strictly to office admins.
+ * Verifies office ownership and scoping, returning 404 if not found.
  * Enforces client_id on update.
  */
 router.put("/poa/:rowId", async (req, res) => {
+  if (req.authUser?.role !== "admin") {
+    res.status(403).json({ error: "تعديل بيانات الوكالة مقتصر على مدير المكتب فقط." });
+    return;
+  }
+
   const officeId = getOfficeId(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
@@ -155,7 +161,7 @@ router.put("/poa/:rowId", async (req, res) => {
 
   try {
     const existing = await postgresService.getPoaById(rowId, officeId);
-    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+    if (!existing) {
       res.status(404).json({ error: "الوكالة غير موجودة." });
       return;
     }
@@ -199,7 +205,7 @@ router.put("/poa/:rowId", async (req, res) => {
       payload.caseId = body.caseId !== undefined ? body.caseId : body.case_id;
     }
 
-    if (req.authUser?.role !== "staff" && (body.assignedLawyerId !== undefined || body.assigned_lawyer_id !== undefined)) {
+    if (body.assignedLawyerId !== undefined || body.assigned_lawyer_id !== undefined) {
       const targetLawyer = body.assignedLawyerId !== undefined ? body.assignedLawyerId : body.assigned_lawyer_id;
       if (targetLawyer) {
         const val = await validateOfficeLawyer(targetLawyer, officeId);
@@ -275,9 +281,15 @@ router.patch("/poa/:id/reassign", async (req, res) => {
 
 /**
  * DELETE /api/poa/:rowId
- * Deletes a POA record by id. Verifies office ownership and scoping, returning 404 if not found.
+ * Deletes a POA record by id. Restricted strictly to office admins.
+ * Verifies office ownership and scoping, returning 404 if not found.
  */
 router.delete("/poa/:rowId", async (req, res) => {
+  if (req.authUser?.role !== "admin") {
+    res.status(403).json({ error: "حذف الوكالة مقتصر على مدير المكتب فقط." });
+    return;
+  }
+
   const officeId = getOfficeId(req);
   const rowId = parseInt(String(req.params.rowId), 10);
   if (isNaN(rowId)) {
@@ -287,7 +299,7 @@ router.delete("/poa/:rowId", async (req, res) => {
 
   try {
     const existing = await postgresService.getPoaById(rowId, officeId);
-    if (!existing || !canUserAccessRecord(existing, req.authUser)) {
+    if (!existing) {
       res.status(404).json({ error: "الوكالة غير موجودة." });
       return;
     }
