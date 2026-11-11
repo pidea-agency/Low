@@ -491,31 +491,49 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
   }
 });
 
-router.post("/settings/test-whatsapp", async (_req, res) => {
+router.post("/settings/test-whatsapp", async (req, res) => {
   const s = getSettings();
-  if (!s.whatsappNumber?.trim()) {
+  const phone = String(
+    req.body?.whatsappNumber ?? req.body?.number ?? req.body?.recipientPhone ?? s.whatsappNumber ?? ""
+  ).trim();
+
+  if (!phone) {
     res.status(400).json({ error: "يرجى كتابة رقم الواتساب وتحديد الإعدادات أولاً." });
     return;
   }
 
+  const rawApiUrl = String(req.body?.whatsappApiUrl ?? req.body?.apiUrl ?? s.whatsappApiUrl ?? "").trim();
+  const token = String(req.body?.whatsappToken ?? req.body?.token ?? s.whatsappToken ?? "").trim();
+  const instanceId = String(req.body?.whatsappInstanceId ?? req.body?.instanceId ?? s.whatsappInstanceId ?? "").trim();
+
   try {
     const channel = new WhatsappReminderChannel();
-    await channel.send({
-      officeId: "admin",
-      recipientPhone: s.whatsappNumber.trim(),
-      sessionId: 999,
-      caseNumber: "1445/اختباري/01",
-      court: "المحكمة العامة بالرياض",
-      courtCircuit: "دائرة الدعاوي الحقوقية الأولى",
-      sessionDateHijri: "15/02/1446",
-      sessionTime: "10:30 صباحا",
-      plaintiff: "شركة الحلول القضائية",
-      defendant: "مؤسسة النور للتجارة",
-      caseSubject: "تجربة إرسال تنبيهات الواتساب للجلسات",
-      kind: "24h",
+    const nowHijri = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date());
+
+    const testMessage = [
+      "🔔 *رسالة تجريبية من نظام إدارة جلسات المحكمة*",
+      "",
+      `📱 تم إرسال هذه الرسالة لاختبار ربط تنبيهات الواتساب بنجاح إلى الرقم: ${phone}`,
+      "⚖️ *رقم القضية:* 1446/اختباري/01",
+      "🏛️ *المحكمة:* المحكمة العامة",
+      `📅 *التاريخ:* ${nowHijri}`,
+      "⏰ *الوقت:* 10:30 صباحاً",
+      "✅ اتصال مزود الخدمة (Green API) يعمل بصورة سليمة وجاهز لإرسال تذكيرات الجلسات.",
+      "",
+      "الرجاء عدم الرد على هذه الرسالة الآلية."
+    ].join("\n");
+
+    await channel.sendRaw(testMessage, phone, {
+      apiUrl: rawApiUrl,
+      token,
+      instanceId,
     });
 
-    res.json({ message: "تمت تجربة إرسال تنبيه الواتساب بنجاح!" });
+    res.json({ message: `تمت تجربة إرسال تنبيه الواتساب بنجاح إلى الرقم ${phone}!` });
   } catch (err) {
     logger.error({ err }, "Failed to execute WhatsApp test notification");
     const msg = err instanceof Error ? err.message : "فشل إجراء تجربة التنبيه عبر الواتساب.";

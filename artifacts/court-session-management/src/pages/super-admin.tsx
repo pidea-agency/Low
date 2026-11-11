@@ -23,6 +23,7 @@ import {
   Sparkles,
   Layers,
   Plus,
+  Database,
   BarChart3,
   SlidersHorizontal,
   Bot,
@@ -542,6 +543,16 @@ export default function SuperAdminPage() {
   });
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isTestingDb, setIsTestingDb] = useState(false);
+  const [dbTestResult, setDbTestResult] = useState<{
+    tested: boolean;
+    connected: boolean;
+    latencyMs?: number;
+    message?: string;
+    error?: string;
+    host?: string;
+    tableName?: string;
+  } | null>(null);
 
   // Modals for Office Admins
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -682,6 +693,51 @@ export default function SuperAdminPage() {
       });
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleTestDbConnection = async () => {
+    setIsTestingDb(true);
+    try {
+      const res = await fetch('/api/super-admin/test-db-connection', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      setDbTestResult({
+        tested: true,
+        connected: Boolean(data.connected),
+        latencyMs: data.latencyMs,
+        message: data.message,
+        error: data.error,
+        host: data.host,
+        tableName: data.tableName,
+      });
+
+      if (data.connected) {
+        toast({
+          title: 'قاعدة البيانات متصلة بنجاح ✓',
+          description: data.message || `تم الاتصال في ${data.latencyMs}ms بنجاح.`,
+        });
+      } else {
+        toast({
+          title: 'تعذر الاتصال بقاعدة البيانات ✕',
+          description: data.error || data.message || 'فشل الاتصال بقاعدة البيانات.',
+          variant: 'destructive',
+        });
+      }
+    } catch (err: any) {
+      setDbTestResult({
+        tested: true,
+        connected: false,
+        error: err.message || 'فشل إرسال طلب الفحص إلى الخادم.',
+      });
+      toast({
+        title: 'خطأ في الاتصال',
+        description: err.message || 'تعذر الوصول إلى الخادم.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTestingDb(false);
     }
   };
 
@@ -3683,6 +3739,84 @@ export default function SuperAdminPage() {
                     <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSettings ? 'animate-spin' : ''}`} />
                     إعادة تحميل
                   </Button>
+                </div>
+
+                {/* Database Connection Test Card */}
+                <div className="bg-card border border-border rounded-2xl p-6 shadow-xs max-w-2xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Database className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground">فحص اتصال قاعدة البيانات (Database Check)</h3>
+                        <p className="text-xs text-muted-foreground">
+                          التحقق الفوري من سلامة الربط بقاعدة بيانات Supabase PostgreSQL وزمن الاستجابة
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isTestingDb}
+                      onClick={handleTestDbConnection}
+                      className="gap-2 text-xs font-bold border-primary/30 text-primary hover:bg-primary/5 shrink-0"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isTestingDb ? 'animate-spin' : ''}`} />
+                      <span>{isTestingDb ? 'جارٍ الفحص...' : 'فحص الاتصال الآن ⚡'}</span>
+                    </Button>
+                  </div>
+
+                  {dbTestResult && (
+                    <div
+                      className={`p-4 rounded-xl border text-xs space-y-2.5 transition-all ${
+                        dbTestResult.connected
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-destructive/10 border-destructive/30 text-destructive'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-sm">
+                          {dbTestResult.connected ? (
+                            <>
+                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                              <span>قاعدة البيانات متصلة وتعمل بصورة ممتازة ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="w-5 h-5 text-destructive" />
+                              <span>تعذر الاتصال بقاعدة البيانات ✕</span>
+                            </>
+                          )}
+                        </div>
+                        {dbTestResult.latencyMs !== undefined && (
+                          <Badge
+                            variant="outline"
+                            className={`text-[11px] font-mono ${
+                              dbTestResult.connected
+                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                                : 'bg-destructive/20 text-destructive border-destructive/40'
+                            }`}
+                          >
+                            {dbTestResult.latencyMs} ms
+                          </Badge>
+                        )}
+                      </div>
+
+                      <p className="text-xs leading-relaxed">
+                        {dbTestResult.message || dbTestResult.error}
+                      </p>
+
+                      {dbTestResult.host && (
+                        <div className="pt-2 border-t border-border/40 flex items-center gap-4 text-[11px] text-muted-foreground font-mono">
+                          <span>الخادم: {dbTestResult.host}</span>
+                          {dbTestResult.tableName && <span>الجدول الأساسي: {dbTestResult.tableName}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Form Card */}

@@ -27,8 +27,9 @@ import {
   getPaymentById,
   listSuperAdminUsers,
   getSuperAdminReportsOverview,
+  getSupabaseClient,
 } from "../services/supabase.service";
-import { isSupabaseConfigured } from "../config/env";
+import { env, isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -148,6 +149,69 @@ router.patch("/super-admin/settings", async (req, res) => {
   } catch (err: any) {
     logger.error({ err }, "Failed to update platform settings");
     res.status(400).json({ error: err.message || "فشل تحديث إعدادات المنصة." });
+  }
+});
+
+/**
+ * POST /api/super-admin/test-db-connection
+ * Tests live connectivity to Supabase database and reports status, latency, and table health.
+ */
+router.post("/super-admin/test-db-connection", async (_req, res) => {
+  const startTime = Date.now();
+  const client = getSupabaseClient();
+
+  if (!client) {
+    res.status(503).json({
+      connected: false,
+      configured: false,
+      latencyMs: 0,
+      error: "قاعدة البيانات غير متصلة حالياً. لم يتم ضبط إعدادات الاتصال بـ Supabase.",
+      message: "تعذر الاتصال بقاعدة البيانات.",
+    });
+    return;
+  }
+
+  try {
+    const tableName = env.supabaseTableName || "app_users";
+    const { count, error } = await client
+      .from(tableName)
+      .select("id", { count: "exact", head: true })
+      .limit(1);
+
+    const latencyMs = Date.now() - startTime;
+
+    if (error) {
+      res.status(500).json({
+        connected: false,
+        configured: true,
+        latencyMs,
+        error: `فشل الاستعلام من قاعدة البيانات: ${error.message} (رمز الخطأ: ${error.code || "unknown"})`,
+        message: "تم الوصول إلى الخادم لكن حدث خطأ أثناء تنفيذ الاستعلام.",
+      });
+      return;
+    }
+
+    const host = env.supabaseUrl ? new URL(env.supabaseUrl).hostname : "Supabase";
+
+    res.json({
+      connected: true,
+      configured: true,
+      latencyMs,
+      host,
+      tableName,
+      userCount: count ?? 0,
+      message: `الاتصال بقاعدة البيانات (${host}) نشط وسليم تماماً!`,
+    });
+  } catch (err: any) {
+    const latencyMs = Date.now() - startTime;
+    logger.error({ err }, "Super Admin test-db-connection failed");
+    res.status(500).json({
+      connected: false,
+      configured: true,
+      latencyMs,
+      error: err?.message || "تعذر إتمام الاتصال بقاعدة البيانات.",
+      message: "حدث خطأ غير متوقع أثناء فحص الاتصال.",
+    });
   }
 });
 

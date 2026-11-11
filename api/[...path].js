@@ -851195,20 +851195,26 @@ function maskPhone(phone) {
 }
 var WhatsappReminderChannel = class {
   name = "whatsapp";
-  async sendRaw(message, recipientPhone) {
+  async sendRaw(message, recipientPhone, options) {
     const phone = recipientPhone?.trim();
     if (!phone) {
       throw new Error("Recipient phone number is required to send WhatsApp reminder.");
     }
     const masked = maskPhone(phone);
     const settings = getSettings();
-    if (settings.whatsappApiUrl) {
+    const instanceId = (options?.instanceId ?? settings.whatsappInstanceId)?.trim();
+    const token = (options?.token ?? settings.whatsappToken)?.trim();
+    let rawApiUrl = (options?.apiUrl ?? settings.whatsappApiUrl)?.trim();
+    if (!rawApiUrl && instanceId) {
+      rawApiUrl = "https://api.green-api.com";
+    }
+    if (rawApiUrl) {
       const requestConfig = buildWhatsappPayloadAndHeaders(
-        settings.whatsappApiUrl.trim(),
+        rawApiUrl,
         phone,
-        settings.whatsappToken?.trim(),
+        token,
         message,
-        settings.whatsappInstanceId?.trim()
+        instanceId
       );
       try {
         const res = await fetch(requestConfig.targetUrl, {
@@ -852283,29 +852289,43 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
     });
   }
 });
-router6.post("/settings/test-whatsapp", async (_req, res) => {
+router6.post("/settings/test-whatsapp", async (req, res) => {
   const s3 = getSettings();
-  if (!s3.whatsappNumber?.trim()) {
+  const phone = String(
+    req.body?.whatsappNumber ?? req.body?.number ?? req.body?.recipientPhone ?? s3.whatsappNumber ?? ""
+  ).trim();
+  if (!phone) {
     res.status(400).json({ error: "\u064A\u0631\u062C\u0649 \u0643\u062A\u0627\u0628\u0629 \u0631\u0642\u0645 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0648\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0623\u0648\u0644\u0627\u064B." });
     return;
   }
+  const rawApiUrl = String(req.body?.whatsappApiUrl ?? req.body?.apiUrl ?? s3.whatsappApiUrl ?? "").trim();
+  const token = String(req.body?.whatsappToken ?? req.body?.token ?? s3.whatsappToken ?? "").trim();
+  const instanceId = String(req.body?.whatsappInstanceId ?? req.body?.instanceId ?? s3.whatsappInstanceId ?? "").trim();
   try {
     const channel = new WhatsappReminderChannel();
-    await channel.send({
-      officeId: "admin",
-      recipientPhone: s3.whatsappNumber.trim(),
-      sessionId: 999,
-      caseNumber: "1445/\u0627\u062E\u062A\u0628\u0627\u0631\u064A/01",
-      court: "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0628\u0627\u0644\u0631\u064A\u0627\u0636",
-      courtCircuit: "\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u062F\u0639\u0627\u0648\u064A \u0627\u0644\u062D\u0642\u0648\u0642\u064A\u0629 \u0627\u0644\u0623\u0648\u0644\u0649",
-      sessionDateHijri: "15/02/1446",
-      sessionTime: "10:30 \u0635\u0628\u0627\u062D\u0627",
-      plaintiff: "\u0634\u0631\u0643\u0629 \u0627\u0644\u062D\u0644\u0648\u0644 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629",
-      defendant: "\u0645\u0624\u0633\u0633\u0629 \u0627\u0644\u0646\u0648\u0631 \u0644\u0644\u062A\u062C\u0627\u0631\u0629",
-      caseSubject: "\u062A\u062C\u0631\u0628\u0629 \u0625\u0631\u0633\u0627\u0644 \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0644\u0644\u062C\u0644\u0633\u0627\u062A",
-      kind: "24h"
+    const nowHijri = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }).format(/* @__PURE__ */ new Date());
+    const testMessage = [
+      "\u{1F514} *\u0631\u0633\u0627\u0644\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0645\u0646 \u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u062C\u0644\u0633\u0627\u062A \u0627\u0644\u0645\u062D\u0643\u0645\u0629*",
+      "",
+      `\u{1F4F1} \u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0631\u0628\u0637 \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 \u0627\u0644\u0631\u0642\u0645: ${phone}`,
+      "\u2696\uFE0F *\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629:* 1446/\u0627\u062E\u062A\u0628\u0627\u0631\u064A/01",
+      "\u{1F3DB}\uFE0F *\u0627\u0644\u0645\u062D\u0643\u0645\u0629:* \u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0639\u0627\u0645\u0629",
+      `\u{1F4C5} *\u0627\u0644\u062A\u0627\u0631\u064A\u062E:* ${nowHijri}`,
+      "\u23F0 *\u0627\u0644\u0648\u0642\u062A:* 10:30 \u0635\u0628\u0627\u062D\u0627\u064B",
+      "\u2705 \u0627\u062A\u0635\u0627\u0644 \u0645\u0632\u0648\u062F \u0627\u0644\u062E\u062F\u0645\u0629 (Green API) \u064A\u0639\u0645\u0644 \u0628\u0635\u0648\u0631\u0629 \u0633\u0644\u064A\u0645\u0629 \u0648\u062C\u0627\u0647\u0632 \u0644\u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0627\u062A.",
+      "",
+      "\u0627\u0644\u0631\u062C\u0627\u0621 \u0639\u062F\u0645 \u0627\u0644\u0631\u062F \u0639\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0622\u0644\u064A\u0629."
+    ].join("\n");
+    await channel.sendRaw(testMessage, phone, {
+      apiUrl: rawApiUrl,
+      token,
+      instanceId
     });
-    res.json({ message: "\u062A\u0645\u062A \u062A\u062C\u0631\u0628\u0629 \u0625\u0631\u0633\u0627\u0644 \u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D!" });
+    res.json({ message: `\u062A\u0645\u062A \u062A\u062C\u0631\u0628\u0629 \u0625\u0631\u0633\u0627\u0644 \u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 \u0627\u0644\u0631\u0642\u0645 ${phone}!` });
   } catch (err) {
     logger.error({ err }, "Failed to execute WhatsApp test notification");
     const msg = err instanceof Error ? err.message : "\u0641\u0634\u0644 \u0625\u062C\u0631\u0627\u0621 \u062A\u062C\u0631\u0628\u0629 \u0627\u0644\u062A\u0646\u0628\u064A\u0647 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.";
@@ -853914,6 +853934,55 @@ router13.patch("/super-admin/settings", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to update platform settings");
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629." });
+  }
+});
+router13.post("/super-admin/test-db-connection", async (_req, res) => {
+  const startTime = Date.now();
+  const client = getSupabaseClient();
+  if (!client) {
+    res.status(503).json({
+      connected: false,
+      configured: false,
+      latencyMs: 0,
+      error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B. \u0644\u0645 \u064A\u062A\u0645 \u0636\u0628\u0637 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Supabase.",
+      message: "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A."
+    });
+    return;
+  }
+  try {
+    const tableName = env.supabaseTableName || "app_users";
+    const { count, error } = await client.from(tableName).select("id", { count: "exact", head: true }).limit(1);
+    const latencyMs = Date.now() - startTime;
+    if (error) {
+      res.status(500).json({
+        connected: false,
+        configured: true,
+        latencyMs,
+        error: `\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u0639\u0644\u0627\u0645 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: ${error.message} (\u0631\u0645\u0632 \u0627\u0644\u062E\u0637\u0623: ${error.code || "unknown"})`,
+        message: "\u062A\u0645 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645 \u0644\u0643\u0646 \u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u0646\u0641\u064A\u0630 \u0627\u0644\u0627\u0633\u062A\u0639\u0644\u0627\u0645."
+      });
+      return;
+    }
+    const host = env.supabaseUrl ? new URL(env.supabaseUrl).hostname : "Supabase";
+    res.json({
+      connected: true,
+      configured: true,
+      latencyMs,
+      host,
+      tableName,
+      userCount: count ?? 0,
+      message: `\u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (${host}) \u0646\u0634\u0637 \u0648\u0633\u0644\u064A\u0645 \u062A\u0645\u0627\u0645\u0627\u064B!`
+    });
+  } catch (err) {
+    const latencyMs = Date.now() - startTime;
+    logger.error({ err }, "Super Admin test-db-connection failed");
+    res.status(500).json({
+      connected: false,
+      configured: true,
+      latencyMs,
+      error: err?.message || "\u062A\u0639\u0630\u0631 \u0625\u062A\u0645\u0627\u0645 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.",
+      message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639 \u0623\u062B\u0646\u0627\u0621 \u0641\u062D\u0635 \u0627\u0644\u0627\u062A\u0635\u0627\u0644."
+    });
   }
 });
 router13.get("/super-admin/plans", async (_req, res) => {

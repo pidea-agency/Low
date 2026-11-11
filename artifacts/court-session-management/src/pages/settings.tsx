@@ -363,10 +363,26 @@ export default function OfficeSettingsPage() {
   };
 
   const handleTestWhatsapp = async () => {
+    if (!whatsappNumber?.trim()) {
+      toast({
+        title: 'رقم الواتساب مطلوب',
+        description: 'يرجى كتابة رقم الواتساب المراد إرسال الرسالة التجريبية إليه أولاً.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsTestingWhatsapp(true);
     try {
       const res = await fetch('/api/settings/test-whatsapp', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          whatsappNumber: whatsappNumber.trim(),
+          whatsappApiUrl: whatsappApiUrl.trim(),
+          whatsappToken: whatsappToken.trim(),
+          whatsappInstanceId: whatsappInstanceId.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل إجراء تجربة الواتساب.');

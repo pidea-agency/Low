@@ -153,7 +153,11 @@ export function maskPhone(phone?: string | null): string {
 export class WhatsappReminderChannel implements ReminderChannel {
   readonly name = "whatsapp";
 
-  async sendRaw(message: string, recipientPhone?: string): Promise<void> {
+  async sendRaw(
+    message: string,
+    recipientPhone?: string,
+    options?: { apiUrl?: string; token?: string; instanceId?: string }
+  ): Promise<void> {
     const phone = recipientPhone?.trim();
 
     if (!phone) {
@@ -163,13 +167,22 @@ export class WhatsappReminderChannel implements ReminderChannel {
     const masked = maskPhone(phone);
     const settings = getSettings();
 
-    if (settings.whatsappApiUrl) {
+    const instanceId = (options?.instanceId ?? settings.whatsappInstanceId)?.trim();
+    const token = (options?.token ?? settings.whatsappToken)?.trim();
+    let rawApiUrl = (options?.apiUrl ?? settings.whatsappApiUrl)?.trim();
+
+    // If API URL is omitted but instanceId is present, default to standard Green API endpoint
+    if (!rawApiUrl && instanceId) {
+      rawApiUrl = "https://api.green-api.com";
+    }
+
+    if (rawApiUrl) {
       const requestConfig = buildWhatsappPayloadAndHeaders(
-        settings.whatsappApiUrl.trim(),
+        rawApiUrl,
         phone,
-        settings.whatsappToken?.trim(),
+        token,
         message,
-        settings.whatsappInstanceId?.trim(),
+        instanceId,
       );
 
       try {
