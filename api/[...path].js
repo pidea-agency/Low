@@ -33225,333 +33225,6 @@ var init_logger = __esm({
   }
 });
 
-// src/config/settings-store.ts
-function loadFromDisk() {
-  const pathsToTry = [
-    LOCAL_SETTINGS_PATH,
-    ALT_SETTINGS_PATH,
-    (0, import_path.resolve)(currentDirname, "..", "..", "settings.json"),
-    (0, import_path.resolve)(currentDirname, "..", "..", "..", "settings.json"),
-    TMP_SETTINGS_PATH
-  ];
-  let result = {};
-  for (const p of pathsToTry) {
-    try {
-      if ((0, import_fs.existsSync)(p)) {
-        const raw = (0, import_fs.readFileSync)(p, "utf-8");
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object") {
-          result = { ...parsed, ...result };
-        }
-      }
-    } catch {
-    }
-  }
-  return result;
-}
-function saveToDisk(settings) {
-  const content = JSON.stringify(settings, null, 2);
-  try {
-    (0, import_fs.writeFileSync)(TMP_SETTINGS_PATH, content, "utf-8");
-    return;
-  } catch {
-  }
-  try {
-    (0, import_fs.writeFileSync)(LOCAL_SETTINGS_PATH, content, "utf-8");
-  } catch (err) {
-    logger.warn({ err }, "Failed to persist settings.json to any path");
-  }
-}
-function getSettings() {
-  const disk = loadFromDisk();
-  const merged = { ...disk, ..._cache };
-  return {
-    hfApiToken: merged.hfApiToken || process.env.HF_API_TOKEN || process.env.HF_TOKEN || void 0,
-    hfModel: merged.hfModel || process.env.HF_MODEL || void 0,
-    whatsappNumber: merged.whatsappNumber || process.env.WHATSAPP_NUMBER || void 0,
-    whatsappApiUrl: merged.whatsappApiUrl || process.env.WHATSAPP_API_URL || void 0,
-    whatsappToken: merged.whatsappToken || process.env.WHATSAPP_TOKEN || void 0,
-    whatsappInstanceId: merged.whatsappInstanceId || process.env.WHATSAPP_INSTANCE_ID || void 0,
-    aiApiKey: merged.aiApiKey || process.env.AI_API_KEY || process.env.OPENAI_API_KEY || void 0,
-    aiBaseUrl: merged.aiBaseUrl || process.env.AI_BASE_URL || void 0,
-    aiModel: merged.aiModel || process.env.AI_MODEL || void 0,
-    googleSpreadsheetId: merged.googleSpreadsheetId || process.env.GOOGLE_SPREADSHEET_ID || void 0,
-    googleSheetName: merged.googleSheetName || process.env.GOOGLE_SHEET_NAME || void 0
-  };
-}
-function saveSettings(patch) {
-  const cleaned = {};
-  for (const [k, v] of Object.entries(patch)) {
-    if (v !== void 0 && v !== "") {
-      cleaned[k] = v;
-    }
-  }
-  _cache = { ..._cache, ...cleaned };
-  if (patch.aiApiKey === "") delete _cache.aiApiKey;
-  if (patch.aiBaseUrl === "") delete _cache.aiBaseUrl;
-  if (patch.aiModel === "") delete _cache.aiModel;
-  if (patch.googleSpreadsheetId === "") delete _cache.googleSpreadsheetId;
-  if (patch.googleSheetName === "") delete _cache.googleSheetName;
-  if (patch.hfApiToken === "") delete _cache.hfApiToken;
-  if (patch.hfModel === "") delete _cache.hfModel;
-  if (patch.whatsappNumber === "") delete _cache.whatsappNumber;
-  if (patch.whatsappApiUrl === "") delete _cache.whatsappApiUrl;
-  if (patch.whatsappToken === "") delete _cache.whatsappToken;
-  if (patch.whatsappInstanceId === "") delete _cache.whatsappInstanceId;
-  saveToDisk(_cache);
-  return getSettings();
-}
-var import_fs, import_path, import_url, currentDirname, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache;
-var init_settings_store = __esm({
-  "src/config/settings-store.ts"() {
-    "use strict";
-    import_fs = require("fs");
-    import_path = require("path");
-    import_url = require("url");
-    init_logger();
-    currentDirname = typeof __dirname !== "undefined" ? __dirname : (0, import_url.fileURLToPath)(new URL(".", __bannerImportMetaUrl));
-    TMP_SETTINGS_PATH = (0, import_path.resolve)("/tmp", "settings.json");
-    LOCAL_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "settings.json");
-    ALT_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "settings.json");
-    _cache = loadFromDisk();
-  }
-});
-
-// src/config/env.ts
-function parseDotEnvFile() {
-  try {
-    const candidates = [
-      import_path2.default.resolve(process.cwd(), ".env"),
-      import_path2.default.resolve(process.cwd(), "..", ".env"),
-      import_path2.default.resolve(process.cwd(), "..", "..", ".env"),
-      import_path2.default.resolve(currentDirname2, "..", "..", ".env"),
-      import_path2.default.resolve(currentDirname2, "..", "..", "..", ".env")
-    ];
-    for (const p of candidates) {
-      if (import_fs2.default.existsSync(p)) {
-        const content = import_fs2.default.readFileSync(p, "utf-8");
-        const parsed = {};
-        for (const line of content.split("\n")) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith("#")) continue;
-          const eq = trimmed.indexOf("=");
-          if (eq > 0) {
-            const k = trimmed.slice(0, eq).trim();
-            let v = trimmed.slice(eq + 1).trim();
-            if (v.startsWith('"') && v.endsWith('"') || v.startsWith("'") && v.endsWith("'")) {
-              v = v.slice(1, -1);
-            }
-            parsed[k] = v;
-          }
-        }
-        return parsed;
-      }
-    }
-  } catch {
-  }
-  return {};
-}
-function readEnv(key) {
-  const fromProcess = process.env[key];
-  if (fromProcess && fromProcess.trim().length > 0) return fromProcess;
-  const dotEnv = parseDotEnvFile();
-  const fromFile2 = dotEnv[key];
-  return fromFile2 && fromFile2.trim().length > 0 ? fromFile2 : void 0;
-}
-function requireEnv(key, hint) {
-  const value = readEnv(key);
-  if (!value) {
-    console.warn(`[SERVER WARNING] Missing env var "${key}". Using fallback until configured in Settings.`);
-    if (key === "GOOGLE_SERVICE_ACCOUNT_JSON") return "{}";
-    return `fallback_${key.toLowerCase()}`;
-  }
-  return value;
-}
-function isGoogleSheetsConfigured() {
-  const stored = getSettings().googleSpreadsheetId;
-  const hasSpreadsheetId = Boolean(
-    stored && stored.trim() || readEnv("GOOGLE_SPREADSHEET_ID")
-  );
-  let hasServiceAccount = Boolean(readEnv("GOOGLE_SERVICE_ACCOUNT_JSON"));
-  if (!hasServiceAccount) {
-    try {
-      const candidates = [
-        import_path2.default.resolve(process.cwd(), "service-account.json"),
-        import_path2.default.resolve(process.cwd(), "..", "service-account.json"),
-        import_path2.default.resolve(process.cwd(), "..", "..", "service-account.json"),
-        import_path2.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
-        import_path2.default.resolve(currentDirname2, "..", "..", "service-account.json"),
-        import_path2.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
-      ];
-      hasServiceAccount = candidates.some((p) => import_fs2.default.existsSync(p));
-    } catch (e2) {
-    }
-  }
-  return Boolean(hasSpreadsheetId && hasServiceAccount);
-}
-function isAuthConfigured() {
-  return true;
-}
-function isSupabaseConfigured() {
-  const hasUrl = Boolean(readEnv("SUPABASE_URL"));
-  const hasKey = Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
-  return hasUrl && hasKey;
-}
-var import_fs2, import_path2, import_url2, currentDirname2, MissingEnvVarError, env;
-var init_env = __esm({
-  "src/config/env.ts"() {
-    "use strict";
-    import_fs2 = __toESM(require("fs"), 1);
-    import_path2 = __toESM(require("path"), 1);
-    import_url2 = require("url");
-    init_settings_store();
-    currentDirname2 = typeof __dirname !== "undefined" ? __dirname : (0, import_url2.fileURLToPath)(new URL(".", __bannerImportMetaUrl));
-    MissingEnvVarError = class extends Error {
-      constructor(key, hint) {
-        super(
-          `Missing required environment variable "${key}".${hint ? ` ${hint}` : ""}`
-        );
-        this.key = key;
-        this.name = "MissingEnvVarError";
-      }
-    };
-    env = {
-      get sessionSecret() {
-        const val = readEnv("SESSION_SECRET");
-        if (!process.env.VERCEL) {
-          if (!val || val === "court_session_secret_fallback_key") {
-            throw new MissingEnvVarError(
-              "SESSION_SECRET",
-              "A secure SESSION_SECRET environment variable must be set in production to sign and verify session tokens."
-            );
-          }
-        }
-        return val ?? "court_session_secret_fallback_key";
-      },
-      // --- Google Sheets (Optional Export Store) ---
-      get googleSpreadsheetId() {
-        const stored = getSettings().googleSpreadsheetId;
-        if (stored && stored.trim()) return stored.trim();
-        const val = readEnv("GOOGLE_SPREADSHEET_ID");
-        return val ? val.trim() : "";
-      },
-      get googleServiceAccountJson() {
-        try {
-          const candidates = [
-            import_path2.default.resolve(process.cwd(), "service-account.json"),
-            import_path2.default.resolve(process.cwd(), "..", "service-account.json"),
-            import_path2.default.resolve(process.cwd(), "..", "..", "service-account.json"),
-            import_path2.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
-            import_path2.default.resolve(currentDirname2, "..", "..", "service-account.json"),
-            import_path2.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
-          ];
-          for (const p of candidates) {
-            if (import_fs2.default.existsSync(p)) {
-              return JSON.parse(import_fs2.default.readFileSync(p, "utf-8"));
-            }
-          }
-        } catch (e2) {
-        }
-        const raw = readEnv("GOOGLE_SERVICE_ACCOUNT_JSON");
-        if (raw) {
-          try {
-            return JSON.parse(raw);
-          } catch {
-            return null;
-          }
-        }
-        return null;
-      },
-      get googleSheetName() {
-        const stored = getSettings().googleSheetName;
-        if (stored && stored.trim()) return stored.trim();
-        return readEnv("GOOGLE_SHEET_NAME") ?? "Sessions";
-      },
-      // --- AI Settings (OpenRouter/Groq/OpenAI compatible) ---
-      // Settings UI takes precedence over env vars.
-      get aiApiKey() {
-        const stored = getSettings().aiApiKey;
-        if (stored && stored.trim()) return stored.trim();
-        return requireEnv(
-          "AI_API_KEY",
-          "Add your AI Provider API key (e.g. from OpenRouter) so the chat screen can extract session details."
-        );
-      },
-      get aiBaseUrl() {
-        const stored = getSettings().aiBaseUrl;
-        if (stored && stored.trim()) return stored.trim();
-        return readEnv("AI_BASE_URL") ?? "https://openrouter.ai/api/v1";
-      },
-      get aiModel() {
-        const stored = getSettings().aiModel;
-        if (stored && stored.trim()) return stored.trim();
-        return readEnv("AI_MODEL") ?? "qwen/qwen-2.5-7b-instruct";
-      },
-      // --- Supabase Settings (Environment Variables only - no UI override) ---
-      get supabaseUrl() {
-        return readEnv("SUPABASE_URL")?.trim() || void 0;
-      },
-      get supabaseKey() {
-        return readEnv("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? readEnv("SUPABASE_KEY")?.trim() ?? readEnv("SUPABASE_ANON_KEY")?.trim() ?? void 0;
-      },
-      get supabaseTableName() {
-        return readEnv("SUPABASE_TABLE_NAME")?.trim() || "app_users";
-      },
-      // --- Scheduler ---
-      get reminderCronExpression() {
-        return readEnv("REMINDER_CRON_EXPRESSION") ?? "*/10 * * * *";
-      },
-      /**
-       * Secret token used to authenticate Vercel Cron Job requests.
-       * Set CRON_SECRET in your Vercel environment variables.
-       * Vercel automatically sends this as `Authorization: Bearer <CRON_SECRET>`.
-       */
-      get cronSecret() {
-        return readEnv("CRON_SECRET");
-      },
-      /**
-       * Fixed UTC offset (hours) used to interpret Hijri session dates/times.
-       * Uses Mecca time (Asia/Makkah = UTC+3), identical to Asia/Riyadh.
-       * Saudi Arabia has no daylight-saving time, so the offset is always +3.
-       */
-      get courtTimezoneOffsetHours() {
-        const raw = readEnv("COURT_TIMEZONE_OFFSET_HOURS");
-        const parsed = raw ? Number(raw) : 3;
-        return Number.isFinite(parsed) ? parsed : 3;
-      },
-      // --- Rate Limiting ---
-      get rateLimitLoginMaxPerAccount() {
-        const raw = readEnv("RATE_LIMIT_LOGIN_MAX_PER_ACCOUNT");
-        const parsed = raw ? parseInt(raw, 10) : 5;
-        return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
-      },
-      get rateLimitLoginMaxPerIp() {
-        const raw = readEnv("RATE_LIMIT_LOGIN_MAX_PER_IP");
-        const parsed = raw ? parseInt(raw, 10) : 20;
-        return Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
-      },
-      get rateLimitWindowMs() {
-        const raw = readEnv("RATE_LIMIT_WINDOW_MS");
-        const parsed = raw ? parseInt(raw, 10) : 15 * 60 * 1e3;
-        return Number.isFinite(parsed) && parsed > 0 ? parsed : 15 * 60 * 1e3;
-      },
-      get isProduction() {
-        return true;
-      },
-      get resendApiKey() {
-        return readEnv("RESEND_API_KEY");
-      },
-      get emailFrom() {
-        return readEnv("EMAIL_FROM") || "onboarding@resend.dev";
-      },
-      get frontendUrl() {
-        const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || "http://localhost:5173";
-        return raw.replace(/\/+$/, "");
-      }
-    };
-  }
-});
-
 // ../../node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs
 function getTraceContextExtractor() {
   return globalThis[EXTRACTOR_KEY];
@@ -57193,8 +56866,8 @@ function loadLocalUsers() {
   const paths = [LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE];
   for (const p of paths) {
     try {
-      if ((0, import_fs3.existsSync)(p)) {
-        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+      if ((0, import_fs.existsSync)(p)) {
+        const raw = (0, import_fs.readFileSync)(p, "utf-8");
         const list = JSON.parse(raw);
         if (Array.isArray(list) && list.length > 0) {
           let hasAdmin = false;
@@ -57323,7 +56996,7 @@ function saveLocalUsers(users) {
   const paths = [LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE];
   for (const p of paths) {
     try {
-      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+      (0, import_fs.writeFileSync)(p, content, "utf-8");
     } catch {
     }
   }
@@ -57335,8 +57008,8 @@ function loadLocalPlans() {
   const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
   for (const p of paths) {
     try {
-      if ((0, import_fs3.existsSync)(p)) {
-        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+      if ((0, import_fs.existsSync)(p)) {
+        const raw = (0, import_fs.readFileSync)(p, "utf-8");
         const list = JSON.parse(raw);
         if (Array.isArray(list) && list.length > 0) {
           _localPlansCache = list;
@@ -57356,7 +57029,7 @@ function saveLocalPlans(plans) {
   const paths = [LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE];
   for (const p of paths) {
     try {
-      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+      (0, import_fs.writeFileSync)(p, content, "utf-8");
     } catch {
     }
   }
@@ -57368,8 +57041,8 @@ function loadLocalOfficePlans() {
   const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
   for (const p of paths) {
     try {
-      if ((0, import_fs3.existsSync)(p)) {
-        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+      if ((0, import_fs.existsSync)(p)) {
+        const raw = (0, import_fs.readFileSync)(p, "utf-8");
         const data = JSON.parse(raw);
         if (typeof data === "object" && data !== null) {
           _localOfficePlansCache = data;
@@ -57388,7 +57061,7 @@ function saveLocalOfficePlans(data) {
   const paths = [LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE];
   for (const p of paths) {
     try {
-      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+      (0, import_fs.writeFileSync)(p, content, "utf-8");
     } catch {
     }
   }
@@ -57400,8 +57073,8 @@ function loadLocalAuditLogs() {
   const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
   for (const p of paths) {
     try {
-      if ((0, import_fs3.existsSync)(p)) {
-        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+      if ((0, import_fs.existsSync)(p)) {
+        const raw = (0, import_fs.readFileSync)(p, "utf-8");
         const list = JSON.parse(raw);
         if (Array.isArray(list)) {
           _localAuditLogCache = list;
@@ -57420,7 +57093,7 @@ function saveLocalAuditLogs(logs) {
   const paths = [LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE];
   for (const p of paths) {
     try {
-      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+      (0, import_fs.writeFileSync)(p, content, "utf-8");
     } catch {
     }
   }
@@ -57432,8 +57105,8 @@ function loadLocalPlatformSettings() {
   const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
   for (const p of paths) {
     try {
-      if ((0, import_fs3.existsSync)(p)) {
-        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+      if ((0, import_fs.existsSync)(p)) {
+        const raw = (0, import_fs.readFileSync)(p, "utf-8");
         const data = JSON.parse(raw);
         if (typeof data === "object" && data !== null) {
           const loaded = {
@@ -57457,7 +57130,7 @@ function saveLocalPlatformSettings(settings) {
   const paths = [LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE];
   for (const p of paths) {
     try {
-      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+      (0, import_fs.writeFileSync)(p, content, "utf-8");
     } catch {
     }
   }
@@ -57469,8 +57142,8 @@ function loadLocalPayments() {
   const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
   for (const p of paths) {
     try {
-      if ((0, import_fs3.existsSync)(p)) {
-        const raw = (0, import_fs3.readFileSync)(p, "utf-8");
+      if ((0, import_fs.existsSync)(p)) {
+        const raw = (0, import_fs.readFileSync)(p, "utf-8");
         const list = JSON.parse(raw);
         if (Array.isArray(list)) {
           _localPaymentsCache = list;
@@ -57489,7 +57162,7 @@ function saveLocalPayments(payments) {
   const paths = [LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE];
   for (const p of paths) {
     try {
-      (0, import_fs3.writeFileSync)(p, content, "utf-8");
+      (0, import_fs.writeFileSync)(p, content, "utf-8");
     } catch {
     }
   }
@@ -60425,14 +60098,14 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_fs3, import_path3, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, DEFAULT_SUBSCRIPTION_PLANS, LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE, _localPlansCache, LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE, _localOfficePlansCache, DEFAULT_PLATFORM_SETTINGS, LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE, _localAuditLogCache, LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE, _localPlatformSettingsCache, LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE, _localPaymentsCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_fs, import_path, import_crypto2, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, LOCAL_USERS_FILE, ALT_LOCAL_USERS_FILE, TMP_LOCAL_USERS_FILE, _localUsersCache, DEFAULT_SUBSCRIPTION_PLANS, LOCAL_PLANS_FILE, ALT_LOCAL_PLANS_FILE, TMP_LOCAL_PLANS_FILE, _localPlansCache, LOCAL_OFFICE_PLANS_FILE, ALT_LOCAL_OFFICE_PLANS_FILE, TMP_LOCAL_OFFICE_PLANS_FILE, _localOfficePlansCache, DEFAULT_PLATFORM_SETTINGS, LOCAL_AUDIT_LOG_FILE, ALT_LOCAL_AUDIT_LOG_FILE, TMP_LOCAL_AUDIT_LOG_FILE, _localAuditLogCache, LOCAL_PLATFORM_SETTINGS_FILE, ALT_LOCAL_PLATFORM_SETTINGS_FILE, TMP_LOCAL_PLATFORM_SETTINGS_FILE, _localPlatformSettingsCache, LOCAL_PAYMENTS_FILE, ALT_LOCAL_PAYMENTS_FILE, TMP_LOCAL_PAYMENTS_FILE, _localPaymentsCache, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
     init_dist4();
     import_bcryptjs = __toESM(require_bcryptjs(), 1);
-    import_fs3 = require("fs");
-    import_path3 = require("path");
+    import_fs = require("fs");
+    import_path = require("path");
     import_crypto2 = __toESM(require("crypto"), 1);
     init_src();
     init_env();
@@ -60460,8 +60133,8 @@ var init_supabase_service = __esm({
     userAuthCache = /* @__PURE__ */ new Map();
     userGoogleCredsCache = /* @__PURE__ */ new Map();
     CACHE_TTL_MS = 60 * 1e3;
-    LOCAL_USERS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_users.json");
-    ALT_LOCAL_USERS_FILE = (0, import_path3.resolve)(process.cwd(), "local_users.json");
+    LOCAL_USERS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_users.json");
+    ALT_LOCAL_USERS_FILE = (0, import_path.resolve)(process.cwd(), "local_users.json");
     TMP_LOCAL_USERS_FILE = "/tmp/local_users.json";
     _localUsersCache = null;
     DEFAULT_SUBSCRIPTION_PLANS = [
@@ -60517,12 +60190,12 @@ var init_supabase_service = __esm({
         updated_at: "2026-01-01T00:00:00.000Z"
       }
     ];
-    LOCAL_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_plans.json");
-    ALT_LOCAL_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "local_plans.json");
+    LOCAL_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_plans.json");
+    ALT_LOCAL_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "local_plans.json");
     TMP_LOCAL_PLANS_FILE = "/tmp/local_plans.json";
     _localPlansCache = null;
-    LOCAL_OFFICE_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_office_plans.json");
-    ALT_LOCAL_OFFICE_PLANS_FILE = (0, import_path3.resolve)(process.cwd(), "local_office_plans.json");
+    LOCAL_OFFICE_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_office_plans.json");
+    ALT_LOCAL_OFFICE_PLANS_FILE = (0, import_path.resolve)(process.cwd(), "local_office_plans.json");
     TMP_LOCAL_OFFICE_PLANS_FILE = "/tmp/local_office_plans.json";
     _localOfficePlansCache = null;
     DEFAULT_PLATFORM_SETTINGS = {
@@ -60531,16 +60204,16 @@ var init_supabase_service = __esm({
       support_contact_email: "support@law.local",
       support_contact_phone: "+966500000000"
     };
-    LOCAL_AUDIT_LOG_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_audit_log.json");
-    ALT_LOCAL_AUDIT_LOG_FILE = (0, import_path3.resolve)(process.cwd(), "local_audit_log.json");
+    LOCAL_AUDIT_LOG_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_audit_log.json");
+    ALT_LOCAL_AUDIT_LOG_FILE = (0, import_path.resolve)(process.cwd(), "local_audit_log.json");
     TMP_LOCAL_AUDIT_LOG_FILE = "/tmp/local_audit_log.json";
     _localAuditLogCache = null;
-    LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_platform_settings.json");
-    ALT_LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path3.resolve)(process.cwd(), "local_platform_settings.json");
+    LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_platform_settings.json");
+    ALT_LOCAL_PLATFORM_SETTINGS_FILE = (0, import_path.resolve)(process.cwd(), "local_platform_settings.json");
     TMP_LOCAL_PLATFORM_SETTINGS_FILE = "/tmp/local_platform_settings.json";
     _localPlatformSettingsCache = null;
-    LOCAL_PAYMENTS_FILE = (0, import_path3.resolve)(process.cwd(), "artifacts", "api-server", "local_payments.json");
-    ALT_LOCAL_PAYMENTS_FILE = (0, import_path3.resolve)(process.cwd(), "local_payments.json");
+    LOCAL_PAYMENTS_FILE = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "local_payments.json");
+    ALT_LOCAL_PAYMENTS_FILE = (0, import_path.resolve)(process.cwd(), "local_payments.json");
     TMP_LOCAL_PAYMENTS_FILE = "/tmp/local_payments.json";
     _localPaymentsCache = null;
     officeAiLocks = /* @__PURE__ */ new Map();
@@ -60571,6 +60244,415 @@ var init_supabase_service = __esm({
         this.name = "QuotaExceededError";
       }
       statusCode = 400;
+    };
+  }
+});
+
+// src/config/settings-store.ts
+function loadFromDisk() {
+  const pathsToTry = [
+    LOCAL_SETTINGS_PATH,
+    ALT_SETTINGS_PATH,
+    (0, import_path2.resolve)(currentDirname, "..", "..", "settings.json"),
+    (0, import_path2.resolve)(currentDirname, "..", "..", "..", "settings.json"),
+    TMP_SETTINGS_PATH
+  ];
+  let result = {};
+  for (const p of pathsToTry) {
+    try {
+      if ((0, import_fs2.existsSync)(p)) {
+        const raw = (0, import_fs2.readFileSync)(p, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          const decrypted = decryptSettings(parsed);
+          result = { ...decrypted, ...result };
+        }
+      }
+    } catch {
+    }
+  }
+  return result;
+}
+function saveToDisk(settings) {
+  const encrypted = encryptSettings(settings);
+  const content = JSON.stringify(encrypted, null, 2);
+  try {
+    (0, import_fs2.writeFileSync)(TMP_SETTINGS_PATH, content, "utf-8");
+    return;
+  } catch {
+  }
+  try {
+    (0, import_fs2.writeFileSync)(LOCAL_SETTINGS_PATH, content, "utf-8");
+  } catch (err) {
+    logger.warn({ err }, "Failed to persist settings.json to any path");
+  }
+}
+function decryptSettings(raw) {
+  const result = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof v === "string" && v) {
+      if (isEncrypted(v)) {
+        try {
+          result[k] = decryptSecret(v);
+        } catch (err) {
+          logger.warn({ key: k, err }, "Failed to decrypt setting value, keeping raw");
+          result[k] = v;
+        }
+      } else {
+        result[k] = v;
+      }
+    } else if (v !== void 0) {
+      result[k] = v;
+    }
+  }
+  return result;
+}
+function encryptSettings(settings) {
+  const payload = {};
+  for (const [k, v] of Object.entries(settings)) {
+    if (v !== void 0 && v !== "") {
+      if (SENSITIVE_KEYS.includes(k)) {
+        payload[k] = encryptSecret(v);
+      } else {
+        payload[k] = v;
+      }
+    }
+  }
+  return payload;
+}
+async function refreshSettingsFromSupabase() {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from("platform_settings").select("value, updated_at").eq("key", "app_settings").single();
+      if (!error && data?.value && typeof data.value === "object") {
+        const decrypted = decryptSettings(data.value);
+        _cache = { ..._cache, ...decrypted };
+        return getSettings();
+      } else if (error && error.code !== "PGRST116" && error.code !== "PGRST205") {
+        logger.warn({ code: error.code, message: error.message }, "Supabase query platform_settings (app_settings) failed");
+      }
+    } catch (err) {
+      logger.warn({ err }, "Exception fetching platform_settings from Supabase");
+    }
+  }
+  return getSettings();
+}
+async function saveToSupabase(settings) {
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const encrypted = encryptSettings(settings);
+    const { error } = await client.from("platform_settings").upsert({
+      key: "app_settings",
+      value: encrypted,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    if (error) {
+      logger.warn({ code: error.code, message: error.message }, "Failed to upsert app_settings to Supabase platform_settings");
+      return false;
+    }
+    logger.info("Encrypted AppSettings safely persisted to Supabase platform_settings");
+    return true;
+  } catch (err) {
+    logger.warn({ err }, "Exception persisting app_settings to Supabase platform_settings");
+    return false;
+  }
+}
+function getSettings() {
+  return {
+    hfApiToken: _cache.hfApiToken || process.env.HF_API_TOKEN || process.env.HF_TOKEN || void 0,
+    hfModel: _cache.hfModel || process.env.HF_MODEL || void 0,
+    whatsappNumber: _cache.whatsappNumber || process.env.WHATSAPP_NUMBER || void 0,
+    whatsappApiUrl: _cache.whatsappApiUrl || process.env.WHATSAPP_API_URL || void 0,
+    whatsappToken: _cache.whatsappToken || process.env.WHATSAPP_TOKEN || void 0,
+    whatsappInstanceId: _cache.whatsappInstanceId || process.env.WHATSAPP_INSTANCE_ID || void 0,
+    aiApiKey: _cache.aiApiKey || process.env.AI_API_KEY || process.env.OPENAI_API_KEY || void 0,
+    aiBaseUrl: _cache.aiBaseUrl || process.env.AI_BASE_URL || void 0,
+    aiModel: _cache.aiModel || process.env.AI_MODEL || void 0,
+    googleSpreadsheetId: _cache.googleSpreadsheetId || process.env.GOOGLE_SPREADSHEET_ID || void 0,
+    googleSheetName: _cache.googleSheetName || process.env.GOOGLE_SHEET_NAME || void 0
+  };
+}
+async function saveSettings(patch) {
+  const cleaned = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== void 0 && v !== "") {
+      cleaned[k] = v;
+    }
+  }
+  _cache = { ..._cache, ...cleaned };
+  if (patch.aiApiKey === "") delete _cache.aiApiKey;
+  if (patch.aiBaseUrl === "") delete _cache.aiBaseUrl;
+  if (patch.aiModel === "") delete _cache.aiModel;
+  if (patch.googleSpreadsheetId === "") delete _cache.googleSpreadsheetId;
+  if (patch.googleSheetName === "") delete _cache.googleSheetName;
+  if (patch.hfApiToken === "") delete _cache.hfApiToken;
+  if (patch.hfModel === "") delete _cache.hfModel;
+  if (patch.whatsappNumber === "") delete _cache.whatsappNumber;
+  if (patch.whatsappApiUrl === "") delete _cache.whatsappApiUrl;
+  if (patch.whatsappToken === "") delete _cache.whatsappToken;
+  if (patch.whatsappInstanceId === "") delete _cache.whatsappInstanceId;
+  await saveToSupabase(_cache);
+  saveToDisk(_cache);
+  return getSettings();
+}
+var import_fs2, import_path2, import_url, currentDirname, SENSITIVE_KEYS, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache;
+var init_settings_store = __esm({
+  "src/config/settings-store.ts"() {
+    "use strict";
+    import_fs2 = require("fs");
+    import_path2 = require("path");
+    import_url = require("url");
+    init_logger();
+    init_supabase_service();
+    init_encryption();
+    currentDirname = typeof __dirname !== "undefined" ? __dirname : (0, import_url.fileURLToPath)(new URL(".", __bannerImportMetaUrl));
+    SENSITIVE_KEYS = [
+      "whatsappToken",
+      "whatsappInstanceId",
+      "whatsappApiUrl",
+      "aiApiKey",
+      "hfApiToken"
+    ];
+    TMP_SETTINGS_PATH = (0, import_path2.resolve)("/tmp", "settings.json");
+    LOCAL_SETTINGS_PATH = (0, import_path2.resolve)(process.cwd(), "settings.json");
+    ALT_SETTINGS_PATH = (0, import_path2.resolve)(process.cwd(), "artifacts", "api-server", "settings.json");
+    _cache = loadFromDisk();
+  }
+});
+
+// src/config/env.ts
+function parseDotEnvFile() {
+  try {
+    const candidates = [
+      import_path3.default.resolve(process.cwd(), ".env"),
+      import_path3.default.resolve(process.cwd(), "..", ".env"),
+      import_path3.default.resolve(process.cwd(), "..", "..", ".env"),
+      import_path3.default.resolve(currentDirname2, "..", "..", ".env"),
+      import_path3.default.resolve(currentDirname2, "..", "..", "..", ".env")
+    ];
+    for (const p of candidates) {
+      if (import_fs3.default.existsSync(p)) {
+        const content = import_fs3.default.readFileSync(p, "utf-8");
+        const parsed = {};
+        for (const line of content.split("\n")) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) continue;
+          const eq = trimmed.indexOf("=");
+          if (eq > 0) {
+            const k = trimmed.slice(0, eq).trim();
+            let v = trimmed.slice(eq + 1).trim();
+            if (v.startsWith('"') && v.endsWith('"') || v.startsWith("'") && v.endsWith("'")) {
+              v = v.slice(1, -1);
+            }
+            parsed[k] = v;
+          }
+        }
+        return parsed;
+      }
+    }
+  } catch {
+  }
+  return {};
+}
+function readEnv(key) {
+  const fromProcess = process.env[key];
+  if (fromProcess && fromProcess.trim().length > 0) return fromProcess;
+  const dotEnv = parseDotEnvFile();
+  const fromFile2 = dotEnv[key];
+  return fromFile2 && fromFile2.trim().length > 0 ? fromFile2 : void 0;
+}
+function requireEnv(key, hint) {
+  const value = readEnv(key);
+  if (!value) {
+    console.warn(`[SERVER WARNING] Missing env var "${key}". Using fallback until configured in Settings.`);
+    if (key === "GOOGLE_SERVICE_ACCOUNT_JSON") return "{}";
+    return `fallback_${key.toLowerCase()}`;
+  }
+  return value;
+}
+function isGoogleSheetsConfigured() {
+  const stored = getSettings().googleSpreadsheetId;
+  const hasSpreadsheetId = Boolean(
+    stored && stored.trim() || readEnv("GOOGLE_SPREADSHEET_ID")
+  );
+  let hasServiceAccount = Boolean(readEnv("GOOGLE_SERVICE_ACCOUNT_JSON"));
+  if (!hasServiceAccount) {
+    try {
+      const candidates = [
+        import_path3.default.resolve(process.cwd(), "service-account.json"),
+        import_path3.default.resolve(process.cwd(), "..", "service-account.json"),
+        import_path3.default.resolve(process.cwd(), "..", "..", "service-account.json"),
+        import_path3.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
+        import_path3.default.resolve(currentDirname2, "..", "..", "service-account.json"),
+        import_path3.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
+      ];
+      hasServiceAccount = candidates.some((p) => import_fs3.default.existsSync(p));
+    } catch (e2) {
+    }
+  }
+  return Boolean(hasSpreadsheetId && hasServiceAccount);
+}
+function isAuthConfigured() {
+  return true;
+}
+function isSupabaseConfigured() {
+  const hasUrl = Boolean(readEnv("SUPABASE_URL"));
+  const hasKey = Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_KEY") || readEnv("SUPABASE_ANON_KEY"));
+  return hasUrl && hasKey;
+}
+var import_fs3, import_path3, import_url2, currentDirname2, MissingEnvVarError, env;
+var init_env = __esm({
+  "src/config/env.ts"() {
+    "use strict";
+    import_fs3 = __toESM(require("fs"), 1);
+    import_path3 = __toESM(require("path"), 1);
+    import_url2 = require("url");
+    init_settings_store();
+    currentDirname2 = typeof __dirname !== "undefined" ? __dirname : (0, import_url2.fileURLToPath)(new URL(".", __bannerImportMetaUrl));
+    MissingEnvVarError = class extends Error {
+      constructor(key, hint) {
+        super(
+          `Missing required environment variable "${key}".${hint ? ` ${hint}` : ""}`
+        );
+        this.key = key;
+        this.name = "MissingEnvVarError";
+      }
+    };
+    env = {
+      get sessionSecret() {
+        const val = readEnv("SESSION_SECRET");
+        if (!process.env.VERCEL) {
+          if (!val || val === "court_session_secret_fallback_key") {
+            throw new MissingEnvVarError(
+              "SESSION_SECRET",
+              "A secure SESSION_SECRET environment variable must be set in production to sign and verify session tokens."
+            );
+          }
+        }
+        return val ?? "court_session_secret_fallback_key";
+      },
+      // --- Google Sheets (Optional Export Store) ---
+      get googleSpreadsheetId() {
+        const stored = getSettings().googleSpreadsheetId;
+        if (stored && stored.trim()) return stored.trim();
+        const val = readEnv("GOOGLE_SPREADSHEET_ID");
+        return val ? val.trim() : "";
+      },
+      get googleServiceAccountJson() {
+        try {
+          const candidates = [
+            import_path3.default.resolve(process.cwd(), "service-account.json"),
+            import_path3.default.resolve(process.cwd(), "..", "service-account.json"),
+            import_path3.default.resolve(process.cwd(), "..", "..", "service-account.json"),
+            import_path3.default.resolve(process.cwd(), "artifacts", "api-server", "service-account.json"),
+            import_path3.default.resolve(currentDirname2, "..", "..", "service-account.json"),
+            import_path3.default.resolve(currentDirname2, "..", "..", "..", "service-account.json")
+          ];
+          for (const p of candidates) {
+            if (import_fs3.default.existsSync(p)) {
+              return JSON.parse(import_fs3.default.readFileSync(p, "utf-8"));
+            }
+          }
+        } catch (e2) {
+        }
+        const raw = readEnv("GOOGLE_SERVICE_ACCOUNT_JSON");
+        if (raw) {
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      },
+      get googleSheetName() {
+        const stored = getSettings().googleSheetName;
+        if (stored && stored.trim()) return stored.trim();
+        return readEnv("GOOGLE_SHEET_NAME") ?? "Sessions";
+      },
+      // --- AI Settings (OpenRouter/Groq/OpenAI compatible) ---
+      // Settings UI takes precedence over env vars.
+      get aiApiKey() {
+        const stored = getSettings().aiApiKey;
+        if (stored && stored.trim()) return stored.trim();
+        return requireEnv(
+          "AI_API_KEY",
+          "Add your AI Provider API key (e.g. from OpenRouter) so the chat screen can extract session details."
+        );
+      },
+      get aiBaseUrl() {
+        const stored = getSettings().aiBaseUrl;
+        if (stored && stored.trim()) return stored.trim();
+        return readEnv("AI_BASE_URL") ?? "https://openrouter.ai/api/v1";
+      },
+      get aiModel() {
+        const stored = getSettings().aiModel;
+        if (stored && stored.trim()) return stored.trim();
+        return readEnv("AI_MODEL") ?? "qwen/qwen-2.5-7b-instruct";
+      },
+      // --- Supabase Settings (Environment Variables only - no UI override) ---
+      get supabaseUrl() {
+        return readEnv("SUPABASE_URL")?.trim() || void 0;
+      },
+      get supabaseKey() {
+        return readEnv("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? readEnv("SUPABASE_KEY")?.trim() ?? readEnv("SUPABASE_ANON_KEY")?.trim() ?? void 0;
+      },
+      get supabaseTableName() {
+        return readEnv("SUPABASE_TABLE_NAME")?.trim() || "app_users";
+      },
+      // --- Scheduler ---
+      get reminderCronExpression() {
+        return readEnv("REMINDER_CRON_EXPRESSION") ?? "*/10 * * * *";
+      },
+      /**
+       * Secret token used to authenticate Vercel Cron Job requests.
+       * Set CRON_SECRET in your Vercel environment variables.
+       * Vercel automatically sends this as `Authorization: Bearer <CRON_SECRET>`.
+       */
+      get cronSecret() {
+        return readEnv("CRON_SECRET");
+      },
+      /**
+       * Fixed UTC offset (hours) used to interpret Hijri session dates/times.
+       * Uses Mecca time (Asia/Makkah = UTC+3), identical to Asia/Riyadh.
+       * Saudi Arabia has no daylight-saving time, so the offset is always +3.
+       */
+      get courtTimezoneOffsetHours() {
+        const raw = readEnv("COURT_TIMEZONE_OFFSET_HOURS");
+        const parsed = raw ? Number(raw) : 3;
+        return Number.isFinite(parsed) ? parsed : 3;
+      },
+      // --- Rate Limiting ---
+      get rateLimitLoginMaxPerAccount() {
+        const raw = readEnv("RATE_LIMIT_LOGIN_MAX_PER_ACCOUNT");
+        const parsed = raw ? parseInt(raw, 10) : 5;
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+      },
+      get rateLimitLoginMaxPerIp() {
+        const raw = readEnv("RATE_LIMIT_LOGIN_MAX_PER_IP");
+        const parsed = raw ? parseInt(raw, 10) : 20;
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
+      },
+      get rateLimitWindowMs() {
+        const raw = readEnv("RATE_LIMIT_WINDOW_MS");
+        const parsed = raw ? parseInt(raw, 10) : 15 * 60 * 1e3;
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 15 * 60 * 1e3;
+      },
+      get isProduction() {
+        return true;
+      },
+      get resendApiKey() {
+        return readEnv("RESEND_API_KEY");
+      },
+      get emailFrom() {
+        return readEnv("EMAIL_FROM") || "onboarding@resend.dev";
+      },
+      get frontendUrl() {
+        const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || "http://localhost:5173";
+        return raw.replace(/\/+$/, "");
+      }
     };
   }
 });
@@ -852802,13 +852884,14 @@ function buildSettingsResponse(s3) {
     whatsappInstanceId: s3.whatsappInstanceId ?? ""
   };
 }
-router6.get("/settings", (_req, res) => {
+router6.get("/settings", async (_req, res) => {
+  await refreshSettingsFromSupabase();
   const s3 = getSettings();
   res.json(buildSettingsResponse(s3));
 });
-router6.put("/settings", (req, res) => {
+router6.put("/settings", async (req, res) => {
   try {
-    const updated = saveSettings(req.body);
+    const updated = await saveSettings(req.body);
     logger.info("Settings saved via API");
     res.json(buildSettingsResponse(updated));
   } catch (err) {
@@ -852829,6 +852912,81 @@ router6.post("/settings/google-export", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Google export failed");
     res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Google Sheets." });
+  }
+});
+router6.post("/settings/test-whatsapp-connection", async (req, res) => {
+  const s3 = getSettings();
+  const instanceId = String(req.body?.instanceId ?? s3.whatsappInstanceId ?? "").trim();
+  const token = String(req.body?.token ?? s3.whatsappToken ?? "").trim();
+  const rawApiUrl = String(req.body?.apiUrl ?? s3.whatsappApiUrl ?? "https://api.green-api.com").trim();
+  if (!instanceId || !token) {
+    res.status(400).json({
+      success: false,
+      connected: false,
+      error: "\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0645\u0639\u0631\u0641 \u0627\u0644\u0646\u0633\u062E\u0629 (Instance ID) \u0648\u0631\u0645\u0632 \u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 (Token) \u0623\u0648\u0644\u0627\u064B \u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644."
+    });
+    return;
+  }
+  const base = (rawApiUrl || "https://api.green-api.com").replace(/\/+$/, "");
+  const targetUrl = `${base}/waInstance${instanceId}/getStateInstance/${token}`;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8e3);
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => ({}));
+      const message2 = errJson.message || `\u0641\u0634\u0644\u062A \u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 \u0645\u0639 \u0645\u0632\u0648\u062F Green API (\u0631\u0645\u0632 \u0627\u0644\u062E\u0637\u0623: ${response.status})`;
+      res.status(400).json({
+        success: false,
+        connected: false,
+        stateInstance: "unauthorized",
+        error: message2
+      });
+      return;
+    }
+    const data = await response.json();
+    const state = data?.stateInstance || "unknown";
+    if (state === "authorized") {
+      res.json({
+        success: true,
+        connected: true,
+        stateInstance: state,
+        message: "\u0627\u0644\u0645\u062B\u064A\u0644 \u0645\u0635\u0627\u062F\u0642 \u0639\u0644\u064A\u0647 \u0648\u0645\u062A\u0635\u0644 \u0628\u062D\u0633\u0627\u0628 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D!"
+      });
+      return;
+    }
+    let message = `\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u064A\u0644 \u0627\u0644\u062D\u0627\u0644\u064A\u0629: ${state}`;
+    if (state === "notAuthorized") {
+      message = "\u0627\u0644\u0645\u062B\u064A\u0644 \u063A\u064A\u0631 \u0645\u0635\u0631\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0631\u0645\u0632 \u0627\u0644\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0627\u0644\u0633\u0631\u064A\u0639\u0629 (QR Code) \u0641\u064A \u0644\u0648\u062D\u0629 \u062A\u062D\u0643\u0645 Green API \u0644\u0631\u0628\u0637 \u0627\u0644\u062D\u0633\u0627\u0628.";
+    } else if (state === "blocked") {
+      message = "\u0627\u0644\u0645\u062B\u064A\u0644 \u0645\u062D\u0638\u0648\u0631 \u0645\u0646 \u0642\u0650\u0628\u0644 \u0645\u0632\u0648\u062F \u0627\u0644\u062E\u062F\u0645\u0629.";
+    } else if (state === "sleepMode") {
+      message = "\u0627\u0644\u0645\u062B\u064A\u0644 \u0641\u064A \u0648\u0636\u0639 \u0627\u0644\u0633\u0643\u0648\u0646 (Sleep Mode). \u064A\u0631\u062C\u0649 \u062A\u0641\u0639\u064A\u0644\u0647 \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645.";
+    } else if (state === "starting") {
+      message = "\u0627\u0644\u0645\u062B\u064A\u0644 \u0642\u064A\u062F \u0628\u062F\u0621 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u062D\u0627\u0644\u064A\u0627\u064B\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0642\u0644\u064A\u0644.";
+    }
+    res.json({
+      success: true,
+      connected: false,
+      stateInstance: state,
+      message
+    });
+  } catch (err) {
+    logger.error({ err, targetUrl }, "WhatsApp test connection failed");
+    const isTimeout = err?.name === "AbortError" || err?.message?.includes("aborted");
+    const msg = isTimeout ? "\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0645\u0632\u0648\u062F Green API (\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0635\u062D\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u0640 API \u0648\u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A)." : err?.message || "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u0645\u0632\u0648\u062F \u062E\u062F\u0645\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.";
+    res.status(400).json({
+      success: false,
+      connected: false,
+      error: msg
+    });
   }
 });
 router6.post("/settings/test-whatsapp", async (_req, res) => {
@@ -857566,11 +857724,15 @@ var routes_default = router21;
 // src/app.ts
 init_logger();
 init_env();
+init_settings_store();
 var import_meta = {};
 if (!isSupabaseConfigured() && true) {
   logger.fatal("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
   throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
 }
+void refreshSettingsFromSupabase().catch((err) => {
+  logger.warn({ err }, "Initial settings sync from Supabase encountered error, falling back to disk/env");
+});
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path6.default.dirname(currentFilename);
 var app = (0, import_express22.default)();

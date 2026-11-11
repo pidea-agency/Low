@@ -1,20 +1,20 @@
 /**
  * settings-store.ts
  *
- * A lightweight, file-backed store for user-configurable runtime settings.
- * Values here take precedence over environment variables so that staff can
- * update API keys and spreadsheet IDs through the /settings UI without
- * restarting the server.
+ * Persists runtime application settings to Supabase table `platform_settings` (key: 'app_settings'),
+ * with sensitive secrets (tokens, API keys, instance IDs) encrypted at rest using AES-256-GCM
+ * with the SETTINGS_ENCRYPTION_KEY pattern.
  *
- * The file is stored at <cwd>/settings.json (next to the process working dir).
- * On first boot it is created as an empty object; missing keys fall through to
- * process.env as a fallback.
+ * Falls back to disk (/tmp/settings.json or <cwd>/settings.json) and process.env when Supabase
+ * is offline or not configured.
  */
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import { fileURLToPath } from "url";
 import { logger } from "../lib/logger";
+import { getSupabaseClient } from "../services/supabase.service";
+import { encryptSecret, decryptSecret, isEncrypted } from "../lib/encryption";
 
 const currentDirname = typeof __dirname !== "undefined" ? __dirname : fileURLToPath(new URL(".", import.meta.url));
 
@@ -43,9 +43,17 @@ export interface AppSettings {
   whatsappInstanceId?: string;
 }
 
+const SENSITIVE_KEYS: (keyof AppSettings)[] = [
+  "whatsappToken",
+  "whatsappInstanceId",
+  "whatsappApiUrl",
+  "aiApiKey",
+  "hfApiToken",
+];
+
 /**
  * On Vercel, the filesystem is read-only except for /tmp.
- * Priority order: in-memory _cache > /tmp/settings.json > process.env
+ * Priority order: in-memory _cache > Supabase platform_settings > /tmp/settings.json > process.env
  */
 const TMP_SETTINGS_PATH = resolve("/tmp", "settings.json");
 const LOCAL_SETTINGS_PATH = resolve(process.cwd(), "settings.json");
@@ -64,10 +72,11 @@ function loadFromDisk(): AppSettings {
     try {
       if (existsSync(p)) {
         const raw = readFileSync(p, "utf-8");
-        const parsed = JSON.parse(raw) as AppSettings;
+        const parsed = JSON.parse(raw) as Record<string, any>;
         if (parsed && typeof parsed === "object") {
-          // Merge so any non-empty setting from any path is preserved
-          result = { ...parsed, ...result };
+          // Decrypt any encrypted fields that might be stored locally
+          const decrypted = decryptSettings(parsed);
+          result = { ...decrypted, ...result };
         }
       }
     } catch {
@@ -78,7 +87,8 @@ function loadFromDisk(): AppSettings {
 }
 
 function saveToDisk(settings: AppSettings): void {
-  const content = JSON.stringify(settings, null, 2);
+  const encrypted = encryptSettings(settings);
+  const content = JSON.stringify(encrypted, null, 2);
   // Try /tmp first (always writable on Vercel)
   try {
     writeFileSync(TMP_SETTINGS_PATH, content, "utf-8");
@@ -93,39 +103,131 @@ function saveToDisk(settings: AppSettings): void {
   }
 }
 
-// In-memory cache — loaded once at module init, updated on every save.
+/**
+ * Decrypts any fields stored with enc:v1 format
+ */
+function decryptSettings(raw: Record<string, any>): Partial<AppSettings> {
+  const result: Partial<AppSettings> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof v === "string" && v) {
+      if (isEncrypted(v)) {
+        try {
+          (result as any)[k] = decryptSecret(v);
+        } catch (err) {
+          logger.warn({ key: k, err }, "Failed to decrypt setting value, keeping raw");
+          (result as any)[k] = v;
+        }
+      } else {
+        (result as any)[k] = v;
+      }
+    } else if (v !== undefined) {
+      (result as any)[k] = v;
+    }
+  }
+  return result;
+}
+
+/**
+ * Encrypts sensitive fields with AES-256-GCM using SETTINGS_ENCRYPTION_KEY
+ */
+function encryptSettings(settings: AppSettings): Record<string, any> {
+  const payload: Record<string, any> = {};
+  for (const [k, v] of Object.entries(settings) as [keyof AppSettings, string | undefined][]) {
+    if (v !== undefined && v !== "") {
+      if (SENSITIVE_KEYS.includes(k)) {
+        payload[k] = encryptSecret(v);
+      } else {
+        payload[k] = v;
+      }
+    }
+  }
+  return payload;
+}
+
+// In-memory cache — loaded once at module init, updated on every save/refresh.
 let _cache: AppSettings = loadFromDisk();
 
 /**
+ * Asynchronously refreshes in-memory settings from Supabase platform_settings table.
+ */
+export async function refreshSettingsFromSupabase(): Promise<AppSettings> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from("platform_settings")
+        .select("value, updated_at")
+        .eq("key", "app_settings")
+        .single();
+
+      if (!error && data?.value && typeof data.value === "object") {
+        const decrypted = decryptSettings(data.value);
+        _cache = { ..._cache, ...decrypted };
+        return getSettings();
+      } else if (error && error.code !== "PGRST116" && error.code !== "PGRST205") {
+        logger.warn({ code: error.code, message: error.message }, "Supabase query platform_settings (app_settings) failed");
+      }
+    } catch (err) {
+      logger.warn({ err }, "Exception fetching platform_settings from Supabase");
+    }
+  }
+
+  return getSettings();
+}
+
+/**
+ * Persists settings to Supabase platform_settings table encrypted at rest.
+ */
+async function saveToSupabase(settings: AppSettings): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (!client) return false;
+
+  try {
+    const encrypted = encryptSettings(settings);
+    const { error } = await client.from("platform_settings").upsert({
+      key: "app_settings",
+      value: encrypted,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      logger.warn({ code: error.code, message: error.message }, "Failed to upsert app_settings to Supabase platform_settings");
+      return false;
+    }
+
+    logger.info("Encrypted AppSettings safely persisted to Supabase platform_settings");
+    return true;
+  } catch (err) {
+    logger.warn({ err }, "Exception persisting app_settings to Supabase platform_settings");
+    return false;
+  }
+}
+
+/**
  * Return the current settings.
- * Priority: in-memory _cache > /tmp disk > process.env
+ * Priority: in-memory _cache (synced with Supabase) > /tmp disk > process.env
  */
 export function getSettings(): AppSettings {
-  // Re-read disk every time to pick up saves from other requests in the same
-  // Vercel invocation that may have written to /tmp.
-  const disk = loadFromDisk();
-  const merged = { ...disk, ..._cache };
-
   return {
-    hfApiToken:          merged.hfApiToken          || process.env.HF_API_TOKEN          || process.env.HF_TOKEN             || undefined,
-    hfModel:             merged.hfModel              || process.env.HF_MODEL               || undefined,
-    whatsappNumber:      merged.whatsappNumber       || process.env.WHATSAPP_NUMBER        || undefined,
-    whatsappApiUrl:      merged.whatsappApiUrl       || process.env.WHATSAPP_API_URL       || undefined,
-    whatsappToken:       merged.whatsappToken        || process.env.WHATSAPP_TOKEN         || undefined,
-    whatsappInstanceId:  merged.whatsappInstanceId   || process.env.WHATSAPP_INSTANCE_ID   || undefined,
-    aiApiKey:            merged.aiApiKey             || process.env.AI_API_KEY             || process.env.OPENAI_API_KEY      || undefined,
-    aiBaseUrl:           merged.aiBaseUrl            || process.env.AI_BASE_URL            || undefined,
-    aiModel:             merged.aiModel              || process.env.AI_MODEL               || undefined,
-    googleSpreadsheetId: merged.googleSpreadsheetId  || process.env.GOOGLE_SPREADSHEET_ID  || undefined,
-    googleSheetName:     merged.googleSheetName      || process.env.GOOGLE_SHEET_NAME      || undefined,
+    hfApiToken:          _cache.hfApiToken          || process.env.HF_API_TOKEN          || process.env.HF_TOKEN             || undefined,
+    hfModel:             _cache.hfModel              || process.env.HF_MODEL               || undefined,
+    whatsappNumber:      _cache.whatsappNumber       || process.env.WHATSAPP_NUMBER        || undefined,
+    whatsappApiUrl:      _cache.whatsappApiUrl       || process.env.WHATSAPP_API_URL       || undefined,
+    whatsappToken:       _cache.whatsappToken        || process.env.WHATSAPP_TOKEN         || undefined,
+    whatsappInstanceId:  _cache.whatsappInstanceId   || process.env.WHATSAPP_INSTANCE_ID   || undefined,
+    aiApiKey:            _cache.aiApiKey             || process.env.AI_API_KEY             || process.env.OPENAI_API_KEY      || undefined,
+    aiBaseUrl:           _cache.aiBaseUrl            || process.env.AI_BASE_URL            || undefined,
+    aiModel:             _cache.aiModel              || process.env.AI_MODEL               || undefined,
+    googleSpreadsheetId: _cache.googleSpreadsheetId  || process.env.GOOGLE_SPREADSHEET_ID  || undefined,
+    googleSheetName:     _cache.googleSheetName      || process.env.GOOGLE_SHEET_NAME      || undefined,
   };
 }
 
 /**
- * Merge `patch` into the current settings, persist to disk, and update
- * the in-memory cache.
+ * Merge `patch` into the current settings, persist encrypted to Supabase (and local disk fallback),
+ * and update the in-memory cache.
  */
-export function saveSettings(patch: Partial<AppSettings>): AppSettings {
+export async function saveSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
   // Strip empty strings so they don't shadow env var fallbacks
   const cleaned: Partial<AppSettings> = {};
   for (const [k, v] of Object.entries(patch) as [keyof AppSettings, string | undefined][]) {
@@ -149,7 +251,19 @@ export function saveSettings(patch: Partial<AppSettings>): AppSettings {
   if (patch.whatsappToken === "") delete _cache.whatsappToken;
   if (patch.whatsappInstanceId === "") delete _cache.whatsappInstanceId;
 
+  // 1. Persist encrypted to Supabase platform_settings
+  await saveToSupabase(_cache);
+
+  // 2. Persist to disk fallback
   saveToDisk(_cache);
+
   return getSettings();
 }
 
+/**
+ * Synchronous variant of saveSettings for non-async callers.
+ */
+export function saveSettingsSync(patch: Partial<AppSettings>): AppSettings {
+  void saveSettings(patch);
+  return getSettings();
+}

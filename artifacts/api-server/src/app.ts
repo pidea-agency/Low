@@ -8,12 +8,18 @@ import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { env, isSupabaseConfigured } from "./config/env";
+import { refreshSettingsFromSupabase } from "./config/settings-store";
 
 // Startup check: Fail loudly if Supabase credentials are missing (outside tests)
 if (!isSupabaseConfigured() && process.env.NODE_ENV !== "test") {
   logger.fatal("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
   throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
 }
+
+// Pre-load runtime settings from Supabase platform_settings into memory cache
+void refreshSettingsFromSupabase().catch((err) => {
+  logger.warn({ err }, "Initial settings sync from Supabase encountered error, falling back to disk/env");
+});
 
 // ESM and CJS safe directory resolution
 const currentFilename = typeof __filename !== "undefined" ? __filename : (typeof import.meta !== "undefined" && import.meta.url ? fileURLToPath(import.meta.url) : process.cwd());

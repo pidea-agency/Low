@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import request from "supertest";
 import app from "../app";
 
@@ -50,6 +50,11 @@ describe("Server Settings API Authorization Enforcement", () => {
       const res = await request(app).post("/api/settings/test-whatsapp");
       expect(res.status).toBe(401);
     });
+
+    it("POST /api/settings/test-whatsapp-connection returns 401", async () => {
+      const res = await request(app).post("/api/settings/test-whatsapp-connection");
+      expect(res.status).toBe(401);
+    });
   });
 
   describe("Lawyer requests (Forbidden)", () => {
@@ -80,6 +85,16 @@ describe("Server Settings API Authorization Enforcement", () => {
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/صلاحيات مدير المكتب|المشرف/);
     });
+
+    it("POST /api/settings/test-whatsapp-connection returns 403 for lawyer", async () => {
+      const res = await request(app)
+        .post("/api/settings/test-whatsapp-connection")
+        .set("Cookie", lawyerCookie)
+        .send({ instanceId: "123", token: "tok" });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toMatch(/صلاحيات مدير المكتب|المشرف/);
+    });
   });
 
   describe("Admin requests (Authorized)", () => {
@@ -101,6 +116,97 @@ describe("Server Settings API Authorization Enforcement", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.googleSheetName).toBe("Sessions");
+    });
+
+    it("POST /api/settings/test-whatsapp-connection returns 400 when instanceId or token is missing", async () => {
+      const res = await request(app)
+        .post("/api/settings/test-whatsapp-connection")
+        .set("Cookie", adminCookie)
+        .send({ instanceId: "", token: "" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.connected).toBe(false);
+      expect(res.body.error).toContain("معرف النسخة");
+    });
+
+    it("POST /api/settings/test-whatsapp-connection returns connected: true when Green API returns authorized", async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ stateInstance: "authorized" }),
+      } as any);
+
+      try {
+        const res = await request(app)
+          .post("/api/settings/test-whatsapp-connection")
+          .set("Cookie", adminCookie)
+          .send({
+            instanceId: "7103123456",
+            token: "valid-secret-token",
+            apiUrl: "https://api.green-api.com",
+          });
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.connected).toBe(true);
+        expect(res.body.stateInstance).toBe("authorized");
+        expect(res.body.message).toContain("متصل بحساب الواتساب");
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it("POST /api/settings/test-whatsapp-connection returns connected: false when Green API returns notAuthorized", async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ stateInstance: "notAuthorized" }),
+      } as any);
+
+      try {
+        const res = await request(app)
+          .post("/api/settings/test-whatsapp-connection")
+          .set("Cookie", adminCookie)
+          .send({
+            instanceId: "7103123456",
+            token: "valid-secret-token",
+          });
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.connected).toBe(false);
+        expect(res.body.stateInstance).toBe("notAuthorized");
+        expect(res.body.message).toContain("QR Code");
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it("POST /api/settings/test-whatsapp-connection handles Green API 401 error gracefully", async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ message: "Invalid token" }),
+      } as any);
+
+      try {
+        const res = await request(app)
+          .post("/api/settings/test-whatsapp-connection")
+          .set("Cookie", adminCookie)
+          .send({
+            instanceId: "7103123456",
+            token: "invalid-token",
+          });
+
+        expect(res.status).toBe(400);
+        expect(res.body.connected).toBe(false);
+        expect(res.body.error).toBe("Invalid token");
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
   });
 });

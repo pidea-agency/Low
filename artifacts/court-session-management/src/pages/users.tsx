@@ -673,36 +673,9 @@ export default function OfficeMembersPage() {
               </div>
 
               {/* Bottom Action Bar */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                {/* Left Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                {/* Right Action Buttons in RTL (Start) */}
                 <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                  {selectedMember && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleToggleStatus(selectedMember)}
-                        className="text-xs font-bold border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-4 py-2 cursor-pointer"
-                      >
-                        <Power className="w-3.5 h-3.5 ml-1.5" />
-                        <span>تعطيل الحساب</span>
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleResendActivation(selectedMember)}
-                        className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer"
-                      >
-                        <Key className="w-3.5 h-3.5 ml-1.5 text-[#C4933F]" />
-                        <span>إعادة تعيين كلمة المرور</span>
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* Right Action Buttons */}
-                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                   <Button
                     type="submit"
                     disabled={isSubmitting}
@@ -720,6 +693,29 @@ export default function OfficeMembersPage() {
                   >
                     <X className="w-4 h-4 ml-1.5" />
                     <span>إلغاء</span>
+                  </Button>
+                </div>
+
+                {/* Left Action Buttons in RTL (End) */}
+                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => selectedMember && handleResendActivation(selectedMember)}
+                    className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer"
+                  >
+                    <Key className="w-3.5 h-3.5 ml-1.5 text-[#C4933F]" />
+                    <span>إعادة تعيين كلمة المرور</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => selectedMember && handleToggleStatus(selectedMember)}
+                    className="text-xs font-bold border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-4 py-2 cursor-pointer"
+                  >
+                    <Power className="w-3.5 h-3.5 ml-1.5" />
+                    <span>تعطيل الحساب</span>
                   </Button>
                 </div>
               </div>

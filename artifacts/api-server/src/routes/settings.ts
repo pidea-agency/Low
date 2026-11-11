@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { google } from "googleapis";
-import { getSettings, saveSettings, type AppSettings } from "../config/settings-store";
+import { getSettings, saveSettings, refreshSettingsFromSupabase, type AppSettings } from "../config/settings-store";
 import { attachAuthUser, requireAdmin } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
@@ -365,14 +365,15 @@ function buildSettingsResponse(s: AppSettings) {
   };
 }
 
-router.get("/settings", (_req, res) => {
+router.get("/settings", async (_req, res) => {
+  await refreshSettingsFromSupabase();
   const s = getSettings();
   res.json(buildSettingsResponse(s));
 });
 
-router.put("/settings", (req, res) => {
+router.put("/settings", async (req, res) => {
   try {
-    const updated = saveSettings(req.body);
+    const updated = await saveSettings(req.body);
     logger.info("Settings saved via API");
     res.json(buildSettingsResponse(updated));
   } catch (err) {
@@ -394,6 +395,99 @@ router.post("/settings/google-export", async (req, res) => {
   } catch (err: any) {
     logger.error({ err }, "Google export failed");
     res.status(500).json({ error: err.message || "فشل تصدير البيانات إلى Google Sheets." });
+  }
+});
+
+/**
+ * POST /api/settings/test-whatsapp-connection
+ * Tests connectivity and authorization of Green API instance using getStateInstance.
+ * Confirms whether the instance is actually authorized/connected to WhatsApp.
+ */
+router.post("/settings/test-whatsapp-connection", async (req, res) => {
+  const s = getSettings();
+  const instanceId = String(req.body?.instanceId ?? s.whatsappInstanceId ?? "").trim();
+  const token = String(req.body?.token ?? s.whatsappToken ?? "").trim();
+  const rawApiUrl = String(req.body?.apiUrl ?? s.whatsappApiUrl ?? "https://api.green-api.com").trim();
+
+  if (!instanceId || !token) {
+    res.status(400).json({
+      success: false,
+      connected: false,
+      error: "يرجى إدخال معرف النسخة (Instance ID) ورمز المصادقة (Token) أولاً لاختبار الاتصال.",
+    });
+    return;
+  }
+
+  const base = (rawApiUrl || "https://api.green-api.com").replace(/\/+$/, "");
+  const targetUrl = `${base}/waInstance${instanceId}/getStateInstance/${token}`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errJson = (await response.json().catch(() => ({}))) as Record<string, any>;
+      const message = errJson.message || `فشلت المصادقة مع مزود Green API (رمز الخطأ: ${response.status})`;
+      res.status(400).json({
+        success: false,
+        connected: false,
+        stateInstance: "unauthorized",
+        error: message,
+      });
+      return;
+    }
+
+    const data = (await response.json()) as { stateInstance?: string };
+    const state = data?.stateInstance || "unknown";
+
+    if (state === "authorized") {
+      res.json({
+        success: true,
+        connected: true,
+        stateInstance: state,
+        message: "المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح!",
+      });
+      return;
+    }
+
+    let message = `حالة المثيل الحالية: ${state}`;
+    if (state === "notAuthorized") {
+      message = "المثيل غير مصرح حالياً. يرجى مسح رمز الاستجابة السريعة (QR Code) في لوحة تحكم Green API لربط الحساب.";
+    } else if (state === "blocked") {
+      message = "المثيل محظور من قِبل مزود الخدمة.";
+    } else if (state === "sleepMode") {
+      message = "المثيل في وضع السكون (Sleep Mode). يرجى تفعيله من لوحة التحكم.";
+    } else if (state === "starting") {
+      message = "المثيل قيد بدء التشغيل حالياً، يرجى المحاولة بعد قليل.";
+    }
+
+    res.json({
+      success: true,
+      connected: false,
+      stateInstance: state,
+      message,
+    });
+  } catch (err: any) {
+    logger.error({ err, targetUrl }, "WhatsApp test connection failed");
+    const isTimeout = err?.name === "AbortError" || err?.message?.includes("aborted");
+    const msg = isTimeout
+      ? "انتهت مهلة الاتصال بمزود Green API (يرجى التحقق من صحة رابط الـ API والاتصال بالإنترنت)."
+      : (err?.message || "تعذر الاتصال بخادم مزود خدمة الواتساب.");
+    res.status(400).json({
+      success: false,
+      connected: false,
+      error: msg,
+    });
   }
 });
 

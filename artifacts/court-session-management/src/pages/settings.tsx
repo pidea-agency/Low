@@ -18,6 +18,9 @@ import {
   HelpCircle,
   Sparkles,
   Link2,
+  Radio,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +81,13 @@ export default function OfficeSettingsPage() {
   const [whatsappInstanceId, setWhatsappInstanceId] = useState('');
   const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    tested: boolean;
+    connected: boolean;
+    stateInstance?: string;
+    message?: string;
+  } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExportToSheets = async () => {
@@ -372,6 +382,67 @@ export default function OfficeSettingsPage() {
       });
     } finally {
       setIsTestingWhatsapp(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!whatsappInstanceId?.trim() || !whatsappToken?.trim()) {
+      toast({
+        title: 'بيانات غير مكتملة',
+        description: 'يرجى إدخال معرف النسخة (Instance ID) ورمز المصادقة (Token) أولاً لاختبار الاتصال.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsTestingConnection(true);
+    try {
+      const res = await fetch('/api/settings/test-whatsapp-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: whatsappInstanceId.trim(),
+          token: whatsappToken.trim(),
+          apiUrl: whatsappApiUrl.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'فشل فحص حالة الاتصال بمزود Green API.');
+      }
+
+      setConnectionStatus({
+        tested: true,
+        connected: Boolean(data.connected),
+        stateInstance: data.stateInstance,
+        message: data.message,
+      });
+
+      if (data.connected) {
+        toast({
+          title: 'الاتصال ناجح ومصادق عليه ✓',
+          description: data.message || 'المثيل متصل بنجاح مع Green API!',
+        });
+      } else {
+        toast({
+          title: 'المثيل غير متصل بالواتساب',
+          description: data.message || `حالة المثيل: ${data.stateInstance}`,
+          variant: 'destructive',
+        });
+      }
+    } catch (err: any) {
+      setConnectionStatus({
+        tested: true,
+        connected: false,
+        message: err.message,
+      });
+      toast({
+        title: 'خطأ في فحص الاتصال',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
@@ -1009,25 +1080,77 @@ export default function OfficeSettingsPage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isTestingWhatsapp}
-              onClick={handleTestWhatsapp}
-              className="w-full sm:w-auto gap-2 text-xs font-bold"
+          {/* Connection Status Banner */}
+          {connectionStatus && (
+            <div
+              className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${
+                connectionStatus.connected
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300'
+              }`}
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>إرسال تنبيه تجريبي الآن</span>
-            </Button>
+              {connectionStatus.connected ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-1 text-xs">
+                <div className="font-bold flex items-center gap-2">
+                  <span>حالة اتصال Green API:</span>
+                  <Badge
+                    variant="outline"
+                    className={
+                      connectionStatus.connected
+                        ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                    }
+                  >
+                    {connectionStatus.connected ? 'متصل ومصادق عليه (Authorized)' : connectionStatus.stateInstance || 'غير متصل'}
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground leading-relaxed">{connectionStatus.message}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-border">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isTestingConnection || !whatsappInstanceId?.trim() || !whatsappToken?.trim()}
+                onClick={handleTestConnection}
+                className="w-full sm:w-auto gap-2 text-xs font-bold border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                data-testid="button-test-whatsapp-connection"
+              >
+                {isTestingConnection ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Radio className="w-3.5 h-3.5 text-emerald-600" />
+                )}
+                <span>اختبار الاتصال (Green API)</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={isTestingWhatsapp}
+                onClick={handleTestWhatsapp}
+                className="w-full sm:w-auto gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>إرسال تنبيه تجريبي</span>
+              </Button>
+            </div>
 
             <Button
               type="button"
               size="sm"
               disabled={isSavingWhatsapp}
               onClick={handleSaveWhatsapp}
-              className="w-full sm:w-auto gap-2 text-xs font-bold"
+              className="w-full sm:w-auto gap-2 text-xs font-bold bg-[#C99732] hover:bg-[#B28325] text-white"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>حفظ إعدادات الواتساب</span>
