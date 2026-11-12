@@ -830487,6 +830487,7 @@ var init_googleSheets_service = __esm({
 // src/services/postgres.service.ts
 var postgres_service_exports = {};
 __export(postgres_service_exports, {
+  DatabaseQueryError: () => DatabaseQueryError,
   DatabaseUnavailableError: () => DatabaseUnavailableError2,
   calcDaysFromHijri: () => calcDaysFromHijri,
   createAttachment: () => createAttachment,
@@ -830520,6 +830521,7 @@ __export(postgres_service_exports, {
   handleDatabaseOrServerError: () => handleDatabaseOrServerError,
   handleSupabaseFailure: () => handleSupabaseFailure,
   hasRecentNotification: () => hasRecentNotification,
+  isDatabaseConnectionError: () => isDatabaseConnectionError,
   isInMemoryFallbackAllowed: () => isInMemoryFallbackAllowed,
   listAttachments: () => listAttachments,
   listCases: () => listCases,
@@ -830568,6 +830570,45 @@ function resetInMemoryStore() {
   memoryCases.clear();
   memoryBroadcasts.clear();
 }
+function isDatabaseConnectionError(err) {
+  if (!err) return false;
+  if (err instanceof DatabaseQueryError) return false;
+  if (err instanceof DatabaseUnavailableError2) return true;
+  if (err?.code === "DATABASE_UNAVAILABLE") return true;
+  const msg = String(err?.message || "").toLowerCase();
+  if (msg.includes("supabase client is not configured")) return true;
+  const code = String(err?.code || "");
+  const networkCodes = [
+    "ECONNREFUSED",
+    "ENOTFOUND",
+    "ETIMEDOUT",
+    "ECONNRESET",
+    "EHOSTUNREACH",
+    "ENETUNREACH",
+    "EPIPE",
+    "EAI_AGAIN",
+    "UND_ERR_CONNECT_TIMEOUT",
+    // Postgres Class 08 (connection exceptions)
+    "08000",
+    "08003",
+    "08006",
+    "08001",
+    "08004",
+    "08007",
+    "08P01",
+    // Postgres Class 57 (operator shutdown / crash)
+    "57P01",
+    "57P02",
+    "57P03"
+  ];
+  if (networkCodes.includes(code)) return true;
+  const status = Number(err?.status || err?.statusCode || 0);
+  if (status === 502 || status === 503 || status === 504) return true;
+  if (msg.includes("fetch failed") || msg.includes("failed to fetch") || msg.includes("connect timeout") || msg.includes("connection refused") || msg.includes("econnrefused") || msg.includes("network error")) {
+    return true;
+  }
+  return false;
+}
 function setForceDisableMemoryStoreForTesting(disabled) {
   _forceDisableMemoryStoreForTesting = disabled;
 }
@@ -830578,16 +830619,36 @@ function isInMemoryFallbackAllowed() {
   return !_forceDisableMemoryStoreForTesting;
 }
 function handleSupabaseFailure(operation, err) {
-  if (err instanceof DatabaseUnavailableError2) throw err;
-  logger.error({ err, operation }, `Supabase ${operation} failed`);
-  if (!isInMemoryFallbackAllowed()) {
-    throw new DatabaseUnavailableError2(
-      `\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B (${operation}): ${err?.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Supabase"}`
+  if (err instanceof DatabaseUnavailableError2 || err instanceof DatabaseQueryError) throw err;
+  const isConn = isDatabaseConnectionError(err);
+  if (isConn) {
+    logger.error({ err, operation }, `Supabase connection failure (${operation})`);
+    if (!isInMemoryFallbackAllowed()) {
+      throw new DatabaseUnavailableError2(
+        `\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B (${operation}): ${err?.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Supabase"}`
+      );
+    }
+  } else {
+    logger.error(
+      {
+        operation,
+        pgCode: err?.code,
+        pgMessage: err?.message,
+        pgDetails: err?.details,
+        pgHint: err?.hint,
+        status: err?.status
+      },
+      `Supabase query error (${operation}): ${err?.message || "Postgres query failure"}`
     );
+    if (!isInMemoryFallbackAllowed()) {
+      throw new DatabaseQueryError(operation, err);
+    }
   }
 }
 function handleDatabaseOrServerError(res, err, refId, defaultMsg) {
-  if (err instanceof DatabaseUnavailableError2 || err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
+  const isConn = (err instanceof DatabaseUnavailableError2 || err?.code === "DATABASE_UNAVAILABLE" || isDatabaseConnectionError(err)) && !(err instanceof DatabaseQueryError);
+  if (isConn) {
+    logger.warn({ refId, err, defaultMsg }, `Database unavailable (503): ${err?.message || defaultMsg}`);
     res.status(503).json({
       error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B",
       code: "DATABASE_UNAVAILABLE",
@@ -830595,7 +830656,23 @@ function handleDatabaseOrServerError(res, err, refId, defaultMsg) {
     });
     return;
   }
-  res.status(500).json({ error: `${defaultMsg}. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`, refId });
+  logger.error(
+    {
+      refId,
+      err,
+      pgCode: err?.code,
+      pgDetails: err?.details,
+      pgHint: err?.hint,
+      operation: err?.operation,
+      defaultMsg
+    },
+    `Internal database/server error (500): ${err?.message || defaultMsg}`
+  );
+  res.status(500).json({
+    error: `${defaultMsg}. \u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639: ${refId}`,
+    code: err?.code || "INTERNAL_SERVER_ERROR",
+    refId
+  });
 }
 function calcDaysFromHijri(hijriDateStr) {
   if (!hijriDateStr?.trim()) return 0;
@@ -832983,7 +833060,7 @@ async function getCaseStats(officeId, filterRecords) {
     postponed
   };
 }
-var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, memoryBroadcasts, _nextId, DatabaseUnavailableError2, _forceDisableMemoryStoreForTesting;
+var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, memoryBroadcasts, _nextId, DatabaseUnavailableError2, DatabaseQueryError, _forceDisableMemoryStoreForTesting;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -833010,6 +833087,24 @@ var init_postgres_service = __esm({
       constructor(message = "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B") {
         super(message);
         this.name = "DatabaseUnavailableError";
+      }
+    };
+    DatabaseQueryError = class extends Error {
+      statusCode = 500;
+      code;
+      details;
+      hint;
+      operation;
+      originalError;
+      constructor(operation, err) {
+        const rawMsg = err?.message || "\u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u0646\u0641\u064A\u0630 \u0627\u0633\u062A\u0639\u0644\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A";
+        super(`\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u0639\u0644\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (${operation}): ${rawMsg}`);
+        this.name = "DatabaseQueryError";
+        this.operation = operation;
+        this.code = err?.code;
+        this.details = err?.details;
+        this.hint = err?.hint;
+        this.originalError = err;
       }
     };
     _forceDisableMemoryStoreForTesting = false;
@@ -855223,7 +855318,6 @@ var clients_default = router15;
 
 // src/routes/notifications.ts
 var import_express16 = __toESM(require_express2(), 1);
-init_logger();
 init_postgres_service();
 var router16 = (0, import_express16.Router)();
 function getOfficeId6(req) {
@@ -855256,12 +855350,8 @@ router16.get("/notifications", async (req, res) => {
       limit
     });
   } catch (err) {
-    logger.error({ err, userId: req.authUser?.userId }, "Failed to list notifications");
-    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
-      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
-      return;
-    }
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A." });
+    const refId = `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A");
   }
 });
 router16.post("/notifications/:id/read", async (req, res) => {
@@ -855280,12 +855370,8 @@ router16.post("/notifications/:id/read", async (req, res) => {
     }
     res.json({ ok: true, id: notificationId });
   } catch (err) {
-    logger.error({ err, id: req.params.id }, "Failed to mark notification as read");
-    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
-      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
-      return;
-    }
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631." });
+    const refId = `notif-read-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631");
   }
 });
 router16.post("/notifications/read-all", async (req, res) => {
@@ -855295,12 +855381,8 @@ router16.post("/notifications/read-all", async (req, res) => {
     const count = await markAllNotificationsRead(officeId, userId);
     res.json({ ok: true, count });
   } catch (err) {
-    logger.error({ err, userId: req.authUser?.userId }, "Failed to mark all notifications as read");
-    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
-      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
-      return;
-    }
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A." });
+    const refId = `notif-readall-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A");
   }
 });
 var notifications_default = router16;

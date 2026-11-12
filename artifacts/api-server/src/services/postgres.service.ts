@@ -261,6 +261,87 @@ export class DatabaseUnavailableError extends Error {
   }
 }
 
+export class DatabaseQueryError extends Error {
+  public statusCode = 500;
+  public code?: string;
+  public details?: any;
+  public hint?: string;
+  public operation: string;
+  public originalError?: any;
+
+  constructor(operation: string, err?: any) {
+    const rawMsg = err?.message || "خطأ أثناء تنفيذ استعلام قاعدة البيانات";
+    super(`خطأ في استعلام قاعدة البيانات (${operation}): ${rawMsg}`);
+    this.name = "DatabaseQueryError";
+    this.operation = operation;
+    this.code = err?.code;
+    this.details = err?.details;
+    this.hint = err?.hint;
+    this.originalError = err;
+  }
+}
+
+/**
+ * Distinguishes genuine database connectivity/network failures (503)
+ * from SQL/schema/query execution errors (500) where the database was reached and responded.
+ */
+export function isDatabaseConnectionError(err: any): boolean {
+  if (!err) return false;
+  if (err instanceof DatabaseQueryError) return false;
+  if (err instanceof DatabaseUnavailableError) return true;
+  if ((err as any)?.code === "DATABASE_UNAVAILABLE") return true;
+
+  // Supabase client missing or unconfigured
+  const msg = String(err?.message || "").toLowerCase();
+  if (msg.includes("supabase client is not configured")) return true;
+
+  // Network / Socket error codes
+  const code = String(err?.code || "");
+  const networkCodes = [
+    "ECONNREFUSED",
+    "ENOTFOUND",
+    "ETIMEDOUT",
+    "ECONNRESET",
+    "EHOSTUNREACH",
+    "ENETUNREACH",
+    "EPIPE",
+    "EAI_AGAIN",
+    "UND_ERR_CONNECT_TIMEOUT",
+    // Postgres Class 08 (connection exceptions)
+    "08000",
+    "08003",
+    "08006",
+    "08001",
+    "08004",
+    "08007",
+    "08P01",
+    // Postgres Class 57 (operator shutdown / crash)
+    "57P01",
+    "57P02",
+    "57P03",
+  ];
+  if (networkCodes.includes(code)) return true;
+
+  // Supabase/PostgREST gateway timeouts or server down
+  const status = Number(err?.status || (err as any)?.statusCode || 0);
+  if (status === 502 || status === 503 || status === 504) return true;
+
+  // Network fetch failure messages
+  if (
+    msg.includes("fetch failed") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("connect timeout") ||
+    msg.includes("connection refused") ||
+    msg.includes("econnrefused") ||
+    msg.includes("network error")
+  ) {
+    return true;
+  }
+
+  // Any Postgres/PostgREST query error codes (e.g. PGRST205, 42P01, 23505) are query errors, not connection errors
+  return false;
+}
+
 let _forceDisableMemoryStoreForTesting = false;
 
 export function setForceDisableMemoryStoreForTesting(disabled: boolean): void {
@@ -275,12 +356,32 @@ export function isInMemoryFallbackAllowed(): boolean {
 }
 
 export function handleSupabaseFailure(operation: string, err?: any): void {
-  if (err instanceof DatabaseUnavailableError) throw err;
-  logger.error({ err, operation }, `Supabase ${operation} failed`);
-  if (!isInMemoryFallbackAllowed()) {
-    throw new DatabaseUnavailableError(
-      `قاعدة البيانات غير متصلة حالياً (${operation}): ${err?.message || "فشل الاتصال بـ Supabase"}`
+  if (err instanceof DatabaseUnavailableError || err instanceof DatabaseQueryError) throw err;
+
+  const isConn = isDatabaseConnectionError(err);
+  if (isConn) {
+    logger.error({ err, operation }, `Supabase connection failure (${operation})`);
+    if (!isInMemoryFallbackAllowed()) {
+      throw new DatabaseUnavailableError(
+        `قاعدة البيانات غير متصلة حالياً (${operation}): ${err?.message || "فشل الاتصال بـ Supabase"}`
+      );
+    }
+  } else {
+    // Database was reached and returned a query/schema error (e.g. PGRST205, missing column, constraint violation)
+    logger.error(
+      {
+        operation,
+        pgCode: err?.code,
+        pgMessage: err?.message,
+        pgDetails: err?.details,
+        pgHint: err?.hint,
+        status: err?.status,
+      },
+      `Supabase query error (${operation}): ${err?.message || "Postgres query failure"}`
     );
+    if (!isInMemoryFallbackAllowed()) {
+      throw new DatabaseQueryError(operation, err);
+    }
   }
 }
 
@@ -290,12 +391,14 @@ export function handleDatabaseOrServerError(
   refId: string,
   defaultMsg: string
 ): void {
-  if (
-    err instanceof DatabaseUnavailableError ||
-    (err as any)?.statusCode === 503 ||
-    (err as any)?.code === "DATABASE_UNAVAILABLE" ||
-    String(err?.message || "").includes("قاعدة البيانات غير متصلة")
-  ) {
+  const isConn =
+    (err instanceof DatabaseUnavailableError ||
+      (err as any)?.code === "DATABASE_UNAVAILABLE" ||
+      isDatabaseConnectionError(err)) &&
+    !(err instanceof DatabaseQueryError);
+
+  if (isConn) {
+    logger.warn({ refId, err, defaultMsg }, `Database unavailable (503): ${err?.message || defaultMsg}`);
     res.status(503).json({
       error: "قاعدة البيانات غير متصلة حالياً",
       code: "DATABASE_UNAVAILABLE",
@@ -303,7 +406,25 @@ export function handleDatabaseOrServerError(
     });
     return;
   }
-  res.status(500).json({ error: `${defaultMsg}. رقم المرجع: ${refId}`, refId });
+
+  logger.error(
+    {
+      refId,
+      err,
+      pgCode: (err as any)?.code,
+      pgDetails: (err as any)?.details,
+      pgHint: (err as any)?.hint,
+      operation: (err as any)?.operation,
+      defaultMsg,
+    },
+    `Internal database/server error (500): ${err?.message || defaultMsg}`
+  );
+
+  res.status(500).json({
+    error: `${defaultMsg}. رقم المرجع: ${refId}`,
+    code: (err as any)?.code || "INTERNAL_SERVER_ERROR",
+    refId,
+  });
 }
 
 // Helper: Hijri Remaining Days Calculation

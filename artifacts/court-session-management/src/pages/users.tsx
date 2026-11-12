@@ -23,6 +23,9 @@ import {
   Mail,
   Folder,
   Check,
+  Eye,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,7 +74,7 @@ export default function OfficeMembersPage() {
     sessions: { view: true, add: true, edit: true, delete: false },
     clients: { view: true, add: true, edit: false, delete: false },
     documents: { view: true, add: true, edit: false, delete: true },
-    reports: { view: true, add: false, edit: false, delete: false },
+    reports: { view: true, add: false, edit: true, delete: false },
     users: { view: false, add: false, edit: false, delete: false },
     settings: { view: false, add: false, edit: false, delete: false },
   });
@@ -536,10 +539,30 @@ export default function OfficeMembersPage() {
                     <thead className="bg-slate-50/70 border-b border-slate-100 text-[#64748B]">
                       <tr>
                         <th className="p-3 font-bold">الوحدة / الصلاحية</th>
-                        <th className="p-3 font-bold text-center">عرض فقط</th>
-                        <th className="p-3 font-bold text-center">إضافة</th>
-                        <th className="p-3 font-bold text-center">تعديل</th>
-                        <th className="p-3 font-bold text-center">حذف</th>
+                        <th className="p-3 font-bold text-center">
+                          <span className="inline-flex items-center gap-1 text-[#64748B]">
+                            <Eye className="w-3.5 h-3.5" />
+                            عرض فقط
+                          </span>
+                        </th>
+                        <th className="p-3 font-bold text-center">
+                          <span className="inline-flex items-center gap-1 text-[#64748B]">
+                            <Plus className="w-3.5 h-3.5" />
+                            إضافة +
+                          </span>
+                        </th>
+                        <th className="p-3 font-bold text-center">
+                          <span className="inline-flex items-center gap-1 text-[#64748B]">
+                            <Edit3 className="w-3.5 h-3.5" />
+                            تعديل
+                          </span>
+                        </th>
+                        <th className="p-3 font-bold text-center">
+                          <span className="inline-flex items-center gap-1 text-rose-500">
+                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                            حذف
+                          </span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">

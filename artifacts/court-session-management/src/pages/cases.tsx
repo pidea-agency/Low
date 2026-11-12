@@ -823,23 +823,23 @@ export default function CasesPage() {
               المحكمة: {selectedCase.court || 'محكمة بداية غزة'}
             </p>
 
-            {/* Lower metadata row */}
+            {/* Lower metadata row matching Image 3 (Right to left in RTL: نوع القضية -> تاريخ القيد -> الدرجة -> المحامي المسؤول) */}
             <div className="flex items-center gap-4 pt-1 text-xs text-[#64748B] flex-wrap">
               <div className="flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-[#C4933F]" />
-                <span>المحامي المسؤول: <strong className="text-[#10233F]">{selectedCase.assignedLawyerName || 'أحمد سالم'}</strong></span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5 text-[#C4933F]" />
-                <span>الدرجة: <strong className="text-[#10233F]">أولى</strong></span>
+                <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
+                <span>نوع القضية: <strong className="text-[#10233F]">{selectedCase.caseType || 'نزاع عقاري'}</strong></span>
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
                 <span>تاريخ القيد: <strong className="text-[#10233F]">{selectedCase.createdAt ? selectedCase.createdAt.split('T')[0] : '2024/03/01'}</strong></span>
               </div>
               <div className="flex items-center gap-1">
-                <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
-                <span>نوع القضية: <strong className="text-[#10233F]">{selectedCase.caseType || 'نزاع عقاري'}</strong></span>
+                <Layers className="w-3.5 h-3.5 text-[#C4933F]" />
+                <span>الدرجة: <strong className="text-[#10233F]">أولى</strong></span>
+              </div>
+              <div className="flex items-center gap-1">
+                <User className="w-3.5 h-3.5 text-[#C4933F]" />
+                <span>المحامي المسؤول: <strong className="text-[#10233F]">{selectedCase.assignedLawyerName || 'أحمد سالم'}</strong></span>
               </div>
             </div>
           </div>

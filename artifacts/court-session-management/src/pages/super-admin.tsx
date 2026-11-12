@@ -1716,7 +1716,7 @@ export default function SuperAdminPage() {
                     </div>
                     <div>
                       <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight flex items-center gap-2">
-                        <span>Super Admin لوحة تحكم</span>
+                        <span>لوحة تحكم Super Admin</span>
                       </h1>
                       <p className="text-xs text-[#64748B] mt-0.5">
                         إدارة شاملة للمكاتب والمستخدمين والاشتراكات في النظام
