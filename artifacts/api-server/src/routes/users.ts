@@ -12,6 +12,7 @@ import {
 } from "../services/supabase.service";
 import { isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
+import { dispatchEventNotification } from "../services/notification-template.service";
 
 const router: IRouter = Router();
 
@@ -194,6 +195,23 @@ router.post("/users/:id/toggle-status", async (req, res) => {
     const id = String(req.params.id);
     const { status } = req.body;
     const updated = await toggleOfficeMemberStatus(adminId, id, status);
+    if (updated) {
+      const officeId = req.authUser!.officeId || adminId;
+      const officeName = (req.authUser as any)?.officeName || (req.authUser as any)?.office_name || "مكتب المحاماة";
+      const eventType = updated.status === "suspended" ? "member_account_suspended" : "member_account_reactivated";
+      dispatchEventNotification({
+        officeId,
+        eventType,
+        recipientUserId: updated.id,
+        recipientPhone: updated.phone || null,
+        placeholderData: {
+          officeName,
+          memberName: updated.display_name || updated.username,
+        },
+        relatedRecordType: "user",
+        relatedRecordId: updated.id,
+      }).catch((e) => logger.warn({ e }, "Failed to dispatch member status notification"));
+    }
     res.json(updated);
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to toggle member status");

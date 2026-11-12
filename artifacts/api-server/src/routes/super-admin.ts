@@ -31,6 +31,7 @@ import {
 } from "../services/supabase.service";
 import { env, isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
+import { dispatchEventNotification } from "../services/notification-template.service";
 
 const router: IRouter = Router();
 
@@ -576,6 +577,22 @@ router.post("/super-admin/admins/:id/toggle-status", async (req, res) => {
     const { status } = req.body;
     const updated = await toggleAdminStatus(id, status);
 
+    if (status === "suspended") {
+      dispatchEventNotification({
+        officeId: id,
+        eventType: "subscription_suspended",
+        recipientUserId: id,
+        recipientPhone: updated.phone || null,
+        placeholderData: {
+          platformName: "منصة رَسَند",
+          officeName: updated.office_name || "مكتب المحاماة",
+          reason: "تم تعليق الاشتراك بواسطة إدارة المنصة",
+        },
+        relatedRecordType: "subscription",
+        relatedRecordId: id,
+      }).catch((e) => logger.warn({ e, id }, "Failed to dispatch subscription_suspended notification"));
+    }
+
     await recordAuditLog({
       actor_id: (req as any).user?.id,
       actor_username: (req as any).user?.username,
@@ -748,6 +765,21 @@ router.post("/super-admin/payments", async (req, res) => {
       notes,
       recorded_by,
     });
+
+    dispatchEventNotification({
+      officeId: office_id,
+      eventType: "payment_recorded",
+      recipientUserId: office_id,
+      placeholderData: {
+        amount: String(payment.amount),
+        currency: payment.currency || "SAR",
+        reference: payment.id,
+        paymentDate: payment.payment_date || new Date().toISOString().split("T")[0],
+        method: payment.method || "تحويل بنكي",
+      },
+      relatedRecordType: "payment",
+      relatedRecordId: payment.id,
+    }).catch((e) => logger.warn({ e, office_id }, "Failed to dispatch payment_recorded notification"));
 
     await recordAuditLog({
       actor_id: (req as any).user?.id || req.authUser?.userId || "super_admin",

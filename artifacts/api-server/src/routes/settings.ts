@@ -18,6 +18,11 @@ import {
 } from "../services/supabase.service";
 import { SHEET_COLUMNS } from "../services/googleSheets.service";
 import { isEncrypted, decryptSecret } from "../lib/encryption";
+import {
+  listOfficeNotificationTemplates,
+  updateOfficeNotificationTemplate,
+  type NotificationEventType,
+} from "../services/notification-template.service";
 
 const router: IRouter = Router();
 
@@ -575,6 +580,44 @@ router.post("/settings/test-whatsapp", async (req, res) => {
     logger.error({ err }, "Failed to execute WhatsApp test notification");
     const msg = err instanceof Error ? err.message : "فشل إجراء تجربة التنبيه عبر الواتساب.";
     res.status(400).json({ error: msg });
+  }
+});
+
+/**
+ * GET /api/settings/notification-templates
+ * Returns all 12 platform event templates for the office.
+ */
+router.get("/settings/notification-templates", async (req, res) => {
+  try {
+    const officeId = req.authUser!.officeId || req.authUser!.userId!;
+    const templates = await listOfficeNotificationTemplates(officeId);
+    res.json(templates);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to list notification templates");
+    res.status(500).json({ error: err.message || "فشل جلب قوالب التنبيهات." });
+  }
+});
+
+/**
+ * PUT /api/settings/notification-templates/:eventType
+ * Updates channels (in_app, whatsapp) and custom body/title templates.
+ */
+router.put("/settings/notification-templates/:eventType", async (req, res) => {
+  try {
+    const officeId = req.authUser!.officeId || req.authUser!.userId!;
+    const eventType = req.params.eventType as NotificationEventType;
+    const { channels, body_template, title_template } = req.body;
+
+    const updated = await updateOfficeNotificationTemplate(officeId, eventType, {
+      channels,
+      body_template,
+      title_template,
+    });
+
+    res.json(updated);
+  } catch (err: any) {
+    logger.error({ err, eventType: req.params.eventType }, "Failed to update notification template");
+    res.status(400).json({ error: err.message || "فشل تحديث قالب التنبيه." });
   }
 });
 

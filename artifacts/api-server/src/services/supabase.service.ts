@@ -2720,6 +2720,7 @@ export async function createOfficeMember(
 
   // Send activation invitation (WhatsApp primary with email fallback)
   const delivery = await sendActivationInvitation({
+    officeId: admin.id,
     memberId: user.id,
     memberName: input.display_name || input.username,
     email: input.email.trim(),
@@ -2813,6 +2814,7 @@ export async function resendOfficeMemberActivation(
 
   // Send activation invitation (WhatsApp primary with email fallback)
   const delivery = await sendActivationInvitation({
+    officeId: admin?.id || member.admin_id,
     memberId,
     memberName: member.display_name || member.username,
     email: member.email.trim(),

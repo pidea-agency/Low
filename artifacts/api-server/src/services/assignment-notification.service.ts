@@ -12,9 +12,10 @@
  */
 
 import { logger } from "../lib/logger";
-import { findUserByIdOrUsername } from "./supabase.service";
-import { createNotification } from "./postgres.service";
-import { WhatsappReminderChannel } from "./reminder/channels/whatsappChannel";
+import {
+  dispatchEventNotification,
+  type NotificationEventType,
+} from "./notification-template.service";
 
 export interface AssignmentNotificationParams {
   officeId: string;
@@ -58,48 +59,28 @@ export async function notifyLawyerAssignment(
     return { notified: false, inAppCreated: false, whatsappSent: false };
   }
 
-  const title = `تكليف جديد: ${recordTypeArabic}`;
-  const body = `تم تكليفك بـ${recordTypeArabic} جديد: ${recordDescription}. لمتابعتها: ${directLink}.`;
+  const eventType: NotificationEventType =
+    recordType === "poa" ? "poa_assigned" : "case_assigned";
 
-  let inAppCreated = false;
-  let whatsappSent = false;
+  const dispatchRes = await dispatchEventNotification({
+    officeId,
+    eventType,
+    recipientUserId: targetLawyerId,
+    placeholderData: {
+      recordTypeArabic,
+      recordDescription,
+      directLink,
+      recordId: String(recordId),
+      poaNumber: recordDescription,
+      clientName: recordDescription,
+    },
+    relatedRecordType: recordType,
+    relatedRecordId: String(recordId),
+  });
 
-  // 4. Create in-app notification
-  try {
-    await createNotification({
-      officeId,
-      userId: targetLawyerId,
-      type: "case_assigned",
-      title,
-      body,
-      relatedRecordType: recordType,
-      relatedRecordId: String(recordId),
-    });
-    inAppCreated = true;
-  } catch (err) {
-    logger.error({ err, targetLawyerId, recordType, recordId }, "Failed to create in-app assignment notification");
-  }
-
-  // 5. Lookup assigned lawyer for WhatsApp dispatch
-  try {
-    const lawyer = await findUserByIdOrUsername(targetLawyerId);
-    const phone = lawyer?.phone?.trim();
-
-    if (phone) {
-      const whatsappMessage = `تم تكليفك بـ${recordTypeArabic} جديد: ${recordDescription}. لمتابعتها: ${directLink}.`;
-      const channel = new WhatsappReminderChannel();
-      const res = await channel.sendRaw(whatsappMessage, phone, { throwIfNotConfigured: false });
-      whatsappSent = res.success;
-      if (res.success) {
-        logger.info({ phone, targetLawyerId, recordType, recordId }, "Assignment WhatsApp message dispatched successfully");
-      } else {
-        logger.warn({ phone, targetLawyerId, recordType, recordId, error: res.error }, "Failed to send assignment WhatsApp message (non-blocking)");
-      }
-    }
-  } catch (err) {
-    // WhatsApp failures must NEVER block in-app notifications or fail the reassign operation
-    logger.warn({ err, targetLawyerId, recordType, recordId }, "Failed to send assignment WhatsApp message (non-blocking)");
-  }
-
-  return { notified: true, inAppCreated, whatsappSent };
+  return {
+    notified: true,
+    inAppCreated: dispatchRes.inAppCreated,
+    whatsappSent: dispatchRes.whatsappSent,
+  };
 }

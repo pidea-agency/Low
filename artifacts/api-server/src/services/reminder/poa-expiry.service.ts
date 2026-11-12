@@ -13,8 +13,8 @@ import {
   listPoa,
   calcDaysFromHijri,
   hasRecentNotification,
-  createNotification,
 } from "../postgres.service";
+import { dispatchEventNotification } from "../notification-template.service";
 
 export const POA_EXPIRY_THRESHOLD_DAYS = 7;
 
@@ -117,44 +117,65 @@ export async function runPoaExpirySweep(targetOfficeId?: string): Promise<PoaExp
           const lawyer = officeUsers.find((u) => u.id === assignedLawyerId);
           const lawyerName = lawyer?.display_name || lawyer?.username || "محامٍ";
 
-          // Notify assigned lawyer
-          await createNotification({
+          // Notify assigned lawyer via template system
+          const res1 = await dispatchEventNotification({
             officeId,
-            userId: assignedLawyerId,
-            type: "poa_expiring",
-            title: `اقتراب انتهاء الوكالة: ${clientName}`,
-            body: `تنتهي الوكالة رقم ${poaNumber} للموكل "${clientName}" خلال ${daysRemaining} يوم (تاريخ الانتهاء: ${expiryHijri}).`,
+            eventType: "poa_expiring",
+            recipientUserId: assignedLawyerId,
+            placeholderData: {
+              poaNumber,
+              clientName,
+              daysRemaining: String(daysRemaining),
+              expiryDate: expiryHijri,
+              lawyerName,
+            },
             relatedRecordType: "poa",
             relatedRecordId: poaIdStr,
           });
-          notificationsCreated++;
+          if (res1.inAppCreated || res1.whatsappSent) {
+            notificationsCreated++;
+          }
 
           // Also notify admin if admin exists and is not the same person as assigned lawyer
           if (adminUser && adminUser.id !== assignedLawyerId) {
-            await createNotification({
+            const res2 = await dispatchEventNotification({
               officeId,
-              userId: adminUser.id,
-              type: "poa_expiring",
-              title: `اقتراب انتهاء الوكالة: ${clientName}`,
-              body: `تنتهي الوكالة رقم ${poaNumber} للموكل "${clientName}" (المعين لها: ${lawyerName}) خلال ${daysRemaining} يوم (تاريخ الانتهاء: ${expiryHijri}).`,
+              eventType: "poa_expiring",
+              recipientUserId: adminUser.id,
+              placeholderData: {
+                poaNumber,
+                clientName,
+                daysRemaining: String(daysRemaining),
+                expiryDate: expiryHijri,
+                lawyerName,
+              },
               relatedRecordType: "poa",
               relatedRecordId: poaIdStr,
             });
-            notificationsCreated++;
+            if (res2.inAppCreated || res2.whatsappSent) {
+              notificationsCreated++;
+            }
           }
         } else {
           // Unassigned POA: notify admin only with a note that it's unassigned
           if (adminUser) {
-            await createNotification({
+            const res3 = await dispatchEventNotification({
               officeId,
-              userId: adminUser.id,
-              type: "poa_expiring",
-              title: `اقتراب انتهاء الوكالة (غير معينة): ${clientName}`,
-              body: `تنتهي الوكالة رقم ${poaNumber} للموكل "${clientName}" خلال ${daysRemaining} يوم (تاريخ الانتهاء: ${expiryHijri}) وهي غير معينة لمحامٍ بعد.`,
+              eventType: "poa_expiring",
+              recipientUserId: adminUser.id,
+              placeholderData: {
+                poaNumber,
+                clientName,
+                daysRemaining: String(daysRemaining),
+                expiryDate: expiryHijri,
+                lawyerName: "غير معين",
+              },
               relatedRecordType: "poa",
               relatedRecordId: poaIdStr,
             });
-            notificationsCreated++;
+            if (res3.inAppCreated || res3.whatsappSent) {
+              notificationsCreated++;
+            }
           }
         }
       }

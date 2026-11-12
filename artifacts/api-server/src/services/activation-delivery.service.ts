@@ -2,8 +2,13 @@ import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { sendActivationEmail } from "./email.service";
 import { WhatsappReminderChannel, maskPhone } from "./reminder/channels/whatsappChannel";
+import {
+  getOfficeNotificationTemplate,
+  renderTemplate,
+} from "./notification-template.service";
 
 export interface ActivationDeliveryParams {
+  officeId?: string;
   memberId: string;
   memberName: string;
   email: string;
@@ -90,13 +95,38 @@ export async function sendActivationInvitation(
   // 1. WhatsApp Primary attempt (if phone number is on file)
   if (cleanPhone) {
     try {
-      const message = formatActivationWhatsappMessage({
-        memberName,
-        officeName,
-        platformName,
-        expiryHours,
-        activationUrl,
-      });
+      let message: string;
+      if (params.officeId) {
+        try {
+          const template = await getOfficeNotificationTemplate(
+            params.officeId,
+            "member_activation_invite",
+          );
+          message = renderTemplate(template.body_template, {
+            memberName,
+            officeName: officeName || "مكتب المحاماة",
+            platformName: platformName || "منصة رَسَند",
+            activationLink: activationUrl,
+            expiryHours: String(expiryHours),
+          });
+        } catch {
+          message = formatActivationWhatsappMessage({
+            memberName,
+            officeName,
+            platformName,
+            expiryHours,
+            activationUrl,
+          });
+        }
+      } else {
+        message = formatActivationWhatsappMessage({
+          memberName,
+          officeName,
+          platformName,
+          expiryHours,
+          activationUrl,
+        });
+      }
 
       const channel = new WhatsappReminderChannel();
       const rawRes = await channel.sendRaw(message, cleanPhone, { throwIfNotConfigured: true });

@@ -107,7 +107,7 @@ export async function verifyRecordAccess(
   relatedRecordType: string,
   relatedRecordId: string,
   authUser: SessionCookiePayload,
-): Promise<{ allowed: boolean; status?: number; error?: string }> {
+): Promise<{ allowed: boolean; status?: number; error?: string; record?: any }> {
   if (!authUser) {
     return { allowed: false, status: 401, error: "يجب تسجيل الدخول أولاً." };
   }
@@ -126,7 +126,7 @@ export async function verifyRecordAccess(
           return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذا العميل." };
         }
       }
-      return { allowed: true };
+      return { allowed: true, record: client };
     }
     case "session": {
       const numId = Number(relatedRecordId);
@@ -137,7 +137,7 @@ export async function verifyRecordAccess(
       if (!canUserAccessRecord(session, authUser)) {
         return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذه الجلسة." };
       }
-      return { allowed: true };
+      return { allowed: true, record: session };
     }
     case "task": {
       const numId = Number(relatedRecordId);
@@ -148,7 +148,7 @@ export async function verifyRecordAccess(
       if (!canUserAccessRecord(task, authUser)) {
         return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذه المهمة." };
       }
-      return { allowed: true };
+      return { allowed: true, record: task };
     }
     case "poa": {
       const numId = Number(relatedRecordId);
@@ -163,7 +163,7 @@ export async function verifyRecordAccess(
       if (!canUserAccessRecord(poa, authUser)) {
         return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذه الوكالة." };
       }
-      return { allowed: true };
+      return { allowed: true, record: poa };
     }
     case "judgment": {
       const numId = Number(relatedRecordId);
@@ -174,7 +174,7 @@ export async function verifyRecordAccess(
       if (!canUserAccessRecord(judgment, authUser)) {
         return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذا الحكم." };
       }
-      return { allowed: true };
+      return { allowed: true, record: judgment };
     }
     case "case": {
       const caseRecord = await postgresService.getCaseById(String(relatedRecordId), officeId);
@@ -184,7 +184,7 @@ export async function verifyRecordAccess(
       if (!canUserAccessRecord(caseRecord, authUser)) {
         return { allowed: false, status: 403, error: "ليس لديك صلاحية الوصول إلى هذه القضية." };
       }
-      return { allowed: true };
+      return { allowed: true, record: caseRecord };
     }
     default:
       return { allowed: false, status: 400, error: "نوع السجل غير صالح." };

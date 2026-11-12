@@ -4,6 +4,8 @@ import { logger } from "../lib/logger";
 import { listSessions, markReminderSent } from "../services/session.service";
 import { notify } from "../services/reminder/reminder.service";
 import { runPoaExpirySweep } from "../services/reminder/poa-expiry.service";
+import { runSubscriptionExpirySweep } from "../services/reminder/subscription-expiry.service";
+import { dispatchEventNotification } from "../services/notification-template.service";
 import { computeHearingDateTime } from "../utils/hijri";
 import { listSupabaseUsers, type AppUser } from "../services/supabase.service";
 import { GoogleBindingMissingError } from "../services/googleSheets.service";
@@ -185,6 +187,16 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
             };
 
             const notifyResult = await notify(payload, officeId);
+            const recipients = new Set<string>();
+            if (officeAdminId) {
+              recipients.add(officeAdminId);
+            }
+            const assignedLawyerId =
+              (session as any).assignedLawyerId || (session as any).assigned_lawyer_id;
+            if (assignedLawyerId && typeof assignedLawyerId === "string" && assignedLawyerId.trim()) {
+              recipients.add(assignedLawyerId.trim());
+            }
+
             if (notifyResult && notifyResult.whatsappSuccess === false) {
               failed++;
               logger.warn(
@@ -192,30 +204,43 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
                 "WhatsApp reminder delivery failed",
               );
               try {
-                const { createNotification } = await import("../services/postgres.service");
-                const recipients = new Set<string>();
-                if (officeAdminId) {
-                  recipients.add(officeAdminId);
-                }
-                const assignedLawyerId =
-                  (session as any).assignedLawyerId || (session as any).assigned_lawyer_id;
-                if (assignedLawyerId && typeof assignedLawyerId === "string" && assignedLawyerId.trim()) {
-                  recipients.add(assignedLawyerId.trim());
-                }
-
                 for (const recipientId of recipients) {
-                  await createNotification({
+                  await dispatchEventNotification({
                     officeId,
-                    userId: recipientId,
-                    type: "reminder_failed",
-                    title: "فشل إرسال تذكير الجلسة عبر الواتساب",
-                    body: `تعذر إرسال تذكير الجلسة القضائية رقم ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                    eventType: "reminder_failed",
+                    recipientUserId: recipientId,
+                    placeholderData: {
+                      caseNumber: session.caseNumber || String(session.id),
+                      sessionId: session.id,
+                      error: notifyResult.whatsappError || "تعذر إرسال التذكير عبر الواتساب",
+                    },
                     relatedRecordType: "session",
-                    relatedRecordId: String(session.id),
+                    relatedRecordId: session.id,
                   });
                 }
               } catch { /* ignore notification failure */ }
             } else {
+              try {
+                for (const recipientId of recipients) {
+                  await dispatchEventNotification({
+                    officeId,
+                    eventType: "session_upcoming_reminder",
+                    recipientUserId: recipientId,
+                    recipientPhone,
+                    placeholderData: {
+                      caseNumber: session.caseNumber || String(session.id),
+                      sessionDate: session.sessionDateHijri || "",
+                      sessionTime: session.sessionTime || "",
+                      court: session.court || "المحكمة",
+                      remainingText,
+                      kind: "24h",
+                    },
+                    relatedRecordType: "session",
+                    relatedRecordId: session.id,
+                  });
+                }
+              } catch { /* ignore in-app notification failure */ }
+
               await markReminderSent(session.id, "24h", officeId);
               sent++;
             }
@@ -245,6 +270,16 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
             };
 
             const notifyResult = await notify(payload, officeId);
+            const recipients = new Set<string>();
+            if (officeAdminId) {
+              recipients.add(officeAdminId);
+            }
+            const assignedLawyerId =
+              (session as any).assignedLawyerId || (session as any).assigned_lawyer_id;
+            if (assignedLawyerId && typeof assignedLawyerId === "string" && assignedLawyerId.trim()) {
+              recipients.add(assignedLawyerId.trim());
+            }
+
             if (notifyResult && notifyResult.whatsappSuccess === false) {
               failed++;
               logger.warn(
@@ -252,30 +287,43 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
                 "WhatsApp reminder delivery failed",
               );
               try {
-                const { createNotification } = await import("../services/postgres.service");
-                const recipients = new Set<string>();
-                if (officeAdminId) {
-                  recipients.add(officeAdminId);
-                }
-                const assignedLawyerId =
-                  (session as any).assignedLawyerId || (session as any).assigned_lawyer_id;
-                if (assignedLawyerId && typeof assignedLawyerId === "string" && assignedLawyerId.trim()) {
-                  recipients.add(assignedLawyerId.trim());
-                }
-
                 for (const recipientId of recipients) {
-                  await createNotification({
+                  await dispatchEventNotification({
                     officeId,
-                    userId: recipientId,
-                    type: "reminder_failed",
-                    title: "فشل إرسال تذكير الجلسة عبر الواتساب",
-                    body: `تعذر إرسال تذكير الجلسة القضائية رقم ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                    eventType: "reminder_failed",
+                    recipientUserId: recipientId,
+                    placeholderData: {
+                      caseNumber: session.caseNumber || String(session.id),
+                      sessionId: session.id,
+                      error: notifyResult.whatsappError || "تعذر إرسال التذكير عبر الواتساب",
+                    },
                     relatedRecordType: "session",
-                    relatedRecordId: String(session.id),
+                    relatedRecordId: session.id,
                   });
                 }
               } catch { /* ignore notification failure */ }
             } else {
+              try {
+                for (const recipientId of recipients) {
+                  await dispatchEventNotification({
+                    officeId,
+                    eventType: "session_upcoming_reminder",
+                    recipientUserId: recipientId,
+                    recipientPhone,
+                    placeholderData: {
+                      caseNumber: session.caseNumber || String(session.id),
+                      sessionDate: session.sessionDateHijri || "",
+                      sessionTime: session.sessionTime || "",
+                      court: session.court || "المحكمة",
+                      remainingText,
+                      kind: "6h",
+                    },
+                    relatedRecordType: "session",
+                    relatedRecordId: session.id,
+                  });
+                }
+              } catch { /* ignore in-app notification failure */ }
+
               await markReminderSent(session.id, "6h", officeId);
               sent++;
             }
@@ -345,10 +393,13 @@ export function startReminderScheduler(): void {
     });
   });
 
-  // Daily POA expiry sweep
+  // Daily sweeps: POA expiry & Subscription expiry
   cron.schedule("0 2 * * *", () => {
     runPoaExpirySweep().catch((err) => {
       logger.error({ err }, "Daily POA expiry sweep failed");
+    });
+    runSubscriptionExpirySweep().catch((err) => {
+      logger.error({ err }, "Daily subscription expiry sweep failed");
     });
   });
   logger.info(

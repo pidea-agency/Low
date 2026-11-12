@@ -1580,21 +1580,36 @@ export default function SuperAdminPage() {
                 setCurrentSection(item.id);
                 onNav?.();
               }}
-              className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
+              className={`group relative w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-200 cursor-pointer ${
                 isActive
-                  ? 'bg-[#C99732] text-white shadow-md shadow-[#C99732]/25'
-                  : 'text-[#D6E0EC] hover:bg-white/10 hover:text-white'
+                  ? 'bg-gradient-to-l from-[#C99732]/15 via-white/[0.06] to-white/[0.02] text-white font-semibold shadow-xs border border-[#C99732]/30'
+                  : 'text-slate-300 hover:text-white hover:bg-white/[0.05] border border-transparent font-medium'
               }`}
             >
+              {/* Refined Edge Accent Pill (Right edge in RTL) */}
+              {isActive && (
+                <span
+                  className="absolute -right-[1px] top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-l-full bg-gradient-to-b from-[#F2D794] via-[#C99732] to-[#996F19] shadow-[0_0_10px_rgba(232,196,119,0.8)]"
+                  aria-hidden="true"
+                />
+              )}
               <div className="flex items-center gap-3 min-w-0">
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#D6E0EC]'}`} />
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                    isActive
+                      ? 'bg-[#C99732]/25 text-[#F2D794] border border-[#C99732]/40 shadow-xs'
+                      : 'text-slate-400 group-hover:text-slate-100 group-hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                </div>
                 <span className="truncate text-start">{item.name}</span>
               </div>
               {item.badge !== undefined && (
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     isActive
-                      ? 'bg-black/20 text-white'
+                      ? 'bg-[#C99732]/30 text-[#F2D794] border border-[#C99732]/40'
                       : 'bg-white/10 text-white/90'
                   }`}
                 >

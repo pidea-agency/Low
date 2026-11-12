@@ -25,12 +25,20 @@ import {
   EyeOff,
   Lock,
   ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Bell,
+  FileText,
+  Users,
+  CreditCard,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 
@@ -95,6 +103,80 @@ export default function OfficeSettingsPage() {
     message?: string;
   } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Notification templates state
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [savingTemplateKey, setSavingTemplateKey] = useState<string | null>(null);
+  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
+
+  const fetchTemplates = async () => {
+    setIsLoadingTemplates(true);
+    try {
+      const res = await fetch('/api/settings/notification-templates', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'whatsapp') {
+      fetchTemplates();
+    }
+  }, [activeTab]);
+
+  const handleToggleChannel = (eventType: string, channel: 'in_app' | 'whatsapp', enabled: boolean) => {
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.event_type === eventType
+          ? { ...t, channels: { ...t.channels, [channel]: enabled } }
+          : t
+      )
+    );
+  };
+
+  const handleBodyChange = (eventType: string, text: string) => {
+    setTemplates((prev) =>
+      prev.map((t) => (t.event_type === eventType ? { ...t, body_template: text } : t))
+    );
+  };
+
+  const handleSaveTemplate = async (template: any) => {
+    setSavingTemplateKey(template.event_type);
+    try {
+      const res = await fetch(`/api/settings/notification-templates/${template.event_type}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          channels: template.channels,
+          body_template: template.body_template,
+          title_template: template.title_template,
+        }),
+      });
+      if (!res.ok) throw new Error('فشل حفظ القالب');
+      const updated = await res.json();
+      setTemplates((prev) => prev.map((t) => (t.event_type === template.event_type ? updated : t)));
+      toast({
+        title: 'تم حفظ القالب بنجاح',
+        description: `تم تحديث قنوات ونصوص إشعار "${template.name}".`,
+      });
+    } catch (err: any) {
+      toast({
+        title: 'خطأ في الحفظ',
+        description: err.message || 'تعذر حفظ تعديلات القالب.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingTemplateKey(null);
+    }
+  };
 
   const handleExportToSheets = async () => {
     setIsExporting(true);
@@ -531,7 +613,7 @@ export default function OfficeSettingsPage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            تنبيهات الواتساب
+            إشعارات وواتساب
           </button>
         </div>
       </div>
@@ -1062,7 +1144,8 @@ export default function OfficeSettingsPage() {
 
       {/* Tab 2: WhatsApp Notification Channel */}
       {activeTab === 'whatsapp' && (
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6">
           <div className="flex items-center gap-3 pb-3 border-b border-border">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
               <MessageSquare className="w-5 h-5" />
@@ -1225,6 +1308,231 @@ export default function OfficeSettingsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Section: Notification Templates & Channels System */}
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#C99732]/10 text-[#C99732] flex items-center justify-center">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-foreground">قوالب وقنوات الإشعارات والتنبيهات</h2>
+                <p className="text-xs text-muted-foreground">
+                  تحديد قنوات الإرسال المسموحة (داخل التطبيق / واتساب) وتخصيص نص الرسائل التلقائية لجميع أحداث المنصة
+                </p>
+              </div>
+            </div>
+            {isLoadingTemplates && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C99732]" />
+                <span>جارٍ تحميل القوالب...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Group 1: أحداث القضايا والوكالات */}
+          {[
+            {
+              id: 'cases_poa',
+              title: 'أحداث القضايا والوكالات',
+              description: 'إشعارات التكليف بالقضايا والوكالات، المرفقات الجديدة، وتنبيهات الصلاحية',
+              icon: FileText,
+              iconColor: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10',
+            },
+            {
+              id: 'accounts',
+              title: 'أحداث الحسابات وأعضاء المكتب',
+              description: 'دعوات تفعيل الحسابات عبر الواتساب، وإشعارات تعليق أو إعادة تفعيل حسابات المحامين',
+              icon: Users,
+              iconColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+            },
+            {
+              id: 'subscription_payments',
+              title: 'أحداث الاشتراك والمدفوعات',
+              description: 'إشعارات قرب انتهاء باقة المكتب، إيقاف الاشتراك، وتسجيل الدفعات المالية',
+              icon: CreditCard,
+              iconColor: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
+            },
+            {
+              id: 'reminders',
+              title: 'التذكيرات وتنبيهات الجلسات',
+              description: 'تذكيرات الجلسات القضائية القادمة وتنبيهات فشل الإرسال لمسؤول المكتب',
+              icon: Clock,
+              iconColor: 'text-blue-600 dark:text-blue-400 bg-blue-500/10',
+            },
+          ].map((group) => {
+            const groupTemplates = templates.filter((t) => t.category === group.id);
+            const GroupIcon = group.icon;
+
+            return (
+              <div key={group.id} className="border border-border/80 rounded-xl overflow-hidden bg-card/50">
+                <div className="p-4 bg-muted/40 border-b border-border/60 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${group.iconColor}`}>
+                      <GroupIcon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-bold text-foreground">{group.title}</h3>
+                      <p className="text-[11px] text-muted-foreground">{group.description}</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] font-mono">
+                    {groupTemplates.length} أحداث
+                  </Badge>
+                </div>
+
+                <div className="divide-y divide-border/40">
+                  {groupTemplates.map((template) => {
+                    const isExpanded = expandedTemplate === template.event_type;
+                    const isSaving = savingTemplateKey === template.event_type;
+
+                    return (
+                      <div key={template.event_type} className="p-4 space-y-3 transition-colors hover:bg-muted/15">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs sm:text-sm font-bold text-foreground">
+                                {template.name}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] font-medium text-muted-foreground bg-muted/50 border-border"
+                              >
+                                المستلم التلقائي: {template.default_recipient_arabic || 'المعني'}
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground line-clamp-1">
+                              {template.body_template}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-4 shrink-0 self-end sm:self-center">
+                            {/* In-app toggle */}
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={template.channels?.in_app}
+                                onCheckedChange={(val) =>
+                                  handleToggleChannel(template.event_type, 'in_app', val)
+                                }
+                                id={`inapp-${template.event_type}`}
+                              />
+                              <Label
+                                htmlFor={`inapp-${template.event_type}`}
+                                className="text-xs font-semibold cursor-pointer select-none"
+                              >
+                                داخل التطبيق
+                              </Label>
+                            </div>
+
+                            {/* WhatsApp toggle */}
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={template.channels?.whatsapp}
+                                onCheckedChange={(val) =>
+                                  handleToggleChannel(template.event_type, 'whatsapp', val)
+                                }
+                                id={`wa-${template.event_type}`}
+                              />
+                              <Label
+                                htmlFor={`wa-${template.event_type}`}
+                                className="text-xs font-semibold cursor-pointer select-none"
+                              >
+                                واتساب
+                              </Label>
+                            </div>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setExpandedTemplate(isExpanded ? null : template.event_type)
+                              }
+                              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1"
+                            >
+                              <span>{isExpanded ? 'إخفاء النص' : 'تعديل النص'}</span>
+                              {isExpanded ? (
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              ) : (
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Expandable Template Editor */}
+                        {isExpanded && (
+                          <div className="mt-3 p-4 rounded-xl bg-muted/30 border border-border/70 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs font-bold text-foreground">
+                                نص رسالة التنبيه (يدعم المتغيرات الديناميكية):
+                              </Label>
+                              <span className="text-[11px] text-muted-foreground">
+                                انقر على أي متغير لإدراجه في النص
+                              </span>
+                            </div>
+
+                            <Textarea
+                              rows={3}
+                              value={template.body_template}
+                              onChange={(e) => handleBodyChange(template.event_type, e.target.value)}
+                              className="text-xs font-sans bg-background leading-relaxed"
+                              dir="rtl"
+                            />
+
+                            {/* Available Placeholders Pills */}
+                            {template.available_placeholders && template.available_placeholders.length > 0 && (
+                              <div className="space-y-1.5">
+                                <span className="text-[11px] font-bold text-muted-foreground">المتغيرات المتاحة لهذا الحدث:</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {template.available_placeholders.map((ph: string) => (
+                                    <button
+                                      key={ph}
+                                      type="button"
+                                      onClick={() => {
+                                        const addition = ` {{${ph}}} `;
+                                        handleBodyChange(
+                                          template.event_type,
+                                          (template.body_template || '') + addition
+                                        );
+                                      }}
+                                      className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-background hover:bg-[#C99732]/10 hover:text-[#C99732] border border-border transition-colors cursor-pointer"
+                                    >
+                                      {`{{${ph}}}`}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex justify-end pt-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={isSaving}
+                                onClick={() => handleSaveTemplate(template)}
+                                className="gap-1.5 text-xs font-bold bg-[#C99732] hover:bg-[#B28325] text-white"
+                              >
+                                {isSaving ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Check className="w-3.5 h-3.5" />
+                                )}
+                                <span>حفظ تعديلات القالب</span>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
       )}
     </div>
   );

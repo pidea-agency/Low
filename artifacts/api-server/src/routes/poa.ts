@@ -133,6 +133,20 @@ router.post("/poa", async (req, res) => {
       officeId,
     );
     logger.info({ id: created.id, officeId }, "POA record created in database");
+
+    if (assignedLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId: assignedLawyerId,
+        recordType: "poa",
+        recordTypeArabic: "وكالة",
+        recordId: created.id,
+        recordDescription: `رقم ${created.poaNumber || created.id}`,
+        directLink: "/poa",
+      });
+    }
+
     res.status(201).json(formatPoa(created));
   } catch (err: any) {
     const refId = generateRefId();
@@ -223,6 +237,20 @@ router.put("/poa/:rowId", async (req, res) => {
     if (!updated) {
       res.status(404).json({ error: "الوكالة غير موجودة." });
       return;
+    }
+
+    if (payload.assignedLawyerId && String(payload.assignedLawyerId) !== String((existing as any)?.assignedLawyerId || (existing as any)?.assigned_lawyer_id)) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId: payload.assignedLawyerId,
+        previousLawyerId: (existing as any)?.assignedLawyerId || (existing as any)?.assigned_lawyer_id,
+        recordType: "poa",
+        recordTypeArabic: "وكالة",
+        recordId: updated.id,
+        recordDescription: `رقم ${updated.poaNumber || updated.id}`,
+        directLink: "/poa",
+      });
     }
 
     logger.info({ id: rowId, officeId }, "POA record updated in database");

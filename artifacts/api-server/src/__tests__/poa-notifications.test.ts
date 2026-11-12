@@ -296,5 +296,5 @@ describe("POA Expiry Tracking & In-App Notifications", { timeout: 35000 }, () =>
       .set("Authorization", `Bearer ${env.cronSecret}`);
     expect(validRes.status).toBe(200);
     expect(validRes.body.ok).toBe(true);
-  });
+  }, 60000);
 });

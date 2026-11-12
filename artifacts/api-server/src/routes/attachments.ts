@@ -12,6 +12,7 @@ import * as postgresService from "../services/postgres.service";
 import * as storageService from "../services/storage.service";
 import { verifyRecordAccess } from "../utils/record-access";
 import { logger } from "../lib/logger";
+import { dispatchEventNotification } from "../services/notification-template.service";
 
 const router: IRouter = Router();
 
@@ -230,6 +231,39 @@ router.post("/attachments", async (req, res) => {
       uploaderName:
         (req.authUser as any)?.displayName || req.authUser!.username,
     });
+
+    // Notify assigned lawyer if someone else uploaded the document
+    try {
+      const assignedLawyerId =
+        (accessCheck as any)?.record?.assignedLawyerId ||
+        (accessCheck as any)?.record?.assigned_lawyer_id ||
+        null;
+      const uploaderId = req.authUser!.userId!;
+
+      if (assignedLawyerId && String(assignedLawyerId) !== String(uploaderId)) {
+        const typeArabicMap: Record<string, string> = {
+          case: "قضية",
+          session: "جلسة قضائية",
+          poa: "وكالة",
+          judgment: "حكم قضائي",
+          task: "مهمة",
+          client: "عميل",
+        };
+        dispatchEventNotification({
+          officeId,
+          eventType: "new_document_uploaded",
+          recipientUserId: String(assignedLawyerId),
+          placeholderData: {
+            documentName: originalFilename,
+            uploaderName: (req.authUser as any)?.displayName || req.authUser!.username,
+            recordTypeArabic: typeArabicMap[relatedRecordType] || relatedRecordType,
+            recordNumber: String(relatedRecordId),
+          },
+          relatedRecordType,
+          relatedRecordId,
+        }).catch((e) => logger.warn({ e }, "Failed to dispatch new_document_uploaded notification"));
+      }
+    } catch {}
 
     res.status(201).json(attachment);
   } catch (err: any) {
