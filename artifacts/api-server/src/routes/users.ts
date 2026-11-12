@@ -82,6 +82,9 @@ router.post("/users", async (req, res) => {
       ...result.member,
       emailSent: result.emailSent,
       emailError: result.emailError,
+      deliveryChannel: result.deliveryChannel,
+      whatsappSent: result.whatsappSent,
+      whatsappError: result.whatsappError,
     });
   } catch (err: any) {
     logger.error({ err }, "Failed to create office member");
@@ -114,13 +117,23 @@ router.post("/users/:id/resend-activation", async (req, res) => {
     const result = await resendOfficeMemberActivation(adminId, memberId);
     resendCooldowns.set(memberId, now);
 
+    let message = "تم تجديد رابط التفعيل بنجاح.";
+    if (result.deliveryChannel === "whatsapp") {
+      message = "تم إرسال رابط التفعيل بنجاح عبر تطبيق واتساب.";
+    } else if (result.deliveryChannel === "email") {
+      message = "تم إرسال رابط التفعيل الجديد بنجاح إلى البريد الإلكتروني.";
+    } else {
+      message = `تم تجديد رابط التفعيل ولكن تعذر الإرسال: ${result.emailError || result.whatsappError || "خطأ غير معروف"}`;
+    }
+
     res.json({
       success: true,
       emailSent: result.emailSent,
       emailError: result.emailError,
-      message: result.emailSent
-        ? "تم إرسال رابط التفعيل الجديد بنجاح إلى البريد الإلكتروني."
-        : `تم تجديد رابط التفعيل ولكن تعذر إرسال البريد: ${result.emailError || "خطأ غير معروف"}`,
+      deliveryChannel: result.deliveryChannel,
+      whatsappSent: result.whatsappSent,
+      whatsappError: result.whatsappError,
+      message,
     });
   } catch (err: any) {
     logger.error({ err, id: req.params.id }, "Failed to resend activation link");

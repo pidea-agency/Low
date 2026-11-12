@@ -56739,6 +56739,376 @@ var init_email_service = __esm({
   }
 });
 
+// src/services/reminder/channels/whatsappChannel.ts
+function formatWhatsappMessage(payload) {
+  const timeDesc = payload.remainingText ? payload.remainingText : payload.kind === "24h" ? "\u0645\u062A\u0628\u0642\u064A 24 \u0633\u0627\u0639\u0629" : payload.kind === "6h" ? "\u0645\u062A\u0628\u0642\u064A 6 \u0633\u0627\u0639\u0627\u062A" : "\u062A\u0630\u0643\u064A\u0631 \u0641\u0648\u0631\u064A";
+  const lines = [
+    `\u{1F514} *\u062A\u0630\u0643\u064A\u0631 \u0628\u0645\u0648\u0639\u062F \u062C\u0644\u0633\u0629 \u0642\u0636\u0627\u0626\u064A\u0629* (${timeDesc})`,
+    "",
+    `\u{1F4CB} *\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629:* ${payload.caseNumber || "\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}`
+  ];
+  if (payload.court) lines.push(`\u2696\uFE0F *\u0627\u0644\u0645\u062D\u0643\u0645\u0629:* ${payload.court}`);
+  if (payload.courtCircuit) lines.push(`\u{1F3DB}\uFE0F *\u0627\u0644\u062F\u0627\u0626\u0631\u0629:* ${payload.courtCircuit}`);
+  if (payload.sessionDateHijri) lines.push(`\u{1F4C5} *\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0647\u062C\u0631\u064A:* ${payload.sessionDateHijri}`);
+  if (payload.sessionTime) lines.push(`\u23F0 *\u0648\u0642\u062A \u0627\u0644\u062C\u0644\u0633\u0629:* ${payload.sessionTime}`);
+  if (payload.plaintiff) lines.push(`\u{1F464} *\u0627\u0644\u0645\u062F\u0639\u064A:* ${payload.plaintiff}`);
+  if (payload.defendant) lines.push(`\u{1F465} *\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647:* ${payload.defendant}`);
+  if (payload.caseSubject) lines.push(`\u{1F4DD} *\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0642\u0636\u064A\u0629:* ${payload.caseSubject}`);
+  lines.push("", "\u0627\u0644\u0631\u062C\u0627\u0621 \u0627\u0644\u062A\u062D\u0636\u064A\u0631 \u0648\u0627\u0644\u0627\u0633\u062A\u0639\u062F\u0627\u062F \u0644\u0644\u062C\u0644\u0633\u0629 \u0641\u064A \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u0645\u062D\u062F\u062F.");
+  return lines.join("\n");
+}
+function buildWhatsappPayloadAndHeaders(url, phone, token, message, instanceId) {
+  const cleanPhone = phone.replace(/[^0-9]/g, "");
+  const formattedChatId = `${cleanPhone}@c.us`;
+  if (url.includes("callmebot.com")) {
+    const params = new URLSearchParams({
+      phone,
+      text: message,
+      apikey: token || ""
+    });
+    return {
+      targetUrl: `${url.split("?")[0]}?${params.toString()}`,
+      method: "GET",
+      headers: {}
+    };
+  }
+  if (url.includes("green-api.com") || url.includes("greenapi")) {
+    if (url.includes("/waInstance") && url.includes("/sendMessage")) {
+      return {
+        targetUrl: url,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId: formattedChatId, message })
+      };
+    }
+    if (instanceId && token) {
+      const base = url.replace(/\/+$/, "");
+      const endpoint = `${base}/waInstance${instanceId}/sendMessage/${token}`;
+      return {
+        targetUrl: endpoint,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId: formattedChatId, message }),
+        isGreenApi: true
+      };
+    }
+    throw new Error(
+      "\u0625\u0639\u062F\u0627\u062F Green API \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644: \u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 Instance ID \u0641\u064A \u062D\u0642\u0644 \xABInstance ID\xBB \u0628\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628."
+    );
+  }
+  if (url.includes("ultramsg.com")) {
+    return {
+      targetUrl: url,
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        token: token || "",
+        to: phone,
+        body: message
+      }).toString()
+    };
+  }
+  if (url.includes("graph.facebook.com")) {
+    return {
+      targetUrl: url,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...token ? { Authorization: `Bearer ${token}` } : {}
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: cleanPhone,
+        type: "text",
+        text: { body: message }
+      })
+    };
+  }
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    headers["x-api-key"] = token;
+  }
+  return {
+    targetUrl: url,
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      phone,
+      to: phone,
+      number: cleanPhone,
+      chatId: formattedChatId,
+      message,
+      body: message,
+      text: message,
+      token,
+      apikey: token
+    })
+  };
+}
+function maskPhone(phone) {
+  if (!phone) return "";
+  const cleaned = phone.trim();
+  if (cleaned.length <= 3) return "***";
+  return "*".repeat(cleaned.length - 3) + cleaned.slice(-3);
+}
+var WhatsappReminderChannel;
+var init_whatsappChannel = __esm({
+  "src/services/reminder/channels/whatsappChannel.ts"() {
+    "use strict";
+    init_settings_store();
+    init_logger();
+    WhatsappReminderChannel = class {
+      name = "whatsapp";
+      async sendRaw(message, recipientPhone, options) {
+        const phone = recipientPhone?.trim();
+        if (!phone) {
+          throw new Error("Recipient phone number is required to send WhatsApp reminder.");
+        }
+        const masked = maskPhone(phone);
+        await ensureSettingsLoaded();
+        const settings = getSettings();
+        const instanceId = (options?.instanceId ?? settings.whatsappInstanceId)?.trim();
+        const token = (options?.token ?? settings.whatsappToken)?.trim();
+        let rawApiUrl = (options?.apiUrl ?? settings.whatsappApiUrl)?.trim();
+        if (!rawApiUrl && instanceId) {
+          rawApiUrl = "https://api.green-api.com";
+        }
+        if (rawApiUrl) {
+          const requestConfig = buildWhatsappPayloadAndHeaders(
+            rawApiUrl,
+            phone,
+            token,
+            message,
+            instanceId
+          );
+          try {
+            const res = await fetch(requestConfig.targetUrl, {
+              method: requestConfig.method,
+              headers: requestConfig.headers,
+              body: requestConfig.body
+            });
+            if (!res.ok) {
+              const bodyText = await res.text().catch(() => "");
+              logger.error(
+                { status: res.status, bodyText, phone: masked },
+                "WhatsApp Gateway API returned non-OK status"
+              );
+              throw new Error(
+                `\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0623\u0631\u062C\u0639\u062A \u062E\u0637\u0623 (${res.status}): ${bodyText.slice(0, 120) || res.statusText}`
+              );
+            } else {
+              if (requestConfig.isGreenApi) {
+                const bodyText = await res.text().catch(() => "{}");
+                let parsed = {};
+                try {
+                  parsed = JSON.parse(bodyText);
+                } catch {
+                }
+                if (parsed["instanceError"] || parsed["typeError"]) {
+                  const errMsg = parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"];
+                  logger.error({ errMsg, phone: masked }, "Green API error in response body");
+                  if (String(errMsg).includes("notAuthorized")) {
+                    throw new Error(
+                      "\u26A0\uFE0F \u0627\u0644\u0640 Instance \u063A\u064A\u0631 \u0645\u062A\u0635\u0644 \u0628\u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u0627\u0641\u062A\u062D console.greenapi.com \u0648\u0627\u0633\u062D\u0628 QR Code \u0628\u0647\u0627\u062A\u0641\u0643."
+                    );
+                  }
+                  throw new Error(`Green API \u0623\u0631\u062C\u0639 \u062E\u0637\u0623: ${errMsg}`);
+                }
+                if (!parsed["idMessage"]) {
+                  logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage \u2014 message may not have been sent");
+                }
+              }
+              logger.info(
+                { phone: masked },
+                "WhatsApp reminder sent via Gateway API successfully"
+              );
+            }
+          } catch (err) {
+            logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
+            throw err;
+          }
+        } else {
+          if (options?.throwIfNotConfigured) {
+            throw new Error("\u0644\u0645 \u064A\u062A\u0645 \u0636\u0628\u0637 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645.");
+          }
+          logger.info(
+            {
+              phone: masked
+            },
+            "[WhatsApp Reminder Triggered] Notification formatted for target recipient"
+          );
+        }
+      }
+      async send(payload) {
+        const phone = payload.recipientPhone?.trim();
+        if (!phone) {
+          throw new Error("Recipient phone number is required to send WhatsApp reminder.");
+        }
+        const message = formatWhatsappMessage(payload);
+        return this.sendRaw(message, phone);
+      }
+    };
+  }
+});
+
+// src/services/activation-delivery.service.ts
+function formatActivationWhatsappMessage(params) {
+  const name = params.memberName.trim();
+  const office = params.officeName?.trim() || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629";
+  const platform = params.platformName?.trim() || "\u0645\u0646\u0635\u0629 \u0631\u064E\u0633\u064E\u0646\u062F";
+  const hours = params.expiryHours;
+  const link = params.activationUrl;
+  return [
+    `\u0645\u0631\u062D\u0628\u0627\u064B ${name}\u060C \u062A\u0645\u062A \u0625\u0636\u0627\u0641\u062A\u0643 \u0625\u0644\u0649 ${office} \u0639\u0644\u0649 ${platform}.`,
+    `\u0644\u0625\u0643\u0645\u0627\u0644 \u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643\u060C \u0627\u0641\u062A\u062D \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u062E\u0644\u0627\u0644 ${hours} \u0633\u0627\u0639\u0629:`,
+    link,
+    "\u0625\u0630\u0627 \u0644\u0645 \u062A\u0637\u0644\u0628 \u0647\u0630\u0627\u060C \u062A\u062C\u0627\u0647\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629."
+  ].join("\n");
+}
+async function sendActivationInvitation(params) {
+  const { memberId, memberName, email, phone, officeName, platformName, token, expiryHours } = params;
+  const activationUrl = `${env.frontendUrl}/activate?token=${encodeURIComponent(token)}`;
+  const cleanPhone = phone ? phone.trim() : "";
+  let whatsappSent = false;
+  let whatsappError;
+  if (cleanPhone) {
+    try {
+      const message = formatActivationWhatsappMessage({
+        memberName,
+        officeName,
+        platformName,
+        expiryHours,
+        activationUrl
+      });
+      const channel = new WhatsappReminderChannel();
+      await channel.sendRaw(message, cleanPhone, { throwIfNotConfigured: true });
+      whatsappSent = true;
+      sentWhatsappHistory.push({
+        memberId,
+        phone: cleanPhone,
+        memberName,
+        officeName,
+        message,
+        activationUrl,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      logger.info(
+        {
+          memberId,
+          channel: "whatsapp",
+          phone: maskPhone(cleanPhone),
+          expiryHours
+        },
+        "Member activation link dispatched successfully via WhatsApp (primary channel)"
+      );
+      return {
+        channel: "whatsapp",
+        whatsappSent: true,
+        emailSent: false
+      };
+    } catch (err) {
+      whatsappSent = false;
+      whatsappError = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0639\u0628\u0631 \u0648\u0627\u062A\u0633\u0627\u0628.";
+      logger.warn(
+        {
+          memberId,
+          channel: "whatsapp",
+          phone: maskPhone(cleanPhone),
+          error: whatsappError
+        },
+        "WhatsApp activation delivery failed or not configured; falling back to email"
+      );
+    }
+  }
+  let emailSent = false;
+  let emailError;
+  try {
+    const emailRes = await sendActivationEmail({
+      to: email.trim(),
+      memberName,
+      officeName,
+      token,
+      expiryHours
+    });
+    emailSent = emailRes.success;
+    emailError = emailRes.error;
+    if (emailSent) {
+      logger.info(
+        {
+          memberId,
+          channel: "email",
+          email: email.trim(),
+          expiryHours,
+          reason: cleanPhone ? "whatsapp_fallback" : "no_phone"
+        },
+        "Member activation link dispatched successfully via email"
+      );
+      return {
+        channel: "email",
+        whatsappSent: false,
+        whatsappError,
+        emailSent: true
+      };
+    } else {
+      logger.warn(
+        {
+          memberId,
+          channel: "email",
+          email: email.trim(),
+          error: emailError
+        },
+        "Email activation fallback delivery failed"
+      );
+      return {
+        channel: "email",
+        whatsappSent: false,
+        whatsappError,
+        emailSent: false,
+        emailError
+      };
+    }
+  } catch (err) {
+    emailSent = false;
+    emailError = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0628\u0631\u064A\u062F \u0627\u0644\u062A\u0641\u0639\u064A\u0644.";
+    logger.error(
+      {
+        memberId,
+        channel: "email",
+        error: emailError
+      },
+      "Exception during email activation delivery"
+    );
+    return {
+      channel: "email",
+      whatsappSent: false,
+      whatsappError,
+      emailSent: false,
+      emailError
+    };
+  }
+  return {
+    channel: "none",
+    whatsappSent: false,
+    whatsappError,
+    emailSent: false,
+    emailError: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0648\u0633\u064A\u0644\u0629 \u062A\u0648\u0627\u0635\u0644 \u0645\u062A\u0627\u062D\u0629 \u0644\u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644."
+  };
+}
+var sentWhatsappHistory;
+var init_activation_delivery_service = __esm({
+  "src/services/activation-delivery.service.ts"() {
+    "use strict";
+    init_env();
+    init_logger();
+    init_email_service();
+    init_whatsappChannel();
+    sentWhatsappHistory = [];
+  }
+});
+
 // src/services/supabase.service.ts
 var supabase_service_exports = {};
 __export(supabase_service_exports, {
@@ -57100,7 +57470,7 @@ async function findUserByIdOrUsername(identifier) {
   try {
     const tableName = env.supabaseTableName;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
-    let query = client.from(tableName).select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at");
+    let query = client.from(tableName).select("id, username, email, phone, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at");
     if (isUuid) {
       query = query.or(`id.eq.${identifier},username.ilike.${clean}`);
     } else {
@@ -57121,6 +57491,7 @@ async function findUserByIdOrUsername(identifier) {
       id: u.id,
       username: u.username,
       email: u.email,
+      phone: u.phone || null,
       role: u.role || "staff",
       admin_id: u.admin_id || null,
       office_name: u.office_name || null,
@@ -58596,8 +58967,10 @@ async function createOfficeMember(adminId, input) {
     throw new Error("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0637\u0644\u0648\u0628 \u0644\u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644.");
   }
   let expiryHours = 48;
+  let platformSettings = null;
   try {
     const settings = await getPlatformSettings();
+    platformSettings = settings;
     if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
       expiryHours = settings.activation_link_expiry_hours;
     }
@@ -58620,22 +58993,16 @@ async function createOfficeMember(adminId, input) {
     activation_token_expires_at: expiresAt.toISOString()
   });
   saveFallbackActivationToken(user.id, tokenHash, expiresAt);
-  let emailSent = false;
-  let emailError;
-  try {
-    const emailRes = await sendActivationEmail({
-      to: input.email.trim(),
-      memberName: input.display_name || input.username,
-      officeName: admin.office_name,
-      token: rawToken,
-      expiryHours
-    });
-    emailSent = emailRes.success;
-    emailError = emailRes.error;
-  } catch (err) {
-    emailSent = false;
-    emailError = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0628\u0631\u064A\u062F \u0627\u0644\u062A\u0641\u0639\u064A\u0644.";
-  }
+  const delivery = await sendActivationInvitation({
+    memberId: user.id,
+    memberName: input.display_name || input.username,
+    email: input.email.trim(),
+    phone: input.phone,
+    officeName: admin.office_name,
+    platformName: platformSettings?.platform_name,
+    token: rawToken,
+    expiryHours
+  });
   return {
     member: {
       id: user.id,
@@ -58648,8 +59015,11 @@ async function createOfficeMember(adminId, input) {
       phone: user.phone,
       created_at: user.created_at
     },
-    emailSent,
-    emailError,
+    emailSent: delivery.emailSent,
+    emailError: delivery.emailError,
+    deliveryChannel: delivery.channel,
+    whatsappSent: delivery.whatsappSent,
+    whatsappError: delivery.whatsappError,
     rawToken
   };
 }
@@ -58669,8 +59039,10 @@ async function resendOfficeMemberActivation(adminId, memberId) {
     throw new Error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0631\u0633\u0627\u0644 \u0631\u0648\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u0644\u0623\u0646 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627\u064B.");
   }
   let expiryHours = 48;
+  let platformSettings = null;
   try {
     const settings = await getPlatformSettings();
+    platformSettings = settings;
     if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
       expiryHours = settings.activation_link_expiry_hours;
     }
@@ -58686,26 +59058,23 @@ async function resendOfficeMemberActivation(adminId, memberId) {
     activation_token_hash: tokenHash,
     activation_token_expires_at: expiresAt.toISOString()
   });
-  let emailSent = false;
-  let emailError;
-  try {
-    const emailRes = await sendActivationEmail({
-      to: member.email.trim(),
-      memberName: member.display_name || member.username,
-      officeName: admin?.office_name,
-      token: rawToken,
-      expiryHours
-    });
-    emailSent = emailRes.success;
-    emailError = emailRes.error;
-  } catch (err) {
-    emailSent = false;
-    emailError = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0628\u0631\u064A\u062F \u0627\u0644\u062A\u0641\u0639\u064A\u0644.";
-  }
+  const delivery = await sendActivationInvitation({
+    memberId,
+    memberName: member.display_name || member.username,
+    email: member.email.trim(),
+    phone: member.phone,
+    officeName: admin?.office_name,
+    platformName: platformSettings?.platform_name,
+    token: rawToken,
+    expiryHours
+  });
   return {
     success: true,
-    emailSent,
-    emailError,
+    emailSent: delivery.emailSent,
+    emailError: delivery.emailError,
+    deliveryChannel: delivery.channel,
+    whatsappSent: delivery.whatsappSent,
+    whatsappError: delivery.whatsappError,
     rawToken
   };
 }
@@ -59419,7 +59788,7 @@ var init_supabase_service = __esm({
     init_env();
     init_logger();
     init_encryption();
-    init_email_service();
+    init_activation_delivery_service();
     UserPendingActivationError = class extends Error {
       statusCode = 403;
       constructor(message = "\u064A\u062C\u0628 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644\u0627\u064B \u0639\u0628\u0631 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0631\u0633\u0644 \u0625\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643.") {
@@ -59614,6 +59983,12 @@ function encryptSettings(settings) {
   }
   return payload;
 }
+async function ensureSettingsLoaded() {
+  if (!_loadedFromSupabase) {
+    await refreshSettingsFromSupabase();
+  }
+  return getSettings();
+}
 async function refreshSettingsFromSupabase() {
   const client = getSupabaseClient();
   if (client) {
@@ -59625,6 +60000,7 @@ async function refreshSettingsFromSupabase() {
           if (parsed && typeof parsed === "object") {
             const decrypted = decryptSettings(parsed);
             _cache = { ..._cache, ...decrypted };
+            _loadedFromSupabase = true;
             logger.info("Loaded persistent AppSettings from Supabase app_users permanent storage");
             return getSettings();
           }
@@ -59636,6 +60012,7 @@ async function refreshSettingsFromSupabase() {
       if (!error && data?.value && typeof data.value === "object") {
         const decrypted = decryptSettings(data.value);
         _cache = { ..._cache, ...decrypted };
+        _loadedFromSupabase = true;
         return getSettings();
       }
     } catch (err) {
@@ -59718,7 +60095,7 @@ async function saveSettings(patch) {
   saveToDisk(_cache);
   return getSettings();
 }
-var import_fs, import_path, import_url, currentDirname, SENSITIVE_KEYS, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache, SYSTEM_SETTINGS_USER_ID, SYSTEM_SETTINGS_USERNAME;
+var import_fs, import_path, import_url, currentDirname, SENSITIVE_KEYS, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache, _loadedFromSupabase, SYSTEM_SETTINGS_USER_ID, SYSTEM_SETTINGS_USERNAME;
 var init_settings_store = __esm({
   "src/config/settings-store.ts"() {
     "use strict";
@@ -59740,6 +60117,7 @@ var init_settings_store = __esm({
     LOCAL_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "settings.json");
     ALT_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "settings.json");
     _cache = loadFromDisk();
+    _loadedFromSupabase = false;
     SYSTEM_SETTINGS_USER_ID = "00000000-0000-0000-0000-000000000001";
     SYSTEM_SETTINGS_USERNAME = "__platform_settings__";
   }
@@ -830188,6 +830566,7 @@ function resetInMemoryStore() {
   memoryAttachments.clear();
   memoryClientNotes.clear();
   memoryCases.clear();
+  memoryBroadcasts.clear();
 }
 function setForceDisableMemoryStoreForTesting(disabled) {
   _forceDisableMemoryStoreForTesting = disabled;
@@ -832604,7 +832983,7 @@ async function getCaseStats(officeId, filterRecords) {
     postponed
   };
 }
-var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, _nextId, DatabaseUnavailableError2, _forceDisableMemoryStoreForTesting;
+var import_moment_hijri2, import_crypto4, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, memoryBroadcasts, _nextId, DatabaseUnavailableError2, _forceDisableMemoryStoreForTesting;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -832623,6 +833002,7 @@ var init_postgres_service = __esm({
     memoryAttachments = /* @__PURE__ */ new Map();
     memoryClientNotes = /* @__PURE__ */ new Map();
     memoryCases = /* @__PURE__ */ new Map();
+    memoryBroadcasts = /* @__PURE__ */ new Map();
     _nextId = 1e3;
     DatabaseUnavailableError2 = class extends Error {
       statusCode = 503;
@@ -851104,213 +851484,7 @@ var import_express5 = __toESM(require_express2(), 1);
 init_src();
 init_googleSheets_service();
 init_logger();
-
-// src/services/reminder/channels/whatsappChannel.ts
-init_settings_store();
-init_logger();
-function formatWhatsappMessage(payload) {
-  const timeDesc = payload.remainingText ? payload.remainingText : payload.kind === "24h" ? "\u0645\u062A\u0628\u0642\u064A 24 \u0633\u0627\u0639\u0629" : payload.kind === "6h" ? "\u0645\u062A\u0628\u0642\u064A 6 \u0633\u0627\u0639\u0627\u062A" : "\u062A\u0630\u0643\u064A\u0631 \u0641\u0648\u0631\u064A";
-  const lines = [
-    `\u{1F514} *\u062A\u0630\u0643\u064A\u0631 \u0628\u0645\u0648\u0639\u062F \u062C\u0644\u0633\u0629 \u0642\u0636\u0627\u0626\u064A\u0629* (${timeDesc})`,
-    "",
-    `\u{1F4CB} *\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629:* ${payload.caseNumber || "\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}`
-  ];
-  if (payload.court) lines.push(`\u2696\uFE0F *\u0627\u0644\u0645\u062D\u0643\u0645\u0629:* ${payload.court}`);
-  if (payload.courtCircuit) lines.push(`\u{1F3DB}\uFE0F *\u0627\u0644\u062F\u0627\u0626\u0631\u0629:* ${payload.courtCircuit}`);
-  if (payload.sessionDateHijri) lines.push(`\u{1F4C5} *\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0647\u062C\u0631\u064A:* ${payload.sessionDateHijri}`);
-  if (payload.sessionTime) lines.push(`\u23F0 *\u0648\u0642\u062A \u0627\u0644\u062C\u0644\u0633\u0629:* ${payload.sessionTime}`);
-  if (payload.plaintiff) lines.push(`\u{1F464} *\u0627\u0644\u0645\u062F\u0639\u064A:* ${payload.plaintiff}`);
-  if (payload.defendant) lines.push(`\u{1F465} *\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647:* ${payload.defendant}`);
-  if (payload.caseSubject) lines.push(`\u{1F4DD} *\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0642\u0636\u064A\u0629:* ${payload.caseSubject}`);
-  lines.push("", "\u0627\u0644\u0631\u062C\u0627\u0621 \u0627\u0644\u062A\u062D\u0636\u064A\u0631 \u0648\u0627\u0644\u0627\u0633\u062A\u0639\u062F\u0627\u062F \u0644\u0644\u062C\u0644\u0633\u0629 \u0641\u064A \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u0645\u062D\u062F\u062F.");
-  return lines.join("\n");
-}
-function buildWhatsappPayloadAndHeaders(url, phone, token, message, instanceId) {
-  const cleanPhone = phone.replace(/[^0-9]/g, "");
-  const formattedChatId = `${cleanPhone}@c.us`;
-  if (url.includes("callmebot.com")) {
-    const params = new URLSearchParams({
-      phone,
-      text: message,
-      apikey: token || ""
-    });
-    return {
-      targetUrl: `${url.split("?")[0]}?${params.toString()}`,
-      method: "GET",
-      headers: {}
-    };
-  }
-  if (url.includes("green-api.com") || url.includes("greenapi")) {
-    if (url.includes("/waInstance") && url.includes("/sendMessage")) {
-      return {
-        targetUrl: url,
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId: formattedChatId, message })
-      };
-    }
-    if (instanceId && token) {
-      const base = url.replace(/\/+$/, "");
-      const endpoint = `${base}/waInstance${instanceId}/sendMessage/${token}`;
-      return {
-        targetUrl: endpoint,
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId: formattedChatId, message }),
-        isGreenApi: true
-      };
-    }
-    throw new Error(
-      "\u0625\u0639\u062F\u0627\u062F Green API \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644: \u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 Instance ID \u0641\u064A \u062D\u0642\u0644 \xABInstance ID\xBB \u0628\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628."
-    );
-  }
-  if (url.includes("ultramsg.com")) {
-    return {
-      targetUrl: url,
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        token: token || "",
-        to: phone,
-        body: message
-      }).toString()
-    };
-  }
-  if (url.includes("graph.facebook.com")) {
-    return {
-      targetUrl: url,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...token ? { Authorization: `Bearer ${token}` } : {}
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: cleanPhone,
-        type: "text",
-        text: { body: message }
-      })
-    };
-  }
-  const headers = {
-    "Content-Type": "application/json"
-  };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-    headers["x-api-key"] = token;
-  }
-  return {
-    targetUrl: url,
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      phone,
-      to: phone,
-      number: cleanPhone,
-      chatId: formattedChatId,
-      message,
-      body: message,
-      text: message,
-      token,
-      apikey: token
-    })
-  };
-}
-function maskPhone(phone) {
-  if (!phone) return "";
-  const cleaned = phone.trim();
-  if (cleaned.length <= 3) return "***";
-  return "*".repeat(cleaned.length - 3) + cleaned.slice(-3);
-}
-var WhatsappReminderChannel = class {
-  name = "whatsapp";
-  async sendRaw(message, recipientPhone, options) {
-    const phone = recipientPhone?.trim();
-    if (!phone) {
-      throw new Error("Recipient phone number is required to send WhatsApp reminder.");
-    }
-    const masked = maskPhone(phone);
-    const settings = getSettings();
-    const instanceId = (options?.instanceId ?? settings.whatsappInstanceId)?.trim();
-    const token = (options?.token ?? settings.whatsappToken)?.trim();
-    let rawApiUrl = (options?.apiUrl ?? settings.whatsappApiUrl)?.trim();
-    if (!rawApiUrl && instanceId) {
-      rawApiUrl = "https://api.green-api.com";
-    }
-    if (rawApiUrl) {
-      const requestConfig = buildWhatsappPayloadAndHeaders(
-        rawApiUrl,
-        phone,
-        token,
-        message,
-        instanceId
-      );
-      try {
-        const res = await fetch(requestConfig.targetUrl, {
-          method: requestConfig.method,
-          headers: requestConfig.headers,
-          body: requestConfig.body
-        });
-        if (!res.ok) {
-          const bodyText = await res.text().catch(() => "");
-          logger.error(
-            { status: res.status, bodyText, phone: masked },
-            "WhatsApp Gateway API returned non-OK status"
-          );
-          throw new Error(
-            `\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0623\u0631\u062C\u0639\u062A \u062E\u0637\u0623 (${res.status}): ${bodyText.slice(0, 120) || res.statusText}`
-          );
-        } else {
-          if (requestConfig.isGreenApi) {
-            const bodyText = await res.text().catch(() => "{}");
-            let parsed = {};
-            try {
-              parsed = JSON.parse(bodyText);
-            } catch {
-            }
-            if (parsed["instanceError"] || parsed["typeError"]) {
-              const errMsg = parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"];
-              logger.error({ errMsg, phone: masked }, "Green API error in response body");
-              if (String(errMsg).includes("notAuthorized")) {
-                throw new Error(
-                  "\u26A0\uFE0F \u0627\u0644\u0640 Instance \u063A\u064A\u0631 \u0645\u062A\u0635\u0644 \u0628\u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u0627\u0641\u062A\u062D console.greenapi.com \u0648\u0627\u0633\u062D\u0628 QR Code \u0628\u0647\u0627\u062A\u0641\u0643."
-                );
-              }
-              throw new Error(`Green API \u0623\u0631\u062C\u0639 \u062E\u0637\u0623: ${errMsg}`);
-            }
-            if (!parsed["idMessage"]) {
-              logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage \u2014 message may not have been sent");
-            }
-          }
-          logger.info(
-            { phone: masked },
-            "WhatsApp reminder sent via Gateway API successfully"
-          );
-        }
-      } catch (err) {
-        logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
-        throw err;
-      }
-    } else {
-      logger.info(
-        {
-          phone: masked
-        },
-        "[WhatsApp Reminder Triggered] Notification formatted for target recipient"
-      );
-    }
-  }
-  async send(payload) {
-    const phone = payload.recipientPhone?.trim();
-    if (!phone) {
-      throw new Error("Recipient phone number is required to send WhatsApp reminder.");
-    }
-    const message = formatWhatsappMessage(payload);
-    return this.sendRaw(message, phone);
-  }
-};
-
-// src/routes/sessions.ts
+init_whatsappChannel();
 init_hijri();
 
 // src/utils/record-access.ts
@@ -851465,6 +851639,68 @@ async function verifyRecordAccess(officeId, relatedRecordType, relatedRecordId, 
 
 // src/routes/sessions.ts
 init_postgres_service();
+
+// src/services/assignment-notification.service.ts
+init_logger();
+init_supabase_service();
+init_postgres_service();
+init_whatsappChannel();
+async function notifyLawyerAssignment(params) {
+  const {
+    officeId,
+    assignerId,
+    targetLawyerId,
+    previousLawyerId,
+    recordType: recordType2,
+    recordTypeArabic,
+    recordId,
+    recordDescription,
+    directLink
+  } = params;
+  if (!targetLawyerId) {
+    return { notified: false, inAppCreated: false, whatsappSent: false };
+  }
+  if (previousLawyerId && String(previousLawyerId) === String(targetLawyerId)) {
+    return { notified: false, inAppCreated: false, whatsappSent: false };
+  }
+  if (assignerId && String(assignerId) === String(targetLawyerId)) {
+    return { notified: false, inAppCreated: false, whatsappSent: false };
+  }
+  const title = `\u062A\u0643\u0644\u064A\u0641 \u062C\u062F\u064A\u062F: ${recordTypeArabic}`;
+  const body = `\u062A\u0645 \u062A\u0643\u0644\u064A\u0641\u0643 \u0628\u0640${recordTypeArabic} \u062C\u062F\u064A\u062F: ${recordDescription}. \u0644\u0645\u062A\u0627\u0628\u0639\u062A\u0647\u0627: ${directLink}.`;
+  let inAppCreated = false;
+  let whatsappSent = false;
+  try {
+    await createNotification({
+      officeId,
+      userId: targetLawyerId,
+      type: "case_assigned",
+      title,
+      body,
+      relatedRecordType: recordType2,
+      relatedRecordId: String(recordId)
+    });
+    inAppCreated = true;
+  } catch (err) {
+    logger.error({ err, targetLawyerId, recordType: recordType2, recordId }, "Failed to create in-app assignment notification");
+  }
+  try {
+    const lawyer = await findUserByIdOrUsername(targetLawyerId);
+    const phone = lawyer?.phone?.trim();
+    if (phone) {
+      const whatsappMessage = `\u062A\u0645 \u062A\u0643\u0644\u064A\u0641\u0643 \u0628\u0640${recordTypeArabic} \u062C\u062F\u064A\u062F: ${recordDescription}. \u0644\u0645\u062A\u0627\u0628\u0639\u062A\u0647\u0627: ${directLink}.`;
+      const channel = new WhatsappReminderChannel();
+      await channel.sendRaw(whatsappMessage, phone);
+      whatsappSent = true;
+      logger.info({ phone, targetLawyerId, recordType: recordType2, recordId }, "Assignment WhatsApp message dispatched successfully");
+    }
+  } catch (err) {
+    logger.warn({ err, targetLawyerId, recordType: recordType2, recordId }, "Failed to send assignment WhatsApp message (non-blocking)");
+  }
+  return { notified: true, inAppCreated, whatsappSent };
+}
+
+// src/routes/sessions.ts
 var router5 = (0, import_express5.Router)();
 function getOfficeId(req) {
   const officeId = req.authUser?.officeId || req.authUser?.userId;
@@ -851864,6 +852100,19 @@ router5.patch("/sessions/:id/reassign", attachAuthUser, requireAuth, async (req,
       }
     }
     const updated = await updateSession2(id, { assignedLawyerId: targetLawyerId || null }, officeId);
+    if (updated && targetLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId,
+        previousLawyerId: existing.assignedLawyerId ?? existing.assigned_lawyer_id ?? null,
+        recordType: "session",
+        recordTypeArabic: "\u062C\u0644\u0633\u0629",
+        recordId: id,
+        recordDescription: updated.caseNumber ? `\u0642\u0636\u064A\u0629 \u0631\u0642\u0645 ${updated.caseNumber}` : `\u062C\u0644\u0633\u0629 #${id}`,
+        directLink: `/sessions/${id}`
+      });
+    }
     res.json(updated);
   } catch (err) {
     logger.error({ err }, "Failed to reassign session");
@@ -851948,6 +852197,7 @@ var import_express6 = __toESM(require_express2(), 1);
 var import_googleapis2 = __toESM(require_src11(), 1);
 init_settings_store();
 init_logger();
+init_whatsappChannel();
 init_supabase_service();
 init_googleSheets_service();
 init_encryption();
@@ -852254,7 +852504,7 @@ router6.post("/settings/google-export", async (req, res) => {
   }
 });
 router6.post("/settings/test-whatsapp-connection", async (req, res) => {
-  const s3 = getSettings();
+  const s3 = await ensureSettingsLoaded();
   const rawInstanceId = String(req.body?.instanceId ?? "").trim();
   const rawToken = String(req.body?.token ?? "").trim();
   const isMaskedToken = rawToken.includes("\u2022") || rawToken.includes("*");
@@ -852296,6 +852546,13 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
     const data = await response.json();
     const state = data?.stateInstance || "unknown";
     if (state === "authorized") {
+      if (req.body?.saveOnSuccess && instanceId && token && !isMaskedToken) {
+        await saveSettings({
+          whatsappInstanceId: instanceId,
+          whatsappToken: token,
+          whatsappApiUrl: rawApiUrl
+        });
+      }
       res.json({
         success: true,
         connected: true,
@@ -852332,7 +852589,7 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
   }
 });
 router6.post("/settings/test-whatsapp", async (req, res) => {
-  const s3 = getSettings();
+  const s3 = await ensureSettingsLoaded();
   const phone = String(
     req.body?.whatsappNumber ?? req.body?.number ?? req.body?.recipientPhone ?? s3.whatsappNumber ?? ""
   ).trim();
@@ -852629,6 +852886,7 @@ Hearing ${label} at ${payload.sessionTime ?? "(unknown time)"}.`
 };
 
 // src/services/reminder/reminder.service.ts
+init_whatsappChannel();
 var channels = [
   new ConsoleReminderChannel(),
   new WhatsappReminderChannel()
@@ -853248,6 +853506,19 @@ router9.patch("/poa/:id/reassign", async (req, res) => {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
+    if (targetLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId,
+        previousLawyerId: existing.assignedLawyerId,
+        recordType: "poa",
+        recordTypeArabic: "\u0648\u0643\u0627\u0644\u0629",
+        recordId: id,
+        recordDescription: updated.poaNumber ? `\u0648\u0643\u0627\u0644\u0629 \u0631\u0642\u0645 ${updated.poaNumber}` : updated.clientName ? `\u0648\u0643\u0627\u0644\u0629 \u0644\u0644\u0645\u0648\u0643\u0644 ${updated.clientName}` : `\u0648\u0643\u0627\u0644\u0629 #${id}`,
+        directLink: `/poa`
+      });
+    }
     res.json(formatPoa2(updated));
   } catch (err) {
     const refId = generateRefId();
@@ -853478,6 +853749,19 @@ router10.patch("/judgments/:id/reassign", async (req, res) => {
       return;
     }
     const updated = await reassignJudgment(id, targetLawyerId || null, officeId, lawyerName);
+    if (updated && targetLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId,
+        previousLawyerId: existing.assignedLawyerId,
+        recordType: "judgment",
+        recordTypeArabic: "\u062D\u0643\u0645 \u0642\u0636\u0627\u0626\u064A",
+        recordId: id,
+        recordDescription: updated.judgmentNumber ? `\u062D\u0643\u0645 \u0631\u0642\u0645 ${updated.judgmentNumber}` : updated.caseNumber ? `\u062D\u0643\u0645 \u0642\u0636\u064A\u0629 ${updated.caseNumber}` : `\u062D\u0643\u0645 #${id}`,
+        directLink: `/judgments`
+      });
+    }
     res.json(updated);
   } catch (err) {
     const refId = generateRefId2();
@@ -853704,6 +853988,19 @@ router11.patch("/tasks/:id/reassign", async (req, res) => {
       return;
     }
     const updated = await reassignTask(id, targetLawyerId || null, officeId, lawyerName);
+    if (updated && targetLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId,
+        previousLawyerId: existing.assignedLawyerId,
+        recordType: "task",
+        recordTypeArabic: "\u0645\u0647\u0645\u0629",
+        recordId: id,
+        recordDescription: updated.title || `\u0645\u0647\u0645\u0629 #${id}`,
+        directLink: `/tasks`
+      });
+    }
     res.json(updated);
   } catch (err) {
     const refId = generateRefId3();
@@ -853792,7 +854089,10 @@ router12.post("/users", async (req, res) => {
     res.status(201).json({
       ...result.member,
       emailSent: result.emailSent,
-      emailError: result.emailError
+      emailError: result.emailError,
+      deliveryChannel: result.deliveryChannel,
+      whatsappSent: result.whatsappSent,
+      whatsappError: result.whatsappError
     });
   } catch (err) {
     logger.error({ err }, "Failed to create office member");
@@ -853815,11 +854115,22 @@ router12.post("/users/:id/resend-activation", async (req, res) => {
     }
     const result = await resendOfficeMemberActivation(adminId, memberId);
     resendCooldowns.set(memberId, now);
+    let message = "\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0628\u0646\u062C\u0627\u062D.";
+    if (result.deliveryChannel === "whatsapp") {
+      message = "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0628\u0646\u062C\u0627\u062D \u0639\u0628\u0631 \u062A\u0637\u0628\u064A\u0642 \u0648\u0627\u062A\u0633\u0627\u0628.";
+    } else if (result.deliveryChannel === "email") {
+      message = "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062C\u062F\u064A\u062F \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A.";
+    } else {
+      message = `\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0627\u0644\u0625\u0631\u0633\u0627\u0644: ${result.emailError || result.whatsappError || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}`;
+    }
     res.json({
       success: true,
       emailSent: result.emailSent,
       emailError: result.emailError,
-      message: result.emailSent ? "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062C\u062F\u064A\u062F \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A." : `\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0648\u0644\u0643\u0646 \u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0628\u0631\u064A\u062F: ${result.emailError || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}`
+      deliveryChannel: result.deliveryChannel,
+      whatsappSent: result.whatsappSent,
+      whatsappError: result.whatsappError,
+      message
     });
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Failed to resend activation link");
@@ -857070,10 +857381,28 @@ router20.patch("/cases/:id/reassign", async (req, res) => {
     }
   }
   try {
+    const existing = await getCaseById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
     const updated = await reassignCase(id, assignedLawyerId, officeId);
     if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
+    }
+    if (assignedLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId: assignedLawyerId,
+        previousLawyerId: existing.assignedLawyerId,
+        recordType: "case",
+        recordTypeArabic: "\u0642\u0636\u064A\u0629",
+        recordId: id,
+        recordDescription: updated.caseNumber ? `\u0642\u0636\u064A\u0629 \u0631\u0642\u0645 ${updated.caseNumber}` : `\u0642\u0636\u064A\u0629 #${id}`,
+        directLink: `/cases`
+      });
     }
     res.json(updated);
   } catch (err) {

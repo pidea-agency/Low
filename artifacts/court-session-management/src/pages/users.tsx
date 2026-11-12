@@ -226,7 +226,9 @@ export default function OfficeMembersPage() {
 
         toast({
           title: 'تم إنشاء الحساب',
-          description: data.emailSent
+          description: data.deliveryChannel === 'whatsapp'
+            ? 'تم إنشاء المستخدم بنجاح وإرسال رابط التفعيل عبر تطبيق واتساب.'
+            : data.deliveryChannel === 'email' || data.emailSent
             ? 'تم إنشاء المستخدم بنجاح وإرسال رابط التفعيل عبر البريد الإلكتروني.'
             : 'تم إنشاء المستخدم بنجاح.',
         });
@@ -255,7 +257,7 @@ export default function OfficeMembersPage() {
       setCooldowns((prev) => ({ ...prev, [member.id]: 60 }));
       toast({
         title: 'تم الإرسال',
-        description: `تم إرسال رابط تفعيل جديد إلى ${member.email || 'البريد الإلكتروني'}.`,
+        description: data.message || `تم إرسال رابط تفعيل جديد إلى ${member.email || 'البريد الإلكتروني'}.`,
       });
     } catch (err: any) {
       toast({ title: 'خطأ', description: err.message, variant: 'destructive' });

@@ -156,7 +156,7 @@ export class WhatsappReminderChannel implements ReminderChannel {
   async sendRaw(
     message: string,
     recipientPhone?: string,
-    options?: { apiUrl?: string; token?: string; instanceId?: string }
+    options?: { apiUrl?: string; token?: string; instanceId?: string; throwIfNotConfigured?: boolean }
   ): Promise<void> {
     const phone = recipientPhone?.trim();
 
@@ -235,6 +235,9 @@ export class WhatsappReminderChannel implements ReminderChannel {
         throw err;
       }
     } else {
+      if (options?.throwIfNotConfigured) {
+        throw new Error("لم يتم ضبط إعدادات بوابة الواتساب في النظام.");
+      }
       logger.info(
         {
           phone: masked,

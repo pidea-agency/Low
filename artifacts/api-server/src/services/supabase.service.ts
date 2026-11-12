@@ -8,6 +8,7 @@ import { env, isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { encryptSecret, decryptSecret, isEncrypted } from "../lib/encryption";
 import { sendActivationEmail } from "./email.service";
+import { sendActivationInvitation } from "./activation-delivery.service";
 
 export interface SubscriptionPlanFeatures {
   google_sheets_export: boolean;
@@ -611,7 +612,7 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
 
     let query = client
       .from(tableName)
-      .select("id, username, email, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at");
+      .select("id, username, email, phone, role, admin_id, office_name, display_name, status, subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at");
 
     if (isUuid) {
       query = query.or(`id.eq.${identifier},username.ilike.${clean}`);
@@ -640,6 +641,7 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
       id: u.id,
       username: u.username,
       email: u.email,
+      phone: u.phone || null,
       role: (u.role as any) || "staff",
       admin_id: u.admin_id || null,
       office_name: u.office_name || null,
@@ -2653,6 +2655,9 @@ export interface CreateOfficeMemberResult {
   emailSent: boolean;
   emailError?: string;
   rawToken?: string;
+  deliveryChannel?: "whatsapp" | "email" | "none";
+  whatsappSent?: boolean;
+  whatsappError?: string;
 }
 
 export async function createOfficeMember(
@@ -2679,8 +2684,10 @@ export async function createOfficeMember(
 
   // Read dynamic expiry hours from platform settings
   let expiryHours = 48;
+  let platformSettings: PlatformSettings | null = null;
   try {
     const settings = await getPlatformSettings();
+    platformSettings = settings;
     if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
       expiryHours = settings.activation_link_expiry_hours;
     }
@@ -2711,23 +2718,17 @@ export async function createOfficeMember(
   // Always save in fallback store so it is immediately findable even if DB schema cache is refreshing
   saveFallbackActivationToken(user.id, tokenHash, expiresAt);
 
-  // Send activation email
-  let emailSent = false;
-  let emailError: string | undefined;
-  try {
-    const emailRes = await sendActivationEmail({
-      to: input.email.trim(),
-      memberName: input.display_name || input.username,
-      officeName: admin.office_name,
-      token: rawToken,
-      expiryHours,
-    });
-    emailSent = emailRes.success;
-    emailError = emailRes.error;
-  } catch (err: any) {
-    emailSent = false;
-    emailError = err?.message || "فشل إرسال بريد التفعيل.";
-  }
+  // Send activation invitation (WhatsApp primary with email fallback)
+  const delivery = await sendActivationInvitation({
+    memberId: user.id,
+    memberName: input.display_name || input.username,
+    email: input.email.trim(),
+    phone: input.phone,
+    officeName: admin.office_name,
+    platformName: platformSettings?.platform_name,
+    token: rawToken,
+    expiryHours,
+  });
 
   return {
     member: {
@@ -2741,21 +2742,29 @@ export async function createOfficeMember(
       phone: user.phone,
       created_at: user.created_at,
     },
-    emailSent,
-    emailError,
+    emailSent: delivery.emailSent,
+    emailError: delivery.emailError,
+    deliveryChannel: delivery.channel,
+    whatsappSent: delivery.whatsappSent,
+    whatsappError: delivery.whatsappError,
     rawToken,
   };
+}
+
+export interface ResendOfficeMemberActivationResult {
+  success: boolean;
+  emailSent: boolean;
+  emailError?: string;
+  rawToken?: string;
+  deliveryChannel?: "whatsapp" | "email" | "none";
+  whatsappSent?: boolean;
+  whatsappError?: string;
 }
 
 export async function resendOfficeMemberActivation(
   adminId: string,
   memberId: string,
-): Promise<{
-  success: boolean;
-  emailSent: boolean;
-  emailError?: string;
-  rawToken?: string;
-}> {
+): Promise<ResendOfficeMemberActivationResult> {
   const member = await findUserByIdOrUsername(memberId);
   if (!member || member.role !== "staff" || member.admin_id !== adminId) {
     throw new OfficeMemberNotFoundError();
@@ -2776,8 +2785,10 @@ export async function resendOfficeMemberActivation(
 
   // Read dynamic expiry hours from platform settings
   let expiryHours = 48;
+  let platformSettings: PlatformSettings | null = null;
   try {
     const settings = await getPlatformSettings();
+    platformSettings = settings;
     if (settings && typeof settings.activation_link_expiry_hours === "number" && settings.activation_link_expiry_hours > 0) {
       expiryHours = settings.activation_link_expiry_hours;
     }
@@ -2800,27 +2811,25 @@ export async function resendOfficeMemberActivation(
     activation_token_expires_at: expiresAt.toISOString(),
   });
 
-  let emailSent = false;
-  let emailError: string | undefined;
-  try {
-    const emailRes = await sendActivationEmail({
-      to: member.email.trim(),
-      memberName: member.display_name || member.username,
-      officeName: admin?.office_name,
-      token: rawToken,
-      expiryHours,
-    });
-    emailSent = emailRes.success;
-    emailError = emailRes.error;
-  } catch (err: any) {
-    emailSent = false;
-    emailError = err?.message || "فشل إرسال بريد التفعيل.";
-  }
+  // Send activation invitation (WhatsApp primary with email fallback)
+  const delivery = await sendActivationInvitation({
+    memberId,
+    memberName: member.display_name || member.username,
+    email: member.email.trim(),
+    phone: member.phone,
+    officeName: admin?.office_name,
+    platformName: platformSettings?.platform_name,
+    token: rawToken,
+    expiryHours,
+  });
 
   return {
     success: true,
-    emailSent,
-    emailError,
+    emailSent: delivery.emailSent,
+    emailError: delivery.emailError,
+    deliveryChannel: delivery.channel,
+    whatsappSent: delivery.whatsappSent,
+    whatsappError: delivery.whatsappError,
     rawToken,
   };
 }
