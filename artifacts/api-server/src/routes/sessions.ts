@@ -24,6 +24,7 @@ import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappC
 import { computeHearingDateTime } from "../utils/hijri";
 import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
 import * as postgresService from "../services/postgres.service";
+import { notifyLawyerAssignment } from "../services/assignment-notification.service";
 import type { Response } from "express";
 
 const router: IRouter = Router();
@@ -491,6 +492,22 @@ router.patch("/sessions/:id/reassign", attachAuthUser, requireAuth, async (req, 
     }
 
     const updated = await updateSession(id, { assignedLawyerId: targetLawyerId || null } as any, officeId);
+
+    // Trigger assignment notification for lawyer (in-app + WhatsApp)
+    if (updated && targetLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId,
+        previousLawyerId: (existing as any).assignedLawyerId ?? (existing as any).assigned_lawyer_id ?? null,
+        recordType: "session",
+        recordTypeArabic: "جلسة",
+        recordId: id,
+        recordDescription: updated.caseNumber ? `قضية رقم ${updated.caseNumber}` : `جلسة #${id}`,
+        directLink: `/sessions/${id}`,
+      });
+    }
+
     res.json(updated);
   } catch (err: any) {
     logger.error({ err }, "Failed to reassign session");

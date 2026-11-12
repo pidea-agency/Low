@@ -349,95 +349,8 @@ export default function OfficeMembersPage() {
         </div>
 
         <form onSubmit={handleSaveForm}>
-          {/* 2-Column Grid matching Image 6 */}
+          {/* 2-Column Grid matching Image 6: Form & Permissions on Right, Summary on Left in RTL */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Summary + Status + Info (lg:col-span-3) */}
-            <div className="lg:col-span-3 space-y-4">
-              {/* Card 1: ملخص المستخدم */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs text-center space-y-3">
-                <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-500 mx-auto">
-                  <User className="w-10 h-10" />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-black text-[#10233F]">
-                    {formDisplayName || 'أحمد محمد العتيبي'}
-                  </h3>
-                  <span className="text-xs font-mono text-[#64748B] block mt-0.5">
-                    {formUsername || 'a.alotaibi'}
-                  </span>
-                  <div className="mt-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      نشط
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-xs pt-3 border-t border-slate-100 text-right">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#C4933F]" />
-                      رقم الموظف :
-                    </span>
-                    <span className="font-mono font-bold text-[#10233F]">{empId}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
-                      تاريخ إنشاء الحساب :
-                    </span>
-                    <span className="font-mono text-[#10233F]">{createdDate}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: حالة الحساب */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                  <BarChart3 className="w-4 h-4 text-[#C4933F]" />
-                  <h3 className="text-xs font-black text-[#10233F]">حالة الحساب</h3>
-                </div>
-
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold">الحساب نشط</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold">يمكنه تسجيل الدخول</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold">الصلاحيات محدثة</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: معلومات إضافية */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                  <ShieldCheck className="w-4 h-4 text-[#C4933F]" />
-                  <h3 className="text-xs font-black text-[#10233F]">معلومات إضافية</h3>
-                </div>
-
-                <div className="space-y-2.5 text-xs text-right">
-                  <div>
-                    <span className="text-[#64748B] block mb-0.5">آخر تسجيل دخول :</span>
-                    <span className="font-mono text-[#10233F]">10:25-01-27 ص</span>
-                  </div>
-                  <div className="pt-2 border-t border-slate-100">
-                    <span className="text-[#64748B] block mb-0.5">ملاحظات إدارية :</span>
-                    <span className="text-[#10233F] leading-relaxed">
-                      المستخدم مسؤول عن إدارة الجلسات في الفرع الرئيسي.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Right Column: User Details + Permissions Matrix (lg:col-span-9) */}
             <div className="lg:col-span-9 space-y-5">
               {/* Card 1: بيانات المستخدم */}
@@ -672,7 +585,98 @@ export default function OfficeMembersPage() {
                 </div>
               </div>
 
-              {/* Bottom Action Bar */}
+            </div>
+
+            {/* Left Column: Summary + Status + Info (lg:col-span-3) */}
+            <div className="lg:col-span-3 space-y-4">
+              {/* Card 1: ملخص المستخدم */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs text-center space-y-3">
+                <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-500 mx-auto">
+                  <User className="w-10 h-10" />
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-black text-[#10233F]">
+                    {formDisplayName || 'أحمد محمد العتيبي'}
+                  </h3>
+                  <span className="text-xs font-mono text-[#64748B] block mt-0.5">
+                    {formUsername || 'a.alotaibi'}
+                  </span>
+                  <div className="mt-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      نشط
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs pt-3 border-t border-slate-100 text-right">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-[#C4933F]" />
+                      رقم الموظف :
+                    </span>
+                    <span className="font-mono font-bold text-[#10233F]">{empId}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
+                      تاريخ إنشاء الحساب :
+                    </span>
+                    <span className="font-mono text-[#10233F]">{createdDate}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: حالة الحساب */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <BarChart3 className="w-4 h-4 text-[#C4933F]" />
+                  <h3 className="text-xs font-black text-[#10233F]">حالة الحساب</h3>
+                </div>
+
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-semibold">الحساب نشط</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-semibold">يمكنه تسجيل الدخول</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-semibold">الصلاحيات محدثة</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: معلومات إضافية */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <ShieldCheck className="w-4 h-4 text-[#C4933F]" />
+                  <h3 className="text-xs font-black text-[#10233F]">معلومات إضافية</h3>
+                </div>
+
+                <div className="space-y-2.5 text-xs text-right">
+                  <div>
+                    <span className="text-[#64748B] block mb-0.5">آخر تسجيل دخول :</span>
+                    <span className="font-mono text-[#10233F]">10:25-01-27 ص</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100">
+                    <span className="text-[#64748B] block mb-0.5">ملاحظات إدارية :</span>
+                    <span className="text-[#10233F] leading-relaxed">
+                      المستخدم مسؤول عن إدارة الجلسات في الفرع الرئيسي.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Bottom Action Bar */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
                 {/* Right Action Buttons in RTL (Start) */}
                 <div className="flex items-center gap-2.5 w-full sm:w-auto">
@@ -696,31 +700,29 @@ export default function OfficeMembersPage() {
                   </Button>
                 </div>
 
-                {/* Left Action Buttons in RTL (End) */}
-                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                {/* Left Action Buttons matching Image 6: [تعطيل الحساب] on far left, [إعادة تعيين كلمة المرور] to its right */}
+                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-start" dir="ltr">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => selectedMember && handleResendActivation(selectedMember)}
-                    className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer"
+                    onClick={() => selectedMember && handleToggleStatus(selectedMember)}
+                    className="text-xs font-bold border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-4 py-2 cursor-pointer flex items-center gap-1.5"
                   >
-                    <Key className="w-3.5 h-3.5 ml-1.5 text-[#C4933F]" />
-                    <span>إعادة تعيين كلمة المرور</span>
+                    <Power className="w-3.5 h-3.5" />
+                    <span>تعطيل الحساب</span>
                   </Button>
 
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => selectedMember && handleToggleStatus(selectedMember)}
-                    className="text-xs font-bold border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-4 py-2 cursor-pointer"
+                    onClick={() => selectedMember && handleResendActivation(selectedMember)}
+                    className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer flex items-center gap-1.5"
                   >
-                    <Power className="w-3.5 h-3.5 ml-1.5" />
-                    <span>تعطيل الحساب</span>
+                    <Key className="w-3.5 h-3.5 text-[#C4933F]" />
+                    <span>إعادة تعيين كلمة المرور</span>
                   </Button>
                 </div>
               </div>
-            </div>
-          </div>
         </form>
       </div>
     );

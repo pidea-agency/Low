@@ -1,6 +1,12 @@
 import { Router, type IRouter } from "express";
 import { google } from "googleapis";
-import { getSettings, saveSettings, refreshSettingsFromSupabase, type AppSettings } from "../config/settings-store";
+import {
+  getSettings,
+  saveSettings,
+  refreshSettingsFromSupabase,
+  ensureSettingsLoaded,
+  type AppSettings,
+} from "../config/settings-store";
 import { attachAuthUser, requireAdmin } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import { WhatsappReminderChannel } from "../services/reminder/channels/whatsappChannel";
@@ -373,8 +379,18 @@ router.get("/settings", async (_req, res) => {
 
 router.put("/settings", async (req, res) => {
   try {
-    const updated = await saveSettings(req.body);
-    logger.info("Settings saved via API");
+    const patch = { ...req.body };
+    if (patch.whatsappToken && (patch.whatsappToken.includes("•") || patch.whatsappToken.includes("*"))) {
+      delete patch.whatsappToken;
+    }
+    if (patch.aiApiKey && (patch.aiApiKey.includes("•") || patch.aiApiKey.includes("*"))) {
+      delete patch.aiApiKey;
+    }
+    if (patch.hfApiToken && (patch.hfApiToken.includes("•") || patch.hfApiToken.includes("*"))) {
+      delete patch.hfApiToken;
+    }
+    const updated = await saveSettings(patch);
+    logger.info("Settings saved via API and persisted permanently to Supabase");
     res.json(buildSettingsResponse(updated));
   } catch (err) {
     logger.error({ err }, "Failed to save settings");
@@ -404,10 +420,14 @@ router.post("/settings/google-export", async (req, res) => {
  * Confirms whether the instance is actually authorized/connected to WhatsApp.
  */
 router.post("/settings/test-whatsapp-connection", async (req, res) => {
-  const s = getSettings();
-  const instanceId = String(req.body?.instanceId ?? s.whatsappInstanceId ?? "").trim();
-  const token = String(req.body?.token ?? s.whatsappToken ?? "").trim();
-  const rawApiUrl = String(req.body?.apiUrl ?? s.whatsappApiUrl ?? "https://api.green-api.com").trim();
+  const s = await ensureSettingsLoaded();
+  const rawInstanceId = String(req.body?.instanceId ?? "").trim();
+  const rawToken = String(req.body?.token ?? "").trim();
+  const isMaskedToken = rawToken.includes("•") || rawToken.includes("*");
+
+  const instanceId = rawInstanceId || s.whatsappInstanceId || "";
+  const token = (!rawToken || isMaskedToken) ? (s.whatsappToken || "") : rawToken;
+  const rawApiUrl = String(req.body?.apiUrl || s.whatsappApiUrl || "https://api.green-api.com").trim();
 
   if (!instanceId || !token) {
     res.status(400).json({
@@ -451,6 +471,15 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
     const state = data?.stateInstance || "unknown";
 
     if (state === "authorized") {
+      // If requested or if valid token passed, ensure it is safely persisted permanently to Supabase
+      if (req.body?.saveOnSuccess && instanceId && token && !isMaskedToken) {
+        await saveSettings({
+          whatsappInstanceId: instanceId,
+          whatsappToken: token,
+          whatsappApiUrl: rawApiUrl,
+        });
+      }
+
       res.json({
         success: true,
         connected: true,
@@ -492,7 +521,7 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
 });
 
 router.post("/settings/test-whatsapp", async (req, res) => {
-  const s = getSettings();
+  const s = await ensureSettingsLoaded();
   const phone = String(
     req.body?.whatsappNumber ?? req.body?.number ?? req.body?.recipientPhone ?? s.whatsappNumber ?? ""
   ).trim();
@@ -503,8 +532,11 @@ router.post("/settings/test-whatsapp", async (req, res) => {
   }
 
   const rawApiUrl = String(req.body?.whatsappApiUrl ?? req.body?.apiUrl ?? s.whatsappApiUrl ?? "").trim();
-  const token = String(req.body?.whatsappToken ?? req.body?.token ?? s.whatsappToken ?? "").trim();
-  const instanceId = String(req.body?.whatsappInstanceId ?? req.body?.instanceId ?? s.whatsappInstanceId ?? "").trim();
+  const rawToken = String(req.body?.whatsappToken ?? req.body?.token ?? "").trim();
+  const isMaskedToken = rawToken.includes("•") || rawToken.includes("*");
+  const token = (!rawToken || isMaskedToken) ? (s.whatsappToken ?? "") : rawToken;
+  const rawInstance = String(req.body?.whatsappInstanceId ?? req.body?.instanceId ?? "").trim();
+  const instanceId = rawInstance || (s.whatsappInstanceId ?? "");
 
   try {
     const channel = new WhatsappReminderChannel();

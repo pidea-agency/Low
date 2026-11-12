@@ -4,6 +4,7 @@ import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import type { PoaRecord } from "../services/postgres.service";
 import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
+import { notifyLawyerAssignment } from "../services/assignment-notification.service";
 
 const router: IRouter = Router();
 
@@ -271,6 +272,22 @@ router.patch("/poa/:id/reassign", async (req, res) => {
       res.status(404).json({ error: "الوكالة غير موجودة." });
       return;
     }
+
+    // Trigger assignment notification for lawyer (in-app + WhatsApp)
+    if (targetLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId,
+        previousLawyerId: existing.assignedLawyerId,
+        recordType: "poa",
+        recordTypeArabic: "وكالة",
+        recordId: id,
+        recordDescription: updated.poaNumber ? `وكالة رقم ${updated.poaNumber}` : (updated.clientName ? `وكالة للموكل ${updated.clientName}` : `وكالة #${id}`),
+        directLink: `/poa`,
+      });
+    }
+
     res.json(formatPoa(updated));
   } catch (err: any) {
     const refId = generateRefId();

@@ -1,4 +1,4 @@
-import { getSettings } from "../../../config/settings-store";
+import { getSettings, ensureSettingsLoaded } from "../../../config/settings-store";
 import { logger } from "../../../lib/logger";
 import type { ReminderChannel, ReminderPayload } from "../reminder.types";
 
@@ -165,6 +165,7 @@ export class WhatsappReminderChannel implements ReminderChannel {
     }
 
     const masked = maskPhone(phone);
+    await ensureSettingsLoaded();
     const settings = getSettings();
 
     const instanceId = (options?.instanceId ?? settings.whatsappInstanceId)?.trim();

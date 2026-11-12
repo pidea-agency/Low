@@ -4,6 +4,7 @@ import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import type { TaskRecord } from "../services/postgres.service";
 import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
+import { notifyLawyerAssignment } from "../services/assignment-notification.service";
 
 export type { TaskRecord };
 
@@ -235,6 +236,22 @@ router.patch("/tasks/:id/reassign", async (req, res) => {
     }
 
     const updated = await postgresService.reassignTask(id, targetLawyerId || null, officeId, lawyerName);
+
+    // Trigger assignment notification for lawyer (in-app + WhatsApp)
+    if (updated && targetLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId,
+        previousLawyerId: existing.assignedLawyerId,
+        recordType: "task",
+        recordTypeArabic: "مهمة",
+        recordId: id,
+        recordDescription: updated.title || `مهمة #${id}`,
+        directLink: `/tasks`,
+      });
+    }
+
     res.json(updated);
   } catch (err: any) {
     const refId = generateRefId();

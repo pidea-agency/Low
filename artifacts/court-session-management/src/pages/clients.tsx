@@ -390,58 +390,8 @@ export default function ClientsPage() {
         </div>
 
         <form onSubmit={handleSaveClient}>
-          {/* 2-Column Grid matching Image 4 */}
+          {/* 2-Column Grid matching Image 4: Form on Right, Avatar on Left in RTL */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Avatar & Summary Card (lg:col-span-3) */}
-            <div className="lg:col-span-3 space-y-4">
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs text-center space-y-4">
-                <div className="relative inline-block mx-auto">
-                  <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-400">
-                    <User className="w-12 h-12" />
-                  </div>
-                  <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#C4933F] text-white flex items-center justify-center shadow-xs cursor-pointer border-2 border-white">
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-
-                <h3 className="text-sm font-black text-[#10233F]">بيانات العميل</h3>
-
-                <div className="space-y-3 text-xs pt-2 border-t border-slate-100 text-right">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#C4933F]" />
-                      رقم العميل
-                    </span>
-                    <span className="font-bold font-mono text-[#10233F]">{clientCode}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
-                      تاريخ الإضافة
-                    </span>
-                    <span className="font-mono text-[#10233F]">{clientDate}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <Gavel className="w-3.5 h-3.5 text-[#C4933F]" />
-                      عدد القضايا
-                    </span>
-                    <span className="font-bold text-[#10233F]">3 قضايا</span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                    <span className="text-[#64748B]">الحالة</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      نشط
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Right Column: 3 Form Cards (lg:col-span-9) */}
             <div className="lg:col-span-9 space-y-5">
               {/* Card 1: البيانات الأساسية */}
@@ -605,31 +555,83 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              {/* Bottom Action Bar */}
-              <div className="flex items-center gap-3 pt-2">
-                <Button
-                  type="submit"
-                  disabled={!formName.trim() || saving}
-                  className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? 'جارٍ الحفظ...' : 'حفظ'}</span>
-                </Button>
+            </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setCreateOpen(false);
-                    setEditingClient(null);
-                  }}
-                  className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer"
-                >
-                  <X className="w-4 h-4 ml-1.5" />
-                  <span>إلغاء</span>
-                </Button>
+            {/* Left Column: Avatar & Summary Card (lg:col-span-3) */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs text-center space-y-4">
+                <div className="relative inline-block mx-auto">
+                  <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-400">
+                    <User className="w-12 h-12" />
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#C4933F] text-white flex items-center justify-center shadow-xs cursor-pointer border-2 border-white">
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-black text-[#10233F]">بيانات العميل</h3>
+
+                <div className="space-y-3 text-xs pt-2 border-t border-slate-100 text-right">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-[#C4933F]" />
+                      رقم العميل
+                    </span>
+                    <span className="font-bold font-mono text-[#10233F]">{clientCode}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
+                      تاريخ الإضافة
+                    </span>
+                    <span className="font-mono text-[#10233F]">{clientDate}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <Gavel className="w-3.5 h-3.5 text-[#C4933F]" />
+                      عدد القضايا
+                    </span>
+                    <span className="font-bold text-[#10233F]">3 قضايا</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <span className="text-[#64748B]">الحالة</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      نشط
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
+
+          </div>
+
+          {/* Bottom Action Bar: Matching Image 4 (Gold button on left, Cancel to its right) */}
+          <div className="flex items-center justify-start gap-3 pt-6" dir="ltr">
+            <Button
+              type="submit"
+              disabled={!formName.trim() || saving}
+              className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
+            >
+              <Save className="w-4 h-4" />
+              <span>{saving ? 'جارٍ الحفظ...' : 'حفظ'}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setCreateOpen(false);
+                setEditingClient(null);
+              }}
+              className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer flex items-center gap-1.5"
+            >
+              <X className="w-4 h-4" />
+              <span>إلغاء</span>
+            </Button>
           </div>
         </form>
       </div>

@@ -1136,7 +1136,9 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
     throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  return (data || []).map((u: any) => ({
+  return (data || [])
+    .filter((u: any) => u.username !== "__platform_settings__" && u.id !== "00000000-0000-0000-0000-000000000001")
+    .map((u: any) => ({
     id: u.id,
     username: u.username,
     email: u.email,

@@ -32,6 +32,7 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   Filter,
   TrendingUp,
   DollarSign,
@@ -1799,53 +1800,44 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
 
-                {/* Middle Row (3 cards: Monthly Revenue + Subscription Distribution + Quick Stats) */}
+                {/* Middle Row matching Image 5: Quick Stats on Right, Donut Chart in Center, Revenue Chart on Left in RTL */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                  {/* Card 1: الإيرادات الشهرية (Chart, Col 5) */}
-                  <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-[#C4933F]" />
-                        <h3 className="text-sm font-black text-[#10233F]">الإيرادات الشهرية</h3>
+                  {/* Card 3: إحصائيات سريعة (Col 3) */}
+                  <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Zap className="w-4 h-4 text-[#C4933F]" />
+                      <h3 className="text-sm font-black text-[#10233F]">إحصائيات سريعة</h3>
+                    </div>
+
+                    <div className="space-y-3.5 my-auto">
+                      {/* Item 1 */}
+                      <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100/80 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <PlusCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span className="font-semibold text-[#10233F]">المكاتب الجديدة هذا الشهر</span>
+                        </div>
+                        <span className="font-black text-sm font-mono text-blue-700">3</span>
+                      </div>
+
+                      {/* Item 2 */}
+                      <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-100/80 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span className="font-semibold text-[#10233F]">الاشتراكات المنتهية قريباً</span>
+                        </div>
+                        <span className="font-black text-sm font-mono text-amber-700">4</span>
+                      </div>
+
+                      {/* Item 3 */}
+                      <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-100/80 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span className="font-semibold text-[#10233F]">المدفوعات المعلقة</span>
+                        </div>
+                        <span className="font-black text-sm font-mono text-rose-700">2</span>
                       </div>
                     </div>
-
-                    <div className="h-56 w-full pt-2">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart
-                          data={[
-                            { month: 'يناير', amount: 0 },
-                            { month: 'فبراير', amount: 2000 },
-                            { month: 'مارس', amount: 4000 },
-                            { month: 'أبريل', amount: 6000 },
-                            { month: 'مايو', amount: 8000 },
-                            { month: 'يونيو', amount: 10000 },
-                          ]}
-                          margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                        >
-                          <defs>
-                            <linearGradient id="revenueBlueGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#38BDF8" stopOpacity={0.35} />
-                              <stop offset="95%" stopColor="#38BDF8" stopOpacity={0.0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                          <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
-                          <YAxis stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} domain={[0, 10000]} />
-                          <RechartsTooltip />
-                          <Area
-                            type="monotone"
-                            dataKey="amount"
-                            stroke="#0EA5E9"
-                            strokeWidth={2.5}
-                            fill="url(#revenueBlueGrad)"
-                            dot={{ stroke: '#0EA5E9', strokeWidth: 2, fill: '#FFFFFF', r: 4 }}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
                   </div>
-
                   {/* Card 2: توزيع الاشتراكات (Donut Chart, Col 4) */}
                   <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
                     <div className="flex items-center gap-2 mb-2">
@@ -1905,42 +1897,51 @@ export default function SuperAdminPage() {
                     </div>
                   </div>
 
-                  {/* Card 3: إحصائيات سريعة (Col 3) */}
-                  <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Zap className="w-4 h-4 text-[#C4933F]" />
-                      <h3 className="text-sm font-black text-[#10233F]">إحصائيات سريعة</h3>
+                  {/* Card 1: الإيرادات الشهرية (Chart, Col 5) */}
+                  <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-[#C4933F]" />
+                        <h3 className="text-sm font-black text-[#10233F]">الإيرادات الشهرية</h3>
+                      </div>
                     </div>
 
-                    <div className="space-y-3.5 my-auto">
-                      {/* Item 1 */}
-                      <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100/80 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <PlusCircle className="w-4 h-4 text-blue-600 shrink-0" />
-                          <span className="font-semibold text-[#10233F]">المكاتب الجديدة هذا الشهر</span>
-                        </div>
-                        <span className="font-black text-sm font-mono text-blue-700">3</span>
-                      </div>
-
-                      {/* Item 2 */}
-                      <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-100/80 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
-                          <span className="font-semibold text-[#10233F]">الاشتراكات المنتهية قريباً</span>
-                        </div>
-                        <span className="font-black text-sm font-mono text-amber-700">4</span>
-                      </div>
-
-                      {/* Item 3 */}
-                      <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-100/80 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="w-4 h-4 text-rose-600 shrink-0" />
-                          <span className="font-semibold text-[#10233F]">المدفوعات المعلقة</span>
-                        </div>
-                        <span className="font-black text-sm font-mono text-rose-700">2</span>
-                      </div>
+                    <div className="h-56 w-full pt-2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={[
+                            { month: 'يناير', amount: 0 },
+                            { month: 'فبراير', amount: 2000 },
+                            { month: 'مارس', amount: 4000 },
+                            { month: 'أبريل', amount: 6000 },
+                            { month: 'مايو', amount: 8000 },
+                            { month: 'يونيو', amount: 10000 },
+                          ]}
+                          margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="revenueBlueGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#38BDF8" stopOpacity={0.35} />
+                              <stop offset="95%" stopColor="#38BDF8" stopOpacity={0.0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                          <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} domain={[0, 10000]} />
+                          <RechartsTooltip />
+                          <Area
+                            type="monotone"
+                            dataKey="amount"
+                            stroke="#0EA5E9"
+                            strokeWidth={2.5}
+                            fill="url(#revenueBlueGrad)"
+                            dot={{ stroke: '#0EA5E9', strokeWidth: 2, fill: '#FFFFFF', r: 4 }}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
+
                 </div>
 
                 {/* Bottom Row (2 tables: آخر المؤسسات المضافة + آخر الاشتراكات) */}
@@ -1988,14 +1989,14 @@ export default function SuperAdminPage() {
                       </table>
                     </div>
 
-                    <div className="p-3 border-t border-slate-100 text-center">
+                    <div className="p-3 border-t border-slate-100 text-right">
                       <button
                         type="button"
                         onClick={() => setCurrentSection('offices')}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1 mx-auto cursor-pointer"
+                        className="text-xs font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer"
                       >
+                        <ArrowLeft className="w-3.5 h-3.5 ml-1" />
                         <span>عرض جميع المؤسسات</span>
-                        <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -2041,14 +2042,14 @@ export default function SuperAdminPage() {
                       </table>
                     </div>
 
-                    <div className="p-3 border-t border-slate-100 text-center">
+                    <div className="p-3 border-t border-slate-100 text-right">
                       <button
                         type="button"
                         onClick={() => setCurrentSection('subscriptions')}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1 mx-auto cursor-pointer"
+                        className="text-xs font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer"
                       >
+                        <ArrowLeft className="w-3.5 h-3.5 ml-1" />
                         <span>عرض جميع الاشتراكات</span>
-                        <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

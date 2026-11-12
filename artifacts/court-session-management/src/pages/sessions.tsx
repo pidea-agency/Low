@@ -375,72 +375,12 @@ export default function SessionsPage() {
             className="gap-2 text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer self-start sm:self-auto shadow-xs"
           >
             <ArrowLeft className="w-4 h-4 ml-1" />
-            <span>العودة للجلسات</span>
+            <span>العودة للقضية</span>
           </Button>
         </div>
 
-        {/* 2-Column Grid matching Image 2 */}
+        {/* 2-Column Grid matching Image 2: Form on Right, Gavel & Info on Left in RTL */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Gavel Card + Case Info Card (lg:col-span-3) */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs overflow-hidden">
-              <img
-                src="/gavel.jpg"
-                alt="Gavel"
-                className="w-full h-44 object-cover rounded-xl shadow-xs"
-              />
-            </div>
-
-            {/* Case Info Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-              <h3 className="text-sm font-black text-[#10233F] text-center pb-2 border-b border-slate-100">
-                معلومات القضية
-              </h3>
-
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#64748B] flex items-center gap-1.5">
-                    <Briefcase className="w-3.5 h-3.5 text-[#C4933F]" />
-                    رقم القضية
-                  </span>
-                  <span className="font-bold font-mono text-[#10233F]">{currentCaseNumber}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-[#64748B] flex items-center gap-1.5">
-                    <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
-                    نوع القضية
-                  </span>
-                  <span className="font-semibold text-[#10233F]">نزاع عقاري</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-[#64748B] flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-[#C4933F]" />
-                    المحكمة
-                  </span>
-                  <span className="font-semibold text-[#10233F]">{currentCourt}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-[#64748B] flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-[#C4933F]" />
-                    الأطراف
-                  </span>
-                  <span className="font-semibold text-[#10233F] truncate max-w-[120px]">{currentParties}</span>
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                  <span className="text-[#64748B]">حالة القضية</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    قيد التنفيذ
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Right Column: 3 Form Cards (lg:col-span-9) */}
           <div className="lg:col-span-9 space-y-5">
             {/* Card 1: بيانات الجلسة الأساسية */}
@@ -536,14 +476,14 @@ export default function SessionsPage() {
               </div>
             </div>
 
-            {/* Card 2: تفاصيل الجلسة */}
+            {/* Card 2: تفاصيل الجلسة (Side-by-side matching Image 2) */}
             <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                 <FileText className="w-4 h-4 text-[#C4933F]" />
                 <h2 className="text-sm font-black text-[#10233F]">تفاصيل الجلسة</h2>
               </div>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#10233F] mb-1.5">
                     موضوع الجلسة <span className="text-rose-500">*</span>
@@ -570,7 +510,7 @@ export default function SessionsPage() {
                     maxLength={500}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
                     placeholder="أدخل أي ملاحظات إضافية حول وقائع الجلسة..."
-                    rows={3}
+                    rows={2}
                     className="text-xs rounded-xl bg-slate-50/50 border-slate-200 resize-none"
                   />
                 </div>
@@ -596,42 +536,104 @@ export default function SessionsPage() {
               </label>
             </div>
 
-            {/* Bottom Action Bar */}
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="button"
-                onClick={() => {
-                  if (isEdit) {
-                    handleEditSave();
-                  } else {
-                    toast({ title: 'تم الحفظ', description: 'تمت إضافة الجلسة بنجاح.' });
-                    setIsAddSessionOpen(false);
-                    refetch();
-                  }
-                }}
-                disabled={updateMutation.isPending}
-                data-testid="button-quick-edit-save"
-                className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
-              >
-                <Save className="w-4 h-4" />
-                <span>{updateMutation.isPending ? 'جارٍ الحفظ...' : 'حفظ'}</span>
-              </Button>
+          </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsAddSessionOpen(false);
-                  setEditTarget(null);
-                }}
-                data-testid="button-quick-edit-cancel"
-                className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer"
-              >
-                <X className="w-4 h-4 ml-1.5" />
-                <span>إلغاء</span>
-              </Button>
+          {/* Left Column: Gavel Card + Case Info Card (lg:col-span-3) */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs overflow-hidden">
+              <img
+                src="/gavel.jpg"
+                alt="Gavel"
+                className="w-full h-44 object-cover rounded-xl shadow-xs"
+              />
+            </div>
+
+            {/* Case Info Card */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <h3 className="text-sm font-black text-[#10233F] text-center pb-2 border-b border-slate-100">
+                معلومات القضية
+              </h3>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-[#C4933F]" />
+                    رقم القضية
+                  </span>
+                  <span className="font-bold font-mono text-[#10233F]">{currentCaseNumber}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
+                    نوع القضية
+                  </span>
+                  <span className="font-semibold text-[#10233F]">نزاع عقاري</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[#C4933F]" />
+                    المحكمة
+                  </span>
+                  <span className="font-semibold text-[#10233F]">{currentCourt}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B] flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-[#C4933F]" />
+                    الأطراف
+                  </span>
+                  <span className="font-semibold text-[#10233F] truncate max-w-[120px]">{currentParties}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <span className="text-[#64748B]">حالة القضية</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    قيد التنفيذ
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+
+        </div>
+
+        {/* Bottom Action Bar: Matching Image 2 (Gold button on left, Cancel to its right) */}
+        <div className="flex items-center justify-start gap-3 pt-6" dir="ltr">
+          <Button
+            type="button"
+            onClick={() => {
+              if (isEdit) {
+                handleEditSave();
+              } else {
+                toast({ title: 'تم الحفظ', description: 'تمت إضافة الجلسة بنجاح.' });
+                setIsAddSessionOpen(false);
+                refetch();
+              }
+            }}
+            disabled={updateMutation.isPending}
+            data-testid="button-quick-edit-save"
+            className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
+          >
+            <Save className="w-4 h-4" />
+            <span>{updateMutation.isPending ? 'جارٍ الحفظ...' : 'حفظ'}</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setIsAddSessionOpen(false);
+              setEditTarget(null);
+            }}
+            data-testid="button-quick-edit-cancel"
+            className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer flex items-center gap-1.5"
+          >
+            <X className="w-4 h-4" />
+            <span>إلغاء</span>
+          </Button>
         </div>
       </div>
     );

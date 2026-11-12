@@ -417,19 +417,8 @@ export default function CasesPage() {
         </div>
 
         <form onSubmit={handleSaveCase}>
-          {/* Main 2-Column Grid */}
+          {/* Main 2-Column Grid matching Image 1: Form Cards on Right, Gavel on Left in RTL */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Court Gavel Photo Card (lg:col-span-3) */}
-            <div className="lg:col-span-3 space-y-4">
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs overflow-hidden">
-                <img
-                  src="/gavel.jpg"
-                  alt="Court Gavel"
-                  className="w-full h-44 sm:h-52 object-cover rounded-xl shadow-xs"
-                />
-              </div>
-            </div>
-
             {/* Right Column: 4 Form Cards (lg:col-span-9) */}
             <div className="lg:col-span-9 space-y-5">
               {/* Card 1: البيانات الأساسية */}
@@ -530,13 +519,18 @@ export default function CasesPage() {
                     <label className="block text-xs font-bold text-[#10233F] mb-1.5">
                       المحكمة <span className="text-rose-500">*</span>
                     </label>
-                    <Input
+                    <select
                       value={formCourt}
                       onChange={(e) => setFormCourt(e.target.value)}
-                      placeholder="محكمة بداية غزة"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-                      required
-                    />
+                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none focus:ring-1 focus:ring-[#C4933F] cursor-pointer"
+                    >
+                      <option value="محكمة بداية غزة">محكمة بداية غزة</option>
+                      <option value="محكمة صلح غزة">محكمة صلح غزة</option>
+                      <option value="محكمة استئناف غزة">محكمة استئناف غزة</option>
+                      <option value="محكمة بداية خانيونس">محكمة بداية خانيونس</option>
+                      <option value="محكمة بداية رام الله">محكمة بداية رام الله</option>
+                      <option value="المحكمة العليا">المحكمة العليا</option>
+                    </select>
                   </div>
 
                   {/* الدرجة */}
@@ -565,20 +559,20 @@ export default function CasesPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center">
-                  {/* Right party: المدعي */}
+                  {/* Right party: المدعي (Emerald Badge) */}
                   <div className="md:col-span-5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                         <User className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="text-[10px] text-blue-600 font-bold block">المدعي</span>
+                        <span className="text-[10px] text-emerald-700 font-bold block">المدعي</span>
                         <input
                           type="text"
                           value={formClientName}
                           onChange={(e) => setFormClientName(e.target.value)}
                           className="text-xs font-bold text-[#10233F] bg-transparent border-0 focus:outline-none p-0"
-                          placeholder="اسم المدعي"
+                          placeholder="أحمد سالم محمد"
                         />
                       </div>
                     </div>
@@ -599,20 +593,20 @@ export default function CasesPage() {
                     </button>
                   </div>
 
-                  {/* Left party: المدعى عليه */}
+                  {/* Left party: المدعى عليه (Amber Badge) */}
                   <div className="md:col-span-5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-7 h-7 rounded-lg bg-amber-100 text-[#C4933F] flex items-center justify-center shrink-0">
                         <User className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="text-[10px] text-amber-600 font-bold block">المدعى عليه</span>
+                        <span className="text-[10px] text-amber-700 font-bold block">المدعى عليه</span>
                         <input
                           type="text"
                           value={formOpposingParty}
                           onChange={(e) => setFormOpposingParty(e.target.value)}
                           className="text-xs font-bold text-[#10233F] bg-transparent border-0 focus:outline-none p-0"
-                          placeholder="اسم المدعى عليه أو الشركة"
+                          placeholder="شركة الإنشاءات الفلسطينية"
                         />
                       </div>
                     </div>
@@ -633,14 +627,14 @@ export default function CasesPage() {
                 </Button>
               </div>
 
-              {/* Card 3: تفاصيل القضية */}
+              {/* Card 3: تفاصيل القضية (Side by side grid matching Image 1) */}
               <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                   <FileText className="w-4 h-4 text-[#C4933F]" />
                   <h2 className="text-sm font-black text-[#10233F]">تفاصيل القضية</h2>
                 </div>
 
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-[#10233F] mb-1.5">
                       موضوع القضية <span className="text-rose-500">*</span>
@@ -686,29 +680,40 @@ export default function CasesPage() {
                   <input type="file" multiple className="hidden" />
                 </label>
               </div>
+            </div>
 
-              {/* Bottom Action Bar */}
-              <div className="flex items-center gap-3 pt-2">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-6 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{isSubmitting ? 'جارٍ الحفظ...' : 'حفظ القضية'}</span>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setViewMode(selectedCase ? 'detail' : 'list')}
-                  className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer"
-                >
-                  <X className="w-4 h-4 ml-1.5" />
-                  <span>إلغاء</span>
-                </Button>
+            {/* Left Column: Court Gavel Photo Card (lg:col-span-3) */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs overflow-hidden">
+                <img
+                  src="/gavel.jpg"
+                  alt="Court Gavel"
+                  className="w-full h-44 sm:h-52 object-cover rounded-xl shadow-xs"
+                />
               </div>
             </div>
+          </div>
+
+          {/* Bottom Action Bar: Matching Image 1 (Gold button on left, Cancel to its right) */}
+          <div className="flex items-center justify-start gap-3 pt-6" dir="ltr">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-6 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSubmitting ? 'جارٍ الحفظ...' : 'حفظ القضية'}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setViewMode(selectedCase ? 'detail' : 'list')}
+              className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer flex items-center gap-1.5"
+            >
+              <X className="w-4 h-4" />
+              <span>إلغاء</span>
+            </Button>
           </div>
         </form>
       </div>
@@ -742,7 +747,8 @@ export default function CasesPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Top Actions matching Image 3: [العودة للقضايا] [تصدير تقرير] [طباعة] [تعديل القضية] from left to right */}
+          <div className="flex items-center gap-2 flex-wrap" dir="ltr">
             <Button
               type="button"
               variant="outline"
@@ -750,7 +756,7 @@ export default function CasesPage() {
               onClick={() => setViewMode('list')}
               className="text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-3.5 h-9"
             >
-              <ArrowLeft className="w-3.5 h-3.5 ml-1" />
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
               العودة للقضايا
             </Button>
 
@@ -761,7 +767,7 @@ export default function CasesPage() {
               onClick={() => toast({ title: 'تصدير التقرير', description: 'تم إنشاء تقرير القضية بصيغة PDF.' })}
               className="text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-3.5 h-9"
             >
-              <Download className="w-3.5 h-3.5 ml-1" />
+              <Download className="w-3.5 h-3.5 mr-1" />
               تصدير تقرير
             </Button>
 
@@ -772,7 +778,7 @@ export default function CasesPage() {
               onClick={() => window.print()}
               className="text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-3.5 h-9"
             >
-              <Printer className="w-3.5 h-3.5 ml-1" />
+              <Printer className="w-3.5 h-3.5 mr-1" />
               طباعة
             </Button>
 
@@ -787,52 +793,9 @@ export default function CasesPage() {
           </div>
         </div>
 
-        {/* Hero Banner Card */}
+        {/* Hero Banner Card matching Image 3: Case Number on Right, Title in Center, Gavel on Left in RTL */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5 overflow-hidden">
-          {/* Right Section: Gavel image + Case Title + Badges */}
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <img
-              src="/gavel.jpg"
-              alt="Gavel"
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover shrink-0 shadow-xs"
-            />
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h2 className="text-lg sm:text-xl font-black text-[#10233F]">
-                  قضية {selectedCase.caseType || 'نزاع عقاري'}
-                </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  قيد التنفيذ
-                </span>
-              </div>
-              <p className="text-xs text-[#64748B] font-semibold">
-                المحكمة: {selectedCase.court || 'محكمة بداية غزة'}
-              </p>
-
-              {/* Lower metadata row */}
-              <div className="flex items-center gap-4 pt-1 text-xs text-[#64748B] flex-wrap">
-                <div className="flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-[#C4933F]" />
-                  <span>المحامي المسؤول: <strong className="text-[#10233F]">{selectedCase.assignedLawyerName || 'أحمد سالم'}</strong></span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-[#C4933F]" />
-                  <span>الدرجة: <strong className="text-[#10233F]">أولى</strong></span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
-                  <span>تاريخ القيد: <strong className="text-[#10233F]">{selectedCase.createdAt ? selectedCase.createdAt.split('T')[0] : '2024/03/01'}</strong></span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
-                  <span>نوع القضية: <strong className="text-[#10233F]">{selectedCase.caseType || 'نزاع عقاري'}</strong></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Far Left: Dark Navy Box for Case Number */}
+          {/* Right Section: Dark Navy Box for Case Number (First in DOM -> Rightmost in RTL) */}
           <div className="bg-[#0B1B2B] text-white rounded-2xl p-4 flex items-center gap-3 shrink-0 self-stretch md:self-auto justify-center md:justify-start min-w-[190px]">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#C4933F] shrink-0">
               <Briefcase className="w-5 h-5" />
@@ -844,121 +807,55 @@ export default function CasesPage() {
               </span>
             </div>
           </div>
-        </div>
 
-        {/* 2-Column Main Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Quick Actions + Case Timeline (lg:col-span-4) */}
-          <div className="lg:col-span-4 space-y-5">
-            {/* Quick Actions Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                <span className="w-2 h-2 rounded-full bg-[#C4933F]" />
-                <h3 className="text-xs font-black text-[#10233F]">إجراءات سريعة</h3>
-              </div>
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    window.location.href = `/sessions?case_id=${selectedCase.id}`;
-                  }}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <Calendar className="w-4 h-4 text-[#C4933F]" />
-                  <span>إضافة جلسة</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDetailTab('docs')}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <UploadCloud className="w-4 h-4 text-blue-600" />
-                  <span>رفع مستند</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDetailTab('actions')}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <FilePlus className="w-4 h-4 text-emerald-600" />
-                  <span>إضافة إجراء</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDetailTab('notes')}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <MessageSquare className="w-4 h-4 text-purple-600" />
-                  <span>إضافة ملاحظة</span>
-                </Button>
-              </div>
+          {/* Center Section: Case Title + Badges + Metadata */}
+          <div className="flex-1 space-y-1.5 text-right w-full">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-black text-[#10233F]">
+                قضية {selectedCase.caseType || 'نزاع عقاري'}
+              </h2>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                قيد التنفيذ
+              </span>
             </div>
+            <p className="text-xs text-[#64748B] font-semibold">
+              المحكمة: {selectedCase.court || 'محكمة بداية غزة'}
+            </p>
 
-            {/* Case Progression Timeline */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                <span className="w-2 h-2 rounded-full bg-[#C4933F]" />
-                <h3 className="text-xs font-black text-[#10233F]">سير القضية</h3>
+            {/* Lower metadata row */}
+            <div className="flex items-center gap-4 pt-1 text-xs text-[#64748B] flex-wrap">
+              <div className="flex items-center gap-1">
+                <User className="w-3.5 h-3.5 text-[#C4933F]" />
+                <span>المحامي المسؤول: <strong className="text-[#10233F]">{selectedCase.assignedLawyerName || 'أحمد سالم'}</strong></span>
               </div>
-
-              <div className="relative pr-6 space-y-5 before:absolute before:right-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                {/* Step 1 */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                    ✓
-                  </span>
-                  <div>
-                    <strong className="text-[#10233F] block font-bold">إنشاء القضية</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/03/01</span>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                    ✓
-                  </span>
-                  <div>
-                    <strong className="text-[#10233F] block font-bold">تحديد أول جلسة</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/03/10</span>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                    ✓
-                  </span>
-                  <div>
-                    <strong className="text-[#10233F] block font-bold">تقديم مذكرات</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/04/05</span>
-                  </div>
-                </div>
-
-                {/* Step 4 (Active) */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-[#C4933F] text-white flex items-center justify-center text-[10px]">
-                    •
-                  </span>
-                  <div>
-                    <strong className="text-[#C4933F] block font-bold">جلسة نظر</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/05/20</span>
-                  </div>
-                </div>
-
-                {/* Step 5 (Pending) */}
-                <div className="relative flex items-start justify-between text-xs opacity-60">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[10px]">
-                    ○
-                  </span>
-                  <div>
-                    <strong className="text-slate-600 block font-bold">الحكم (قيد الانتظار)</strong>
-                  </div>
-                </div>
+              <div className="flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5 text-[#C4933F]" />
+                <span>الدرجة: <strong className="text-[#10233F]">أولى</strong></span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
+                <span>تاريخ القيد: <strong className="text-[#10233F]">{selectedCase.createdAt ? selectedCase.createdAt.split('T')[0] : '2024/03/01'}</strong></span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
+                <span>نوع القضية: <strong className="text-[#10233F]">{selectedCase.caseType || 'نزاع عقاري'}</strong></span>
               </div>
             </div>
           </div>
 
+          {/* Left Section: Gavel image (Last in DOM -> Leftmost in RTL) */}
+          <div className="shrink-0">
+            <img
+              src="/gavel.jpg"
+              alt="Gavel"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover shrink-0 shadow-xs"
+            />
+          </div>
+        </div>
+
+        {/* 2-Column Main Layout: Tabs & Sessions Table on Right, Quick Actions & Timeline on Left in RTL */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Right Column: Tabs & Tables (lg:col-span-8) */}
           <div className="lg:col-span-8 space-y-4">
             {/* Pill Tabs Bar */}
@@ -1167,6 +1064,117 @@ export default function CasesPage() {
               </div>
             )}
           </div>
+          {/* Left Column: Quick Actions + Case Timeline (lg:col-span-4) */}
+          <div className="lg:col-span-4 space-y-5">
+            {/* Quick Actions Card */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <span className="w-2 h-2 rounded-full bg-[#C4933F]" />
+                <h3 className="text-xs font-black text-[#10233F]">إجراءات سريعة</h3>
+              </div>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    window.location.href = `/sessions?case_id=${selectedCase.id}`;
+                  }}
+                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
+                >
+                  <Calendar className="w-4 h-4 text-[#C4933F]" />
+                  <span>إضافة جلسة</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDetailTab('docs')}
+                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
+                >
+                  <UploadCloud className="w-4 h-4 text-blue-600" />
+                  <span>رفع مستند</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDetailTab('actions')}
+                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
+                >
+                  <FilePlus className="w-4 h-4 text-emerald-600" />
+                  <span>إضافة إجراء</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDetailTab('notes')}
+                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
+                >
+                  <MessageSquare className="w-4 h-4 text-purple-600" />
+                  <span>إضافة ملاحظة</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Case Progression Timeline */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <span className="w-2 h-2 rounded-full bg-[#C4933F]" />
+                <h3 className="text-xs font-black text-[#10233F]">سير القضية</h3>
+              </div>
+
+              <div className="relative pr-6 space-y-5 before:absolute before:right-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                {/* Step 1 */}
+                <div className="relative flex items-start justify-between text-xs">
+                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
+                    ✓
+                  </span>
+                  <div>
+                    <strong className="text-[#10233F] block font-bold">إنشاء القضية</strong>
+                    <span className="text-[11px] text-[#64748B]">2024/03/01</span>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="relative flex items-start justify-between text-xs">
+                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
+                    ✓
+                  </span>
+                  <div>
+                    <strong className="text-[#10233F] block font-bold">تحديد أول جلسة</strong>
+                    <span className="text-[11px] text-[#64748B]">2024/03/10</span>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="relative flex items-start justify-between text-xs">
+                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
+                    ✓
+                  </span>
+                  <div>
+                    <strong className="text-[#10233F] block font-bold">تقديم مذكرات</strong>
+                    <span className="text-[11px] text-[#64748B]">2024/04/05</span>
+                  </div>
+                </div>
+
+                {/* Step 4 (Active) */}
+                <div className="relative flex items-start justify-between text-xs">
+                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-[#C4933F] text-white flex items-center justify-center text-[10px]">
+                    •
+                  </span>
+                  <div>
+                    <strong className="text-[#C4933F] block font-bold">جلسة نظر</strong>
+                    <span className="text-[11px] text-[#64748B]">2024/05/20</span>
+                  </div>
+                </div>
+
+                {/* Step 5 (Pending) */}
+                <div className="relative flex items-start justify-between text-xs opacity-60">
+                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[10px]">
+                    ○
+                  </span>
+                  <div>
+                    <strong className="text-slate-600 block font-bold">الحكم (قيد الانتظار)</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     );

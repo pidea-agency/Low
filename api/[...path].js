@@ -57504,7 +57504,7 @@ async function listSupabaseUsers() {
     logger.error({ error }, "Failed to list users from Supabase");
     throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  return (data || []).map((u) => ({
+  return (data || []).filter((u) => u.username !== "__platform_settings__" && u.id !== "00000000-0000-0000-0000-000000000001").map((u) => ({
     id: u.id,
     username: u.username,
     email: u.email,
@@ -59618,16 +59618,28 @@ async function refreshSettingsFromSupabase() {
   const client = getSupabaseClient();
   if (client) {
     try {
+      const { data: userRow, error: userErr } = await client.from("app_users").select("google_service_account_json, updated_at").eq("id", SYSTEM_SETTINGS_USER_ID).maybeSingle();
+      if (!userErr && userRow?.google_service_account_json) {
+        try {
+          const parsed = JSON.parse(userRow.google_service_account_json);
+          if (parsed && typeof parsed === "object") {
+            const decrypted = decryptSettings(parsed);
+            _cache = { ..._cache, ...decrypted };
+            logger.info("Loaded persistent AppSettings from Supabase app_users permanent storage");
+            return getSettings();
+          }
+        } catch (e2) {
+          logger.warn({ err: e2 }, "Failed to parse system settings JSON from app_users");
+        }
+      }
       const { data, error } = await client.from("platform_settings").select("value, updated_at").eq("key", "app_settings").single();
       if (!error && data?.value && typeof data.value === "object") {
         const decrypted = decryptSettings(data.value);
         _cache = { ..._cache, ...decrypted };
         return getSettings();
-      } else if (error && error.code !== "PGRST116" && error.code !== "PGRST205") {
-        logger.warn({ code: error.code, message: error.message }, "Supabase query platform_settings (app_settings) failed");
       }
     } catch (err) {
-      logger.warn({ err }, "Exception fetching platform_settings from Supabase");
+      logger.warn({ err }, "Exception fetching settings from Supabase");
     }
   }
   return getSettings();
@@ -59635,23 +59647,38 @@ async function refreshSettingsFromSupabase() {
 async function saveToSupabase(settings) {
   const client = getSupabaseClient();
   if (!client) return false;
+  let saved = false;
+  const encrypted = encryptSettings(settings);
   try {
-    const encrypted = encryptSettings(settings);
-    const { error } = await client.from("platform_settings").upsert({
-      key: "app_settings",
-      value: encrypted,
+    const { error: userErr } = await client.from("app_users").upsert({
+      id: SYSTEM_SETTINGS_USER_ID,
+      username: SYSTEM_SETTINGS_USERNAME,
+      role: "super_admin",
+      status: "active",
+      plan_tier: "pro",
+      billing_cycle: "annual",
+      password_hash: "SYSTEM_INTERNAL_KEY",
+      google_service_account_json: JSON.stringify(encrypted),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     });
-    if (error) {
-      logger.warn({ code: error.code, message: error.message }, "Failed to upsert app_settings to Supabase platform_settings");
-      return false;
+    if (!userErr) {
+      logger.info("Encrypted AppSettings safely persisted permanently to Supabase app_users");
+      saved = true;
+    } else {
+      logger.warn({ code: userErr.code, message: userErr.message }, "Failed to upsert settings to app_users");
     }
-    logger.info("Encrypted AppSettings safely persisted to Supabase platform_settings");
-    return true;
+    try {
+      await client.from("platform_settings").upsert({
+        key: "app_settings",
+        value: encrypted,
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } catch {
+    }
   } catch (err) {
-    logger.warn({ err }, "Exception persisting app_settings to Supabase platform_settings");
-    return false;
+    logger.warn({ err }, "Exception persisting app_settings to Supabase");
   }
+  return saved;
 }
 function getSettings() {
   return {
@@ -59691,7 +59718,7 @@ async function saveSettings(patch) {
   saveToDisk(_cache);
   return getSettings();
 }
-var import_fs, import_path, import_url, currentDirname, SENSITIVE_KEYS, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache;
+var import_fs, import_path, import_url, currentDirname, SENSITIVE_KEYS, TMP_SETTINGS_PATH, LOCAL_SETTINGS_PATH, ALT_SETTINGS_PATH, _cache, SYSTEM_SETTINGS_USER_ID, SYSTEM_SETTINGS_USERNAME;
 var init_settings_store = __esm({
   "src/config/settings-store.ts"() {
     "use strict";
@@ -59713,6 +59740,8 @@ var init_settings_store = __esm({
     LOCAL_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "settings.json");
     ALT_SETTINGS_PATH = (0, import_path.resolve)(process.cwd(), "artifacts", "api-server", "settings.json");
     _cache = loadFromDisk();
+    SYSTEM_SETTINGS_USER_ID = "00000000-0000-0000-0000-000000000001";
+    SYSTEM_SETTINGS_USERNAME = "__platform_settings__";
   }
 });
 
@@ -852191,8 +852220,18 @@ router6.get("/settings", async (_req, res) => {
 });
 router6.put("/settings", async (req, res) => {
   try {
-    const updated = await saveSettings(req.body);
-    logger.info("Settings saved via API");
+    const patch = { ...req.body };
+    if (patch.whatsappToken && (patch.whatsappToken.includes("\u2022") || patch.whatsappToken.includes("*"))) {
+      delete patch.whatsappToken;
+    }
+    if (patch.aiApiKey && (patch.aiApiKey.includes("\u2022") || patch.aiApiKey.includes("*"))) {
+      delete patch.aiApiKey;
+    }
+    if (patch.hfApiToken && (patch.hfApiToken.includes("\u2022") || patch.hfApiToken.includes("*"))) {
+      delete patch.hfApiToken;
+    }
+    const updated = await saveSettings(patch);
+    logger.info("Settings saved via API and persisted permanently to Supabase");
     res.json(buildSettingsResponse(updated));
   } catch (err) {
     logger.error({ err }, "Failed to save settings");
@@ -852216,9 +852255,12 @@ router6.post("/settings/google-export", async (req, res) => {
 });
 router6.post("/settings/test-whatsapp-connection", async (req, res) => {
   const s3 = getSettings();
-  const instanceId = String(req.body?.instanceId ?? s3.whatsappInstanceId ?? "").trim();
-  const token = String(req.body?.token ?? s3.whatsappToken ?? "").trim();
-  const rawApiUrl = String(req.body?.apiUrl ?? s3.whatsappApiUrl ?? "https://api.green-api.com").trim();
+  const rawInstanceId = String(req.body?.instanceId ?? "").trim();
+  const rawToken = String(req.body?.token ?? "").trim();
+  const isMaskedToken = rawToken.includes("\u2022") || rawToken.includes("*");
+  const instanceId = rawInstanceId || s3.whatsappInstanceId || "";
+  const token = !rawToken || isMaskedToken ? s3.whatsappToken || "" : rawToken;
+  const rawApiUrl = String(req.body?.apiUrl || s3.whatsappApiUrl || "https://api.green-api.com").trim();
   if (!instanceId || !token) {
     res.status(400).json({
       success: false,
@@ -852299,8 +852341,11 @@ router6.post("/settings/test-whatsapp", async (req, res) => {
     return;
   }
   const rawApiUrl = String(req.body?.whatsappApiUrl ?? req.body?.apiUrl ?? s3.whatsappApiUrl ?? "").trim();
-  const token = String(req.body?.whatsappToken ?? req.body?.token ?? s3.whatsappToken ?? "").trim();
-  const instanceId = String(req.body?.whatsappInstanceId ?? req.body?.instanceId ?? s3.whatsappInstanceId ?? "").trim();
+  const rawToken = String(req.body?.whatsappToken ?? req.body?.token ?? "").trim();
+  const isMaskedToken = rawToken.includes("\u2022") || rawToken.includes("*");
+  const token = !rawToken || isMaskedToken ? s3.whatsappToken ?? "" : rawToken;
+  const rawInstance = String(req.body?.whatsappInstanceId ?? req.body?.instanceId ?? "").trim();
+  const instanceId = rawInstance || (s3.whatsappInstanceId ?? "");
   try {
     const channel = new WhatsappReminderChannel();
     const nowHijri = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {

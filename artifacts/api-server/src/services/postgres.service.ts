@@ -205,6 +205,18 @@ export interface ClientNoteRecord {
   authorName?: string;
 }
 
+export interface BroadcastRecord {
+  id: string;
+  officeId: string;
+  senderId: string;
+  title: string;
+  body: string;
+  inAppSentCount: number;
+  whatsappSentCount: number;
+  whatsappFailedCount: number;
+  createdAt: string;
+}
+
 // ============================================================================
 // In-Memory Fallback Store (Used during tests or if Supabase is offline)
 // ============================================================================
@@ -219,6 +231,7 @@ const memoryNotifications = new Map<string, NotificationRecord[]>();
 const memoryAttachments = new Map<string, AttachmentRecord[]>();
 const memoryClientNotes = new Map<string, ClientNoteRecord[]>();
 const memoryCases = new Map<string, CaseRecord[]>();
+const memoryBroadcasts = new Map<string, BroadcastRecord[]>();
 
 let _nextId = 1000;
 function nextId(): number {
@@ -236,6 +249,7 @@ export function resetInMemoryStore(): void {
   memoryAttachments.clear();
   memoryClientNotes.clear();
   memoryCases.clear();
+  memoryBroadcasts.clear();
 }
 
 export class DatabaseUnavailableError extends Error {

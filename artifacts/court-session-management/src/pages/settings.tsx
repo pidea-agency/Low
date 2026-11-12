@@ -21,6 +21,10 @@ import {
   Radio,
   AlertTriangle,
   Loader2,
+  Eye,
+  EyeOff,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,7 +82,9 @@ export default function OfficeSettingsPage() {
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [whatsappApiUrl, setWhatsappApiUrl] = useState('');
   const [whatsappToken, setWhatsappToken] = useState('');
+  const [whatsappTokenIsSet, setWhatsappTokenIsSet] = useState(false);
   const [whatsappInstanceId, setWhatsappInstanceId] = useState('');
+  const [showWhatsappToken, setShowWhatsappToken] = useState(false);
   const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -146,6 +152,7 @@ export default function OfficeSettingsPage() {
         setWhatsappNumber(data.whatsappNumber || '');
         setWhatsappApiUrl(data.whatsappApiUrl || '');
         setWhatsappToken(data.whatsappToken || '');
+        setWhatsappTokenIsSet(Boolean(data.whatsappTokenIsSet || data.whatsappToken));
         setWhatsappInstanceId(data.whatsappInstanceId || '');
       }
     } catch {}
@@ -336,20 +343,26 @@ export default function OfficeSettingsPage() {
   const handleSaveWhatsapp = async () => {
     setIsSavingWhatsapp(true);
     try {
+      const payload: Record<string, string> = {
+        whatsappNumber: whatsappNumber.trim(),
+        whatsappApiUrl: whatsappApiUrl.trim(),
+        whatsappInstanceId: whatsappInstanceId.trim(),
+      };
+      // Only send token if user typed a new unmasked token
+      if (whatsappToken && !whatsappToken.includes('•') && !whatsappToken.includes('*')) {
+        payload.whatsappToken = whatsappToken.trim();
+      }
+
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          whatsappNumber,
-          whatsappApiUrl,
-          whatsappToken,
-          whatsappInstanceId,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('فشل حفظ إعدادات الواتساب.');
+      setWhatsappTokenIsSet(true);
       toast({
-        title: 'تم الحفظ',
-        description: 'تم تحديث إعدادات تنبيهات الواتساب بنجاح.',
+        title: 'تم الحفظ الدائم في قاعدة البيانات ✓',
+        description: 'تم تشفير وحفظ إعدادات الواتساب بشكل دائم (لن تحتاج لربطها مرة أخرى بعد أي ديبلوي).',
       });
     } catch (err: any) {
       toast({
@@ -374,15 +387,19 @@ export default function OfficeSettingsPage() {
 
     setIsTestingWhatsapp(true);
     try {
+      const payload: Record<string, string> = {
+        whatsappNumber: whatsappNumber.trim(),
+        whatsappApiUrl: whatsappApiUrl.trim(),
+        whatsappInstanceId: whatsappInstanceId.trim(),
+      };
+      if (whatsappToken && !whatsappToken.includes('•') && !whatsappToken.includes('*')) {
+        payload.whatsappToken = whatsappToken.trim();
+      }
+
       const res = await fetch('/api/settings/test-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          whatsappNumber: whatsappNumber.trim(),
-          whatsappApiUrl: whatsappApiUrl.trim(),
-          whatsappToken: whatsappToken.trim(),
-          whatsappInstanceId: whatsappInstanceId.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل إجراء تجربة الواتساب.');
@@ -402,10 +419,10 @@ export default function OfficeSettingsPage() {
   };
 
   const handleTestConnection = async () => {
-    if (!whatsappInstanceId?.trim() || !whatsappToken?.trim()) {
+    if (!whatsappInstanceId?.trim() && !whatsappToken?.trim() && !whatsappTokenIsSet) {
       toast({
         title: 'بيانات غير مكتملة',
-        description: 'يرجى إدخال معرف النسخة (Instance ID) ورمز المصادقة (Token) أولاً لاختبار الاتصال.',
+        description: 'يرجى إدخال معرف النسخة (Instance ID) ورمز المصادقة (Token) أو حفظهما أولاً لاختبار الاتصال.',
         variant: 'destructive',
       });
       return;
@@ -413,14 +430,18 @@ export default function OfficeSettingsPage() {
 
     setIsTestingConnection(true);
     try {
+      const payload: Record<string, string> = {
+        apiUrl: whatsappApiUrl.trim(),
+        instanceId: whatsappInstanceId.trim(),
+      };
+      if (whatsappToken && !whatsappToken.includes('•') && !whatsappToken.includes('*')) {
+        payload.token = whatsappToken.trim();
+      }
+
       const res = await fetch('/api/settings/test-whatsapp-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          instanceId: whatsappInstanceId.trim(),
-          token: whatsappToken.trim(),
-          apiUrl: whatsappApiUrl.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1084,15 +1105,41 @@ export default function OfficeSettingsPage() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-bold">رمز المصادقة (Token / Secret)</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold">رمز المصادقة (Token / Secret)</Label>
+                {whatsappTokenIsSet && (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    محفوظ ومشفّر دائم
+                  </span>
+                )}
+              </div>
               <Input
                 type="password"
-                placeholder="••••••••••••"
+                placeholder={whatsappTokenIsSet ? "•••••••••••• (محفوظ بأمان في قاعدة البيانات)" : "رمز المصادقة (Token)"}
                 value={whatsappToken}
                 onChange={(e) => setWhatsappToken(e.target.value)}
                 className="text-xs h-9 font-mono"
                 dir="ltr"
               />
+              {whatsappTokenIsSet && (
+                <p className="text-[11px] text-muted-foreground">
+                  الرمز محفوظ بأمان في قاعدة البيانات، لا داعي لإعادة إدخاله إلا إذا أردت تحديثه.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Permanent Cloud Storage Notice */}
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div>
+                <span className="font-bold">الربط الدائم: </span>
+                <span className="text-muted-foreground">
+                  يتم حفظ وتشفير مفاتيح الواتساب في قاعدة البيانات السحابية (Supabase) تلقائياً، ولن تفقد الاتصال مطلقاً عند عمل Deploy أو إعادة تشغيل الخادم.
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1135,7 +1182,7 @@ export default function OfficeSettingsPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isTestingConnection || !whatsappInstanceId?.trim() || !whatsappToken?.trim()}
+                disabled={isTestingConnection}
                 onClick={handleTestConnection}
                 className="w-full sm:w-auto gap-2 text-xs font-bold border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                 data-testid="button-test-whatsapp-connection"

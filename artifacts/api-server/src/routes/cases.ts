@@ -8,6 +8,7 @@ import {
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
+import { notifyLawyerAssignment } from "../services/assignment-notification.service";
 
 const router: IRouter = Router();
 
@@ -309,11 +310,33 @@ router.patch("/cases/:id/reassign", async (req, res) => {
   }
 
   try {
+    const existing = await postgresService.getCaseById(id, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "القضية غير موجودة." });
+      return;
+    }
+
     const updated = await postgresService.reassignCase(id, assignedLawyerId, officeId);
     if (!updated) {
       res.status(404).json({ error: "القضية غير موجودة." });
       return;
     }
+
+    // Trigger assignment notification for lawyer (in-app + WhatsApp)
+    if (assignedLawyerId) {
+      void notifyLawyerAssignment({
+        officeId,
+        assignerId: req.authUser?.userId,
+        targetLawyerId: assignedLawyerId,
+        previousLawyerId: existing.assignedLawyerId,
+        recordType: "case",
+        recordTypeArabic: "قضية",
+        recordId: id,
+        recordDescription: updated.caseNumber ? `قضية رقم ${updated.caseNumber}` : `قضية #${id}`,
+        directLink: `/cases`,
+      });
+    }
+
     res.json(updated);
   } catch (err: any) {
     const refId = generateRefId();
