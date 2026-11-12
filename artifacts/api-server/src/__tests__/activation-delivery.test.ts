@@ -23,7 +23,7 @@ describe("Part C — Member Activation Delivery (WhatsApp-primary with email fal
     // Spy on WhatsappReminderChannel.prototype.sendRaw to simulate successful WhatsApp delivery
     const sendRawSpy = vi
       .spyOn(WhatsappReminderChannel.prototype, "sendRaw")
-      .mockResolvedValue(undefined);
+      .mockResolvedValue({ success: true, isConfigured: true });
 
     const sendEmailSpy = vi.spyOn(emailService, "sendActivationEmail").mockResolvedValue({
       success: true,
@@ -171,7 +171,7 @@ describe("Part C — Member Activation Delivery (WhatsApp-primary with email fal
 
     const sendRawSpy = vi
       .spyOn(WhatsappReminderChannel.prototype, "sendRaw")
-      .mockResolvedValue(undefined);
+      .mockResolvedValue({ success: true, isConfigured: true });
     const sendEmailSpy = vi.spyOn(emailService, "sendActivationEmail");
 
     // Create a temporary admin
@@ -220,7 +220,7 @@ describe("Part C — Member Activation Delivery (WhatsApp-primary with email fal
 
     const sendRawSpy = vi
       .spyOn(WhatsappReminderChannel.prototype, "sendRaw")
-      .mockResolvedValue(undefined);
+      .mockResolvedValue({ success: true, isConfigured: true });
 
     const admin = await createSupabaseUser({
       username: `admin_resend_${Date.now()}`,

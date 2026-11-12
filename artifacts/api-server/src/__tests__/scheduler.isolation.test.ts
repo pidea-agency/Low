@@ -94,7 +94,7 @@ describe("Reminder Scheduler Tenant Isolation & Security", () => {
       });
 
       const markSentSpy = vi.spyOn(sessionService, "markReminderSent").mockResolvedValue(undefined);
-      const notifySpy = vi.spyOn(reminderService, "notify").mockResolvedValue(undefined);
+      const notifySpy = vi.spyOn(reminderService, "notify").mockResolvedValue({ allSucceeded: true, whatsappSuccess: true });
 
       const results = await reminderScheduler.runReminderSweep();
 
@@ -222,7 +222,7 @@ describe("Reminder Scheduler Tenant Isolation & Security", () => {
         } as Session,
       ]);
 
-      const notifySpy = vi.spyOn(reminderService, "notify").mockResolvedValue(undefined);
+      const notifySpy = vi.spyOn(reminderService, "notify").mockResolvedValue({ allSucceeded: true, whatsappSuccess: true });
 
       const results = await reminderScheduler.runReminderSweep();
 

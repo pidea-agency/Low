@@ -853296,8 +853296,10 @@ function formatRemainingTime(diffMs) {
 async function runReminderSweep() {
   const results = [];
   let offices = [];
+  let allUsers = [];
   try {
     const users = await listSupabaseUsers();
+    allUsers = users;
     offices = users.filter((u) => u.status !== "suspended");
   } catch (err) {
     logger.error({ err }, "Failed to list offices for reminder sweep");
@@ -853307,6 +853309,8 @@ async function runReminderSweep() {
   for (const office of offices) {
     const officeId = office.id;
     const recipientPhone = office.phone?.trim() || null;
+    const officeAdminUser = (office.role === "admin" ? office : null) || allUsers.find((u) => u.role === "admin" && (u.id === officeId || u.admin_id === officeId)) || (office.admin_id ? allUsers.find((u) => u.id === office.admin_id) : null) || office;
+    const officeAdminId = officeAdminUser.id;
     const hasBinding = Boolean(
       (office.has_google_service || office.google_service_account_json) && office.google_spreadsheet_id
     );
@@ -853386,14 +853390,25 @@ async function runReminderSweep() {
               );
               try {
                 const { createNotification: createNotification2 } = await Promise.resolve().then(() => (init_postgres_service(), postgres_service_exports));
-                await createNotification2({
-                  officeId,
-                  type: "reminder_failed",
-                  title: "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
-                  body: `\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629 \u0631\u0642\u0645 ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
-                  relatedRecordType: "session",
-                  relatedRecordId: String(session.id)
-                });
+                const recipients = /* @__PURE__ */ new Set();
+                if (officeAdminId) {
+                  recipients.add(officeAdminId);
+                }
+                const assignedLawyerId = session.assignedLawyerId || session.assigned_lawyer_id;
+                if (assignedLawyerId && typeof assignedLawyerId === "string" && assignedLawyerId.trim()) {
+                  recipients.add(assignedLawyerId.trim());
+                }
+                for (const recipientId of recipients) {
+                  await createNotification2({
+                    officeId,
+                    userId: recipientId,
+                    type: "reminder_failed",
+                    title: "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
+                    body: `\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629 \u0631\u0642\u0645 ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                    relatedRecordType: "session",
+                    relatedRecordId: String(session.id)
+                  });
+                }
               } catch {
               }
             } else {
@@ -853431,14 +853446,25 @@ async function runReminderSweep() {
               );
               try {
                 const { createNotification: createNotification2 } = await Promise.resolve().then(() => (init_postgres_service(), postgres_service_exports));
-                await createNotification2({
-                  officeId,
-                  type: "reminder_failed",
-                  title: "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
-                  body: `\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629 \u0631\u0642\u0645 ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
-                  relatedRecordType: "session",
-                  relatedRecordId: String(session.id)
-                });
+                const recipients = /* @__PURE__ */ new Set();
+                if (officeAdminId) {
+                  recipients.add(officeAdminId);
+                }
+                const assignedLawyerId = session.assignedLawyerId || session.assigned_lawyer_id;
+                if (assignedLawyerId && typeof assignedLawyerId === "string" && assignedLawyerId.trim()) {
+                  recipients.add(assignedLawyerId.trim());
+                }
+                for (const recipientId of recipients) {
+                  await createNotification2({
+                    officeId,
+                    userId: recipientId,
+                    type: "reminder_failed",
+                    title: "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
+                    body: `\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629 \u0631\u0642\u0645 ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                    relatedRecordType: "session",
+                    relatedRecordId: String(session.id)
+                  });
+                }
               } catch {
               }
             } else {
