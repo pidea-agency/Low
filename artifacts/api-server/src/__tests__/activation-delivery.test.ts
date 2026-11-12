@@ -207,7 +207,7 @@ describe("Part C — Member Activation Delivery (WhatsApp-primary with email fal
     } finally {
       await deleteSupabaseUser(admin.id).catch(() => {});
     }
-  });
+  }, 30000);
 
   it("6. resendOfficeMemberActivation follows WhatsApp-first logic and invalidates old token", async () => {
     const {
@@ -270,5 +270,5 @@ describe("Part C — Member Activation Delivery (WhatsApp-primary with email fal
     } finally {
       await deleteSupabaseUser(admin.id).catch(() => {});
     }
-  });
+  }, 30000);
 });

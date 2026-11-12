@@ -13,18 +13,36 @@ const channels: ReminderChannel[] = [
   new WhatsappReminderChannel(),
 ];
 
-export async function notify(payload: ReminderPayload, officeId: string): Promise<void> {
+export interface NotifyResult {
+  allSucceeded: boolean;
+  whatsappSuccess: boolean;
+  whatsappError?: string;
+}
+
+export async function notify(payload: ReminderPayload, officeId: string): Promise<NotifyResult> {
   if (!officeId || !officeId.trim()) {
     throw new Error("officeId is required to send notifications.");
   }
   if (payload.officeId !== officeId) {
     throw new Error("Mismatched officeId between payload and notify parameter.");
   }
+  let whatsappSuccess = false;
+  let whatsappError: string | undefined;
+  let hasAnyFailure = false;
+
   await Promise.all(
     channels.map(async (channel) => {
       try {
         await channel.send(payload);
-      } catch (err) {
+        if (channel.name === "whatsapp") {
+          whatsappSuccess = true;
+        }
+      } catch (err: any) {
+        hasAnyFailure = true;
+        if (channel.name === "whatsapp") {
+          whatsappSuccess = false;
+          whatsappError = err?.message || "فشل إرسال تذكير الواتساب.";
+        }
         logger.error(
           { err, channel: channel.name, sessionId: payload.sessionId, officeId },
           "Reminder channel failed to send",
@@ -32,4 +50,10 @@ export async function notify(payload: ReminderPayload, officeId: string): Promis
       }
     }),
   );
+
+  return {
+    allSucceeded: !hasAnyFailure,
+    whatsappSuccess,
+    whatsappError,
+  };
 }

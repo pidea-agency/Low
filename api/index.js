@@ -56876,70 +56876,109 @@ var init_whatsappChannel = __esm({
         if (!rawApiUrl && instanceId) {
           rawApiUrl = "https://api.green-api.com";
         }
-        if (rawApiUrl) {
-          const requestConfig = buildWhatsappPayloadAndHeaders(
+        if (!rawApiUrl) {
+          const errMsg = "\u0644\u0645 \u064A\u062A\u0645 \u0636\u0628\u0637 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645.";
+          logger.warn(
+            { phone: masked },
+            "WhatsApp reminder delivery failed: gateway is not configured in settings"
+          );
+          if (options?.throwIfNotConfigured) {
+            throw new Error(errMsg);
+          }
+          return {
+            success: false,
+            isConfigured: false,
+            error: errMsg
+          };
+        }
+        let requestConfig;
+        try {
+          requestConfig = buildWhatsappPayloadAndHeaders(
             rawApiUrl,
             phone,
             token,
             message,
             instanceId
           );
-          try {
-            const res = await fetch(requestConfig.targetUrl, {
-              method: requestConfig.method,
-              headers: requestConfig.headers,
-              body: requestConfig.body
-            });
-            if (!res.ok) {
-              const bodyText = await res.text().catch(() => "");
-              logger.error(
-                { status: res.status, bodyText, phone: masked },
-                "WhatsApp Gateway API returned non-OK status"
-              );
-              throw new Error(
-                `\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0623\u0631\u062C\u0639\u062A \u062E\u0637\u0623 (${res.status}): ${bodyText.slice(0, 120) || res.statusText}`
-              );
-            } else {
-              if (requestConfig.isGreenApi) {
-                const bodyText = await res.text().catch(() => "{}");
-                let parsed = {};
-                try {
-                  parsed = JSON.parse(bodyText);
-                } catch {
-                }
-                if (parsed["instanceError"] || parsed["typeError"]) {
-                  const errMsg = parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"];
-                  logger.error({ errMsg, phone: masked }, "Green API error in response body");
-                  if (String(errMsg).includes("notAuthorized")) {
-                    throw new Error(
-                      "\u26A0\uFE0F \u0627\u0644\u0640 Instance \u063A\u064A\u0631 \u0645\u062A\u0635\u0644 \u0628\u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u0627\u0641\u062A\u062D console.greenapi.com \u0648\u0627\u0633\u062D\u0628 QR Code \u0628\u0647\u0627\u062A\u0641\u0643."
-                    );
-                  }
-                  throw new Error(`Green API \u0623\u0631\u062C\u0639 \u062E\u0637\u0623: ${errMsg}`);
-                }
-                if (!parsed["idMessage"]) {
-                  logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage \u2014 message may not have been sent");
-                }
-              }
-              logger.info(
-                { phone: masked },
-                "WhatsApp reminder sent via Gateway API successfully"
-              );
-            }
-          } catch (err) {
-            logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
-            throw err;
-          }
-        } else {
+        } catch (configErr) {
+          logger.error({ err: configErr, phone: masked }, "WhatsApp request configuration error");
           if (options?.throwIfNotConfigured) {
-            throw new Error("\u0644\u0645 \u064A\u062A\u0645 \u0636\u0628\u0637 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645.");
+            throw configErr;
+          }
+          return {
+            success: false,
+            isConfigured: false,
+            error: configErr?.message || "\u0625\u0639\u062F\u0627\u062F \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644."
+          };
+        }
+        try {
+          const res = await fetch(requestConfig.targetUrl, {
+            method: requestConfig.method,
+            headers: requestConfig.headers,
+            body: requestConfig.body
+          });
+          if (!res.ok) {
+            const bodyText = await res.text().catch(() => "");
+            logger.error(
+              { status: res.status, bodyText, phone: masked },
+              "WhatsApp Gateway API returned non-OK status"
+            );
+            const errMsg = `\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0623\u0631\u062C\u0639\u062A \u062E\u0637\u0623 (${res.status}): ${bodyText.slice(0, 120) || res.statusText}`;
+            if (options?.throwIfNotConfigured) {
+              throw new Error(errMsg);
+            }
+            return {
+              success: false,
+              isConfigured: true,
+              error: errMsg
+            };
+          }
+          let idMessage;
+          if (requestConfig.isGreenApi) {
+            const bodyText = await res.text().catch(() => "{}");
+            let parsed = {};
+            try {
+              parsed = JSON.parse(bodyText);
+            } catch {
+            }
+            if (parsed["instanceError"] || parsed["typeError"]) {
+              const errMsg = parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"];
+              logger.error({ errMsg, phone: masked }, "Green API error in response body");
+              const formattedErr = String(errMsg).includes("notAuthorized") ? "\u26A0\uFE0F \u0627\u0644\u0640 Instance \u063A\u064A\u0631 \u0645\u062A\u0635\u0644 \u0628\u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u0627\u0641\u062A\u062D console.greenapi.com \u0648\u0627\u0633\u062D\u0628 QR Code \u0628\u0647\u0627\u062A\u0641\u0643." : `Green API \u0623\u0631\u062C\u0639 \u062E\u0637\u0623: ${errMsg}`;
+              if (options?.throwIfNotConfigured) {
+                throw new Error(formattedErr);
+              }
+              return {
+                success: false,
+                isConfigured: true,
+                error: formattedErr
+              };
+            }
+            if (parsed["idMessage"]) {
+              idMessage = String(parsed["idMessage"]);
+            } else {
+              logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage \u2014 message may not have been sent");
+            }
           }
           logger.info(
-            {
-              phone: masked
-            },
-            "[WhatsApp Reminder Triggered] Notification formatted for target recipient"
+            { phone: masked, idMessage },
+            "WhatsApp reminder sent via Gateway API successfully"
           );
+          return {
+            success: true,
+            isConfigured: true,
+            idMessage
+          };
+        } catch (err) {
+          logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
+          if (options?.throwIfNotConfigured) {
+            throw err;
+          }
+          return {
+            success: false,
+            isConfigured: true,
+            error: err?.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628."
+          };
         }
       }
       async send(payload) {
@@ -56948,7 +56987,10 @@ var init_whatsappChannel = __esm({
           throw new Error("Recipient phone number is required to send WhatsApp reminder.");
         }
         const message = formatWhatsappMessage(payload);
-        return this.sendRaw(message, phone);
+        const result = await this.sendRaw(message, phone, { throwIfNotConfigured: false });
+        if (!result.success) {
+          throw new Error(result.error || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.");
+        }
       }
     };
   }
@@ -56984,7 +57026,10 @@ async function sendActivationInvitation(params) {
         activationUrl
       });
       const channel = new WhatsappReminderChannel();
-      await channel.sendRaw(message, cleanPhone, { throwIfNotConfigured: true });
+      const rawRes = await channel.sendRaw(message, cleanPhone, { throwIfNotConfigured: true });
+      if (rawRes && !rawRes.success) {
+        throw new Error(rawRes.error || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0639\u0628\u0631 \u0648\u0627\u062A\u0633\u0627\u0628.");
+      }
       whatsappSent = true;
       sentWhatsappHistory.push({
         memberId,
@@ -59993,19 +60038,31 @@ async function refreshSettingsFromSupabase() {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: userRow, error: userErr } = await client.from("app_users").select("google_service_account_json, updated_at").eq("id", SYSTEM_SETTINGS_USER_ID).maybeSingle();
-      if (!userErr && userRow?.google_service_account_json) {
-        try {
-          const parsed = JSON.parse(userRow.google_service_account_json);
-          if (parsed && typeof parsed === "object") {
-            const decrypted = decryptSettings(parsed);
-            _cache = { ..._cache, ...decrypted };
-            _loadedFromSupabase = true;
-            logger.info("Loaded persistent AppSettings from Supabase app_users permanent storage");
-            return getSettings();
+      const { data: userRow, error: userErr } = await client.from("app_users").select("subscription_notes, google_service_account_json, phone, google_sheet_name, google_spreadsheet_id, updated_at").eq("id", SYSTEM_SETTINGS_USER_ID).maybeSingle();
+      if (!userErr && userRow) {
+        const settingsBlob = userRow.subscription_notes || userRow.google_service_account_json;
+        if (settingsBlob) {
+          try {
+            const parsed = JSON.parse(settingsBlob);
+            if (parsed && typeof parsed === "object") {
+              const decrypted = decryptSettings(parsed);
+              if (userRow.phone && !decrypted.whatsappNumber) {
+                decrypted.whatsappNumber = userRow.phone;
+              }
+              if (userRow.google_sheet_name && !decrypted.googleSheetName) {
+                decrypted.googleSheetName = userRow.google_sheet_name;
+              }
+              if (userRow.google_spreadsheet_id && !decrypted.googleSpreadsheetId) {
+                decrypted.googleSpreadsheetId = userRow.google_spreadsheet_id;
+              }
+              _cache = { ..._cache, ...decrypted };
+              _loadedFromSupabase = true;
+              logger.info("Loaded persistent AppSettings from Supabase app_users permanent storage");
+              return getSettings();
+            }
+          } catch (e2) {
+            logger.warn({ err: e2 }, "Failed to parse system settings JSON from app_users");
           }
-        } catch (e2) {
-          logger.warn({ err: e2 }, "Failed to parse system settings JSON from app_users");
         }
       }
       const { data, error } = await client.from("platform_settings").select("value, updated_at").eq("key", "app_settings").single();
@@ -60025,8 +60082,39 @@ async function saveToSupabase(settings) {
   const client = getSupabaseClient();
   if (!client) return false;
   let saved = false;
-  const encrypted = encryptSettings(settings);
   try {
+    const { data: existingRow } = await client.from("app_users").select("subscription_notes, google_service_account_json, phone, google_sheet_name, google_spreadsheet_id").eq("id", SYSTEM_SETTINGS_USER_ID).maybeSingle();
+    let existingDecrypted = {};
+    const existingBlob = existingRow?.subscription_notes || existingRow?.google_service_account_json;
+    if (existingBlob) {
+      try {
+        const parsed = JSON.parse(existingBlob);
+        if (parsed && typeof parsed === "object") {
+          existingDecrypted = decryptSettings(parsed);
+        }
+      } catch {
+      }
+    }
+    if (existingRow?.phone && !existingDecrypted.whatsappNumber) {
+      existingDecrypted.whatsappNumber = existingRow.phone;
+    }
+    if (existingRow?.google_sheet_name && !existingDecrypted.googleSheetName) {
+      existingDecrypted.googleSheetName = existingRow.google_sheet_name;
+    }
+    if (existingRow?.google_spreadsheet_id && !existingDecrypted.googleSpreadsheetId) {
+      existingDecrypted.googleSpreadsheetId = existingRow.google_spreadsheet_id;
+    }
+    const mergedSettings = {
+      ...existingDecrypted,
+      ...settings
+    };
+    for (const [k, v] of Object.entries(settings)) {
+      if (v === "") {
+        delete mergedSettings[k];
+      }
+    }
+    const encrypted = encryptSettings(mergedSettings);
+    const encryptedBlob = JSON.stringify(encrypted);
     const { error: userErr } = await client.from("app_users").upsert({
       id: SYSTEM_SETTINGS_USER_ID,
       username: SYSTEM_SETTINGS_USERNAME,
@@ -60035,11 +60123,18 @@ async function saveToSupabase(settings) {
       plan_tier: "pro",
       billing_cycle: "annual",
       password_hash: "SYSTEM_INTERNAL_KEY",
-      google_service_account_json: JSON.stringify(encrypted),
+      // Dedicated storage column (never used for google service accounts)
+      subscription_notes: encryptedBlob,
+      // Normalized columns
+      phone: mergedSettings.whatsappNumber || null,
+      google_sheet_name: mergedSettings.googleSheetName || null,
+      google_spreadsheet_id: mergedSettings.googleSpreadsheetId || null,
+      // Legacy column mirrored for backward compatibility
+      google_service_account_json: encryptedBlob,
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     });
     if (!userErr) {
-      logger.info("Encrypted AppSettings safely persisted permanently to Supabase app_users");
+      logger.info("Encrypted AppSettings safely persisted permanently to Supabase (read-modify-write)");
       saved = true;
     } else {
       logger.warn({ code: userErr.code, message: userErr.message }, "Failed to upsert settings to app_users");
@@ -60073,6 +60168,7 @@ function getSettings() {
   };
 }
 async function saveSettings(patch) {
+  await ensureSettingsLoaded();
   const cleaned = {};
   for (const [k, v] of Object.entries(patch)) {
     if (v !== void 0 && v !== "") {
@@ -851785,9 +851881,13 @@ async function notifyLawyerAssignment(params) {
     if (phone) {
       const whatsappMessage = `\u062A\u0645 \u062A\u0643\u0644\u064A\u0641\u0643 \u0628\u0640${recordTypeArabic} \u062C\u062F\u064A\u062F: ${recordDescription}. \u0644\u0645\u062A\u0627\u0628\u0639\u062A\u0647\u0627: ${directLink}.`;
       const channel = new WhatsappReminderChannel();
-      await channel.sendRaw(whatsappMessage, phone);
-      whatsappSent = true;
-      logger.info({ phone, targetLawyerId, recordType: recordType2, recordId }, "Assignment WhatsApp message dispatched successfully");
+      const res = await channel.sendRaw(whatsappMessage, phone, { throwIfNotConfigured: false });
+      whatsappSent = res.success;
+      if (res.success) {
+        logger.info({ phone, targetLawyerId, recordType: recordType2, recordId }, "Assignment WhatsApp message dispatched successfully");
+      } else {
+        logger.warn({ phone, targetLawyerId, recordType: recordType2, recordId, error: res.error }, "Failed to send assignment WhatsApp message (non-blocking)");
+      }
     }
   } catch (err) {
     logger.warn({ err, targetLawyerId, recordType: recordType2, recordId }, "Failed to send assignment WhatsApp message (non-blocking)");
@@ -852717,11 +852817,15 @@ router6.post("/settings/test-whatsapp", async (req, res) => {
       "",
       "\u0627\u0644\u0631\u062C\u0627\u0621 \u0639\u062F\u0645 \u0627\u0644\u0631\u062F \u0639\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0622\u0644\u064A\u0629."
     ].join("\n");
-    await channel.sendRaw(testMessage, phone, {
+    const sendRes = await channel.sendRaw(testMessage, phone, {
       apiUrl: rawApiUrl,
       token,
-      instanceId
+      instanceId,
+      throwIfNotConfigured: true
     });
+    if (sendRes && !sendRes.success) {
+      throw new Error(sendRes.error || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.");
+    }
     res.json({ message: `\u062A\u0645\u062A \u062A\u062C\u0631\u0628\u0629 \u0625\u0631\u0633\u0627\u0644 \u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 \u0627\u0644\u0631\u0642\u0645 ${phone}!` });
   } catch (err) {
     logger.error({ err }, "Failed to execute WhatsApp test notification");
@@ -852993,11 +853097,22 @@ async function notify(payload, officeId) {
   if (payload.officeId !== officeId) {
     throw new Error("Mismatched officeId between payload and notify parameter.");
   }
+  let whatsappSuccess = false;
+  let whatsappError;
+  let hasAnyFailure = false;
   await Promise.all(
     channels.map(async (channel) => {
       try {
         await channel.send(payload);
+        if (channel.name === "whatsapp") {
+          whatsappSuccess = true;
+        }
       } catch (err) {
+        hasAnyFailure = true;
+        if (channel.name === "whatsapp") {
+          whatsappSuccess = false;
+          whatsappError = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.";
+        }
         logger.error(
           { err, channel: channel.name, sessionId: payload.sessionId, officeId },
           "Reminder channel failed to send"
@@ -853005,6 +853120,11 @@ async function notify(payload, officeId) {
       }
     })
   );
+  return {
+    allSucceeded: !hasAnyFailure,
+    whatsappSuccess,
+    whatsappError
+  };
 }
 
 // src/services/reminder/poa-expiry.service.ts
@@ -853222,6 +853342,7 @@ async function runReminderSweep() {
       let remindersFound = 0;
       let sent = 0;
       let skipped = 0;
+      let failed = 0;
       for (const session of sessions) {
         if (session.status === "Cancelled" || session.status === "Finished") {
           continue;
@@ -853256,9 +853377,29 @@ async function runReminderSweep() {
               defendant: session.defendant,
               caseSubject: session.caseSubject
             };
-            await notify(payload, officeId);
-            await markReminderSent(session.id, "24h", officeId);
-            sent++;
+            const notifyResult = await notify(payload, officeId);
+            if (notifyResult && notifyResult.whatsappSuccess === false) {
+              failed++;
+              logger.warn(
+                { sessionId: session.id, officeId, error: notifyResult.whatsappError },
+                "WhatsApp reminder delivery failed"
+              );
+              try {
+                const { createNotification: createNotification2 } = await Promise.resolve().then(() => (init_postgres_service(), postgres_service_exports));
+                await createNotification2({
+                  officeId,
+                  type: "reminder_failed",
+                  title: "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
+                  body: `\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629 \u0631\u0642\u0645 ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                  relatedRecordType: "session",
+                  relatedRecordId: String(session.id)
+                });
+              } catch {
+              }
+            } else {
+              await markReminderSent(session.id, "24h", officeId);
+              sent++;
+            }
           }
         }
         if (!session.reminder6 && hoursLeft <= 6 && hoursLeft > 0) {
@@ -853281,9 +853422,29 @@ async function runReminderSweep() {
               defendant: session.defendant,
               caseSubject: session.caseSubject
             };
-            await notify(payload, officeId);
-            await markReminderSent(session.id, "6h", officeId);
-            sent++;
+            const notifyResult = await notify(payload, officeId);
+            if (notifyResult && notifyResult.whatsappSuccess === false) {
+              failed++;
+              logger.warn(
+                { sessionId: session.id, officeId, error: notifyResult.whatsappError },
+                "WhatsApp reminder delivery failed"
+              );
+              try {
+                const { createNotification: createNotification2 } = await Promise.resolve().then(() => (init_postgres_service(), postgres_service_exports));
+                await createNotification2({
+                  officeId,
+                  type: "reminder_failed",
+                  title: "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
+                  body: `\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629 \u0631\u0642\u0645 ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                  relatedRecordType: "session",
+                  relatedRecordId: String(session.id)
+                });
+              } catch {
+              }
+            } else {
+              await markReminderSent(session.id, "6h", officeId);
+              sent++;
+            }
           }
         }
       }
@@ -853292,7 +853453,7 @@ async function runReminderSweep() {
         remindersFound,
         sent,
         skipped,
-        failed: 0,
+        failed,
         ...!recipientPhone ? { reason: "No authorized recipient phone registered for office" } : {}
       };
       logger.info(

@@ -99,7 +99,10 @@ export async function sendActivationInvitation(
       });
 
       const channel = new WhatsappReminderChannel();
-      await channel.sendRaw(message, cleanPhone, { throwIfNotConfigured: true });
+      const rawRes = await channel.sendRaw(message, cleanPhone, { throwIfNotConfigured: true });
+      if (rawRes && !rawRes.success) {
+        throw new Error(rawRes.error || "فشل إرسال رابط التفعيل عبر واتساب.");
+      }
 
       whatsappSent = true;
       sentWhatsappHistory.push({

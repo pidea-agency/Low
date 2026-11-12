@@ -559,11 +559,16 @@ router.post("/settings/test-whatsapp", async (req, res) => {
       "الرجاء عدم الرد على هذه الرسالة الآلية."
     ].join("\n");
 
-    await channel.sendRaw(testMessage, phone, {
+    const sendRes = await channel.sendRaw(testMessage, phone, {
       apiUrl: rawApiUrl,
       token,
       instanceId,
+      throwIfNotConfigured: true,
     });
+
+    if (sendRes && !sendRes.success) {
+      throw new Error(sendRes.error || "فشل إرسال رسالة الاختبار عبر الواتساب.");
+    }
 
     res.json({ message: `تمت تجربة إرسال تنبيه الواتساب بنجاح إلى الرقم ${phone}!` });
   } catch (err) {

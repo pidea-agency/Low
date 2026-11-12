@@ -150,6 +150,13 @@ export function maskPhone(phone?: string | null): string {
   return "*".repeat(cleaned.length - 3) + cleaned.slice(-3);
 }
 
+export interface WhatsappSendResult {
+  success: boolean;
+  isConfigured: boolean;
+  error?: string;
+  idMessage?: string;
+}
+
 export class WhatsappReminderChannel implements ReminderChannel {
   readonly name = "whatsapp";
 
@@ -157,7 +164,7 @@ export class WhatsappReminderChannel implements ReminderChannel {
     message: string,
     recipientPhone?: string,
     options?: { apiUrl?: string; token?: string; instanceId?: string; throwIfNotConfigured?: boolean }
-  ): Promise<void> {
+  ): Promise<WhatsappSendResult> {
     const phone = recipientPhone?.trim();
 
     if (!phone) {
@@ -177,73 +184,117 @@ export class WhatsappReminderChannel implements ReminderChannel {
       rawApiUrl = "https://api.green-api.com";
     }
 
-    if (rawApiUrl) {
-      const requestConfig = buildWhatsappPayloadAndHeaders(
+    if (!rawApiUrl) {
+      const errMsg = "لم يتم ضبط إعدادات بوابة الواتساب في النظام.";
+      logger.warn(
+        { phone: masked },
+        "WhatsApp reminder delivery failed: gateway is not configured in settings",
+      );
+      if (options?.throwIfNotConfigured) {
+        throw new Error(errMsg);
+      }
+      return {
+        success: false,
+        isConfigured: false,
+        error: errMsg,
+      };
+    }
+
+    let requestConfig: ReturnType<typeof buildWhatsappPayloadAndHeaders>;
+    try {
+      requestConfig = buildWhatsappPayloadAndHeaders(
         rawApiUrl,
         phone,
         token,
         message,
         instanceId,
       );
+    } catch (configErr: any) {
+      logger.error({ err: configErr, phone: masked }, "WhatsApp request configuration error");
+      if (options?.throwIfNotConfigured) {
+        throw configErr;
+      }
+      return {
+        success: false,
+        isConfigured: false,
+        error: configErr?.message || "إعداد بوابة الواتساب غير مكتمل.",
+      };
+    }
 
-      try {
-        const res = await fetch(requestConfig.targetUrl, {
-          method: requestConfig.method,
-          headers: requestConfig.headers,
-          body: requestConfig.body,
-        });
+    try {
+      const res = await fetch(requestConfig.targetUrl, {
+        method: requestConfig.method,
+        headers: requestConfig.headers,
+        body: requestConfig.body,
+      });
 
-        if (!res.ok) {
-          const bodyText = await res.text().catch(() => "");
-          logger.error(
-            { status: res.status, bodyText, phone: masked },
-            "WhatsApp Gateway API returned non-OK status",
-          );
-          throw new Error(
-            `بوابة الواتساب أرجعت خطأ (${res.status}): ${bodyText.slice(0, 120) || res.statusText}`,
-          );
-        } else {
-          // Green API may return HTTP 200 but with an error body (e.g. notAuthorized)
-          if (requestConfig.isGreenApi) {
-            const bodyText = await res.text().catch(() => "{}");
-            let parsed: Record<string, unknown> = {};
-            try { parsed = JSON.parse(bodyText) as Record<string, unknown>; } catch { /* ignore */ }
-
-            if (parsed["instanceError"] || parsed["typeError"]) {
-              const errMsg = (parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"]) as string;
-              logger.error({ errMsg, phone: masked }, "Green API error in response body");
-              if (String(errMsg).includes("notAuthorized")) {
-                throw new Error(
-                  "⚠️ الـ Instance غير متصل بالواتساب — افتح console.greenapi.com واسحب QR Code بهاتفك.",
-                );
-              }
-              throw new Error(`Green API أرجع خطأ: ${errMsg}`);
-            }
-
-            if (!parsed["idMessage"]) {
-              logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage — message may not have been sent");
-            }
-          }
-
-          logger.info(
-            { phone: masked },
-            "WhatsApp reminder sent via Gateway API successfully",
-          );
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => "");
+        logger.error(
+          { status: res.status, bodyText, phone: masked },
+          "WhatsApp Gateway API returned non-OK status",
+        );
+        const errMsg = `بوابة الواتساب أرجعت خطأ (${res.status}): ${bodyText.slice(0, 120) || res.statusText}`;
+        if (options?.throwIfNotConfigured) {
+          throw new Error(errMsg);
         }
-      } catch (err) {
-        logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
+        return {
+          success: false,
+          isConfigured: true,
+          error: errMsg,
+        };
+      }
+
+      let idMessage: string | undefined;
+      // Green API may return HTTP 200 but with an error body (e.g. notAuthorized)
+      if (requestConfig.isGreenApi) {
+        const bodyText = await res.text().catch(() => "{}");
+        let parsed: Record<string, unknown> = {};
+        try { parsed = JSON.parse(bodyText) as Record<string, unknown>; } catch { /* ignore */ }
+
+        if (parsed["instanceError"] || parsed["typeError"]) {
+          const errMsg = (parsed["errorMessage"] ?? parsed["instanceError"] ?? parsed["typeError"]) as string;
+          logger.error({ errMsg, phone: masked }, "Green API error in response body");
+          const formattedErr = String(errMsg).includes("notAuthorized")
+            ? "⚠️ الـ Instance غير متصل بالواتساب — افتح console.greenapi.com واسحب QR Code بهاتفك."
+            : `Green API أرجع خطأ: ${errMsg}`;
+          if (options?.throwIfNotConfigured) {
+            throw new Error(formattedErr);
+          }
+          return {
+            success: false,
+            isConfigured: true,
+            error: formattedErr,
+          };
+        }
+
+        if (parsed["idMessage"]) {
+          idMessage = String(parsed["idMessage"]);
+        } else {
+          logger.warn({ bodyText, phone: masked }, "Green API response has no idMessage — message may not have been sent");
+        }
+      }
+
+      logger.info(
+        { phone: masked, idMessage },
+        "WhatsApp reminder sent via Gateway API successfully",
+      );
+
+      return {
+        success: true,
+        isConfigured: true,
+        idMessage,
+      };
+    } catch (err: any) {
+      logger.error({ err, phone: masked }, "Failed to call WhatsApp Gateway API");
+      if (options?.throwIfNotConfigured) {
         throw err;
       }
-    } else {
-      if (options?.throwIfNotConfigured) {
-        throw new Error("لم يتم ضبط إعدادات بوابة الواتساب في النظام.");
-      }
-      logger.info(
-        {
-          phone: masked,
-        },
-        "[WhatsApp Reminder Triggered] Notification formatted for target recipient",
-      );
+      return {
+        success: false,
+        isConfigured: true,
+        error: err?.message || "فشل الاتصال بخادم بوابة الواتساب.",
+      };
     }
   }
 
@@ -253,6 +304,9 @@ export class WhatsappReminderChannel implements ReminderChannel {
       throw new Error("Recipient phone number is required to send WhatsApp reminder.");
     }
     const message = formatWhatsappMessage(payload);
-    return this.sendRaw(message, phone);
+    const result = await this.sendRaw(message, phone, { throwIfNotConfigured: false });
+    if (!result.success) {
+      throw new Error(result.error || "فشل إرسال تذكير الواتساب.");
+    }
   }
 }

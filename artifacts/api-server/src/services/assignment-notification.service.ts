@@ -88,9 +88,13 @@ export async function notifyLawyerAssignment(
     if (phone) {
       const whatsappMessage = `تم تكليفك بـ${recordTypeArabic} جديد: ${recordDescription}. لمتابعتها: ${directLink}.`;
       const channel = new WhatsappReminderChannel();
-      await channel.sendRaw(whatsappMessage, phone);
-      whatsappSent = true;
-      logger.info({ phone, targetLawyerId, recordType, recordId }, "Assignment WhatsApp message dispatched successfully");
+      const res = await channel.sendRaw(whatsappMessage, phone, { throwIfNotConfigured: false });
+      whatsappSent = res.success;
+      if (res.success) {
+        logger.info({ phone, targetLawyerId, recordType, recordId }, "Assignment WhatsApp message dispatched successfully");
+      } else {
+        logger.warn({ phone, targetLawyerId, recordType, recordId, error: res.error }, "Failed to send assignment WhatsApp message (non-blocking)");
+      }
     }
   } catch (err) {
     // WhatsApp failures must NEVER block in-app notifications or fail the reassign operation

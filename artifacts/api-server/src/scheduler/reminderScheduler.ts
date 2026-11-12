@@ -135,6 +135,7 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
       let remindersFound = 0;
       let sent = 0;
       let skipped = 0;
+      let failed = 0;
 
       for (const session of sessions) {
         if (session.status === "Cancelled" || session.status === "Finished") {
@@ -174,9 +175,28 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
               caseSubject: session.caseSubject,
             };
 
-            await notify(payload, officeId);
-            await markReminderSent(session.id, "24h", officeId);
-            sent++;
+            const notifyResult = await notify(payload, officeId);
+            if (notifyResult && notifyResult.whatsappSuccess === false) {
+              failed++;
+              logger.warn(
+                { sessionId: session.id, officeId, error: notifyResult.whatsappError },
+                "WhatsApp reminder delivery failed",
+              );
+              try {
+                const { createNotification } = await import("../services/postgres.service");
+                await createNotification({
+                  officeId,
+                  type: "reminder_failed",
+                  title: "فشل إرسال تذكير الجلسة عبر الواتساب",
+                  body: `تعذر إرسال تذكير الجلسة القضائية رقم ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                  relatedRecordType: "session",
+                  relatedRecordId: String(session.id),
+                });
+              } catch { /* ignore notification failure */ }
+            } else {
+              await markReminderSent(session.id, "24h", officeId);
+              sent++;
+            }
           }
         }
 
@@ -202,9 +222,28 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
               caseSubject: session.caseSubject,
             };
 
-            await notify(payload, officeId);
-            await markReminderSent(session.id, "6h", officeId);
-            sent++;
+            const notifyResult = await notify(payload, officeId);
+            if (notifyResult && notifyResult.whatsappSuccess === false) {
+              failed++;
+              logger.warn(
+                { sessionId: session.id, officeId, error: notifyResult.whatsappError },
+                "WhatsApp reminder delivery failed",
+              );
+              try {
+                const { createNotification } = await import("../services/postgres.service");
+                await createNotification({
+                  officeId,
+                  type: "reminder_failed",
+                  title: "فشل إرسال تذكير الجلسة عبر الواتساب",
+                  body: `تعذر إرسال تذكير الجلسة القضائية رقم ${session.caseNumber || session.id}: ${notifyResult.whatsappError}`,
+                  relatedRecordType: "session",
+                  relatedRecordId: String(session.id),
+                });
+              } catch { /* ignore notification failure */ }
+            } else {
+              await markReminderSent(session.id, "6h", officeId);
+              sent++;
+            }
           }
         }
       }
@@ -214,7 +253,7 @@ export async function runReminderSweep(): Promise<OfficeReminderResult[]> {
         remindersFound,
         sent,
         skipped,
-        failed: 0,
+        failed,
         ...(!recipientPhone
           ? { reason: "No authorized recipient phone registered for office" }
           : {}),

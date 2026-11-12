@@ -164,6 +164,8 @@ export async function ensureSettingsLoaded(): Promise<AppSettings> {
 
 /**
  * Asynchronously refreshes in-memory settings from Supabase (authoritative permanent store).
+ * Prioritizes dedicated storage in subscription_notes and normalized columns on the system record,
+ * with automatic fallback and migration from legacy google_service_account_json.
  */
 export async function refreshSettingsFromSupabase(): Promise<AppSettings> {
   const client = getSupabaseClient();
@@ -172,22 +174,38 @@ export async function refreshSettingsFromSupabase(): Promise<AppSettings> {
       // 1. Primary permanent store: app_users system row
       const { data: userRow, error: userErr } = await client
         .from("app_users")
-        .select("google_service_account_json, updated_at")
+        .select("subscription_notes, google_service_account_json, phone, google_sheet_name, google_spreadsheet_id, updated_at")
         .eq("id", SYSTEM_SETTINGS_USER_ID)
         .maybeSingle();
 
-      if (!userErr && userRow?.google_service_account_json) {
-        try {
-          const parsed = JSON.parse(userRow.google_service_account_json);
-          if (parsed && typeof parsed === "object") {
-            const decrypted = decryptSettings(parsed);
-            _cache = { ..._cache, ...decrypted };
-            _loadedFromSupabase = true;
-            logger.info("Loaded persistent AppSettings from Supabase app_users permanent storage");
-            return getSettings();
+      if (!userErr && userRow) {
+        // Dedicated storage column takes precedence, then legacy blob
+        const settingsBlob = userRow.subscription_notes || userRow.google_service_account_json;
+        if (settingsBlob) {
+          try {
+            const parsed = JSON.parse(settingsBlob);
+            if (parsed && typeof parsed === "object") {
+              const decrypted = decryptSettings(parsed);
+
+              // Merge normalized columns if present on record
+              if (userRow.phone && !decrypted.whatsappNumber) {
+                decrypted.whatsappNumber = userRow.phone;
+              }
+              if (userRow.google_sheet_name && !decrypted.googleSheetName) {
+                decrypted.googleSheetName = userRow.google_sheet_name;
+              }
+              if (userRow.google_spreadsheet_id && !decrypted.googleSpreadsheetId) {
+                decrypted.googleSpreadsheetId = userRow.google_spreadsheet_id;
+              }
+
+              _cache = { ..._cache, ...decrypted };
+              _loadedFromSupabase = true;
+              logger.info("Loaded persistent AppSettings from Supabase app_users permanent storage");
+              return getSettings();
+            }
+          } catch (e) {
+            logger.warn({ err: e }, "Failed to parse system settings JSON from app_users");
           }
-        } catch (e) {
-          logger.warn({ err: e }, "Failed to parse system settings JSON from app_users");
         }
       }
 
@@ -213,17 +231,61 @@ export async function refreshSettingsFromSupabase(): Promise<AppSettings> {
 }
 
 /**
- * Persists settings permanently to Supabase encrypted at rest with AES-256-GCM.
+ * Persists settings permanently to Supabase with true read-modify-write merging.
+ * Never overwrites existing unmentioned keys.
+ * Uses dedicated subscription_notes storage and normalized columns on the system record.
  */
 async function saveToSupabase(settings: AppSettings): Promise<boolean> {
   const client = getSupabaseClient();
   if (!client) return false;
 
   let saved = false;
-  const encrypted = encryptSettings(settings);
 
   try {
-    // 1. Primary permanent store: app_users system row
+    // 1. Read existing row to perform safe read-modify-write
+    const { data: existingRow } = await client
+      .from("app_users")
+      .select("subscription_notes, google_service_account_json, phone, google_sheet_name, google_spreadsheet_id")
+      .eq("id", SYSTEM_SETTINGS_USER_ID)
+      .maybeSingle();
+
+    let existingDecrypted: Partial<AppSettings> = {};
+    const existingBlob = existingRow?.subscription_notes || existingRow?.google_service_account_json;
+    if (existingBlob) {
+      try {
+        const parsed = JSON.parse(existingBlob);
+        if (parsed && typeof parsed === "object") {
+          existingDecrypted = decryptSettings(parsed);
+        }
+      } catch {}
+    }
+
+    if (existingRow?.phone && !existingDecrypted.whatsappNumber) {
+      existingDecrypted.whatsappNumber = existingRow.phone;
+    }
+    if (existingRow?.google_sheet_name && !existingDecrypted.googleSheetName) {
+      existingDecrypted.googleSheetName = existingRow.google_sheet_name;
+    }
+    if (existingRow?.google_spreadsheet_id && !existingDecrypted.googleSpreadsheetId) {
+      existingDecrypted.googleSpreadsheetId = existingRow.google_spreadsheet_id;
+    }
+
+    // Merge: incoming settings on top of existing stored settings
+    const mergedSettings: AppSettings = {
+      ...existingDecrypted,
+      ...settings,
+    };
+
+    // Clean out deleted keys (empty strings)
+    for (const [k, v] of Object.entries(settings) as [keyof AppSettings, string | undefined][]) {
+      if (v === "") {
+        delete mergedSettings[k];
+      }
+    }
+
+    const encrypted = encryptSettings(mergedSettings);
+    const encryptedBlob = JSON.stringify(encrypted);
+
     const { error: userErr } = await client.from("app_users").upsert({
       id: SYSTEM_SETTINGS_USER_ID,
       username: SYSTEM_SETTINGS_USERNAME,
@@ -232,12 +294,19 @@ async function saveToSupabase(settings: AppSettings): Promise<boolean> {
       plan_tier: "pro",
       billing_cycle: "annual",
       password_hash: "SYSTEM_INTERNAL_KEY",
-      google_service_account_json: JSON.stringify(encrypted),
+      // Dedicated storage column (never used for google service accounts)
+      subscription_notes: encryptedBlob,
+      // Normalized columns
+      phone: mergedSettings.whatsappNumber || null,
+      google_sheet_name: mergedSettings.googleSheetName || null,
+      google_spreadsheet_id: mergedSettings.googleSpreadsheetId || null,
+      // Legacy column mirrored for backward compatibility
+      google_service_account_json: encryptedBlob,
       updated_at: new Date().toISOString(),
     });
 
     if (!userErr) {
-      logger.info("Encrypted AppSettings safely persisted permanently to Supabase app_users");
+      logger.info("Encrypted AppSettings safely persisted permanently to Supabase (read-modify-write)");
       saved = true;
     } else {
       logger.warn({ code: userErr.code, message: userErr.message }, "Failed to upsert settings to app_users");
@@ -283,6 +352,9 @@ export function getSettings(): AppSettings {
  * and update the in-memory cache.
  */
 export async function saveSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
+  // Ensure authoritative persistent store is loaded before applying patch
+  await ensureSettingsLoaded();
+
   // Strip empty strings so they don't shadow env var fallbacks
   const cleaned: Partial<AppSettings> = {};
   for (const [k, v] of Object.entries(patch) as [keyof AppSettings, string | undefined][]) {

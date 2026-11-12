@@ -364,6 +364,11 @@ export default function OfficeSettingsPage() {
         title: 'تم الحفظ الدائم في قاعدة البيانات ✓',
         description: 'تم تشفير وحفظ إعدادات الواتساب بشكل دائم (لن تحتاج لربطها مرة أخرى بعد أي ديبلوي).',
       });
+
+      // Immediately test live connection after saving to catch issues right away
+      if (whatsappInstanceId.trim() || whatsappToken?.trim()) {
+        void handleTestConnection();
+      }
     } catch (err: any) {
       toast({
         title: 'خطأ',
