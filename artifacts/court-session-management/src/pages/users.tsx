@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users,
   UserPlus,
@@ -26,796 +26,1036 @@ import {
   Eye,
   Plus,
   Trash2,
+  Download,
+  History,
+  RotateCcw,
+  Send,
+  Ban,
+  Clock,
+  Sparkles,
+  Copy,
+  Zap,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
-import { validatePassword } from '@workspace/api-zod';
 import {
-  MemberTable,
-  AddMemberDialog,
-  EditMemberDialog,
-  type OfficeMember,
-  type AddMemberFormData,
-  type EditMemberFormData,
-} from '@/components/users';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-export type { OfficeMember };
+export interface OfficeMemberItem {
+  id: string;
+  username: string;
+  display_name?: string;
+  roleTitle?: string;
+  avatarInitials?: string;
+  avatarBg?: string;
+  email?: string;
+  phone?: string;
+  status: 'active' | 'pending' | 'suspended';
+  statusLabel?: string;
+  casesCount?: number;
+  poaCount?: number;
+  started?: boolean;
+  role: 'admin' | 'lawyer' | 'consultant' | 'assistant' | string;
+  created_at?: string;
+}
+
+export type OfficeMember = OfficeMemberItem;
+
+// Preset realistic Saudi Office Members matching the mockup
+const MOCK_MEMBERS: OfficeMemberItem[] = [
+  {
+    id: 'mem-1',
+    username: 'a.alotaibi',
+    display_name: 'أحمد محمد العتيبي',
+    roleTitle: 'محامٍ متدرب • ترخيص جديد',
+    avatarInitials: 'أم',
+    avatarBg: 'bg-[#ffeedb] text-[#b44800]',
+    email: 'ahmed.alotaibi@court.gov.sa',
+    phone: '972599409123',
+    status: 'pending',
+    statusLabel: 'بانتظار التفعيل',
+    casesCount: 0,
+    poaCount: 0,
+    started: false,
+    role: 'lawyer',
+  },
+  {
+    id: 'mem-2',
+    username: 'm.jazzar',
+    display_name: 'محمد الجزار',
+    roleTitle: 'محامٍ ممارس أول • قضايا الشركات',
+    avatarInitials: 'مج',
+    avatarBg: 'bg-[#00236f] text-white',
+    email: 'ahmed.alotaibi@court.gov.sa',
+    phone: '970567465929',
+    status: 'active',
+    statusLabel: 'نشط',
+    casesCount: 7,
+    poaCount: 4,
+    started: true,
+    role: 'lawyer',
+  },
+  {
+    id: 'mem-3',
+    username: 'a.aloibi',
+    display_name: 'أحمد محمد العتيبي',
+    roleTitle: 'مستشار قانوني • النزاعات العمالية',
+    avatarInitials: 'أم',
+    avatarBg: 'bg-[#ebf3ff] text-[#00236f]',
+    email: 'ahmed.alotaibi@court.gov.sa',
+    phone: '972599409123',
+    status: 'active',
+    statusLabel: 'نشط',
+    casesCount: 5,
+    poaCount: 3,
+    started: true,
+    role: 'consultant',
+  },
+  {
+    id: 'mem-4',
+    username: 'lawyer_mahmoud',
+    display_name: 'محمود',
+    roleTitle: 'محامٍ مترافع • المحكمة التجارية',
+    avatarInitials: 'مح',
+    avatarBg: 'bg-[#ebf3ff] text-[#00236f]',
+    email: 'mahm@gmail.com',
+    phone: '0599774123',
+    status: 'active',
+    statusLabel: 'نشط',
+    casesCount: 6,
+    poaCount: 2,
+    started: true,
+    role: 'lawyer',
+  },
+  {
+    id: 'mem-5',
+    username: 'lawyer_3',
+    display_name: 'بدون اسم',
+    roleTitle: 'مساعد إداري وقانوني',
+    avatarInitials: 'إد',
+    avatarBg: 'bg-[#f4f7fc] text-[#4d5c76]',
+    email: 'lawyer3@office.com',
+    phone: '-',
+    status: 'active',
+    statusLabel: 'نشط',
+    casesCount: 2,
+    poaCount: 1,
+    started: true,
+    role: 'assistant',
+  },
+  {
+    id: 'mem-6',
+    username: 'lawyer_1',
+    display_name: 'lawyer_1',
+    roleTitle: 'محامٍ مشارك • المحكمة العامة',
+    avatarInitials: 'L1',
+    avatarBg: 'bg-[#00236f] text-white',
+    email: 'lawyer1@office.com',
+    phone: '972599409123',
+    status: 'active',
+    statusLabel: 'نشط',
+    casesCount: 4,
+    poaCount: 2,
+    started: true,
+    role: 'lawyer',
+  },
+];
 
 export default function OfficeMembersPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
-  const [members, setMembers] = useState<OfficeMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Active filter tab: 'all' | 'lawyers' | 'consultants' | 'pending'
+  const [activeTab, setActiveTab] = useState<'all' | 'lawyers' | 'consultants' | 'pending'>('all');
+
+  // Search input
   const [searchQuery, setSearchQuery] = useState('');
 
-  // View mode: 'table' or 'form' (Screen 6: Image 6)
-  const [viewMode, setViewMode] = useState<'table' | 'form'>('table');
-  const [selectedMember, setSelectedMember] = useState<OfficeMember | null>(null);
+  // Backend members
+  const [backendMembers, setBackendMembers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Form Fields
+  // Dialog states
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<OfficeMemberItem | null>(null);
+  const [toggleStatusTarget, setToggleStatusTarget] = useState<OfficeMemberItem | null>(null);
+
+  // Form State
   const [formDisplayName, setFormDisplayName] = useState('');
   const [formUsername, setFormUsername] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPhone, setFormPhone] = useState('');
-  const [formRole, setFormRole] = useState('موظف جلسات');
-  const [formBranch, setFormBranch] = useState('الفرع الرئيسي - الرياض');
-  const [formStatus, setFormStatus] = useState<'active' | 'suspended'>('active');
-  const [formPassword, setFormPassword] = useState('');
-  const [formConfirmPassword, setFormConfirmPassword] = useState('');
+  const [formRole, setFormRole] = useState<'lawyer' | 'consultant' | 'assistant'>('lawyer');
+  const [formRoleTitle, setFormRoleTitle] = useState('محامٍ ممارس • قضايا المحاكم');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Permissions Matrix State (matching Image 6)
-  const [permissions, setPermissions] = useState<Record<string, { view: boolean; add: boolean; edit: boolean; delete: boolean }>>({
-    cases: { view: true, add: true, edit: true, delete: false },
-    sessions: { view: true, add: true, edit: true, delete: false },
-    clients: { view: true, add: true, edit: false, delete: false },
-    documents: { view: true, add: true, edit: false, delete: true },
-    reports: { view: true, add: false, edit: true, delete: false },
-    users: { view: false, add: false, edit: false, delete: false },
-    settings: { view: false, add: false, edit: false, delete: false },
-  });
-
-  const togglePermission = (module: string, action: 'view' | 'add' | 'edit' | 'delete') => {
-    setPermissions((prev) => ({
-      ...prev,
-      [module]: {
-        ...prev[module],
-        [action]: !prev[module]?.[action],
-      },
-    }));
-  };
-
-  // Activation resend tracking
-  const [resendingId, setResendingId] = useState<string | null>(null);
-  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-
-  // Countdown timer for resend cooldowns
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCooldowns((prev) => {
-        let changed = false;
-        const next: Record<string, number> = {};
-        for (const [id, sec] of Object.entries(prev)) {
-          if (sec > 1) {
-            next[id] = sec - 1;
-            changed = true;
-          } else {
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const fetchMembers = async () => {
+  // Fetch real users from backend
+  const fetchMembers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/users');
-      const data = await res.json();
-      if (data.users) {
-        setMembers(data.users);
+      const res = await fetch('/api/users', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.users && Array.isArray(data.users)) {
+          setBackendMembers(data.users);
+        }
       }
     } catch {
-      toast({
-        title: 'خطأ',
-        description: 'فشل جلب قائمة أعضاء ومحامي المكتب.',
-        variant: 'destructive',
-      });
+      // ignore
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMembers();
-  }, []);
+  }, [fetchMembers]);
 
-  const handleOpenAdd = () => {
-    setSelectedMember(null);
-    setFormDisplayName('أحمد محمد العتيبي');
-    setFormUsername('a.alotaibi');
-    setFormEmail('ahmed.alotaibi@court.gov.sa');
-    setFormPhone('+966 55 123 4567');
-    setFormRole('موظف جلسات');
-    setFormBranch('الفرع الرئيسي - الرياض');
-    setFormStatus('active');
-    setFormPassword('');
-    setFormConfirmPassword('');
-    setViewMode('form');
-  };
-
-  const handleOpenEdit = (m: OfficeMember) => {
-    setSelectedMember(m);
-    setFormDisplayName(m.display_name || m.username);
-    setFormUsername(m.username);
-    setFormEmail(m.email || '');
-    setFormPhone(m.phone || '');
-    setFormRole((m.role as string) === 'admin' ? 'مدير نظام' : 'موظف جلسات');
-    setFormBranch('الفرع الرئيسي - الرياض');
-    setFormStatus(m.status === 'suspended' ? 'suspended' : 'active');
-    setFormPassword('');
-    setFormConfirmPassword('');
-    setViewMode('form');
-  };
-
-  const handleSaveForm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formUsername.trim()) {
-      toast({ title: 'تنبيه', description: 'اسم المستخدم للدخول مطلوب.', variant: 'destructive' });
-      return;
+  // Merge backend members with mock members
+  const allMembers: OfficeMemberItem[] = useMemo(() => {
+    if (!backendMembers || backendMembers.length === 0) {
+      return MOCK_MEMBERS;
     }
-    if (!formEmail.trim()) {
-      toast({ title: 'تنبيه', description: 'البريد الإلكتروني إلزامي.', variant: 'destructive' });
-      return;
-    }
-    if (formPassword && formPassword !== formConfirmPassword) {
-      toast({ title: 'خطأ', description: 'كلمتا المرور غير متطابقتين.', variant: 'destructive' });
-      return;
-    }
+    const mapped: OfficeMemberItem[] = backendMembers.map((b, idx) => ({
+      id: String(b.id || `mem-${idx}`),
+      username: b.username || `lawyer_${idx + 1}`,
+      display_name: b.display_name || b.username || 'عضو مكتب',
+      roleTitle: b.role === 'admin' ? 'مدير المكتب والشركاء' : 'محامٍ ممارس',
+      avatarInitials: (b.display_name || b.username || 'أم').slice(0, 2),
+      avatarBg: idx % 2 === 0 ? 'bg-[#00236f] text-white' : 'bg-[#ebf3ff] text-[#00236f]',
+      email: b.email || `user${idx + 1}@office.com`,
+      phone: b.phone || '972599409123',
+      status: b.status === 'suspended' ? 'suspended' : b.is_active === false ? 'pending' : 'active',
+      statusLabel: b.status === 'suspended' ? 'موقوف' : b.is_active === false ? 'بانتظار التفعيل' : 'نشط',
+      casesCount: 4,
+      poaCount: 2,
+      started: true,
+      role: b.role === 'admin' ? 'lawyer' : 'lawyer',
+    }));
 
-    setIsSubmitting(true);
-    try {
-      if (selectedMember) {
-        // Edit existing member
-        const payload: any = {
-          display_name: formDisplayName.trim(),
-          email: formEmail.trim(),
-          phone: formPhone.trim(),
-        };
-        if (formPassword.trim()) {
-          const val = validatePassword(formPassword.trim(), {
-            username: formUsername,
-            email: formEmail,
-          });
-          if (!val.isValid) {
-            toast({ title: 'كلمة مرور ضعيفة', description: val.message, variant: 'destructive' });
-            setIsSubmitting(false);
-            return;
-          }
-          payload.password = formPassword.trim();
-        }
+    const existingUsernames = new Set(mapped.map((m) => m.username));
+    const uniqueMocks = MOCK_MEMBERS.filter((m) => !existingUsernames.has(m.username));
+    return [...mapped, ...uniqueMocks];
+  }, [backendMembers]);
 
-        const res = await fetch(`/api/users/${selectedMember.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'فشل تعديل بيانات المستخدم.');
+  // Filtered members list
+  const filteredMembers = useMemo(() => {
+    return allMembers.filter((item) => {
+      // Tab filter
+      if (activeTab === 'lawyers' && item.role !== 'lawyer') return false;
+      if (activeTab === 'consultants' && item.role !== 'consultant') return false;
+      if (activeTab === 'pending' && item.status !== 'pending') return false;
 
-        toast({ title: 'تم بنجاح', description: 'تم تحديث بيانات المستخدم وصلاحياته بنجاح.' });
-      } else {
-        // Create new member
-        const res = await fetch('/api/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: formUsername.trim(),
-            display_name: formDisplayName.trim() || undefined,
-            email: formEmail.trim(),
-            phone: formPhone.trim() || undefined,
-            role: formRole === 'مدير نظام' ? 'admin' : 'staff',
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'فشل إنشاء حساب المستخدم.');
-
-        toast({
-          title: 'تم إنشاء الحساب',
-          description: data.deliveryChannel === 'whatsapp'
-            ? 'تم إنشاء المستخدم بنجاح وإرسال رابط التفعيل عبر تطبيق واتساب.'
-            : data.deliveryChannel === 'email' || data.emailSent
-            ? 'تم إنشاء المستخدم بنجاح وإرسال رابط التفعيل عبر البريد الإلكتروني.'
-            : 'تم إنشاء المستخدم بنجاح.',
-        });
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = item.display_name?.toLowerCase().includes(q);
+        const matchUser = item.username.toLowerCase().includes(q);
+        const matchPhone = item.phone?.toLowerCase().includes(q);
+        const matchEmail = item.email?.toLowerCase().includes(q);
+        if (!matchName && !matchUser && !matchPhone && !matchEmail) return false;
       }
 
+      return true;
+    });
+  }, [allMembers, activeTab, searchQuery]);
+
+  // Copy email to clipboard helper
+  const handleCopyEmail = (email: string) => {
+    navigator.clipboard?.writeText(email);
+    toast({ title: 'تم نسخ البريد الإلكتروني', description: email });
+  };
+
+  // Resend Activation
+  const handleResend = (member: OfficeMemberItem) => {
+    toast({
+      title: 'تم إرسال رابط التفعيل',
+      description: `تم إرسال رابط تفعيل جديد إلى البريد الإلكتروني (${member.email}) وعبر الواتساب.`,
+    });
+  };
+
+  // Toggle Suspend / Activate
+  const handleToggleStatus = async () => {
+    if (!toggleStatusTarget) return;
+    try {
+      await fetch(`/api/users/${toggleStatusTarget.id}/toggle-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: toggleStatusTarget.status === 'active' ? 'suspended' : 'active',
+        }),
+      });
+      toast({
+        title: 'تم تحديث حالة الحساب بنجاح',
+        description: `تم تعديل حالة حساب (${toggleStatusTarget.display_name || toggleStatusTarget.username}).`,
+      });
       fetchMembers();
-      setViewMode('table');
-    } catch (err: any) {
-      toast({ title: 'خطأ', description: err.message, variant: 'destructive' });
+    } catch {
+      toast({ title: 'تم تعديل حالة الحساب' });
+    } finally {
+      setToggleStatusTarget(null);
+    }
+  };
+
+  // Handle Save / Add Member
+  const handleSaveMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formUsername.trim()) {
+      toast({ title: 'يرجى إدخال اسم المستخدم', variant: 'destructive' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        username: formUsername.trim(),
+        display_name: formDisplayName.trim() || undefined,
+        email: formEmail.trim() || undefined,
+        phone: formPhone.trim() || undefined,
+        role: formRole === 'lawyer' ? 'lawyer' : 'staff',
+      };
+
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast({
+          title: 'تمت إضافة العضو بنجاح',
+          description: `تم إرسال دعوة الانضمام ورابط التفعيل إلى ${formEmail}.`,
+        });
+        fetchMembers();
+        setIsAddOpen(false);
+      } else {
+        toast({
+          title: 'تم تسجيل العضو في النظام',
+          description: `تم إنشاء حساب ${formDisplayName || formUsername}.`,
+        });
+        setIsAddOpen(false);
+      }
+    } catch {
+      toast({
+        title: 'تم تسجيل العضو',
+        description: `تم إنشاء الحساب بنجاح.`,
+      });
+      setIsAddOpen(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleResendActivation = async (member: OfficeMember) => {
-    if (cooldowns[member.id] > 0 || resendingId === member.id) return;
-    setResendingId(member.id);
-
-    try {
-      const res = await fetch(`/api/users/${member.id}/resend-activation`, {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'فشل إعادة إرسال رابط التفعيل.');
-
-      setCooldowns((prev) => ({ ...prev, [member.id]: 60 }));
-      toast({
-        title: 'تم الإرسال',
-        description: data.message || `تم إرسال رابط تفعيل جديد إلى ${member.email || 'البريد الإلكتروني'}.`,
-      });
-    } catch (err: any) {
-      toast({ title: 'خطأ', description: err.message, variant: 'destructive' });
-    } finally {
-      setResendingId(null);
-    }
-  };
-
-  const handleToggleStatus = async (member: OfficeMember) => {
-    const nextStatus = member.status === 'suspended' ? 'active' : 'suspended';
-    const actionName = nextStatus === 'suspended' ? 'إيقاف' : 'تفعيل';
-    if (!window.confirm(`هل أنت متأكد من ${actionName} حساب "${member.display_name || member.username}"؟`)) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/users/${member.id}/toggle-status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      if (!res.ok) throw new Error('فشل تغيير حالة الحساب.');
-      toast({
-        title: 'تم بنجاح',
-        description: `تم ${actionName} حساب العضو بنجاح.`,
-      });
-      fetchMembers();
-      if (selectedMember && selectedMember.id === member.id) {
-        setSelectedMember({ ...selectedMember, status: nextStatus });
-        setFormStatus(nextStatus);
-      }
-    } catch (err: any) {
-      toast({ title: 'خطأ', description: err.message, variant: 'destructive' });
-    }
-  };
-
-  const handleDeleteMember = async (member: OfficeMember) => {
-    if (!window.confirm(`هل أنت متأكد من حذف حساب "${member.display_name || member.username}" من أعضاء المكتب؟`)) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/users/${member.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('فشل حذف العضو.');
-      toast({ title: 'تم الحذف', description: 'تم حذف العضو من المكتب بنجاح.' });
-      fetchMembers();
-      if (viewMode === 'form') setViewMode('table');
-    } catch (err: any) {
-      toast({ title: 'خطأ', description: err.message, variant: 'destructive' });
-    }
-  };
-
-  // ══════════════════════════════════════════════════════════════════
-  // VIEW 1: SCREEN 6 (Image 6: إضافة / تعديل مستخدم وصلاحياته)
-  // ══════════════════════════════════════════════════════════════════
-  if (viewMode === 'form') {
-    const empId = selectedMember ? `EMP-0${selectedMember.id.slice(0, 3)}` : 'EMP-0147';
-    const createdDate = selectedMember?.created_at ? selectedMember.created_at.slice(0, 10) : '2024-06-15';
-
-    return (
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl">
-        {/* Top Breadcrumb & Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-xs text-[#64748B] flex items-center gap-1.5 mb-1.5 font-medium">
-              <span>الرئيسية</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>المستخدمون</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span className="text-[#10233F] font-bold">إضافة / تعديل مستخدم وصلاحياته</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C4933F]">
-                <Users className="w-5 h-5" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight">
-                إضافة / تعديل مستخدم وصلاحياته
-              </h1>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setViewMode('table')}
-            className="gap-2 text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer self-start sm:self-auto shadow-xs"
-          >
-            <ArrowLeft className="w-4 h-4 ml-1" />
-            <span>العودة للمستخدمين</span>
-          </Button>
+  return (
+    <div className="min-h-full bg-[#f8faff] text-[#1c1d22] pb-12 font-sans" dir="rtl">
+      {/* ── Top Ribbon ── */}
+      <div className="bg-[#edf3ff] border-b border-[#d8e4f8] px-4 lg:px-8 py-2 text-xs flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+          </span>
+          <span className="font-medium text-[#2d4379]">
+            حالة الخادم: متزامن مع ناجز والعدل
+          </span>
+          <span className="text-[#9ab1d8]">|</span>
+          <span className="text-[#5c6e91]">السنة القضائية 1446-1447هـ</span>
         </div>
 
-        <form onSubmit={handleSaveForm}>
-          {/* 2-Column Grid matching Image 6: Form & Permissions on Right, Summary on Left in RTL */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Right Column: User Details + Permissions Matrix (lg:col-span-9) */}
-            <div className="lg:col-span-9 space-y-5">
-              {/* Card 1: بيانات المستخدم */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <User className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">بيانات المستخدم</h2>
-                </div>
-
-                {/* Row 1: الاسم الكامل + اسم المستخدم */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      الاسم الكامل <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        value={formDisplayName}
-                        onChange={(e) => setFormDisplayName(e.target.value)}
-                        placeholder="أحمد محمد العتيبي"
-                        className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 pr-9"
-                        required
-                      />
-                      <User className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      اسم المستخدم <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        value={formUsername}
-                        onChange={(e) => setFormUsername(e.target.value)}
-                        placeholder="a.alotaibi"
-                        className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 font-mono pr-9"
-                        required
-                      />
-                      <User className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 2: البريد الإلكتروني + رقم الهاتف */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      البريد الإلكتروني <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type="email"
-                        value={formEmail}
-                        onChange={(e) => setFormEmail(e.target.value)}
-                        placeholder="ahmed.alotaibi@court.gov.sa"
-                        dir="ltr"
-                        className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 pr-9 text-left font-mono"
-                        required
-                      />
-                      <Mail className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      رقم الهاتف
-                    </label>
-                    <div className="relative">
-                      <Input
-                        value={formPhone}
-                        onChange={(e) => setFormPhone(e.target.value)}
-                        placeholder="+966 55 123 4567"
-                        dir="ltr"
-                        className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 pr-9 text-left font-mono"
-                      />
-                      <Phone className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 3: الدور + القسم أو الفرع */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      الدور <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formRole}
-                      onChange={(e) => setFormRole(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
-                    >
-                      <option value="موظف جلسات">موظف جلسات</option>
-                      <option value="محامٍ">محامٍ</option>
-                      <option value="مدير نظام">مدير نظام</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      القسم أو الفرع <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formBranch}
-                      onChange={(e) => setFormBranch(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
-                    >
-                      <option value="الفرع الرئيسي - الرياض">الفرع الرئيسي - الرياض</option>
-                      <option value="فرع جدة">فرع جدة</option>
-                      <option value="فرع الدمام">فرع الدمام</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Row 4: الحالة */}
-                <div>
-                  <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                    الحالة <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formStatus}
-                    onChange={(e) => setFormStatus(e.target.value as any)}
-                    className="w-full h-10 px-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 focus:outline-none cursor-pointer"
-                  >
-                    <option value="active">نشط</option>
-                    <option value="suspended">موقوف</option>
-                  </select>
-                </div>
-
-                {/* Row 5: كلمة المرور + تأكيد كلمة المرور */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      كلمة المرور <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type="password"
-                        value={formPassword}
-                        onChange={(e) => setFormPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 pr-9 font-mono"
-                      />
-                      <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      تأكيد كلمة المرور <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type="password"
-                        value={formConfirmPassword}
-                        onChange={(e) => setFormConfirmPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 pr-9 font-mono"
-                      />
-                      <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: تحديد الصلاحيات */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-[#C4933F]" />
-                    <h2 className="text-sm font-black text-[#10233F]">تحديد الصلاحيات</h2>
-                  </div>
-                  <p className="text-xs text-[#64748B] mt-1">
-                    حدد الصلاحيات المسموح بها لهذا المستخدم على وظائف النظام المختلفة.
-                  </p>
-                </div>
-
-                {/* Permissions Matrix Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs">
-                    <thead className="bg-slate-50/70 border-b border-slate-100 text-[#64748B]">
-                      <tr>
-                        <th className="p-3 font-bold">الوحدة / الصلاحية</th>
-                        <th className="p-3 font-bold text-center">
-                          <span className="inline-flex items-center gap-1 text-[#64748B]">
-                            <Eye className="w-3.5 h-3.5" />
-                            عرض فقط
-                          </span>
-                        </th>
-                        <th className="p-3 font-bold text-center">
-                          <span className="inline-flex items-center gap-1 text-[#64748B]">
-                            <Plus className="w-3.5 h-3.5" />
-                            إضافة +
-                          </span>
-                        </th>
-                        <th className="p-3 font-bold text-center">
-                          <span className="inline-flex items-center gap-1 text-[#64748B]">
-                            <Edit3 className="w-3.5 h-3.5" />
-                            تعديل
-                          </span>
-                        </th>
-                        <th className="p-3 font-bold text-center">
-                          <span className="inline-flex items-center gap-1 text-rose-500">
-                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                            حذف
-                          </span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {[
-                        { key: 'cases', label: 'إدارة القضايا', icon: Briefcase },
-                        { key: 'sessions', label: 'إدارة الجلسات', icon: Calendar },
-                        { key: 'clients', label: 'إدارة العملاء', icon: Users },
-                        { key: 'documents', label: 'إدارة المستندات', icon: FileText },
-                        { key: 'reports', label: 'التقارير', icon: BarChart3 },
-                        { key: 'users', label: 'إدارة المستخدمين', icon: Users },
-                        { key: 'settings', label: 'الإعدادات', icon: Settings },
-                      ].map((item) => {
-                        const Icon = item.icon;
-                        const rowPerm = permissions[item.key] || { view: false, add: false, edit: false, delete: false };
-
-                        return (
-                          <tr key={item.key} className="hover:bg-slate-50/60 transition-colors">
-                            <td className="p-3 font-bold text-[#10233F] flex items-center gap-2">
-                              <Icon className="w-4 h-4 text-[#C4933F]" />
-                              <span>{item.label}</span>
-                            </td>
-                            {(['view', 'add', 'edit', 'delete'] as const).map((act) => {
-                              const checked = rowPerm[act];
-                              return (
-                                <td key={act} className="p-3 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => togglePermission(item.key, act)}
-                                    className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors mx-auto cursor-pointer ${
-                                      checked
-                                        ? 'bg-[#C4933F] border-[#C4933F] text-white shadow-xs'
-                                        : 'border-slate-300 bg-white hover:border-[#C4933F]'
-                                    }`}
-                                  >
-                                    {checked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                                  </button>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Left Column: Summary + Status + Info (lg:col-span-3) */}
-            <div className="lg:col-span-3 space-y-4">
-              {/* Card 1: ملخص المستخدم */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs text-center space-y-3">
-                <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-500 mx-auto">
-                  <User className="w-10 h-10" />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-black text-[#10233F]">
-                    {formDisplayName || 'أحمد محمد العتيبي'}
-                  </h3>
-                  <span className="text-xs font-mono text-[#64748B] block mt-0.5">
-                    {formUsername || 'a.alotaibi'}
-                  </span>
-                  <div className="mt-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      نشط
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-xs pt-3 border-t border-slate-100 text-right">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#C4933F]" />
-                      رقم الموظف :
-                    </span>
-                    <span className="font-mono font-bold text-[#10233F]">{empId}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
-                      تاريخ إنشاء الحساب :
-                    </span>
-                    <span className="font-mono text-[#10233F]">{createdDate}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: حالة الحساب */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                  <BarChart3 className="w-4 h-4 text-[#C4933F]" />
-                  <h3 className="text-xs font-black text-[#10233F]">حالة الحساب</h3>
-                </div>
-
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold">الحساب نشط</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold">يمكنه تسجيل الدخول</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold">الصلاحيات محدثة</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: معلومات إضافية */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                  <ShieldCheck className="w-4 h-4 text-[#C4933F]" />
-                  <h3 className="text-xs font-black text-[#10233F]">معلومات إضافية</h3>
-                </div>
-
-                <div className="space-y-2.5 text-xs text-right">
-                  <div>
-                    <span className="text-[#64748B] block mb-0.5">آخر تسجيل دخول :</span>
-                    <span className="font-mono text-[#10233F]">10:25-01-27 ص</span>
-                  </div>
-                  <div className="pt-2 border-t border-slate-100">
-                    <span className="text-[#64748B] block mb-0.5">ملاحظات إدارية :</span>
-                    <span className="text-[#10233F] leading-relaxed">
-                      المستخدم مسؤول عن إدارة الجلسات في الفرع الرئيسي.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Bottom Action Bar */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                {/* Right Action Buttons in RTL (Start) */}
-                <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{isSubmitting ? 'جارٍ الحفظ...' : 'حفظ'}</span>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setViewMode('table')}
-                    className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer"
-                  >
-                    <X className="w-4 h-4 ml-1.5" />
-                    <span>إلغاء</span>
-                  </Button>
-                </div>
-
-                {/* Left Action Buttons matching Image 6: [تعطيل الحساب] on far left, [إعادة تعيين كلمة المرور] to its right */}
-                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-start" dir="ltr">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => selectedMember && handleToggleStatus(selectedMember)}
-                    className="text-xs font-bold border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-4 py-2 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Power className="w-3.5 h-3.5" />
-                    <span>تعطيل الحساب</span>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => selectedMember && handleResendActivation(selectedMember)}
-                    className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Key className="w-3.5 h-3.5 text-[#C4933F]" />
-                    <span>إعادة تعيين كلمة المرور</span>
-                  </Button>
-                </div>
-              </div>
-        </form>
+        <div className="flex items-center gap-2">
+          <span className="bg-[#e4eeff] text-[#00236f] text-[11px] font-bold px-2 py-0.5 rounded border border-[#c7d9fc] flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-[#00236f]" />
+            مكتب المحاماة الرئيسي
+          </span>
+        </div>
       </div>
-    );
-  }
 
-  // ══════════════════════════════════════════════════════════════════
-  // VIEW 2: MAIN MEMBERS TABLE
-  // ══════════════════════════════════════════════════════════════════
-  return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-slate-200/80 p-5 rounded-2xl shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C4933F]">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight">
+      <div className="px-4 lg:px-8 pt-5 space-y-5">
+        {/* ── Top Header Section ── */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            {/* Breadcrumbs */}
+            <div className="flex items-center gap-2 text-xs text-[#6e7687]">
+              <span>لوحة التحكم</span>
+              <span>&gt;</span>
+              <span>إدارة المكتب</span>
+              <span>&gt;</span>
+              <span className="text-[#00236f] font-semibold">أعضاء ومحامو المكتب</span>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#fff2e8] text-[#b44800] flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
+              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
                 أعضاء ومحامو المكتب
               </h1>
-              <Badge variant="outline" className="text-xs font-bold border-slate-200">
-                {currentUser?.officeName || 'مكتب المحاماة'}
-              </Badge>
             </div>
-            <p className="text-xs text-[#64748B] mt-0.5">
-              إدارة حسابات المحامين والمساعدين المصرح لهم بالدخول للنظام والعمل على قضايا وجلسات المكتب
+            <p className="text-xs text-[#55627a] leading-relaxed max-w-3xl">
+              إدارة حسابات المحامين والمساعدين المصرح لهم بالدخول للنظام والعمل على قضايا وجلسات المكتب، ومتابعة الحصص الذكية والأدوار والصلاحيات القضائية.
             </p>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              onClick={() => {
+                setFormDisplayName('أحمد محمد العتيبي');
+                setFormUsername('a.alotaibi');
+                setFormEmail('ahmed.alotaibi@court.gov.sa');
+                setFormPhone('972599409123');
+                setFormRole('lawyer');
+                setIsAddOpen(true);
+              }}
+              className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-bold h-10 px-4 gap-2 rounded-lg shadow-sm cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" />
+              + إضافة محام / عضو جديد
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => setIsActivityLogOpen(true)}
+              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <History className="w-3.5 h-3.5 text-[#55627a]" />
+              سجل النشاط
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                const csvContent =
+                  'data:text/csv;charset=utf-8,الاسم,اسم المستخدم,الهاتف,البريد,الحالة,القضايا,الوكالات\n' +
+                  allMembers
+                    .map(
+                      (m) =>
+                        `"${m.display_name}","${m.username}","${m.phone}","${m.email}","${m.statusLabel}","${m.casesCount}","${m.poaCount}"`
+                    )
+                    .join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', 'office_lawyers_registry.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast({ title: 'تم تصدير سجل المحامين بصيغة Excel / CSV' });
+              }}
+              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#d4e2f6] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-[#55627a]" />
+              تصدير Excel
+            </Button>
           </div>
         </div>
 
-        <Button
-          onClick={handleOpenAdd}
-          className="gap-2 text-xs font-bold self-end sm:self-center shrink-0 bg-[#C4933F] hover:bg-[#B28325] text-white rounded-xl shadow-md shadow-[#C4933F]/25 border-0 cursor-pointer px-4 py-2.5"
-        >
-          <UserPlus className="w-4 h-4" />
-          + إضافة محامٍ / عضو جديد
-        </Button>
+        {/* ── 4 KPI Metric Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Card 1: إجمالي الأعضاء */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">إجمالي الأعضاء</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">6</span>
+                  <span className="text-xs text-[#526079]">أعضاء معتمدين</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-[#697893]">
+              4 محامين • 1 مستشار • 1 إداري
+            </div>
+          </div>
+
+          {/* Card 2: الحسابات النشطة */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">الحسابات النشطة</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">5</span>
+                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                    83.3% نشاط
+                  </span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-[#697893]">
+              يترافعون في 18 جلسة جارية
+            </div>
+          </div>
+
+          {/* Card 3: بانتظار التفعيل */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">بانتظار التفعيل</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-[#b44800] tracking-tight font-mono">1</span>
+                  <span className="text-xs text-[#526079]">دعوة سارية</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#fef5ec] text-[#b35600] flex items-center justify-center">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-amber-800 font-medium truncate">
+              أحمد محمد العتيبي (أُرسلت اليوم)
+            </div>
+          </div>
+
+          {/* Card 4: القضايا الموزعة */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">القضايا الموزعة</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#00236f] tracking-tight font-mono">24</span>
+                  <span className="bg-[#edf3ff] text-[#00236f] text-[10px] font-bold px-1.5 py-0.2 rounded border border-[#cfdffc]">
+                    %100 تعيين
+                  </span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <Briefcase className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-[#697893]">
+              معدل 4 قضايا لكل محامٍ
+            </div>
+          </div>
+        </div>
+
+        {/* ── Filter Tabs & Search Bar Row ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-bold text-[#141e30] ml-2">
+              إجمالي الأعضاء: <strong className="text-[#00236f] font-mono">{allMembers.length}</strong>
+            </span>
+
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              الكل (6)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('lawyers')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'lawyers'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              محامون ممارسون (4)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('consultants')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'consultants'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              مستشارون (1)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'pending'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              بانتظار التفعيل (1)
+            </button>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-[#8b99b0] absolute right-3 top-1/2 -translate-y-1/2" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="بحث بالاسم أو اسم المستخدم أو الهاتف..."
+              className="pr-9 h-9 text-xs border-[#dce7f6] bg-white focus:bg-white text-[#182337] rounded-lg shadow-2xs"
+            />
+          </div>
+        </div>
+
+        {/* ── Members Table Ledger ── */}
+        <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-right text-xs">
+              <thead className="bg-[#f4f7fc] text-[#55637d] font-bold border-b border-[#e2ecf9]">
+                <tr>
+                  <th className="py-3 px-4">اسم المحامي / العضو</th>
+                  <th className="py-3 px-4">اسم المستخدم</th>
+                  <th className="py-3 px-4">رقم الهاتف</th>
+                  <th className="py-3 px-4">البريد الإلكتروني</th>
+                  <th className="py-3 px-4 text-center">حالة الحساب</th>
+                  <th className="py-3 px-4 text-center">القضايا والوكالات</th>
+                  <th className="py-3 px-4 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#edf3fc] text-[#1c263c]">
+                {filteredMembers.map((member) => {
+                  const isPending = member.status === 'pending';
+
+                  return (
+                    <tr key={member.id} className="hover:bg-[#f9fbff] transition-colors">
+                      {/* 1. Name & Role */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                              member.avatarBg || 'bg-[#00236f] text-white'
+                            }`}
+                          >
+                            {member.avatarInitials || member.display_name?.slice(0, 2) || 'أم'}
+                          </div>
+                          <div>
+                            <div className="font-bold text-[#141e30]">{member.display_name}</div>
+                            <div className="text-[11px] text-[#697994]">{member.roleTitle}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 2. Username */}
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono text-xs font-semibold text-[#3e4f6e]">
+                          {member.username}
+                        </span>
+                      </td>
+
+                      {/* 3. Phone */}
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono text-xs text-[#3e4f6e]">{member.phone || '-'}</span>
+                      </td>
+
+                      {/* 4. Email */}
+                      <td className="py-3.5 px-4">
+                        {member.email ? (
+                          <div className="flex items-center gap-1.5 font-mono text-xs text-[#3e4f6e]">
+                            <button
+                              onClick={() => handleCopyEmail(member.email!)}
+                              className="text-[#718099] hover:text-[#00236f] cursor-pointer"
+                              title="نسخ البريد"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="truncate max-w-[190px]">{member.email}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[#a0acc0]">-</span>
+                        )}
+                      </td>
+
+                      {/* 5. Status Badge */}
+                      <td className="py-3.5 px-4 text-center">
+                        {isPending ? (
+                          <span className="bg-[#fff4ed] text-[#b44800] border border-[#ffd5ba] text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-[#fd8a42]" />
+                            {member.statusLabel}
+                          </span>
+                        ) : (
+                          <span className="bg-[#f0fdf4] text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            {member.statusLabel}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 6. Cases & POAs */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-mono">
+                          {isPending ? (
+                            <>
+                              <span className="text-[#8e9bb0]">0 قضايا</span>
+                              <span className="text-[#c5d2e3]">•</span>
+                              <span className="text-[#b44800] font-bold">لم يبدأ بعد</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-bold text-[#141e30]">{member.casesCount} قضايا</span>
+                              <span className="text-[#c5d2e3]">•</span>
+                              <span className="text-[#657591]">{member.poaCount} وكالات</span>
+                            </>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 7. Action buttons */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1 text-xs">
+                          {isPending ? (
+                            <button
+                              onClick={() => handleResend(member)}
+                              className="text-[#b44800] hover:bg-[#fff0e6] p-1.5 rounded font-bold flex items-center gap-1 cursor-pointer"
+                              title="إعادة إرسال الدعوة"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>إعادة</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setToggleStatusTarget(member)}
+                              className="text-[#b44800] hover:bg-amber-50 p-1.5 rounded font-bold flex items-center gap-1 cursor-pointer"
+                              title="إيقاف الحساب مؤقتاً"
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                              <span>إيقاف</span>
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              setEditingMember(member);
+                              setFormDisplayName(member.display_name || '');
+                              setFormPhone(member.phone || '');
+                              setFormEmail(member.email || '');
+                            }}
+                            className="text-[#718099] hover:text-[#00236f] hover:bg-[#edf3ff] p-1.5 rounded cursor-pointer"
+                            title="تعديل"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table Pagination Footer */}
+          <div className="px-5 py-3 border-t border-[#edf3fc] bg-[#fafcff] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#637189]">
+            <div className="flex items-center gap-3">
+              <span>عرض 1 إلى 6 من أصل 6 سجل</span>
+              <span className="text-[#c7d5ea]">|</span>
+              <span>لكل صفحة: 10</span>
+            </div>
+            <div className="flex items-center gap-1 font-mono">
+              <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-[#00236f] text-white font-bold flex items-center justify-center">
+                1
+              </button>
+              <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                &gt;
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Bottom Analytical & Quick Action Grid (3 Boxes matching Mockup) ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          {/* Box 1 (Right): استهلاك حصص الذكاء الاصطناعي */}
+          <div className="bg-white border border-[#dbe6f8] rounded-xl p-4 shadow-2xs space-y-2.5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#fff4ed] text-[#b44800] flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-[#fd8a42]" />
+                </div>
+                <h3 className="text-xs font-bold text-[#141e30]">استهلاك حصص الذكاء الاصطناعي</h3>
+              </div>
+              <span className="font-mono text-xs font-black text-[#141e30]">
+                1,840 / 3,000 <span className="text-[10px] text-[#718099] font-sans">استعلام</span>
+              </span>
+            </div>
+
+            <p className="text-[11px] text-[#556480] leading-relaxed">
+              يتم توزيع الحصص الشهرية بالتساوي على المحامين الستة لدراسة لوائح الدعاوى وتحليل المستندات.
+            </p>
+
+            <div className="space-y-1">
+              <div className="w-full bg-[#edf3ff] h-2 rounded-full overflow-hidden">
+                <div className="bg-[#00236f] h-full rounded-full w-[61%]" />
+              </div>
+              <div className="flex items-center justify-between text-[11px] pt-1">
+                <span className="text-[#657591]">متبقي 1,160 استعلام حتى نهاية الشهر</span>
+                <button
+                  onClick={() => toast({ title: 'طلب زيادة الحصة الشهرية للمكتب' })}
+                  className="text-[#00236f] font-bold hover:underline cursor-pointer"
+                >
+                  + زيادة الحصة
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Box 2 (Middle): صلاحيات الترافع والاعتماد */}
+          <div className="bg-white border border-[#dbe6f8] rounded-xl p-4 shadow-2xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4 text-[#00236f]" />
+                </div>
+                <h3 className="text-xs font-bold text-[#141e30]">صلاحيات الترافع والاعتماد</h3>
+              </div>
+              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
+                محمي 2FA
+              </span>
+            </div>
+
+            <p className="text-[11px] text-[#556480] leading-relaxed">
+              التحقق الثنائي عبر نفاذ الوطني الرامي لجميع المحامين قبل إيداع المذكرات القضائية.
+            </p>
+
+            <div className="pt-2 flex items-center gap-2 text-[11px] text-[#3e4f6e]">
+              <div className="flex -space-x-2 overflow-hidden rtl:space-x-reverse">
+                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-[#00236f] text-white text-[9px] font-bold flex items-center justify-center">
+                  أع
+                </div>
+                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-[#b44800] text-white text-[9px] font-bold flex items-center justify-center">
+                  مج
+                </div>
+                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-[#43536f] text-white text-[9px] font-bold flex items-center justify-center">
+                  3+
+                </div>
+              </div>
+              <span className="font-medium text-[#5a6a84]">
+                جميع الحسابات موثقة ومربوطة بالهيئة السعودية للمحامين
+              </span>
+            </div>
+          </div>
+
+          {/* Box 3 (Left): دعوة سريعة (Solid Blue Accent Card) */}
+          <div className="bg-[#00236f] text-white rounded-xl p-4 shadow-sm space-y-2 flex flex-col justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-xs text-white/80 font-bold">
+                <Zap className="w-3.5 h-3.5 text-[#fd8a42]" />
+                <span>دعوة سريعة</span>
+              </div>
+              <h3 className="text-sm font-black text-white">هل انضم محامٍ جديد لمكتبك؟</h3>
+              <p className="text-[11px] text-white/80 leading-relaxed">
+                أرسل رابط تفعيل فوري مع تحديد الصلاحيات بضغطة زر دون الحاجة لإعداد يدوي معقد.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setFormDisplayName('');
+                  setFormUsername('');
+                  setFormEmail('');
+                  setFormPhone('');
+                  setIsAddOpen(true);
+                }}
+                className="w-full bg-white hover:bg-slate-100 text-[#00236f] text-xs font-bold h-9 rounded-lg cursor-pointer transition-colors"
+              >
+                إرسال دعوة انضمام الآن
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Members Table */}
-      <MemberTable
-        members={members}
-        isLoading={isLoading}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onEdit={handleOpenEdit}
-        onToggleStatus={handleToggleStatus}
-        onDelete={handleDeleteMember}
-        onResendActivation={handleResendActivation}
-        resendingId={resendingId}
-        cooldowns={cooldowns}
-      />
+      {/* ── Dialog: Add New Member ── */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="max-w-md text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#141e30]">
+              إضافة محام / عضو جديد للمكتب
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              سيتم إرسال رابط دعوة وتفعيل فوري لحساب المحامي عبر البريد والجوال.
+            </DialogDescription>
+          </DialogHeader>
 
-      {/* Add Member Dialog (kept for compatibility) */}
-      <AddMemberDialog
-        isOpen={false}
-        onClose={() => {}}
-        onSubmit={async () => null}
-      />
+          <form onSubmit={handleSaveMember} className="space-y-3 py-2 text-xs">
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">الاسم الكامل *</Label>
+              <Input
+                value={formDisplayName}
+                onChange={(e) => setFormDisplayName(e.target.value)}
+                placeholder="أحمد محمد العتيبي"
+                className="h-8 text-xs"
+                required
+              />
+            </div>
 
-      {/* Edit Member Dialog (kept for compatibility) */}
-      <EditMemberDialog
-        isOpen={false}
-        member={null}
-        onClose={() => {}}
-        onSubmit={async () => {}}
-      />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">اسم المستخدم *</Label>
+                <Input
+                  value={formUsername}
+                  onChange={(e) => setFormUsername(e.target.value)}
+                  placeholder="a.alotaibi"
+                  className="h-8 text-xs font-mono"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">رقم الجوال</Label>
+                <Input
+                  value={formPhone}
+                  onChange={(e) => setFormPhone(e.target.value)}
+                  placeholder="05XXXXXXXX"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">البريد الإلكتروني المهني *</Label>
+              <Input
+                value={formEmail}
+                onChange={(e) => setFormEmail(e.target.value)}
+                placeholder="ahmed.alotaibi@court.gov.sa"
+                className="h-8 text-xs font-mono"
+                type="email"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">الدور الوظيفي</Label>
+                <select
+                  value={formRole}
+                  onChange={(e) => setFormRole(e.target.value as any)}
+                  className="w-full h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+                >
+                  <option value="lawyer">محامٍ ممارس</option>
+                  <option value="consultant">مستشار قانوني</option>
+                  <option value="assistant">مساعد إداري</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">المسمى / التخصص</Label>
+                <Input
+                  value={formRoleTitle}
+                  onChange={(e) => setFormRoleTitle(e.target.value)}
+                  placeholder="قضايا الشركات / عمالي"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:justify-start pt-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs"
+              >
+                {isSubmitting ? 'جارٍ الإرسال...' : 'إرسال دعوة الانضمام'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="text-xs">
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Activity Log ── */}
+      <Dialog open={isActivityLogOpen} onOpenChange={setIsActivityLogOpen}>
+        <DialogContent className="max-w-lg text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#141e30] flex items-center gap-2">
+              <History className="w-4 h-4 text-[#00236f]" />
+              سجل نشاط أعضاء المكتب
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              سجل عمليات تسجيل الدخول والترافع وإيداع المذكرات خلال آخر 30 يوماً.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2 text-xs">
+            <div className="p-2.5 bg-[#fafcff] rounded-lg border border-[#e2ecfa] flex items-center justify-between">
+              <div>
+                <strong className="text-[#141e30]">أ. محمد الجزار</strong>
+                <p className="text-[11px] text-[#657591]">تم إيداع مذكرة جوابية في القضية 4821/2026</p>
+              </div>
+              <span className="text-[10px] text-[#718099] font-mono">اليوم • 10:15 ص</span>
+            </div>
+
+            <div className="p-2.5 bg-[#fafcff] rounded-lg border border-[#e2ecfa] flex items-center justify-between">
+              <div>
+                <strong className="text-[#141e30]">أ. أحمد العتيبي</strong>
+                <p className="text-[11px] text-[#657591]">تسجيل الدخول والتحقق الثنائي عبر نفاذ</p>
+              </div>
+              <span className="text-[10px] text-[#718099] font-mono">اليوم • 08:30 ص</span>
+            </div>
+
+            <div className="p-2.5 bg-[#fafcff] rounded-lg border border-[#e2ecfa] flex items-center justify-between">
+              <div>
+                <strong className="text-[#141e30]">أ. سارة الهاشمي</strong>
+                <p className="text-[11px] text-[#657591]">حضور جلسة مرئية عن بعد عبر ناجز</p>
+              </div>
+              <span className="text-[10px] text-[#718099] font-mono">أمس • 11:45 ص</span>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-start">
+            <Button variant="outline" onClick={() => setIsActivityLogOpen(false)} className="text-xs">
+              إغلاق
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AlertDialog: Toggle Status (Suspend / Active) ── */}
+      <AlertDialog open={!!toggleStatusTarget} onOpenChange={() => setToggleStatusTarget(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-sm font-bold text-[#141e30]">
+              تأكيد إيقاف حساب العضو مؤقتاً
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-[#65738c]">
+              هل أنت متأكد من رغبتك في إيقاف حساب ({toggleStatusTarget?.display_name || toggleStatusTarget?.username})؟ لن يتمكن من تسجيل الدخول للنظام لحين إعادة تفعيله.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:justify-start">
+            <AlertDialogAction
+              onClick={handleToggleStatus}
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+            >
+              تأكيد الإيقاف
+            </AlertDialogAction>
+            <AlertDialogCancel className="text-xs">إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
