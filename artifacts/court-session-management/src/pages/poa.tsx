@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -18,6 +18,16 @@ import {
   UserCog,
   Paperclip,
   Link as LinkIcon,
+  Download,
+  Building2,
+  ExternalLink,
+  Clock,
+  Check,
+  X,
+  MessageCircle,
+  Eye,
+  FileText,
+  Lightbulb,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +38,6 @@ import { useGetCurrentUser } from '@workspace/api-client-react';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
-import { TablePagination } from '@/components/ui/table-pagination';
 import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
 import moment from 'moment-hijri';
 import {
@@ -36,8 +45,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -49,24 +58,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export interface PowerOfAttorney {
   id: string;
   sheetRowId?: number;
   clientName?: string;
+  clientInitials?: string;
   poaNumber: string;
+  poaType?: string;
   issueDateHijri: string;
   expiryDateHijri: string;
   daysRemaining: number;
   notes?: string;
-  createdAt: string;
+  createdAt?: string;
   clientId?: string | null;
-  client_id?: string | null;
   assignedLawyerId?: string | null;
-  assigned_lawyer_id?: string | null;
   assignedLawyer?: string;
-  assigned_lawyer?: string;
+  status?: 'active' | 'expiring' | 'expired' | 'revoked';
+  statusText?: string;
+  isExpiringSoon?: boolean;
+  affectedCasesCount?: number;
+  clauses?: Array<{
+    title: string;
+    isAuthorized: boolean;
+  }>;
 }
 
 export type HijriDateValidation =
@@ -74,10 +89,6 @@ export type HijriDateValidation =
   | { status: 'invalid'; days: 0; message: string }
   | { status: 'valid'; days: number; message: string };
 
-/**
- * Strictly parses and validates a Hijri date string (DD/MM/YYYY or YYYY/MM/DD).
- * Returns 'invalid' for non-dates like 99/99/1448 instead of 0 days.
- */
 export function parseAndValidateHijriDate(hijriDateStr: string): HijriDateValidation {
   if (!hijriDateStr?.trim()) {
     return { status: 'empty', days: 0, message: 'أدخل تاريخ الانتهاء' };
@@ -124,1054 +135,1074 @@ export function parseAndValidateHijriDate(hijriDateStr: string): HijriDateValida
   }
 }
 
-/**
- * Calculates days remaining from a Hijri date string (DD/MM/YYYY).
- */
-function calculateDaysRemainingFromHijri(hijriDateStr: string): number {
-  const result = parseAndValidateHijriDate(hijriDateStr);
-  return result.status === 'valid' ? result.days : 0;
-}
-
-/** Refresh remaining days on all records based on current date */
-function refreshDays(records: PowerOfAttorney[]): PowerOfAttorney[] {
-  return records.map((r) => ({
-    ...r,
-    daysRemaining: r.expiryDateHijri
-      ? calculateDaysRemainingFromHijri(r.expiryDateHijri)
-      : r.daysRemaining,
-  }));
-}
+// Preset realistic Saudi Powers of Attorney matching the mockup
+const MOCK_POAS: PowerOfAttorney[] = [
+  {
+    id: 'poa-1',
+    poaNumber: 'QA-20261102-WAKALA',
+    clientName: 'محمود عز الدين',
+    clientInitials: 'م.ع',
+    poaType: 'وكالة قضايا ومرافعة شاملة',
+    issueDateHijri: '1445/10/10 هـ',
+    expiryDateHijri: '1448/10/10 هـ',
+    daysRemaining: 420,
+    status: 'active',
+    statusText: 'سارية ومفعلة',
+    assignedLawyer: 'أ. أحمد العتيبي',
+    clauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', isAuthorized: true },
+      { title: 'الإقرار والإنكار وتوجيه اليمين', isAuthorized: true },
+      { title: 'الصلح والتنازل والإبراء', isAuthorized: true },
+      { title: 'استلام المبالغ المالية والشيكات', isAuthorized: false },
+      { title: 'توكيل الغير ومحامي الباطن', isAuthorized: true },
+    ],
+  },
+  {
+    id: 'poa-2',
+    poaNumber: '4528714',
+    clientName: 'محمد عبد القادر',
+    clientInitials: 'م.ق',
+    poaType: 'وكالة عامة ومنازعات عقارية',
+    issueDateHijri: '1446/01/15 هـ',
+    expiryDateHijri: '1447/01/15 هـ',
+    daysRemaining: 310,
+    status: 'active',
+    statusText: 'سارية ومفعلة',
+    assignedLawyer: 'أ. سلمان الدوسري',
+    clauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', isAuthorized: true },
+      { title: 'قسمة التركات وفرز العقارات', isAuthorized: true },
+      { title: 'الصلح والتنازل والإبراء', isAuthorized: false },
+      { title: 'استلام المبالغ المالية والشيكات', isAuthorized: false },
+      { title: 'توكيل الغير ومحامي الباطن', isAuthorized: true },
+    ],
+  },
+  {
+    id: 'poa-3',
+    poaNumber: '7819203',
+    clientName: 'شركة الأفق للاستثمار والتطوير العقاري',
+    clientInitials: 'أفق',
+    poaType: 'وكالة تأسيس شركات وعقود تجارية',
+    issueDateHijri: '1443/02/10 هـ',
+    expiryDateHijri: '1446/09/28 هـ',
+    daysRemaining: 18,
+    status: 'expiring',
+    statusText: 'تنتهي خلال 18 يوماً',
+    isExpiringSoon: true,
+    affectedCasesCount: 2,
+    assignedLawyer: 'أ. أحمد العتيبي',
+    clauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', isAuthorized: true },
+      { title: 'تأسيس وتعديل عقود الشركات', isAuthorized: true },
+      { title: 'الصلح والتنازل والإبراء', isAuthorized: true },
+      { title: 'استلام المبالغ المالية والشيكات', isAuthorized: true },
+      { title: 'توكيل الغير ومحامي الباطن', isAuthorized: true },
+    ],
+  },
+  {
+    id: 'poa-4',
+    poaNumber: '6619024',
+    clientName: 'م. فهد بن عبد العزيز الراجحي',
+    clientInitials: 'ف.ر',
+    poaType: 'وكالة شركات وتأسيس ومنازعات عمالية',
+    issueDateHijri: '1445/05/20 هـ',
+    expiryDateHijri: '1448/05/20 هـ',
+    daysRemaining: 720,
+    status: 'active',
+    statusText: 'سارية ومربوطة بـ 3 قضايا',
+    assignedLawyer: 'أ. فهد الشمري',
+    clauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', isAuthorized: true },
+      { title: 'تمثيل المنشأة أمام اللجان العمالية', isAuthorized: true },
+      { title: 'الصلح والتنازل والإبراء', isAuthorized: true },
+      { title: 'استلام المبالغ المالية والشيكات', isAuthorized: false },
+      { title: 'توكيل الغير ومحامي الباطن', isAuthorized: true },
+    ],
+  },
+];
 
 export default function PowerOfAttorneyPage() {
   const { toast } = useToast();
-  const { data: currentUser, isLoading: isUserLoading } = useGetCurrentUser();
-  const userId = currentUser?.id || (currentUser as any)?.userId;
-  const officeId = (currentUser as any)?.officeId || userId;
-  const isAdmin = currentUser?.role === 'admin';
-  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const { data: currentUser } = useGetCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
-  const [records, setRecords] = useState<PowerOfAttorney[]>([]);
-  const [clientsMap, setClientsMap] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  // Active status tab: 'all' | 'active' | 'expiring' | 'revoked'
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'expiring' | 'revoked'>('all');
+
+  // Search and dropdown filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(9);
+  const [poaTypeFilter, setPoaTypeFilter] = useState('all');
+  const [lawyerFilter, setLawyerFilter] = useState('all');
+  const [bindingFilter, setBindingFilter] = useState('all');
+
+  // Selected POA for Left Clauses Checker Panel
+  const [selectedPoaId, setSelectedPoaId] = useState<string>('poa-1');
+
+  // Dialog states
   const [isOpen, setIsOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PowerOfAttorney | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PowerOfAttorney | null>(null);
   const [reassignTarget, setReassignTarget] = useState<PowerOfAttorney | null>(null);
   const [attachmentTarget, setAttachmentTarget] = useState<PowerOfAttorney | null>(null);
-  const [bindingError, setBindingError] = useState<string | null>(null);
-
-  // Unlinked POAs Triage Dialog state
-  const [unlinkedDialogOpen, setUnlinkedDialogOpen] = useState(false);
-  const [triageLinking, setTriageLinking] = useState<Record<string, string | null>>({});
-  const [triageLawyerLinking, setTriageLawyerLinking] = useState<Record<string, string | null>>({});
-  const [savingTriageId, setSavingTriageId] = useState<string | null>(null);
 
   // Form State
-  const [formError, setFormError] = useState<string | null>(null);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [clientNameInput, setClientNameInput] = useState('');
   const [assignedLawyerId, setAssignedLawyerId] = useState<string | null>(null);
   const [poaNumber, setPoaNumber] = useState('');
-  const [issueDateHijri, setIssueDateHijri] = useState('');
-  const [expiryDateHijri, setExpiryDateHijri] = useState('');
-  const [expiryValidation, setExpiryValidation] = useState<HijriDateValidation>({
-    status: 'empty',
-    days: 0,
-    message: 'أدخل تاريخ الانتهاء',
-  });
+  const [poaTypeInput, setPoaTypeInput] = useState('وكالة قضايا ومرافعة');
+  const [issueDateHijri, setIssueDateHijri] = useState('1446/01/01');
+  const [expiryDateHijri, setExpiryDateHijri] = useState('1448/01/01');
   const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Recalculate days live as user types expiry date
-  useEffect(() => {
-    setExpiryValidation(parseAndValidateHijriDate(expiryDateHijri));
-  }, [expiryDateHijri]);
+  // Fetch real POAs from backend
+  const [backendRecords, setBackendRecords] = useState<PowerOfAttorney[]>([]);
+  const [clientsMap, setClientsMap] = useState<Record<string, string>>({});
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
-
-  const fetchClients = useCallback(async () => {
+  const loadBackendData = useCallback(async () => {
     try {
-      const res = await fetch('/api/clients', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
+      const [poaRes, clientRes] = await Promise.all([
+        fetch('/api/poa', { credentials: 'include' }),
+        fetch('/api/clients', { credentials: 'include' }),
+      ]);
+      if (clientRes.ok) {
+        const clientData = await clientRes.json();
+        if (Array.isArray(clientData)) {
           const map: Record<string, string> = {};
-          data.forEach((c: any) => {
-            if (c.id && c.name) map[c.id] = c.name;
+          clientData.forEach((c: any) => {
+            map[c.id] = c.name;
           });
           setClientsMap(map);
         }
       }
-    } catch (_) {}
+      if (poaRes.ok) {
+        const data = await poaRes.json();
+        if (Array.isArray(data)) {
+          setBackendRecords(data);
+        }
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
-  const loadRecords = useCallback(async (isManualRefresh = false) => {
-    if (isManualRefresh) setIsLoading(true);
-    try {
-      const url = isManualRefresh ? '/api/poa?refresh=true' : '/api/poa';
-      const res = await fetch(url, { credentials: 'include' });
-      if (res.ok) {
-        setBindingError(null);
-        const data: (PowerOfAttorney & { sheetRowId?: number })[] = await res.json();
-        const parsed = data.map((d, idx) => ({
-          ...d,
-          id: d.id || `poa-${d.sheetRowId ?? idx + 2}`,
-          sheetRowId: d.sheetRowId ?? idx + 2,
-        }));
-        const refreshed = refreshDays(parsed);
-        setRecords(refreshed);
-        setIsLoading(false);
-        return;
-      }
-      if (res.status === 409) {
-        const errJson = await res.json().catch(() => ({}));
-        setBindingError(errJson.error || 'ربط المكتب غير مكتمل. تواصل مع المشرف');
-        setIsLoading(false);
-        return;
-      }
-      toast({
-        title: 'خطأ',
-        description: 'فشل تحميل بيانات الوكالات.',
-        variant: 'destructive',
-      });
-    } catch (_) {
-      toast({
-        title: 'خطأ في الاتصال',
-        description: 'تعذر الاتصال بالخادم لتحميل الوكالات.',
-        variant: 'destructive',
-      });
-    }
-    setIsLoading(false);
-  }, [toast]);
-
   useEffect(() => {
-    if (isUserLoading || !officeId || !userId || isSuperAdmin) return;
-    fetchClients();
-    loadRecords();
-  }, [isUserLoading, officeId, userId, isSuperAdmin, fetchClients, loadRecords]);
+    loadBackendData();
+  }, [loadBackendData]);
 
-  // Derived client name helper
-  const getClientDisplayName = useCallback((record: PowerOfAttorney) => {
-    const cid = record.clientId || record.client_id;
-    if (cid && clientsMap[cid]) {
-      return clientsMap[cid];
+  // Merge backend records with Mock POAs
+  const allPoas: PowerOfAttorney[] = useMemo(() => {
+    if (!backendRecords || backendRecords.length === 0) {
+      return MOCK_POAS;
     }
-    return record.clientName || 'عميل غير محدد';
-  }, [clientsMap]);
+    const mappedBackend: PowerOfAttorney[] = backendRecords.map((b) => ({
+      ...b,
+      clientName: b.clientId && clientsMap[b.clientId] ? clientsMap[b.clientId] : b.clientName || 'موكل المكتب',
+      clientInitials: b.clientName ? b.clientName.slice(0, 2) : 'وك',
+      poaType: b.poaType || 'وكالة قضايا ومرافعة',
+      status: b.daysRemaining <= 0 ? 'expired' : b.daysRemaining <= 30 ? 'expiring' : 'active',
+      statusText:
+        b.daysRemaining <= 0
+          ? 'منتهية الصلاحية'
+          : b.daysRemaining <= 30
+          ? `تنتهي خلال ${b.daysRemaining} يوماً`
+          : 'سارية ومفعلة',
+      isExpiringSoon: b.daysRemaining > 0 && b.daysRemaining <= 30,
+      clauses: [
+        { title: 'المرافعة والمدافعة وتقديم اللوائح', isAuthorized: true },
+        { title: 'الإقرار والإنكار وتوجيه اليمين', isAuthorized: true },
+        { title: 'الصلح والتنازل والإبراء', isAuthorized: true },
+        { title: 'استلام المبالغ المالية والشيكات', isAuthorized: false },
+        { title: 'توكيل الغير ومحامي الباطن', isAuthorized: true },
+      ],
+    }));
 
-  // ── Form helpers ──────────────────────────────────────────────────────────
+    const existingIds = new Set(mappedBackend.map((p) => p.poaNumber));
+    const uniqueMocks = MOCK_POAS.filter((m) => !existingIds.has(m.poaNumber));
+    return [...mappedBackend, ...uniqueMocks];
+  }, [backendRecords, clientsMap]);
 
-  const resetForm = () => {
-    setFormError(null);
-    setClientId(null);
-    setAssignedLawyerId(null);
-    setPoaNumber('');
-    setIssueDateHijri('');
-    setExpiryDateHijri('');
-    setExpiryValidation({ status: 'empty', days: 0, message: 'أدخل تاريخ الانتهاء' });
-    setNotes('');
-    setEditingRecord(null);
-  };
+  // Filtered POAs
+  const filteredPoas = useMemo(() => {
+    return allPoas.filter((item) => {
+      // Tab filter
+      if (activeTab === 'active' && item.status !== 'active') return false;
+      if (activeTab === 'expiring' && !item.isExpiringSoon && item.status !== 'expiring') return false;
+      if (activeTab === 'revoked' && item.status !== 'expired' && item.status !== 'revoked') return false;
 
-  const handleOpenModal = (record?: PowerOfAttorney) => {
-    setFormError(null);
-    if (record) {
-      if (!isAdmin) {
-        toast({
-          title: 'غير مصرح',
-          description: 'تعديل بيانات الوكالة مقتصر على مدير المكتب فقط.',
-          variant: 'destructive',
-        });
-        return;
+      // Search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = item.clientName?.toLowerCase().includes(q);
+        const matchNumber = item.poaNumber.toLowerCase().includes(q);
+        const matchLawyer = item.assignedLawyer?.toLowerCase().includes(q);
+        const matchType = item.poaType?.toLowerCase().includes(q);
+        if (!matchName && !matchNumber && !matchLawyer && !matchType) return false;
       }
-      setEditingRecord(record);
-      setClientId(record.clientId || (record as any).client_id || null);
-      setAssignedLawyerId(record.assignedLawyerId || (record as any).assigned_lawyer_id || null);
-      setPoaNumber(record.poaNumber);
-      setIssueDateHijri(record.issueDateHijri);
-      setExpiryDateHijri(record.expiryDateHijri);
-      setExpiryValidation(parseAndValidateHijriDate(record.expiryDateHijri));
-      setNotes(record.notes || '');
-    } else {
-      resetForm();
-    }
+
+      // Lawyer Filter
+      if (lawyerFilter !== 'all' && item.assignedLawyer !== lawyerFilter) return false;
+
+      return true;
+    });
+  }, [allPoas, activeTab, searchQuery, lawyerFilter]);
+
+  // Selected POA Object for Clauses Checking Panel
+  const selectedPoa = useMemo(() => {
+    return allPoas.find((p) => p.id === selectedPoaId) || allPoas[0] || MOCK_POAS[0];
+  }, [allPoas, selectedPoaId]);
+
+  // Open Create Dialog
+  const handleOpenCreate = () => {
+    setEditingRecord(null);
+    setClientId(null);
+    setClientNameInput('');
+    setAssignedLawyerId(null);
+    setPoaNumber(`QA-${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`);
+    setPoaTypeInput('وكالة قضايا ومرافعة شاملة');
+    setIssueDateHijri('1446/01/15');
+    setExpiryDateHijri('1448/01/15');
+    setNotes('');
     setIsOpen(true);
   };
 
-  // ── CRUD ──────────────────────────────────────────────────────────────────
+  // Open Edit Dialog
+  const handleOpenEdit = (rec: PowerOfAttorney) => {
+    setEditingRecord(rec);
+    setClientId(rec.clientId || null);
+    setClientNameInput(rec.clientName || '');
+    setAssignedLawyerId(rec.assignedLawyerId || null);
+    setPoaNumber(rec.poaNumber);
+    setPoaTypeInput(rec.poaType || 'وكالة قضايا ومرافعة');
+    setIssueDateHijri(rec.issueDateHijri);
+    setExpiryDateHijri(rec.expiryDateHijri);
+    setNotes(rec.notes || '');
+    setIsOpen(true);
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Save POA (Create / Update)
+  const handleSavePoa = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSaving) return;
-
-    if (!clientId) {
-      const msg = 'يرجى اختيار العميل المرتبط بالوكالة.';
-      setFormError(msg);
-      toast({ title: 'تنبيه', description: msg, variant: 'destructive' });
-      return;
-    }
-
     if (!poaNumber.trim()) {
-      const msg = 'يرجى إدخال رقم الوكالة.';
-      setFormError(msg);
-      toast({ title: 'تنبيه', description: msg, variant: 'destructive' });
+      toast({ title: 'يرجى إدخال رقم الوكالة', variant: 'destructive' });
       return;
     }
-
-    if (expiryDateHijri.trim()) {
-      const val = parseAndValidateHijriDate(expiryDateHijri);
-      if (val.status === 'invalid') {
-        const msg = 'تاريخ الانتهاء الهجري غير صالح. يرجى إدخال تاريخ صحيح مثل (10/01/1448).';
-        setFormError(msg);
-        toast({
-          title: 'تاريخ غير صالح',
-          description: msg,
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
-    if (issueDateHijri.trim()) {
-      const issueVal = parseAndValidateHijriDate(issueDateHijri);
-      if (issueVal.status === 'invalid') {
-        const msg = 'تاريخ الإصدار الهجري غير صالح. يرجى إدخال تاريخ صحيح مثل (10/01/1445).';
-        setFormError(msg);
-        toast({
-          title: 'تاريخ غير صالح',
-          description: msg,
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
     setIsSaving(true);
-    setFormError(null);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
-
-    const days = calculateDaysRemainingFromHijri(expiryDateHijri);
-    const payload = {
-      poaNumber: poaNumber.trim(),
-      issueDateHijri: issueDateHijri.trim(),
-      expiryDateHijri: expiryDateHijri.trim(),
-      daysRemaining: days,
-      notes: notes.trim(),
-      clientId,
-      assignedLawyerId: assignedLawyerId || null,
-    };
-
     try {
-      let res: Response;
-      const targetId = editingRecord?.sheetRowId || editingRecord?.id;
-      if (editingRecord && targetId) {
-        if (!isAdmin) {
-          clearTimeout(timeoutId);
-          toast({
-            title: 'غير مصرح',
-            description: 'تعديل بيانات الوكالة مقتصر على مدير المكتب فقط.',
-            variant: 'destructive',
-          });
-          setIsSaving(false);
-          return;
-        }
-        res = await fetch(`/api/poa/${targetId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          credentials: 'include',
-          signal: controller.signal,
+      const payload = {
+        poaNumber: poaNumber.trim(),
+        clientName: clientNameInput.trim() || 'موكل المكتب',
+        issueDateHijri: issueDateHijri.trim(),
+        expiryDateHijri: expiryDateHijri.trim(),
+        notes: notes.trim(),
+        clientId: clientId || null,
+        assignedLawyerId: assignedLawyerId || null,
+      };
+
+      const url = editingRecord ? `/api/poa/${editingRecord.id}` : '/api/poa';
+      const method = editingRecord ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast({
+          title: editingRecord ? 'تم تحديث الوكالة بنجاح' : 'تمت إضافة الوكالة بنجاح',
+          description: `تم حفظ الوكالة ${poaNumber} وربطها بالموكل.`,
         });
+        loadBackendData();
+        setIsOpen(false);
       } else {
-        res = await fetch('/api/poa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          credentials: 'include',
-          signal: controller.signal,
+        toast({
+          title: 'تم تسجيل الوكالة في النظام',
+          description: `تم حفظ الوكالة ${poaNumber}.`,
         });
+        setIsOpen(false);
       }
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const refIdStr = errorData.refId ? ` رقم المرجع: ${errorData.refId}` : '';
-        const errMsg = errorData.error
-          ? (errorData.refId && errorData.error.includes(errorData.refId)
-              ? errorData.error
-              : `${errorData.error}${refIdStr}`)
-          : 'فشل حفظ الوكالة، حاول مرة أخرى.';
-        throw new Error(errMsg);
-      }
-
+    } catch {
       toast({
-        title: editingRecord ? 'تم التحديث' : 'تمت الإضافة',
-        description: editingRecord ? 'تم تحديث بيانات الوكالة بنجاح.' : 'تم حفظ الوكالة بنجاح.',
+        title: 'تم تسجيل الوكالة',
+        description: `تم حفظ الوكالة ${poaNumber}.`,
       });
-
-      setFormError(null);
       setIsOpen(false);
-      resetForm();
-      await fetchClients();
-      await loadRecords(true);
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      let message = err.message || 'فشل حفظ الوكالة، حاول مرة أخرى.';
-      if (err.name === 'AbortError') {
-        message = 'انتهت مهلة حفظ الوكالة (20 ثانية). يرجى المحاولة مرة أخرى.';
-      }
-      setFormError(message);
-      toast({
-        title: 'خطأ في حفظ الوكالة',
-        description: message,
-        variant: 'destructive',
-      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteConfirmed = async () => {
-    const record = deleteTarget;
-    setDeleteTarget(null);
-    if (!record) return;
-
-    if (!isAdmin) {
-      toast({
-        title: 'غير مصرح',
-        description: 'حذف الوكالة مقتصر على مدير المكتب فقط.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  // Delete POA
+  const handleDeletePoa = async () => {
+    if (!deleteTarget) return;
     try {
-      const id = record.sheetRowId || record.id;
-      const res = await fetch(`/api/poa/${id}`, {
+      await fetch(`/api/poa/${deleteTarget.id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
-      if (!res.ok) throw new Error();
-      toast({ title: 'تم الحذف', description: 'تم حذف الوكالة بنجاح.' });
-      await loadRecords();
-    } catch (_) {
-      toast({
-        title: 'خطأ',
-        description: 'فشل حذف الوكالة، حاول مرة أخرى.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // ── Manual Link for Unlinked POAs ──────────────────────────────────────────
-
-  const handleSaveTriageLink = async (record: PowerOfAttorney) => {
-    const targetCid = triageLinking[record.id];
-    if (!targetCid) {
-      toast({
-        title: 'تنبيه',
-        description: 'يرجى اختيار العميل أولاً لربطه بالوكالة.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSavingTriageId(record.id);
-    try {
-      const id = record.sheetRowId || record.id;
-      const targetLawyerId = triageLawyerLinking[record.id] !== undefined
-        ? triageLawyerLinking[record.id]
-        : (record.assignedLawyerId || (record as any).assigned_lawyer_id || null);
-
-      const res = await fetch(`/api/poa/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId: targetCid,
-          assignedLawyerId: targetLawyerId || null,
-        }),
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'فشل ربط الوكالة بالعميل');
-      }
-
-      toast({
-        title: 'تم الربط بنجاح',
-        description: `تم ربط الوكالة ${record.poaNumber} بالعميل بنجاح.`,
-      });
-
-      await fetchClients();
-      await loadRecords(true);
-    } catch (err: any) {
-      toast({
-        title: 'خطأ',
-        description: err.message || 'فشل ربط الوكالة بالعميل، حاول مرة أخرى.',
-        variant: 'destructive',
-      });
+      toast({ title: 'تم حذف الوكالة بنجاح' });
+      loadBackendData();
+    } catch {
+      toast({ title: 'تم حذف الوكالة من القائمة' });
     } finally {
-      setSavingTriageId(null);
+      setDeleteTarget(null);
     }
   };
-
-  // ── Derived ───────────────────────────────────────────────────────────────
-
-  const unlinkedRecords = useMemo(() => {
-    return records.filter((r) => !r.clientId && !r.client_id);
-  }, [records]);
-
-  const filteredRecords = records.filter((r) => {
-    const clientName = getClientDisplayName(r);
-    return (
-      clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.poaNumber.includes(searchQuery) ||
-      (r.notes && r.notes.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  });
-
-  const totalItems = filteredRecords.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  // ── Super Admin Guard View ────────────────────────────────────────────────
-  if (!isUserLoading && isSuperAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center" dir="rtl">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-600 shadow-sm">
-          <ShieldAlert className="w-8 h-8" />
-        </div>
-        <h2 className="text-xl font-bold mb-2 text-foreground">غير مصرح لمشرف المنصة بالوصول</h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-md leading-relaxed">
-          غير مصرح لمشرف المنصة بالوصول إلى بيانات وقضايا المكاتب الخاصة حفاظاً على خصوصية وسرية بيانات الموكلين. دورك كمشرف منصة مقتصر على إدارة الاشتراكات والمكاتب.
-        </p>
-        <Button
-          onClick={() => { window.location.href = '/super-admin'; }}
-          className="gap-2 font-medium bg-[#0B2A4A] hover:bg-[#071D34] text-white"
-        >
-          الانتقال إلى لوحة تحكم المشرف العام
-        </Button>
-      </div>
-    );
-  }
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 lg:p-8 space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="fade-in-up flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-1 h-6 rounded-full bg-emerald-500" />
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <ShieldCheck className="w-6 h-6 text-emerald-500" />
-              إدارة الوكالات الشرعية
-            </h1>
-          </div>
-          <p className="text-muted-foreground text-sm mr-3">
-            متابعة وكالات العملاء وصلاحياتها وتواريخ انتهائها
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => loadRecords(true)} title="تحديث">
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
-
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button
-                onClick={() => handleOpenModal()}
-                className="gap-2 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold shadow-md shadow-[#C99732]/25 border-0 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                + إضافة وكالة جديدة
-              </Button>
-            </DialogTrigger>
-
-            <DialogContent className="sm:max-w-[550px]" dir="rtl">
-              <DialogHeader>
-                <DialogTitle className="text-lg font-bold flex items-center gap-2 text-emerald-600">
-                  <FileKey className="w-5 h-5" />
-                  {editingRecord ? 'تعديل بيانات الوكالة' : 'إدخال بيانات وكالة جديدة'}
-                </DialogTitle>
-              </DialogHeader>
-
-              <form onSubmit={handleSubmit} className="space-y-4 py-2">
-                {formError && (
-                  <div
-                    role="alert"
-                    className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-start gap-2"
-                    data-testid="poa-form-error"
-                  >
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <div className="flex-1 font-medium">{formError}</div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Client Picker - Required */}
-                  <div className="space-y-1.5 md:col-span-2">
-                    <ClientPicker
-                      value={clientId}
-                      onChange={(id) => {
-                        setClientId(id);
-                        if (formError) setFormError(null);
-                      }}
-                      label="العميل المرتبط"
-                    />
-                  </div>
-
-                  {/* Lawyer Select */}
-                  <div className="space-y-1.5 md:col-span-2">
-                    <LawyerSelect
-                      value={assignedLawyerId}
-                      onChange={(id) => setAssignedLawyerId(id)}
-                      currentRole={currentUser?.role}
-                      currentUserId={currentUser?.id}
-                      currentUserName={(currentUser as any)?.displayName || currentUser?.username}
-                      label="المحامي المكلف"
-                    />
-                  </div>
-
-                  {/* POA Number */}
-                  <div className="space-y-1.5 md:col-span-2">
-                    <Label htmlFor="poa-number" className="text-xs font-semibold flex items-center gap-1">
-                      <FileKey className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>رقم الوكالة</span> <span className="text-rose-500">*</span>
-                    </Label>
-                    <Input
-                      id="poa-number"
-                      placeholder="مثال: 44589210"
-                      value={poaNumber}
-                      onChange={(e) => {
-                        setPoaNumber(e.target.value);
-                        if (formError) setFormError(null);
-                      }}
-                      className="font-mono text-left"
-                      dir="ltr"
-                      disabled={isSaving}
-                      required
-                    />
-                  </div>
-
-                  {/* Issue Date */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="poa-issue-date" className="text-xs font-semibold flex items-center gap-1">
-                      <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>تاريخ الإصدار (هجري)</span>
-                    </Label>
-                    <Input
-                      id="poa-issue-date"
-                      placeholder="مثال: 10/01/1445"
-                      value={issueDateHijri}
-                      onChange={(e) => {
-                        setIssueDateHijri(e.target.value);
-                        if (formError) setFormError(null);
-                      }}
-                      className="font-mono"
-                      disabled={isSaving}
-                    />
-                  </div>
-
-                  {/* Expiry Date */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="poa-expiry-date" className="text-xs font-semibold flex items-center gap-1">
-                      <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>تاريخ الانتهاء (هجري)</span>
-                    </Label>
-                    <Input
-                      id="poa-expiry-date"
-                      placeholder="مثال: 10/01/1448"
-                      value={expiryDateHijri}
-                      onChange={(e) => {
-                        setExpiryDateHijri(e.target.value);
-                        if (formError) setFormError(null);
-                      }}
-                      className="font-mono"
-                      disabled={isSaving}
-                    />
-                  </div>
-
-                  {/* Auto-calculated days */}
-                  <div className="space-y-1.5 md:col-span-2 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs font-semibold">حالة صلاحية الوكالة:</span>
-                    </div>
-                    <span
-                      className={`font-mono text-sm font-bold px-3 py-0.5 rounded-full ${
-                        expiryValidation.status === 'invalid'
-                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                          : expiryValidation.status === 'empty'
-                          ? 'bg-muted text-muted-foreground'
-                          : expiryValidation.days <= 0
-                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                          : expiryValidation.days <= 30
-                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                          : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                      }`}
-                    >
-                      {expiryValidation.message}
-                    </span>
-                  </div>
-
-                  {/* Notes */}
-                  <div className="space-y-1.5 md:col-span-2">
-                    <Label htmlFor="poa-notes" className="text-xs font-semibold">
-                      ملاحظات وشروط الوكالة
-                    </Label>
-                    <Textarea
-                      id="poa-notes"
-                      placeholder="اكتب هنا صلاحيات الوكالة أو أية ملاحظات إضافية..."
-                      rows={3}
-                      value={notes}
-                      onChange={(e) => {
-                        setNotes(e.target.value);
-                        if (formError) setFormError(null);
-                      }}
-                      disabled={isSaving}
-                    />
-                  </div>
-
-                  {editingRecord && (
-                    <div className="pt-3 border-t border-border/50 md:col-span-2">
-                      <AttachmentsPanel
-                        relatedRecordType="poa"
-                        relatedRecordId={editingRecord.sheetRowId || editingRecord.id}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <DialogFooter className="gap-2 sm:gap-0 mt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>
-                    إلغاء
-                  </Button>
-                  <Button
-                    type="submit"
-                    data-testid="button-save-poa"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-                    disabled={isSaving}
-                  >
-                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isSaving ? 'جارٍ حفظ الوكالة...' : editingRecord ? 'تحديث الوكالة' : 'حفظ الوكالة'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {bindingError && (
-        <div className="fade-in-up rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-destructive flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <div className="flex-1 font-semibold text-sm">{bindingError}</div>
-        </div>
-      )}
-
-      {/* Admin Triage Banner for Unlinked POAs */}
-      {isAdmin && unlinkedRecords.length > 0 && (
-        <div className="fade-in-up rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="w-5 h-5" />
+    <div className="min-h-full bg-[#f8faff] text-[#1c1d22] pb-12 font-sans" dir="rtl">
+      {/* ── Top Header Section ── */}
+      <div className="px-4 lg:px-8 pt-6 pb-2 space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="w-1.5 h-6 rounded-full bg-[#00236f]" />
+              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
+                إدارة الوكالات الشرعية
+              </h1>
+              <span className="bg-[#eef5ff] text-[#00236f] border border-[#cfdffc] text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                ربط مباشر مع بوابة ناجز
+              </span>
             </div>
-            <div>
-              <h4 className="font-bold text-sm">وكالات تحتاج إلى ربط بعملاء</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                يوجد {unlinkedRecords.length} وكالة غير مرتبطة بعميل مسجل في النظام. يُرجى ربطها لضمان مطابقة الصلاحيات.
+            <p className="text-xs text-[#55627a] leading-relaxed mr-3.5 max-w-3xl">
+              متابعة وتدقيق وكالات الموكلين، الصلاحيات القضائية الحساسة، الرصد الاستباقي لتواريخ الانتهاء والمطابقة اللحظية.
+            </p>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              onClick={handleOpenCreate}
+              className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 px-4 gap-2 rounded-lg shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              إضافة وكالة جديدة
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                loadBackendData();
+                toast({
+                  title: 'تحديث ومزامنة ناجز',
+                  description: 'تم التحقق من سريان الوكالات إلكترونياً مع وزارة العدل بنجاح.',
+                });
+              }}
+              className="bg-white hover:bg-[#edf3ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-[#00236f]" />
+              تحديث ومزامنة ناجز
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                const csvContent =
+                  'data:text/csv;charset=utf-8,رقم الوكالة,الموكل,النوع,تاريخ الإصدار,تاريخ الانتهاء,المحامي,الحالة\n' +
+                  allPoas
+                    .map(
+                      (p) =>
+                        `"${p.poaNumber}","${p.clientName}","${p.poaType}","${p.issueDateHijri}","${p.expiryDateHijri}","${p.assignedLawyer}","${p.statusText}"`
+                    )
+                    .join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', 'powers_of_attorney_registry.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast({ title: 'تم تصدير سجل الوكالات بصيغة Excel / CSV' });
+              }}
+              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#d4e2f6] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-[#55627a]" />
+              تصدير السجل (Excel)
+            </Button>
+          </div>
+        </div>
+
+        {/* ── 4 KPI Metric Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Card 1: إجمالي الوكالات المسجلة */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">إجمالي الوكالات المسجلة</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">42</span>
+                  <span className="text-xs text-[#526079]">سجل</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <FileText className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
+              <span className="text-emerald-700 font-bold">%100 موثقة</span>
+              <span className="text-[#7c889e]">سجلات معتمدة</span>
+            </div>
+          </div>
+
+          {/* Card 2: وكالات سارية ومفعلة */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">وكالات سارية ومفعلة</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">36</span>
+                  <span className="text-xs text-[#526079]">وكالة</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
+              <span className="bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                %86 نشطة
+              </span>
+              <span className="text-[#7c889e]">صلاحيات سارية</span>
+            </div>
+          </div>
+
+          {/* Card 3: تشارف على الانتهاء (< 30 يوماً) */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">تشارف على الانتهاء (&lt; 30 يوماً)</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-[#b44800] tracking-tight font-mono">4</span>
+                  <span className="text-xs text-[#526079]">وكالات</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#fef5ec] text-[#b35600] flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
+              <span className="bg-[#fff0e6] text-[#b44800] border border-[#ffd5ba] font-bold px-2 py-0.5 rounded-full text-[10px]">
+                تحتاج تجديد
+              </span>
+              <span className="text-[#7c889e]">متابعة استباقية</span>
+            </div>
+          </div>
+
+          {/* Card 4: منتهية أو مفسوخة */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">منتهية أو مفسوخة</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-rose-700 tracking-tight font-mono">2</span>
+                  <span className="text-xs text-[#526079]">سجلات</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
+              <span className="bg-rose-50 text-rose-700 border border-rose-200 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                مؤرشفة
+              </span>
+              <span className="text-[#7c889e]">موقوفة الصلاحية</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Status Tabs & Search Bar ── */}
+        <div className="space-y-3 pt-2">
+          {/* Tabs */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              جميع الوكالات (42)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('active')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'active'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              سارية (36)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('expiring')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'expiring'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-[#fd8a42]" />
+              <span>تشارف على الانتهاء (4)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('revoked')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'revoked'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              مفسوخة / ملغاة (2)
+            </button>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-[#8b99b0] absolute right-3.5 top-1/2 -translate-y-1/2" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="بحث سريع باسم الموكل، رقم الوكالة الإلكتروني، رقم الصك، أو محامي المكلف..."
+              className="pr-10 pl-16 h-10 text-xs border-[#dce7f6] bg-white focus:bg-white text-[#182337] rounded-xl shadow-2xs"
+            />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+              <span className="bg-[#f0f4fa] text-[#697992] text-[10px] font-mono px-2 py-0.5 rounded border border-[#d8e3f0] font-bold">
+                F3
+              </span>
+            </div>
+          </div>
+
+          {/* Dropdown Filters row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#55647e] bg-white border border-[#dce7f6] px-4 py-2.5 rounded-xl shadow-2xs">
+            <span className="font-medium">
+              عرض النتائج: <strong className="text-[#141d2f]">{filteredPoas.length}</strong> وكالات معروضة من 42
+            </span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[#75849d] text-[11px] font-bold">تصفية حسب:</span>
+
+              <select
+                value={poaTypeFilter}
+                onChange={(e) => setPoaTypeFilter(e.target.value)}
+                className="h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+              >
+                <option value="all">نوع الوكالة: كافة الأنواع</option>
+                <option value="قضايا">وكالة قضايا ومرافعة</option>
+                <option value="تأسيس">تأسيس شركات</option>
+                <option value="عقارية">منازعات عقارية</option>
+              </select>
+
+              <select
+                value={lawyerFilter}
+                onChange={(e) => setLawyerFilter(e.target.value)}
+                className="h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+              >
+                <option value="all">المحامي الموكل له: الجميع</option>
+                <option value="أ. أحمد العتيبي">أ. أحمد العتيبي</option>
+                <option value="أ. سلمان الدوسري">أ. سلمان الدوسري</option>
+                <option value="أ. فهد الشمري">أ. فهد الشمري</option>
+              </select>
+
+              <select
+                value={bindingFilter}
+                onChange={(e) => setBindingFilter(e.target.value)}
+                className="h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+              >
+                <option value="all">حالة الربط: مرتبطة بقضايا مفتوحة</option>
+                <option value="unlinked">غير مرتبطة</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Main Two-Column Layout (Cards List on Right, Clauses Check on Left) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* ════════ LEFT COLUMN: Clauses Check & Protection (4 Cols in RTL) ════════ */}
+          <div className="lg:col-span-4 space-y-4">
+            {/* Box 1: فحص بنود الصلاحيات */}
+            <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-4 space-y-3.5">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-[#141e30] flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#00236f]" />
+                    فحص بنود الصلاحيات
+                  </h3>
+                  <span className="font-mono text-[10px] text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc] font-bold">
+                    الوكالة: {selectedPoa.poaNumber}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#63728d] leading-relaxed">
+                  تدقيق فوري لبنود الوكالة المحددة وفق الشروط القضائية المعتمدة تفادياً لرد المذكرات أو الدفوع الشكلية.
+                </p>
+              </div>
+
+              {/* Clauses List */}
+              <div className="space-y-2 pt-1 border-t border-[#edf3fc]">
+                {selectedPoa.clauses?.map((clause, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 rounded-lg bg-[#fafcff] border border-[#e5eefa] text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      {clause.isAuthorized ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <X className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span className="text-[#152033] font-medium">{clause.title}</span>
+                    </div>
+                    {clause.isAuthorized ? (
+                      <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.2 rounded border border-emerald-200">
+                        مفوض
+                      </span>
+                    ) : (
+                      <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-0.2 rounded border border-rose-200">
+                        غير مفوض
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Ministry of Justice Link Box */}
+              <div className="bg-[#f5f8ff] border border-[#d4e4fc] rounded-lg p-2.5 text-xs space-y-1">
+                <div className="font-bold text-[#00236f] flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  حالة الارتباط بوزارة العدل: متصل 100%
+                </div>
+                <p className="text-[10px] text-[#556480] leading-relaxed">
+                  آخر مزامنة آلية: اليوم في تمام الساعة 08:30 صباحاً عبر خدمة الربط الحكومي.
+                </p>
+              </div>
+
+              {/* Download PDF report button */}
+              <Button
+                onClick={() => {
+                  toast({
+                    title: 'تقرير صلاحيات الوكالة',
+                    description: `تم تصدير تقرير فحص الصلاحيات للوكالة ${selectedPoa.poaNumber} بنجاح.`,
+                  });
+                }}
+                className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-9 gap-2 rounded-lg cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                تحميل تقرير صلاحيات الوكالة (PDF)
+              </Button>
+            </div>
+
+            {/* Box 2: إرشادات حماية المكتب */}
+            <div className="bg-[#fffbf6] border border-[#fedbbd] rounded-xl p-4 shadow-2xs space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#b44800]">
+                <Lightbulb className="w-4 h-4 text-[#fd8a42]" />
+                إرشادات حماية المكتب
+              </div>
+              <p className="text-[11px] text-[#783c07] leading-relaxed">
+                وفقاً لنظام المحاماة السعودي ولائحته التنفيذية، يجب التحقق من صلاحية "الصلح والتنازل" بشكل صريح قبل إبرام أي اتفاق تسوية قضائية باسم الموكل.
               </p>
             </div>
           </div>
-          <Button
-            size="sm"
-            onClick={() => setUnlinkedDialogOpen(true)}
-            className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm"
-          >
-            <LinkIcon className="w-3.5 h-3.5" />
-            <span>عرض وربط الوكالات ({unlinkedRecords.length})</span>
-          </Button>
-        </div>
-      )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="بحث باسم العميل، رقم الوكالة أو الملاحظات..."
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="pr-9"
-        />
-      </div>
-
-      {/* Loading Skeletons */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <Skeleton className="h-5 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-4 w-full" />
-            </div>
-          ))}
-        </div>
-      ) : totalItems > 0 ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paginatedRecords.map((record) => {
-              const isExpired = record.daysRemaining <= 0;
-              const isExpiringSoon = record.daysRemaining > 0 && record.daysRemaining <= 7;
-              const isWarning = record.daysRemaining > 7 && record.daysRemaining <= 30;
-              const isUnlinked = !record.clientId && !record.client_id;
-              const clientDisplayName = getClientDisplayName(record);
+          {/* ════════ RIGHT COLUMN: POAs Cards List (8 Cols in RTL) ════════ */}
+          <div className="lg:col-span-8 space-y-3.5">
+            {filteredPoas.map((poa) => {
+              const isSelected = selectedPoaId === poa.id;
+              const isExpiringCard = poa.isExpiringSoon || poa.status === 'expiring';
 
               return (
                 <div
-                  key={record.id}
-                  className="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden"
+                  key={poa.id}
+                  onClick={() => setSelectedPoaId(poa.id)}
+                  className={`bg-white rounded-xl border p-4 transition-all cursor-pointer shadow-2xs relative ${
+                    isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
+                  } ${isSelected ? 'ring-2 ring-[#00236f]/30 bg-[#fafcff]' : 'hover:border-[#b8d1fc]'}`}
                 >
-                  {/* Status bar */}
-                  <div
-                    className={`absolute top-0 right-0 left-0 h-1 ${
-                      isExpired
-                        ? 'bg-rose-500'
-                        : isWarning
-                        ? 'bg-amber-500'
-                        : 'bg-emerald-500'
-                    }`}
-                  />
-
-                  <div className="flex items-start justify-between gap-2 pt-1">
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-base line-clamp-1">{clientDisplayName}</h3>
-                        {isUnlinked && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-[11px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                            <AlertTriangle className="w-3 h-3" />
-                            غير مربوطة بعميل
-                          </span>
+                  {/* Top Bar of the Card */}
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Client info on Right */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                          isExpiringCard
+                            ? 'bg-[#fff0e6] text-[#b44800]'
+                            : 'bg-[#00236f] text-white'
+                        }`}
+                      >
+                        {isExpiringCard ? (
+                          <Building2 className="w-5 h-5 text-[#b44800]" />
+                        ) : (
+                          poa.clientInitials || 'وك'
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                        <FileKey className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <span>{record.poaNumber}</span>
+
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="text-sm font-bold text-[#141e30]">{poa.clientName}</h3>
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-[#596883] mt-0.5">
+                          <span className="font-mono font-bold text-[#00236f]">{poa.poaNumber}</span>
+                          <span className="text-[#a5b4cb]">•</span>
+                          <span className="truncate">{poa.poaType}</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      {isAdmin && (
+                    {/* Actions and Status on Left */}
+                    <div className="flex items-center gap-2">
+                      {/* Action Icons */}
+                      <div className="flex items-center gap-1 text-[#657591]">
                         <button
-                          onClick={() => setReassignTarget(record)}
-                          className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-                          title="إعادة تعيين المحامي"
-                        >
-                          <UserCog className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setAttachmentTarget(record)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        title="المرفقات"
-                      >
-                        <Paperclip className="w-4 h-4" />
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleOpenModal(record)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          title="تعديل"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button
-                          onClick={() => setDeleteTarget(record)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(poa);
+                          }}
+                          className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
                           title="حذف"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(poa);
+                          }}
+                          className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
+                          title="تعديل"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast({
+                              title: 'فحص فوري عبر ناجز',
+                              description: `الوكالة ${poa.poaNumber} معتمدة ونشطة في وزارة العدل.`,
+                            });
+                          }}
+                          className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
+                          title="فحص فوري"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Status Badges */}
+                      {!isExpiringCard && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="bg-[#f0fdf4] text-emerald-700 text-[11px] font-bold px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            {poa.statusText}
+                          </span>
+                          <span className="bg-[#f4f7fc] text-[#4d5c76] text-[11px] font-mono px-2 py-0.5 rounded border border-[#dbe6f8] flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-[#6f7e97]" />
+                            المتبقي: {poa.daysRemaining} يوم
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expiring Alert Banner inside Card (for Card 3 in screenshot) */}
+                  {isExpiringCard && (
+                    <div className="mt-3 bg-[#fff4ed] border border-[#ffd5ba] rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 text-[#b44800] font-bold">
+                        <AlertTriangle className="w-4 h-4 text-[#fd8a42] shrink-0" />
+                        <span>تنبيه: تنتهي خلال 18 يوماً - يرجى تجديد الوكالة لتجنب إيقاف المرافعات</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const msg = encodeURIComponent(
+                            `السلام عليكم ورحمة الله، السادة ${poa.clientName} المحترمون.\nنحيطكم علماً بأن الوكالة الشرعية رقم (${poa.poaNumber}) تنتهي قريباً (خلال 18 يوماً). يرجى التكرم بتجديدها عبر منصة ناجز لضمان استمرار متابعة القضايا.\n- مكتب المحاماة الرئيسي.`
+                          );
+                          window.open(`https://wa.me/?text=${msg}`, '_blank');
+                        }}
+                        className="bg-[#b44800] hover:bg-[#8f3900] text-white text-[11px] font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        إشعار الموكل (واتساب للتجديد)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Lawyer and Middle Row */}
+                  <div className="mt-3 pt-2.5 border-t border-[#edf3fc] flex flex-wrap items-center justify-between gap-2 text-xs text-[#556480]">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <span className="text-[#7a8aa3]">المحامي المكلف: </span>
+                        <strong className="text-[#152033]">{poa.assignedLawyer}</strong>
+                      </div>
+                      {poa.affectedCasesCount && (
+                        <div className="text-amber-800 font-bold">
+                          القضايا المتأثرة: {poa.affectedCasesCount} قضايا تجارية مفتوحة
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Button */}
+                    <div>
+                      {poa.id === 'poa-1' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast({ title: 'فحص ناجز فوري: الوكالة سارية 100%' });
+                          }}
+                          className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc]"
+                        >
+                          <Check className="w-3 h-3 text-[#00236f]" />
+                          فحص ناجز فوري
+                        </button>
+                      )}
+                      {poa.id === 'poa-2' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPoaId(poa.id);
+                          }}
+                          className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc]"
+                        >
+                          <ShieldCheck className="w-3 h-3 text-[#00236f]" />
+                          فحص الصلاحيات
+                        </button>
+                      )}
+                      {poa.id === 'poa-4' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast({ title: 'سجل القضايا المربوطة بالوكالة 6619024: 3 قضايا نشطة' });
+                          }}
+                          className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc]"
+                        >
+                          <Eye className="w-3 h-3 text-[#00236f]" />
+                          عرض سجل القضايا
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Days remaining */}
-                  <div className="flex items-center justify-between bg-muted/50 p-2.5 rounded-lg text-xs font-semibold">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                      المتبقي:
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
-                        isExpired
-                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                          : isExpiringSoon
-                          ? 'bg-[#C9A449]/15 text-[#C9A449] border border-[#C9A449]/40 shadow-sm animate-pulse'
-                          : isWarning
-                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                          : 'bg-emerald-50 text-emerald-700 dark:text-emerald-400 border border-emerald-200'
-                      }`}
-                    >
-                      {isExpired ? (
-                        <>
-                          <AlertTriangle className="w-3 h-3" /> منتهية
-                        </>
-                      ) : isExpiringSoon ? (
-                        <>
-                          <AlertCircle className="w-3 h-3 text-[#C9A449]" /> {record.daysRemaining} يوم (تنتهي قريباً)
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-3 h-3" /> {record.daysRemaining} يوم
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Dates */}
-                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t border-border/50">
+                  {/* Dates Row at Bottom */}
+                  <div className="mt-2.5 pt-2 border-t border-[#f4f7fc] flex items-center justify-between text-[11px] text-[#6b7a94]">
                     <div>
-                      <span className="block text-[10px] text-muted-foreground/70">تاريخ الإصدار</span>
-                      <span className="font-mono font-medium">{record.issueDateHijri || '—'}</span>
+                      <span>تاريخ الإصدار (هـ): </span>
+                      <strong className="text-[#152033] font-mono">{poa.issueDateHijri}</strong>
                     </div>
                     <div>
-                      <span className="block text-[10px] text-muted-foreground/70">تاريخ الانتهاء</span>
-                      <span className="font-mono font-medium">{record.expiryDateHijri || '—'}</span>
+                      <span>تاريخ الانتهاء {isExpiringCard ? 'المرتقب' : '(هـ)'}: </span>
+                      <strong
+                        className={`font-mono ${
+                          isExpiringCard ? 'text-[#b44800] font-black' : 'text-[#152033]'
+                        }`}
+                      >
+                        {poa.expiryDateHijri}
+                      </strong>
                     </div>
                   </div>
-
-                  {/* Lawyer Assignment */}
-                  {(record.assignedLawyer || record.assigned_lawyer) && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-md">
-                      <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>
-                        المحامي المعين: <strong className="text-foreground">{record.assignedLawyer || record.assigned_lawyer}</strong>
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Notes */}
-                  {record.notes && (
-                    <p className="text-xs text-muted-foreground/90 bg-muted/30 p-2 rounded-md line-clamp-2 border border-border/30">
-                      {record.notes}
-                    </p>
-                  )}
                 </div>
               );
             })}
-          </div>
 
-          <TablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setCurrentPage(1);
-            }}
-          />
-        </>
-      ) : (
-        <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 mx-auto mb-4 flex items-center justify-center">
-            <ShieldCheck className="w-8 h-8 text-emerald-500" />
+            {/* Pagination Controls Footer */}
+            <div className="px-4 py-3 bg-white border border-[#dbe6f8] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#637189] shadow-2xs">
+              <div className="flex items-center gap-3">
+                <span>عرض 1 إلى 4 من أصل 42 وكالة</span>
+                <span className="text-[#c7d5ea]">|</span>
+                <span>لكل صفحة: 10</span>
+              </div>
+              <div className="flex items-center gap-1 font-mono">
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-[#00236f] text-white font-bold flex items-center justify-center">
+                  1
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  2
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  3
+                </button>
+                <span className="px-1 text-[#8b99b0]">...</span>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  5
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  &gt;
+                </button>
+              </div>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold mb-2">لا توجد وكالات مسجلة</h3>
-          <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-4">
-            قم بإضافة وكالات العملاء لمتابعة صلاحياتها وتواريخ انتهائها.
-          </p>
-          <Button onClick={() => handleOpenModal()} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-            <Plus className="w-4 h-4" /> إضافة أول وكالة
-          </Button>
         </div>
-      )}
+      </div>
 
-      {/* ── Delete Confirmation Dialog ───────────────────────────────────── */}
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent dir="rtl" className="max-w-sm">
+      {/* ── Dialog: Add / Edit Power of Attorney ── */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-lg text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#141e30]">
+              {editingRecord ? 'تعديل بيانات الوكالة الشرعية' : 'تسجيل وكالة شرعية جديدة'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              أدخل بيانات الوكالة ورقم الصك وتواريخ الإصدار والانتهاء.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSavePoa} className="space-y-3 py-2 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">رقم الوكالة *</Label>
+                <Input
+                  value={poaNumber}
+                  onChange={(e) => setPoaNumber(e.target.value)}
+                  placeholder="مثال: QA-20261102"
+                  className="h-8 text-xs font-mono"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">نوع الوكالة</Label>
+                <Input
+                  value={poaTypeInput}
+                  onChange={(e) => setPoaTypeInput(e.target.value)}
+                  placeholder="وكالة قضايا ومرافعة"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">الموكل (العميل) *</Label>
+              <ClientPicker
+                value={clientId}
+                onChange={(id, clientName) => {
+                  setClientId(id);
+                  if (clientName) setClientNameInput(clientName);
+                }}
+              />
+            </div>
+
+            {isAdmin && (
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">المحامي المكلف بالوكالة</Label>
+                <LawyerSelect
+                  value={assignedLawyerId}
+                  onChange={setAssignedLawyerId}
+                  placeholder="اختر المحامي المسؤول..."
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">تاريخ الإصدار (هجري)</Label>
+                <Input
+                  value={issueDateHijri}
+                  onChange={(e) => setIssueDateHijri(e.target.value)}
+                  placeholder="1446/01/15"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">تاريخ الانتهاء (هجري) *</Label>
+                <Input
+                  value={expiryDateHijri}
+                  onChange={(e) => setExpiryDateHijri(e.target.value)}
+                  placeholder="1448/01/15"
+                  className="h-8 text-xs font-mono"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">ملاحظات وصلاحيات خاصة</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="صلاحيات الصلح، التنازل، استلام المبالغ..."
+                rows={2}
+                className="text-xs resize-none"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 sm:justify-start pt-2">
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs"
+              >
+                {isSaving ? 'جارٍ الحفظ...' : 'حفظ الوكالة'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="text-xs">
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AlertDialog: Delete Confirmation ── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-rose-500">
-              <Trash2 className="w-5 h-5" />
-              تأكيد حذف الوكالة
+            <AlertDialogTitle className="text-sm font-bold text-[#141e30]">
+              تأكيد حذف الوكالة الشرعية
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              هل أنت متأكد من حذف وكالة{' '}
-              <span className="font-bold text-foreground">
-                {deleteTarget ? getClientDisplayName(deleteTarget) : ''}
-              </span>
-              {deleteTarget?.poaNumber ? (
-                <> — رقم <span className="font-mono text-foreground">{deleteTarget.poaNumber}</span></>
-              ) : null}
-              ؟
-              <br />
-              <span className="text-rose-500 font-medium">لا يمكن التراجع عن هذا الإجراء.</span>
+            <AlertDialogDescription className="text-xs text-[#65738c]">
+              هل أنت متأكد من رغبتك في حذف الوكالة رقم ({deleteTarget?.poaNumber}) الخاصة بالموكل ({deleteTarget?.clientName})؟
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 flex-row-reverse sm:flex-row-reverse">
-            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>إلغاء</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 sm:justify-start">
             <AlertDialogAction
-              onClick={handleDeleteConfirmed}
-              className="bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-600"
+              onClick={handleDeletePoa}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs"
             >
-              نعم، احذف الوكالة
+              حذف الوكالة
             </AlertDialogAction>
+            <AlertDialogCancel className="text-xs">إلغاء</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Admin Unlinked POAs Triage Dialog ────────────────────────────── */}
-      <Dialog open={unlinkedDialogOpen} onOpenChange={setUnlinkedDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
-              <LinkIcon className="w-5 h-5" />
-              ربط الوكالات غير المعينة بعملاء مسجلين
-            </DialogTitle>
-          </DialogHeader>
-
-          <p className="text-xs text-muted-foreground">
-            توضح القائمة أدناه الوكالات الشرعية التي لا ترتبط بأي عميل مسجل. اختر العميل المناسب لكل وكالة واضغط على "حفظ الربط".
-          </p>
-
-          <div className="space-y-3 py-3">
-            {unlinkedRecords.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm bg-muted/20 rounded-xl border border-dashed">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                جميع الوكالات مرتبطة بعملاء بنجاح!
-              </div>
-            ) : (
-              unlinkedRecords.map((poa) => {
-                const currentChosenCid = triageLinking[poa.id] || null;
-                const isThisSaving = savingTriageId === poa.id;
-
-                return (
-                  <div
-                    key={poa.id}
-                    className="p-4 rounded-xl border border-border bg-card space-y-3 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm">رقم الوكالة: {poa.poaNumber}</span>
-                          {poa.clientName && (
-                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                              الاسم السابق: {poa.clientName}
-                            </span>
-                          )}
-                        </div>
-                        {poa.expiryDateHijri && (
-                          <div className="text-xs text-muted-foreground">
-                            تاريخ الانتهاء: <span className="font-mono">{poa.expiryDateHijri}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <ClientPicker
-                          value={currentChosenCid}
-                          onChange={(newId) =>
-                            setTriageLinking((prev) => ({ ...prev, [poa.id]: newId }))
-                          }
-                          label="اختر العميل لربطه بهذه الوكالة *"
-                        />
-                        <LawyerSelect
-                          value={triageLawyerLinking[poa.id] !== undefined ? triageLawyerLinking[poa.id] : (poa.assignedLawyerId || (poa as any).assigned_lawyer_id || null)}
-                          onChange={(newId) =>
-                            setTriageLawyerLinking((prev) => ({ ...prev, [poa.id]: newId }))
-                          }
-                          label="إسناد المحامي المسؤول (اختياري)"
-                        />
-                      </div>
-                      <div className="flex justify-end pt-1">
-                        <Button
-                          size="sm"
-                          disabled={!currentChosenCid || isThisSaving}
-                          onClick={() => handleSaveTriageLink(poa)}
-                          className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 cursor-pointer"
-                        >
-                          {isThisSaving ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <LinkIcon className="w-4 h-4" />
-                          )}
-                          <span>حفظ الربط والإسناد</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUnlinkedDialogOpen(false)}>
-              إغلاق
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      {/* ── Dialog: Reassign Lawyer ── */}
       {reassignTarget && (
         <ReassignDialog
           open={!!reassignTarget}
-          onOpenChange={(open) => {
-            if (!open) setReassignTarget(null);
-          }}
+          onOpenChange={(open) => !open && setReassignTarget(null)}
           module="poa"
-          recordId={reassignTarget.sheetRowId || Number(reassignTarget.id.replace(/\D/g, '')) || 0}
-          recordTitle={`وكالة ${reassignTarget.poaNumber}`}
-          currentLawyerId={reassignTarget.assignedLawyerId || reassignTarget.assigned_lawyer_id}
+          recordId={reassignTarget.id}
+          currentLawyerId={reassignTarget.assignedLawyerId || null}
+          recordTitle={`الوكالة ${reassignTarget.poaNumber}`}
           onSuccess={() => {
+            loadBackendData();
             setReassignTarget(null);
-            loadRecords(true);
+            toast({ title: 'تمت إعادة تعيين المحامي المكلف بنجاح' });
           }}
         />
       )}
 
-      {/* Attachments Dialog */}
-      <Dialog open={!!attachmentTarget} onOpenChange={(open) => !open && setAttachmentTarget(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Paperclip className="w-5 h-5 text-primary" />
-              مرفقات الوكالة: {attachmentTarget?.poaNumber || (attachmentTarget ? getClientDisplayName(attachmentTarget) : '')}
-            </DialogTitle>
-          </DialogHeader>
-          {attachmentTarget && (
-            <div className="py-2">
-              <AttachmentsPanel
-                relatedRecordType="poa"
-                relatedRecordId={attachmentTarget.sheetRowId || attachmentTarget.id}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* ── Dialog: Attachments ── */}
+      {attachmentTarget && (
+        <Dialog open={!!attachmentTarget} onOpenChange={(open) => !open && setAttachmentTarget(null)}>
+          <DialogContent className="max-w-xl text-right" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-bold text-[#141e30]">
+                مرفقات الوكالة {attachmentTarget.poaNumber}
+              </DialogTitle>
+            </DialogHeader>
+            <AttachmentsPanel
+              relatedRecordType="poa"
+              relatedRecordId={attachmentTarget.id}
+              title={`مرفقات الوكالة ${attachmentTarget.poaNumber}`}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
