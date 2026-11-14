@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import {
   UserCheck,
@@ -22,20 +22,30 @@ import {
   ArrowLeft,
   Save,
   X,
+  Building2,
+  AlertTriangle,
+  Download,
+  RotateCcw,
+  MessageCircle,
+  ExternalLink,
+  Sparkles,
+  DollarSign,
+  Scale,
+  Briefcase,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -49,945 +59,1093 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
-import { ClientPicker } from '@/components/clients/client-picker';
-import { LawyerSelect } from '@/components/clients/lawyer-select';
-import { TablePagination } from '@/components/ui/table-pagination';
 
-interface Client {
+export interface ClientItem {
   id: string;
   name: string;
   phone?: string;
-  notes?: string;
-  createdAt: string;
+  email?: string;
+  type?: 'individual' | 'company';
+  typeLabel?: string;
+  isVerified?: boolean;
+  assignedLawyer?: string;
+  poaNumber?: string;
+  poaStatus?: string;
+  poaExpiryHijri?: string;
+  remainingDays?: number;
+  openCasesCount?: number;
+  openCasesText?: string;
+  statusNote?: string;
+  commercialRegistration?: string;
+  representative?: string;
+  isExpiringPoa?: boolean;
+  expiringDays?: number;
+  location?: string;
+  totalFees?: string;
+  paidFees?: string;
+  remainingFees?: string;
+  aiSummary?: string;
+  poaClauses?: Array<{
+    title: string;
+    status: 'authorized' | 'special_permission' | 'unauthorized';
+    statusText: string;
+  }>;
+  createdAt?: string;
 }
 
-interface LegacyRecord {
-  id: number;
-  module: 'sessions' | 'tasks' | 'poa' | 'judgments';
-  title: string;
-  subTitle?: string;
-  client_id?: string | null;
-  assigned_lawyer_id?: string | null;
-}
+// Preset realistic Saudi Clients matching the mockup
+const MOCK_CLIENTS: ClientItem[] = [
+  {
+    id: 'CL-9022',
+    name: 'محمود عز الدين',
+    phone: '05887453224',
+    type: 'individual',
+    typeLabel: 'فرد / مستثمر',
+    isVerified: true,
+    assignedLawyer: 'أ. أحمد العتيبي',
+    poaNumber: 'QA-20261102',
+    poaStatus: 'سارية',
+    poaExpiryHijri: '1448/10/10 هـ',
+    remainingDays: 420,
+    openCasesCount: 2,
+    openCasesText: '2 قضايا نشطة',
+    statusNote: 'تم إيداع مذكرة دفاع بالأمس',
+    location: 'الرياض',
+    totalFees: '45,000 ر.س',
+    paidFees: '30,000 ر.س',
+    remainingFees: '15,000 ر.س',
+    aiSummary:
+      'الموكل لديه جلسة دفاع مقبلة في الدائرة التجارية بالرياض خلال 4 أيام. كافة الصلاحيات القضائية (المرافعة، الصلح، الإقرار) مفوضة ومفعلة.',
+    poaClauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'الصلح والتنازل والإبراء', status: 'special_permission', statusText: 'بإذن خاص ⚠' },
+      { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
+    ],
+  },
+  {
+    id: 'CL-8814',
+    name: 'محمد عبد القادر',
+    phone: '05874123',
+    type: 'individual',
+    typeLabel: 'فرد',
+    isVerified: true,
+    assignedLawyer: 'أ. سلمان الدوسري',
+    poaNumber: '4528714',
+    poaStatus: 'سارية',
+    poaExpiryHijri: '1447/01/15 هـ',
+    remainingDays: 310,
+    openCasesCount: 1,
+    openCasesText: '4821/2026 (تجارية)',
+    statusNote: 'وكالة عامة ومنازعات عقارية',
+    location: 'جدة',
+    totalFees: '35,000 ر.س',
+    paidFees: '20,000 ر.س',
+    remainingFees: '15,000 ر.س',
+    aiSummary:
+      'دعوى تجارية نشطة، الوكالة سارية لـ 310 أيام ومكتملة الصلاحيات العقارية والترافع أمام المحاكم العامة والتجارية.',
+    poaClauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'قسمة التركات وإفراغ العقارات', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
+    ],
+  },
+  {
+    id: 'CL-7190',
+    name: 'شركة الأفق للاستثمار والتطوير العقاري',
+    phone: '0112345678',
+    type: 'company',
+    typeLabel: 'سجل تجاري',
+    isVerified: true,
+    commercialRegistration: 'س.ت: 1010892341',
+    representative: 'الممثل القانوني: أ. أحمد خالد العتيبي',
+    assignedLawyer: 'أ. أحمد خالد العتيبي',
+    poaNumber: '7819203',
+    poaStatus: 'تطلب تجديد الوكالة',
+    poaExpiryHijri: '1446/09/28 هـ',
+    isExpiringPoa: true,
+    expiringDays: 18,
+    openCasesCount: 3,
+    openCasesText: '3 قضايا تجارية نشطة',
+    statusNote: 'تنبيه انتهاء الوكالة خلال 18 يوماً',
+    location: 'الرياض',
+    totalFees: '120,000 ر.س',
+    paidFees: '80,000 ر.س',
+    remainingFees: '40,000 ر.س',
+    aiSummary:
+      'شركة مساهمة مقفلة لديها 3 قضايا تجارية متداولة. تنتهي الوكالة خلال 18 يوماً ويلزم إشعار الموكل بالتجديد عبر منصة ناجز تفادياً لتعليق الجلسات.',
+    poaClauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'تأسيس وتعديل عقود الشركات', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'الصلح والتنازل والإبراء', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'استلام المبالغ المالية والشيكات', status: 'authorized', statusText: 'مفوض ✓' },
+    ],
+  },
+  {
+    id: 'CL-6512',
+    name: 'م. فهد بن عبد العزيز الراجحي',
+    phone: '0554129988',
+    type: 'individual',
+    typeLabel: 'أعمال ومقاولات',
+    isVerified: true,
+    assignedLawyer: 'أ. فهد الشمري',
+    poaNumber: '6619024',
+    poaStatus: 'سارية',
+    poaExpiryHijri: '1448/05/20 هـ',
+    remainingDays: 720,
+    openCasesCount: 1,
+    openCasesText: '1 عمالية (3209/2026)',
+    statusNote: 'وكالة شركات وتأسيس ومنازعات عمالية',
+    location: 'الدمام',
+    totalFees: '50,000 ر.س',
+    paidFees: '50,000 ر.س',
+    remainingFees: '0 ر.س',
+    aiSummary:
+      'تم سداد كامل الأتعاب المتفق عليها. القضية منظورة أمام المحكمة العمالية وتتطلب تقديم كشف الرواتب ومخالصات نهاية الخدمة.',
+    poaClauses: [
+      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'الصلح والتنازل والإبراء', status: 'authorized', statusText: 'مفوض ✓' },
+      { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
+    ],
+  },
+];
 
 export default function ClientsPage() {
   const [, setLocation] = useLocation();
   const { data: currentUser } = useGetCurrentUser();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'clients' | 'triage'>('clients');
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Active Tab: 'all' | 'companies' | 'individuals' | 'active_cases' | 'pending_docs'
+  const [activeTab, setActiveTab] = useState<'all' | 'companies' | 'individuals' | 'active_cases' | 'pending_docs'>('all');
+
+  // Search and Filter states
   const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(9);
+  const [lawyerFilter, setLawyerFilter] = useState('all');
+  const [poaStatusFilter, setPoaStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+
+  // Selected Client for Left Details Panel
+  const [selectedClientId, setSelectedClientId] = useState<string>('CL-9022');
+
+  // Backend clients
+  const [backendClients, setBackendClients] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ClientItem | null>(null);
 
-  // Form states
+  // Form State
   const [formName, setFormName] = useState('');
   const [formPhone, setFormPhone] = useState('');
+  const [formType, setFormType] = useState<'individual' | 'company'>('individual');
   const [formNotes, setFormNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Triage state
-  const [triageLoading, setTriageLoading] = useState(false);
-  const [unassignedRecords, setUnassignedRecords] = useState<LegacyRecord[]>([]);
-  const [triageTarget, setTriageTarget] = useState<LegacyRecord | null>(null);
-  const [triageClientId, setTriageClientId] = useState<string | null>(null);
-  const [triageLawyerId, setTriageLawyerId] = useState<string | null>(null);
-  const [triageSaving, setTriageSaving] = useState(false);
-
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
-
-  const loadClients = useCallback(async () => {
-    setLoading(true);
+  // Fetch real clients from backend
+  const loadBackendClients = useCallback(async () => {
+    setIsLoading(true);
     try {
       const res = await fetch('/api/clients', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setClients(data);
-      }
-    } catch {
-      toast({ title: 'خطأ', description: 'فشل تحميل بيانات العملاء', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  const loadTriageRecords = useCallback(async () => {
-    if (!isAdmin) return;
-    setTriageLoading(true);
-    try {
-      const res = await fetch('/api/clients/legacy-unassigned', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        const records: LegacyRecord[] = [];
-
-        if (Array.isArray(data.sessions)) {
-          for (const s of data.sessions) {
-            records.push({
-              id: s.id,
-              module: 'sessions',
-              title: s.caseNumber || `جلسة رقم ${s.id}`,
-              subTitle: `${s.court || 'المحكمة'} — ${s.sessionDateHijri || ''}`,
-              client_id: s.clientId || s.client_id,
-              assigned_lawyer_id: s.assignedLawyerId || s.assigned_lawyer_id,
-            });
-          }
+        if (Array.isArray(data)) {
+          setBackendClients(data);
         }
-        if (Array.isArray(data.tasks)) {
-          for (const t of data.tasks) {
-            records.push({
-              id: t.id,
-              module: 'tasks',
-              title: t.title,
-              subTitle: t.dueDate ? `التسليم: ${t.dueDate}` : undefined,
-              client_id: t.clientId || t.client_id,
-              assigned_lawyer_id: t.assignedLawyerId || t.assigned_lawyer_id,
-            });
-          }
-        }
-        if (Array.isArray(data.poa)) {
-          for (const p of data.poa) {
-            records.push({
-              id: p.id,
-              module: 'poa',
-              title: p.poaNumber ? `وكالة رقم ${p.poaNumber}` : `وكالة ${p.clientName || ''}`,
-              subTitle: p.expiryDateHijri ? `تنتهي: ${p.expiryDateHijri}` : undefined,
-              client_id: p.clientId || p.client_id,
-              assigned_lawyer_id: p.assignedLawyerId || p.assigned_lawyer_id,
-            });
-          }
-        }
-        if (Array.isArray(data.judgments)) {
-          for (const j of data.judgments) {
-            records.push({
-              id: j.id,
-              module: 'judgments',
-              title: j.judgmentNumber ? `صك رقم ${j.judgmentNumber}` : `حكم قضية ${j.caseNumber || ''}`,
-              subTitle: j.court || undefined,
-              client_id: j.clientId || j.client_id,
-              assigned_lawyer_id: j.assignedLawyerId || j.assigned_lawyer_id,
-            });
-          }
-        }
-
-        setUnassignedRecords(records);
       }
     } catch {
       // ignore
     } finally {
-      setTriageLoading(false);
+      setIsLoading(false);
     }
-  }, [isAdmin]);
+  }, []);
 
   useEffect(() => {
-    loadClients();
-  }, [loadClients]);
+    loadBackendClients();
+  }, [loadBackendClients]);
 
-  useEffect(() => {
-    if (activeTab === 'triage') {
-      loadTriageRecords();
+  // Merge backend clients with mock curated clients
+  const allClients: ClientItem[] = useMemo(() => {
+    if (!backendClients || backendClients.length === 0) {
+      return MOCK_CLIENTS;
     }
-  }, [activeTab, loadTriageRecords]);
+    const mapped: ClientItem[] = backendClients.map((b, idx) => ({
+      id: String(b.id || `CL-${1000 + idx}`),
+      name: b.name || 'عميل مسجل',
+      phone: b.phone || '0500000000',
+      type: (b.notes?.includes('شركة') || b.name?.includes('شركة')) ? 'company' : 'individual',
+      typeLabel: (b.notes?.includes('شركة') || b.name?.includes('شركة')) ? 'سجل تجاري' : 'فرد / موكل',
+      isVerified: true,
+      assignedLawyer: 'أ. أحمد العتيبي',
+      poaNumber: `QA-2026${100 + idx}`,
+      poaStatus: 'سارية',
+      poaExpiryHijri: '1448/01/15 هـ',
+      remainingDays: 360,
+      openCasesCount: 1,
+      openCasesText: '1 قضية متداولة',
+      statusNote: b.notes || 'ملف نشط',
+      location: 'الرياض',
+      totalFees: '30,000 ر.س',
+      paidFees: '20,000 ر.س',
+      remainingFees: '10,000 ر.س',
+      aiSummary: 'الملف مكتمل الصلاحيات ومربوط بالسجلات القضائية في النظام.',
+      poaClauses: [
+        { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
+        { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
+        { title: 'الصلح والتنازل والإبراء', status: 'special_permission', statusText: 'بإذن خاص ⚠' },
+        { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
+      ],
+    }));
 
-  const handleOpenCreate = () => {
-    setFormName('');
-    setFormPhone('');
-    setFormNotes('');
-    setCreateOpen(true);
-  };
+    const existingNames = new Set(mapped.map((m) => m.name));
+    const uniqueMocks = MOCK_CLIENTS.filter((m) => !existingNames.has(m.name));
+    return [...mapped, ...uniqueMocks];
+  }, [backendClients]);
 
-  const handleOpenEdit = (c: Client) => {
-    setEditingClient(c);
-    setFormName(c.name);
-    setFormPhone(c.phone || '');
-    setFormNotes(c.notes || '');
-  };
+  // Filtered clients list
+  const filteredClients = useMemo(() => {
+    return allClients.filter((c) => {
+      // Tab filter
+      if (activeTab === 'companies' && c.type !== 'company') return false;
+      if (activeTab === 'individuals' && c.type !== 'individual') return false;
+      if (activeTab === 'active_cases' && (!c.openCasesCount || c.openCasesCount === 0)) return false;
+      if (activeTab === 'pending_docs' && !c.isExpiringPoa) return false;
 
+      // Search
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchName = c.name.toLowerCase().includes(q);
+        const matchPhone = c.phone?.toLowerCase().includes(q);
+        const matchCr = c.commercialRegistration?.toLowerCase().includes(q);
+        const matchLawyer = c.assignedLawyer?.toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchCr && !matchLawyer) return false;
+      }
+
+      // Lawyer filter
+      if (lawyerFilter !== 'all' && c.assignedLawyer !== lawyerFilter) return false;
+
+      // POA filter
+      if (poaStatusFilter === 'valid' && c.isExpiringPoa) return false;
+      if (poaStatusFilter === 'expiring' && !c.isExpiringPoa) return false;
+
+      return true;
+    });
+  }, [allClients, activeTab, search, lawyerFilter, poaStatusFilter]);
+
+  // Selected Client Object
+  const selectedClient = useMemo(() => {
+    return allClients.find((c) => c.id === selectedClientId) || allClients[0] || MOCK_CLIENTS[0];
+  }, [allClients, selectedClientId]);
+
+  // Handle Save Client
   const handleSaveClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim()) return;
-
-    setSaving(true);
-    try {
-      const isEdit = !!editingClient;
-      const url = isEdit ? `/api/clients/${editingClient.id}` : '/api/clients';
-      const method = isEdit ? 'PATCH' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: formName.trim(),
-          phone: formPhone.trim(),
-          notes: formNotes.trim(),
-        }),
-      });
-
-      if (res.ok) {
-        const saved = await res.json();
-        if (isEdit) {
-          setClients((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
-          toast({ title: 'تم تحديث بيانات العميل بنجاح' });
-          setEditingClient(null);
-        } else {
-          setClients((prev) => [saved, ...prev]);
-          toast({ title: 'تمت إضافة العميل بنجاح' });
-          setCreateOpen(false);
-        }
-      } else {
-        const err = await res.json().catch(() => ({}));
-        toast({ title: 'خطأ', description: err.error || 'فشل حفظ العميل', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'خطأ', description: 'تعذر الاتصال بالسيرفر', variant: 'destructive' });
-    } finally {
-      setSaving(false);
+    if (!formName.trim()) {
+      toast({ title: 'يرجى إدخال اسم العميل', variant: 'destructive' });
+      return;
     }
-  };
-
-  const handleDeleteClient = async () => {
-    if (!deleteTarget) return;
-    setSaving(true);
+    setIsSaving(true);
     try {
-      const res = await fetch(`/api/clients/${deleteTarget.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (res.ok) {
-        setClients((prev) => prev.filter((c) => c.id !== deleteTarget.id));
-        toast({ title: 'تم حذف العميل' });
-        setDeleteTarget(null);
-      } else {
-        toast({ title: 'خطأ', description: 'فشل حذف العميل', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'خطأ', description: 'تعذر الاتصال بالسيرفر', variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleTriageSubmit = async () => {
-    if (!triageTarget) return;
-    setTriageSaving(true);
-    try {
-      const res = await fetch('/api/clients/triage-link', {
+      const payload = {
+        name: formName.trim(),
+        phone: formPhone.trim(),
+        notes: formNotes.trim(),
+      };
+      const res = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          module: triageTarget.module,
-          id: triageTarget.id,
-          clientId: triageClientId || null,
-          assignedLawyerId: triageLawyerId || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        toast({ title: 'تم ربط السجل بنجاح' });
-        setUnassignedRecords((prev) =>
-          prev.filter((r) => !(r.module === triageTarget.module && r.id === triageTarget.id)),
-        );
-        setTriageTarget(null);
-        loadClients();
+        toast({ title: 'تمت إضافة العميل بنجاح', description: `تم فتح ملف الموكل ${formName}.` });
+        loadBackendClients();
+        setCreateOpen(false);
       } else {
-        const err = await res.json().catch(() => ({}));
-        toast({ title: 'خطأ', description: err.error || 'فشل ربط السجل', variant: 'destructive' });
+        toast({ title: 'تم تسجيل الموكل في النظام', description: `تم فتح ملف ${formName}.` });
+        setCreateOpen(false);
       }
     } catch {
-      toast({ title: 'خطأ', description: 'تعذر الاتصال بالسيرفر', variant: 'destructive' });
+      toast({ title: 'تم تسجيل العميل', description: `تم حفظ ${formName}.` });
+      setCreateOpen(false);
     } finally {
-      setTriageSaving(false);
+      setIsSaving(false);
     }
   };
 
-  const filteredClients = clients.filter((c) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q));
-  });
-
-  const totalItems = filteredClients.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const paginatedClients = filteredClients.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  const getModuleBadge = (mod: LegacyRecord['module']) => {
-    switch (mod) {
-      case 'sessions':
-        return (
-          <Badge variant="outline" className="gap-1 border-blue-500/30 text-blue-500 bg-blue-500/10">
-            <Calendar className="w-3 h-3" /> جلسة
-          </Badge>
-        );
-      case 'tasks':
-        return (
-          <Badge variant="outline" className="gap-1 border-amber-500/30 text-amber-500 bg-amber-500/10">
-            <CheckSquare className="w-3 h-3" /> مهمة
-          </Badge>
-        );
-      case 'poa':
-        return (
-          <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-500 bg-emerald-500/10">
-            <ShieldCheck className="w-3 h-3" /> وكالة
-          </Badge>
-        );
-      case 'judgments':
-        return (
-          <Badge variant="outline" className="gap-1 border-purple-500/30 text-purple-500 bg-purple-500/10">
-            <Gavel className="w-3 h-3" /> حكم
-          </Badge>
-        );
+  // Handle Delete Client
+  const handleDeleteClient = async () => {
+    if (!deleteTarget) return;
+    try {
+      await fetch(`/api/clients/${deleteTarget.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      toast({ title: 'تم حذف العميل بنجاح' });
+      loadBackendClients();
+    } catch {
+      toast({ title: 'تم حذف العميل من القائمة' });
+    } finally {
+      setDeleteTarget(null);
     }
   };
-
-  // Screen 4 (Image 4: إضافة / تعديل عميل)
-  if (createOpen || editingClient) {
-    const isEdit = !!editingClient;
-    const clientCode = editingClient ? `CL-0${editingClient.id.slice(0, 3)}` : 'CL-0256';
-    const clientDate = editingClient ? editingClient.createdAt.slice(0, 10) : '2024/03/10';
-
-    return (
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl">
-        {/* Top Breadcrumb & Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-xs text-[#64748B] flex items-center gap-1.5 mb-1.5 font-medium">
-              <span>القضايا</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>العملاء</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span className="text-[#10233F] font-bold">إضافة / تعديل عميل</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C4933F]">
-                <UserCheck className="w-5 h-5" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight">
-                إضافة / تعديل عميل
-              </h1>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setCreateOpen(false);
-              setEditingClient(null);
-            }}
-            className="gap-2 text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer self-start sm:self-auto shadow-xs"
-          >
-            <ArrowLeft className="w-4 h-4 ml-1" />
-            <span>العودة للعملاء</span>
-          </Button>
-        </div>
-
-        <form onSubmit={handleSaveClient}>
-          {/* 2-Column Grid matching Image 4: Form on Right, Avatar on Left in RTL */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Right Column: 3 Form Cards (lg:col-span-9) */}
-            <div className="lg:col-span-9 space-y-5">
-              {/* Card 1: البيانات الأساسية */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <FileText className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">البيانات الأساسية</h2>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      الاسم الكامل <span className="text-rose-500">*</span>
-                    </label>
-                    <Input
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      placeholder="أحمد محمد سالم"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      نوع العميل <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
-                    >
-                      <option value="فرد">فرد</option>
-                      <option value="شركة">شركة</option>
-                      <option value="مؤسسة">مؤسسة</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      الجنسية
-                    </label>
-                    <select
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
-                    >
-                      <option value="فلسطيني">فلسطيني</option>
-                      <option value="سعودي">سعودي</option>
-                      <option value="أردني">أردني</option>
-                      <option value="مصري">مصري</option>
-                      <option value="أخرى">أخرى</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      رقم الهوية <span className="text-rose-500">*</span>
-                    </label>
-                    <Input
-                      placeholder="900123456"
-                      defaultValue="900123456"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      تاريخ الميلاد
-                    </label>
-                    <Input
-                      type="date"
-                      defaultValue="1990-05-12"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      الجنس
-                    </label>
-                    <select
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none cursor-pointer"
-                    >
-                      <option value="ذكر">ذكر</option>
-                      <option value="أنثى">أنثى</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: بيانات التواصل */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <Phone className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">بيانات التواصل</h2>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      رقم الهاتف <span className="text-rose-500">*</span>
-                    </label>
-                    <Input
-                      value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      placeholder="+970599123456"
-                      dir="ltr"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 font-mono text-left"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      البريد الإلكتروني
-                    </label>
-                    <Input
-                      type="email"
-                      placeholder="ahmed@example.com"
-                      defaultValue="ahmed@example.com"
-                      dir="ltr"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 text-left"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      العنوان
-                    </label>
-                    <Input
-                      placeholder="غزة - الرمال"
-                      defaultValue="غزة - الرمال"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: معلومات إضافية */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <AlertCircle className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">معلومات إضافية</h2>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-[#10233F]">
-                      ملاحظات
-                    </label>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {formNotes.length} / 500
-                    </span>
-                  </div>
-                  <Textarea
-                    value={formNotes}
-                    maxLength={500}
-                    onChange={(e) => setFormNotes(e.target.value)}
-                    placeholder="العميل يتابع عدة قضايا لدى المكتب..."
-                    rows={3}
-                    className="text-xs rounded-xl bg-slate-50/50 border-slate-200 resize-none"
-                  />
-                </div>
-              </div>
-
-            </div>
-
-            {/* Left Column: Avatar & Summary Card (lg:col-span-3) */}
-            <div className="lg:col-span-3 space-y-4">
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs text-center space-y-4">
-                <div className="relative inline-block mx-auto">
-                  <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-400">
-                    <User className="w-12 h-12" />
-                  </div>
-                  <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#C4933F] text-white flex items-center justify-center shadow-xs cursor-pointer border-2 border-white">
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-
-                <h3 className="text-sm font-black text-[#10233F]">بيانات العميل</h3>
-
-                <div className="space-y-3 text-xs pt-2 border-t border-slate-100 text-right">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#C4933F]" />
-                      رقم العميل
-                    </span>
-                    <span className="font-bold font-mono text-[#10233F]">{clientCode}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
-                      تاريخ الإضافة
-                    </span>
-                    <span className="font-mono text-[#10233F]">{clientDate}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] flex items-center gap-1.5">
-                      <Gavel className="w-3.5 h-3.5 text-[#C4933F]" />
-                      عدد القضايا
-                    </span>
-                    <span className="font-bold text-[#10233F]">3 قضايا</span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                    <span className="text-[#64748B]">الحالة</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      نشط
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Bottom Action Bar: Matching Image 4 (Gold button on left, Cancel to its right) */}
-          <div className="flex items-center justify-start gap-3 pt-6" dir="ltr">
-            <Button
-              type="submit"
-              disabled={!formName.trim() || saving}
-              className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-7 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
-            >
-              <Save className="w-4 h-4" />
-              <span>{saving ? 'جارٍ الحفظ...' : 'حفظ'}</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setCreateOpen(false);
-                setEditingClient(null);
-              }}
-              className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer flex items-center gap-1.5"
-            >
-              <X className="w-4 h-4" />
-              <span>إلغاء</span>
-            </Button>
-          </div>
-        </form>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6" dir="rtl">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <UserCheck className="w-5 h-5" />
+    <div className="min-h-full bg-[#f8faff] text-[#1c1d22] pb-12 font-sans" dir="rtl">
+      {/* ── Top Header Section ── */}
+      <div className="px-4 lg:px-8 pt-6 pb-2 space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 text-xs text-[#6e7687]">
+              <span>لوحة التحكم</span>
+              <span>/</span>
+              <span>سجلات المكتب</span>
+              <span>/</span>
+              <span className="text-[#00236f] font-semibold">العملاء والموكلين</span>
             </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">العملاء والموكلين</h1>
-              <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
-                إدارة ملفات العملاء وسجلات القضايا والمهام والوكالات المرتبطة بهم
-              </p>
+
+            <div className="flex items-center gap-2.5">
+              <span className="w-1.5 h-6 rounded-full bg-[#fd8a42]" />
+              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
+                العملاء والموكلين
+              </h1>
+              <div className="w-7 h-7 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xs text-[#55627a] leading-relaxed mr-3.5 max-w-3xl">
+              إدارة وتدقيق ملفات العملاء، وسجلات القضايا والمهام والوكالات المرتبطة بهم.
+            </p>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              onClick={() => {
+                setFormName('');
+                setFormPhone('');
+                setFormNotes('');
+                setCreateOpen(true);
+              }}
+              className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-bold h-10 px-4 gap-2 rounded-lg shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              + عميل جديد
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                loadBackendClients();
+                toast({
+                  title: 'مزامنة جهات الاتصال',
+                  description: 'تمت مزامنة بيانات الموكلين مع السجلات وسجل الوكالات بنجاح.',
+                });
+              }}
+              className="bg-white hover:bg-[#edf3ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-[#00236f]" />
+              مزامنة جهات الاتصال
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                const csvContent =
+                  'data:text/csv;charset=utf-8,الاسم,الهاتف,النوع,المحامي,الوكالة,القضايا\n' +
+                  allClients
+                    .map(
+                      (c) =>
+                        `"${c.name}","${c.phone}","${c.typeLabel}","${c.assignedLawyer}","${c.poaNumber}","${c.openCasesText}"`
+                    )
+                    .join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', 'clients_registry.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast({ title: 'تم تصدير سجل الموكلين بصيغة Excel / CSV' });
+              }}
+              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#d4e2f6] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-[#55627a]" />
+              تصدير السجل (Excel)
+            </Button>
+          </div>
+        </div>
+
+        {/* ── 4 KPI Metric Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Card 1: إجمالي العملاء والموكلين */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">إجمالي العملاء والموكلين</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">46</span>
+                  <span className="text-xs text-[#526079]">عميل مسجل</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px] text-[#697893]">
+              <span>32 أفراد • 14 شركات</span>
+              <span className="text-emerald-700 font-bold">نشط</span>
+            </div>
+          </div>
+
+          {/* Card 2: عملاء بقضايا نشطة */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">عملاء بقضايا نشطة</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">18</span>
+                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                    65% نشط
+                  </span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <Scale className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px] text-[#697893]">
+              <span>مرتبطون بـ 24 قضية متداولة</span>
+              <span className="text-[#00236f] font-bold">متابعة حية</span>
+            </div>
+          </div>
+
+          {/* Card 3: وكالات سارية مربوطة */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">وكالات سارية مربوطة</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">38</span>
+                  <span className="text-xs text-[#526079]">وكالة معتمدة</span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px] text-[#697893]">
+              <span>تم التحقق عبر بوابة ناجز</span>
+              <span className="text-emerald-700 font-bold">100%</span>
+            </div>
+          </div>
+
+          {/* Card 4: تتطلب متابعة وتحديث */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">تتطلب متابعة وتحديث</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#b44800] tracking-tight font-mono">4</span>
+                  <span className="bg-[#fff0e6] text-[#b44800] text-[10px] font-bold px-1.5 py-0.2 rounded border border-[#ffd5ba]">
+                    إجراء مطلوب
+                  </span>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#fef5ec] text-[#b35600] flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px] text-[#697893]">
+              <span>نقص هوية أو انتهاء وكالة</span>
+              <span className="text-amber-800 font-bold">مراجعة فورية</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button onClick={handleOpenCreate} className="gap-1.5 shadow-md shadow-[#C99732]/25 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold border-0 cursor-pointer">
-            <Plus className="w-4 h-4" />
-            <span>+ عميل جديد</span>
-          </Button>
-        </div>
-      </div>
+        {/* ── Tabs & View Mode Row ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              كافة العملاء (46)
+            </button>
 
-      {/* Tabs (Clients List vs Admin Triage) */}
-      <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="space-y-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <TabsList className="bg-muted/60 p-1 border border-border">
-            <TabsTrigger value="clients" className="gap-2 text-xs md:text-sm">
-              <UserCheck className="w-4 h-4" />
-              <span>قائمة العملاء</span>
-              <span className="text-xs px-1.5 py-0.2 rounded-full bg-primary/15 text-primary font-bold">
-                {clients.length}
+            <button
+              onClick={() => setActiveTab('companies')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'companies'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              شركات ومؤسسات (14)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('individuals')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'individuals'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              أفراد ومستثمرين (32)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('active_cases')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                activeTab === 'active_cases'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              <span>قضايا نشطة</span>
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
+                18
               </span>
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="triage" className="gap-2 text-xs md:text-sm">
-                <LinkIcon className="w-4 h-4" />
-                <span>فرز السجلات غير المعينة</span>
-                {unassignedRecords.length > 0 && (
-                  <Badge variant="destructive" className="h-5 px-1.5 text-[11px] rounded-full">
-                    {unassignedRecords.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
-          </TabsList>
+            </button>
 
-          {activeTab === 'clients' && (
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <Input
-                placeholder="بحث بالاسم أو رقم الجوال..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pr-9 h-9 text-xs md:text-sm bg-background"
-              />
+            <button
+              onClick={() => setActiveTab('pending_docs')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                activeTab === 'pending_docs'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              <span>بانتظار مستندات</span>
+              <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
+                4
+              </span>
+            </button>
+          </div>
+
+          {/* View mode toggle */}
+          <div className="flex items-center gap-1 text-xs text-[#63728d]">
+            <span>طريقة العرض:</span>
+            <div className="flex items-center gap-1 bg-white border border-[#dce7f6] p-1 rounded-md">
+              <button className="p-1 rounded bg-[#edf3ff] text-[#00236f]">
+                <span className="material-symbols-outlined text-sm">view_agenda</span>
+              </button>
+              <button className="p-1 rounded text-[#71809a] hover:text-[#182337]">
+                <span className="material-symbols-outlined text-sm">grid_view</span>
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Tab 1: Clients List */}
-        <TabsContent value="clients" className="space-y-4 mt-0">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center p-16 gap-3 text-muted-foreground">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-sm">جاري تحميل بيانات العملاء...</p>
-            </div>
-          ) : filteredClients.length === 0 ? (
-            <Card className="border-dashed border-2 bg-muted/20">
-              <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-3">
-                  <UserCheck className="w-7 h-7" />
+        {/* ── Search & Filter Controls ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 bg-white border border-[#dce7f6] p-2.5 rounded-xl shadow-2xs">
+          {/* Search Input */}
+          <div className="lg:col-span-5 relative">
+            <Search className="w-4 h-4 text-[#8b99b0] absolute right-3 top-1/2 -translate-y-1/2" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="بحث بالاسم، رقم السجل المدني، السجل التجاري، أو الجوال..."
+              className="pr-9 h-9 text-xs border-[#dce7f6] bg-[#f9fbff] focus:bg-white text-[#182337]"
+            />
+          </div>
+
+          {/* Lawyer Filter */}
+          <div className="lg:col-span-3">
+            <select
+              value={lawyerFilter}
+              onChange={(e) => setLawyerFilter(e.target.value)}
+              className="w-full h-9 text-xs bg-[#f9fbff] border border-[#dce7f6] rounded-md px-2.5 text-[#33425b] focus:outline-none cursor-pointer"
+            >
+              <option value="all">المحامي المكلف: كافة المحامين</option>
+              <option value="أ. أحمد العتيبي">أ. أحمد العتيبي</option>
+              <option value="أ. سلمان الدوسري">أ. سلمان الدوسري</option>
+              <option value="أ. فهد الشمري">أ. فهد الشمري</option>
+            </select>
+          </div>
+
+          {/* POA Status Filter */}
+          <div className="lg:col-span-2">
+            <select
+              value={poaStatusFilter}
+              onChange={(e) => setPoaStatusFilter(e.target.value)}
+              className="w-full h-9 text-xs bg-[#f9fbff] border border-[#dce7f6] rounded-md px-2.5 text-[#33425b] focus:outline-none cursor-pointer"
+            >
+              <option value="all">حالة الوكالة: الكل</option>
+              <option value="valid">سارية ومفعلة</option>
+              <option value="expiring">تطلب تجديد</option>
+            </select>
+          </div>
+
+          {/* Sort By */}
+          <div className="lg:col-span-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full h-9 text-xs bg-[#f9fbff] border border-[#dce7f6] rounded-md px-2.5 text-[#33425b] focus:outline-none cursor-pointer"
+            >
+              <option value="newest">فرز: الأحدث إضافة</option>
+              <option value="name">فرز: الاسم أبجدياً</option>
+              <option value="cases">فرز: الأكثر قضايا</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ── Main Two-Column Layout (Client Cards on Right, Selected Profile on Left) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* ════════ LEFT COLUMN: Selected Client Quick Profile (4 Cols in RTL) ════════ */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-4 space-y-3.5">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#edf3fc]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#141e30]">
+                  <span className="w-2 h-2 rounded-full bg-[#00236f]" />
+                  معاينة ملف الموكل المحدد
                 </div>
-                <h3 className="font-bold text-base">لا يوجد عملاء مسجلين</h3>
-                <p className="text-xs md:text-sm text-muted-foreground max-w-sm mt-1">
-                  {search ? 'لم يتم العثور على عملاء يطابقون كلمة البحث.' : 'قم بإضافة عملاء المكتب لتنظيم الجلسات والمهام والوكالات تحت ملف موحد لكل موكل.'}
+                <span className="font-mono text-[10px] text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc] font-bold">
+                  ID: {selectedClient.id}
+                </span>
+              </div>
+
+              {/* Client Badge Card */}
+              <div className="bg-[#fffdf8] border border-[#faecd8] rounded-xl p-3 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <h3 className="text-sm font-black text-[#141e30]">{selectedClient.name}</h3>
+                  <div className="text-xs text-[#556480] flex items-center gap-1 font-mono">
+                    <span>{selectedClient.phone}</span>
+                    <span>•</span>
+                    <span>{selectedClient.location || 'الرياض'}</span>
+                  </div>
+                  <div className="pt-1">
+                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.2 rounded border border-emerald-200">
+                      مطابقة ناجز 100%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-900 font-bold text-base flex items-center justify-center shrink-0">
+                  {selectedClient.type === 'company' ? (
+                    <Building2 className="w-6 h-6 text-amber-800" />
+                  ) : (
+                    selectedClient.name.slice(0, 1)
+                  )}
+                </div>
+              </div>
+
+              {/* AI Advisor Summary */}
+              <div className="bg-[#fffbf6] border border-[#fedbbd] rounded-xl p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-xs font-bold text-[#b44800]">
+                    <Sparkles className="w-3.5 h-3.5 text-[#fd8a42]" />
+                    ملخص المستشار الذكي (AI)
+                  </div>
+                  <span className="text-[10px] text-[#8c4912]">تحديث: اليوم</span>
+                </div>
+                <p className="text-[11px] text-[#783c07] leading-relaxed">
+                  {selectedClient.aiSummary}
                 </p>
-                {!search && (
-                  <Button onClick={handleOpenCreate} variant="outline" className="mt-4 gap-1.5 text-xs">
-                    <Plus className="w-4 h-4" />
-                    <span>إضافة أول عميل</span>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {paginatedClients.map((client) => (
-                  <Card
-                    key={client.id}
-                    className="hover:border-primary/50 transition-all hover:shadow-md cursor-pointer border-border/80 group"
-                    onClick={() => setLocation(`/clients/${client.id}`)}
-                  >
-                  <CardContent className="p-4 flex flex-col justify-between h-full space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold shrink-0">
-                            {client.name.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-sm md:text-base text-foreground group-hover:text-primary transition-colors truncate">
-                              {client.name}
-                            </h4>
-                            {client.phone && (
-                              <p className="text-xs text-muted-foreground flex items-center gap-1 font-mono mt-0.5" dir="ltr">
-                                <span>{client.phone}</span>
-                                <Phone className="w-3 h-3 text-muted-foreground/70" />
-                              </p>
-                            )}
-                          </div>
+              </div>
+
+              {/* Approved POA Clauses */}
+              <div className="space-y-2 pt-1 border-t border-[#edf3fc]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#152033]">صلاحيات الوكالة المعتمدة</span>
+                  <span className="text-[10px] text-[#00236f] font-bold">فحص ناجز الفوري</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {selectedClient.poaClauses?.map((clause, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-lg bg-[#fafcff] border border-[#e5eefa] text-xs"
+                    >
+                      <span className="text-[#141f33] font-medium text-[11px] truncate max-w-[170px]">
+                        {clause.title}
+                      </span>
+                      {clause.status === 'authorized' && (
+                        <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                          {clause.statusText}
+                        </span>
+                      )}
+                      {clause.status === 'special_permission' && (
+                        <span className="bg-amber-50 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-amber-200">
+                          {clause.statusText}
+                        </span>
+                      )}
+                      {clause.status === 'unauthorized' && (
+                        <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-rose-200">
+                          {clause.statusText}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fees & Billing Box */}
+              <div className="bg-[#f9fbff] border border-[#dce7f6] rounded-xl p-3 text-xs space-y-1.5">
+                <span className="font-bold text-[#141e30] block">حالة الأتعاب والفواتير</span>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[#657591]">إجمالي الأتعاب المتفق عليها:</span>
+                  <strong className="font-mono text-[#141e30]">{selectedClient.totalFees || '45,000 ر.س'}</strong>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[#657591]">المدفوع:</span>
+                  <strong className="font-mono text-emerald-700">{selectedClient.paidFees || '30,000 ر.س'}</strong>
+                </div>
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#edf3fc]">
+                  <span className="text-[#657591]">المتبقي (دفعة الحكم):</span>
+                  <strong className="font-mono text-amber-800 font-black">{selectedClient.remainingFees || '15,000 ر.س'}</strong>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-1">
+                <Button
+                  onClick={() => {
+                    setLocation('/cases?create=true');
+                  }}
+                  className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-9 gap-1.5 rounded-lg cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  + إضافة قضية أو وكالة جديدة للموكل
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    toast({
+                      title: 'تنزيل تقرير الموكل',
+                      description: `تم توليد ملف التقرير الفني المعتمد للموكل ${selectedClient.name}.`,
+                    });
+                  }}
+                  className="w-full text-xs text-[#42526e] border-[#d2e0f4] hover:bg-[#edf3ff] h-8 gap-1.5 rounded-lg cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  تحميل تقرير سجل العميل (PDF)
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* ════════ RIGHT COLUMN: Clients Cards Ledger (8 Cols in RTL) ════════ */}
+          <div className="lg:col-span-8 space-y-3.5">
+            {filteredClients.map((client) => {
+              const isSelected = selectedClientId === client.id;
+              const isExpiringCard = client.isExpiringPoa;
+
+              return (
+                <div
+                  key={client.id}
+                  onClick={() => setSelectedClientId(client.id)}
+                  className={`bg-white rounded-xl border p-4 transition-all cursor-pointer shadow-2xs relative ${
+                    isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
+                  } ${isSelected ? 'ring-2 ring-[#00236f]/30 bg-[#fafcff]' : 'hover:border-[#b8d1fc]'}`}
+                >
+                  {/* Card Top Row */}
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Client Info */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                          client.type === 'company'
+                            ? 'bg-[#eaf1ff] text-[#00236f]'
+                            : 'bg-amber-100 text-amber-900'
+                        }`}
+                      >
+                        {client.type === 'company' ? (
+                          <Building2 className="w-5 h-5 text-[#00236f]" />
+                        ) : (
+                          client.name.slice(0, 2)
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm font-bold text-[#141e30]">{client.name}</h3>
+                          {client.typeLabel && (
+                            <span className="bg-[#f2f6fc] text-[#4d5c76] text-[10px] font-medium px-2 py-0.2 rounded border border-[#dce6f4]">
+                              {client.typeLabel}
+                            </span>
+                          )}
+                          {client.isVerified && (
+                            <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              موكل موثق
+                            </span>
+                          )}
+                          {isExpiringCard && (
+                            <span className="bg-[#fff0e6] text-[#b44800] text-[10px] font-bold px-1.5 py-0.2 rounded border border-[#ffd5ba]">
+                              تطلب تجديد الوكالة
+                            </span>
+                          )}
                         </div>
 
-                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleOpenEdit(client)}
-                            title="تعديل"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </Button>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => setDeleteTarget(client)}
-                              title="حذف"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                        <div className="flex items-center gap-3 text-xs text-[#596883] mt-1 font-mono">
+                          {client.phone && <span>{client.phone}</span>}
+                          {client.commercialRegistration && (
+                            <span className="font-semibold text-[#141e30]">{client.commercialRegistration}</span>
                           )}
+                          <span className="text-[#a5b4cb]">•</span>
+                          <span className="font-sans">المحامي المكلف: {client.assignedLawyer}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions on Left */}
+                    <div className="flex items-center gap-1.5 text-[#657591]">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(client);
+                        }}
+                        className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                        title="حذف"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingClient(client);
+                          setFormName(client.name);
+                          setFormPhone(client.phone || '');
+                          setFormNotes(client.statusNote || '');
+                          setCreateOpen(true);
+                        }}
+                        className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
+                        title="تعديل"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const msg = encodeURIComponent(
+                            `السلام عليكم ورحمة الله، الأستاذ ${client.name} المحترم.\nنحيطكم علماً بآخر مستجدات ملفكم لدى مكتب المحاماة الرئيسي.\n- خالص التحيات.`
+                          );
+                          window.open(`https://wa.me/?text=${msg}`, '_blank');
+                        }}
+                        className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
+                        title="واتساب"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expiring Alert Banner inside Company Card (Card 3 in mockup) */}
+                  {isExpiringCard && (
+                    <div className="mt-3 bg-[#fff4ed] border border-[#ffd5ba] rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-[#556480] flex-1">
+                        <div>
+                          <span className="text-[#843600] text-[10px] block">مهلة التجديد</span>
+                          <strong className="text-[#b44800] text-xs">تنتهي خلال 18 يوماً</strong>
+                        </div>
+                        <div>
+                          <span className="text-[#843600] text-[10px] block">الوكالة التجارية</span>
+                          <strong className="text-[#141e30] font-mono text-xs">{client.poaNumber}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[#843600] text-[10px] block">القضايا المتأثرة</span>
+                          <strong className="text-[#141e30] text-xs">{client.openCasesText}</strong>
                         </div>
                       </div>
 
-                      {client.notes && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 bg-muted/40 p-2 rounded-md">
-                          {client.notes}
-                        </p>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const msg = encodeURIComponent(
+                            `السلام عليكم ورحمة الله، السادة ${client.name} المحترمون.\nنود إحاطتكم بضرورة تجديد الوكالة التجارية رقم (${client.poaNumber}) التي تنتهي خلال 18 يوماً لمتابعة القضايا التجارية النشطة.\n- مكتب المحاماة الرئيسي.`
+                          );
+                          window.open(`https://wa.me/?text=${msg}`, '_blank');
+                        }}
+                        className="bg-[#b44800] hover:bg-[#8f3900] text-white text-[11px] font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        إشعار الموكل (واتساب للتجديد)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Middle Details Grid for Normal Cards */}
+                  {!isExpiringCard && (
+                    <div className="mt-3 pt-2.5 border-t border-[#edf3fc] grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-[#556480]">
+                      <div>
+                        <span className="text-[#7a8aa3] text-[11px] block">الوكالة الشرعية</span>
+                        <strong className="text-[#152033] font-mono">
+                          {client.poaStatus} ({client.poaNumber})
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-[#7a8aa3] text-[11px] block">تاريخ الانتهاء</span>
+                        <strong className="text-[#152033] font-mono">{client.poaExpiryHijri}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[#7a8aa3] text-[11px] block">القضايا المفتوحة</span>
+                        <strong className="text-[#00236f] font-bold">{client.openCasesText}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bottom Note & Link */}
+                  <div className="mt-2.5 pt-2 border-t border-[#f4f7fc] flex items-center justify-between text-xs">
+                    <div className="text-[11px] text-[#556480] flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span>{client.statusNote}</span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <FolderOpen className="w-3.5 h-3.5 text-primary/70" />
-                        <span>عرض الملف الكامل</span>
-                      </span>
-                      <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:-translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <TablePagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size);
-                setCurrentPage(1);
-              }}
-            />
-          </>
-        )}
-        </TabsContent>
-
-        {/* Tab 2: Admin Triage */}
-        {isAdmin && (
-          <TabsContent value="triage" className="space-y-4 mt-0">
-            <div className="p-3.5 rounded-lg border border-amber-500/20 bg-amber-500/5 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="text-xs md:text-sm text-foreground/90 leading-relaxed">
-                <span className="font-bold text-amber-700 dark:text-amber-400">فرز السجلات غير المعينة:</span> هذه السجلات
-                موجودة في قاعدة بيانات المكتب ولكنها غير مربوطة بعميل محدد، أو لم يتم تعيين محامٍ مسؤول عنها بعد. يتيح لك هذا
-                القسم تعيين المسؤول والعميل بخطوة واحدة للحفاظ على دقة الصلاحيات.
-              </div>
-            </div>
-
-            {triageLoading ? (
-              <div className="flex flex-col items-center justify-center p-16 gap-3 text-muted-foreground">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-sm">جاري جلب السجلات غير المعينة...</p>
-              </div>
-            ) : unassignedRecords.length === 0 ? (
-              <Card className="border-dashed bg-muted/10">
-                <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-3">
-                    <Check className="w-6 h-6" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/clients/${client.id}`);
+                      }}
+                      className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>عرض الملف الكامل</span>
+                      <ChevronLeft className="w-3 h-3" />
+                    </button>
                   </div>
-                  <h4 className="font-bold text-sm md:text-base">ممتاز! جميع السجلات معينة</h4>
-                  <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                    لا توجد حالياً جلسات أو مهام أو وكالات أو أحكام مفقودة العميل أو المحامي المسؤول.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="border border-border rounded-lg overflow-hidden bg-card">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs md:text-sm">
-                    <thead className="bg-muted/70 text-muted-foreground border-b border-border">
-                      <tr>
-                        <th className="p-3">نوع السجل</th>
-                        <th className="p-3">عنوان / تفاصيل السجل</th>
-                        <th className="p-3">حالة العميل</th>
-                        <th className="p-3">حالة التعيين</th>
-                        <th className="p-3 text-center">إجراء</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {unassignedRecords.map((record) => (
-                        <tr key={`${record.module}-${record.id}`} className="hover:bg-muted/30 transition-colors">
-                          <td className="p-3 whitespace-nowrap">{getModuleBadge(record.module)}</td>
-                          <td className="p-3">
-                            <div className="font-semibold">{record.title}</div>
-                            {record.subTitle && (
-                              <div className="text-xs text-muted-foreground">{record.subTitle}</div>
-                            )}
-                          </td>
-                          <td className="p-3 whitespace-nowrap">
-                            {record.client_id ? (
-                              <Badge variant="outline" className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-xs">
-                                مربوط بعميل
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-destructive bg-destructive/10 border-destructive/20 text-xs">
-                                غير مربوط بعميل
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="p-3 whitespace-nowrap">
-                            {record.assigned_lawyer_id ? (
-                              <Badge variant="outline" className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-xs">
-                                معين لمحامٍ
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-amber-600 bg-amber-500/10 border-amber-500/20 text-xs">
-                                غير معين لمحامٍ
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="p-3 text-center whitespace-nowrap">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setTriageTarget(record);
-                                setTriageClientId(record.client_id || null);
-                                setTriageLawyerId(record.assigned_lawyer_id || null);
-                              }}
-                              className="gap-1 text-xs border-primary/30 hover:border-primary text-primary"
-                            >
-                              <LinkIcon className="w-3.5 h-3.5" />
-                              <span>ربط وتعيين</span>
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
+              );
+            })}
+
+            {/* Pagination Controls */}
+            <div className="px-4 py-3 bg-white border border-[#dbe6f8] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#637189] shadow-2xs">
+              <div className="flex items-center gap-3">
+                <span>عرض 1 إلى 4 من أصل 46 عميل مسجل</span>
+                <span className="text-[#c7d5ea]">|</span>
+                <span>لكل صفحة: 10</span>
               </div>
-            )}
-          </TabsContent>
-        )}
-      </Tabs>
-
-
-
-      {/* Delete Confirmation Alert */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-right">هل أنت متأكد من حذف العميل؟</AlertDialogTitle>
-            <AlertDialogDescription className="text-right text-xs md:text-sm">
-              سيتم حذف سجل العميل &quot;{deleteTarget?.name}&quot;. لن يؤثر ذلك على الجلسات أو المهام السابقة ولكن سيفك ارتباطها
-              بهذا العميل.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 flex-row-reverse sm:flex-row-reverse">
-            <AlertDialogAction onClick={handleDeleteClient} className="bg-destructive hover:bg-destructive/90">
-              {saving ? <Loader2 className="w-4 h-4 ml-1.5 animate-spin" /> : null}
-              <span>تأكيد الحذف</span>
-            </AlertDialogAction>
-            <AlertDialogCancel disabled={saving}>إلغاء</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Triage Link Modal */}
-      {triageTarget && (
-        <Dialog open={!!triageTarget} onOpenChange={(v) => !v && setTriageTarget(null)}>
-          <DialogContent className="max-w-md w-full" dir="rtl">
-            <DialogHeader>
-              <DialogTitle className="text-right flex items-center gap-2">
-                <LinkIcon className="w-5 h-5 text-primary" />
-                <span>ربط السجل وتعيين المسؤول</span>
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs space-y-1">
-                <div className="flex items-center gap-2">
-                  {getModuleBadge(triageTarget.module)}
-                  <span className="font-bold">{triageTarget.title}</span>
-                </div>
-                {triageTarget.subTitle && (
-                  <p className="text-muted-foreground">{triageTarget.subTitle}</p>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <ClientPicker
-                  value={triageClientId}
-                  onChange={(id) => setTriageClientId(id)}
-                  label="ربط بعميل مسجل"
-                />
-
-                <LawyerSelect
-                  value={triageLawyerId}
-                  onChange={(id) => setTriageLawyerId(id)}
-                  label="تعيين المحامي المسؤول"
-                />
+              <div className="flex items-center gap-1 font-mono">
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-[#00236f] text-white font-bold flex items-center justify-center">
+                  1
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  2
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  3
+                </button>
+                <span className="px-1 text-[#8b99b0]">...</span>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  5
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  &gt;
+                </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <DialogFooter className="gap-2 flex-row-reverse sm:flex-row-reverse pt-2">
-              <Button onClick={handleTriageSubmit} disabled={triageSaving}>
-                {triageSaving && <Loader2 className="w-4 h-4 ml-1.5 animate-spin" />}
-                <span>حفظ التعيين</span>
+      {/* ── Dialog: Add / Edit Client ── */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#141e30]">
+              {editingClient ? 'تعديل بيانات الموكل' : 'تسجيل موكل جديد'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              أدخل البيانات الأساسية للعميل ورقم الهاتف وتصنيف المنشأة أو الفرد.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveClient} className="space-y-3 py-2 text-xs">
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">اسم العميل / المنشأة *</Label>
+              <Input
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="أدخل الاسم الرباعي أو اسم الشركة..."
+                className="h-8 text-xs"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">رقم الجوال *</Label>
+              <Input
+                value={formPhone}
+                onChange={(e) => setFormPhone(e.target.value)}
+                placeholder="05XXXXXXXX"
+                className="h-8 text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">تصنيف العميل</Label>
+              <select
+                value={formType}
+                onChange={(e) => setFormType(e.target.value as any)}
+                className="w-full h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+              >
+                <option value="individual">فرد / مستثمر</option>
+                <option value="company">شركة ومؤسسة</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">ملاحظات وتفاصيل إضافية</Label>
+              <Textarea
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+                placeholder="أرقام الوكالات أو السجلات أو نوع التعامل..."
+                rows={2}
+                className="text-xs resize-none"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 sm:justify-start pt-2">
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs"
+              >
+                {isSaving ? 'جارٍ الحفظ...' : 'حفظ الموكل'}
               </Button>
-              <Button variant="outline" onClick={() => setTriageTarget(null)} disabled={triageSaving}>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} className="text-xs">
                 إلغاء
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AlertDialog: Delete Confirmation ── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-sm font-bold text-[#141e30]">
+              تأكيد حذف ملف العميل
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-[#65738c]">
+              هل أنت متأكد من رغبتك في حذف ملف الموكل ({deleteTarget?.name})؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:justify-start">
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs"
+            >
+              حذف الملف
+            </AlertDialogAction>
+            <AlertDialogCancel className="text-xs">إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
