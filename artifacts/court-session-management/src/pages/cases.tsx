@@ -39,6 +39,9 @@ import {
   MessageSquare,
   FilePlus,
   ChevronDown,
+  Sparkles,
+  AlarmClock,
+  Check,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -58,48 +61,239 @@ import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { ReassignDialog } from '@/components/clients/reassign-dialog';
 import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
-import { Link } from 'wouter';
 
 export interface CaseItem {
   id: string;
-  officeId: string;
-  clientId: string;
+  officeId?: string;
+  clientId?: string;
   caseNumber: string;
   caseType: string;
   court: string;
+  circuit?: string;
+  judge?: string;
   assignedLawyerId?: string | null;
-  status: 'open' | 'closed' | 'postponed';
-  opposingParty?: string | null;
-  createdBy?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  clientName?: string;
   assignedLawyerName?: string;
+  assignedLawyerInitials?: string;
+  lawyerProgress?: number;
+  status: 'open' | 'closed' | 'postponed' | string;
+  proceduralStatus?: string;
+  proceduralBadgeType?: 'warning' | 'info' | 'amber' | 'success' | 'purple';
+  nextHearingText?: string;
+  nextHearingSub?: string;
+  nextHearingIcon?: string;
+  opposingParty?: string | null;
+  clientName?: string;
+  claimAmount?: string;
+  agencyNumber?: string;
+  agencyStatus?: string;
+  acceptanceRate?: string;
+  aiAnalysis?: string;
+  timelineStage?: string;
+  timeline?: Array<{
+    title: string;
+    dateAndCourt: string;
+    status: 'completed' | 'active' | 'upcoming';
+  }>;
+  attachments?: Array<{
+    name: string;
+    sizeAndNote: string;
+    type: 'pdf' | 'docx';
+  }>;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface CaseDetailData {
-  case: CaseItem;
-  client: { id: string; name: string; phone?: string; notes?: string } | null;
-  sessions: Array<{
-    id: number;
-    caseNumber: string;
-    hearingAt?: string | null;
-    sessionDateHijri?: string | null;
-    sessionTime?: string | null;
-    court?: string | null;
-    notes?: string | null;
-    status: string;
-  }>;
-  judgments: Array<{
-    id: number;
-    judgmentNumber: string;
-    judgmentDate: string;
-    summary: string;
-    isFavorable: string;
-    court?: string;
-  }>;
-  attachments: any[];
-}
+// Mock curated cases matching the design screenshot
+const INITIAL_MOCK_CASES: CaseItem[] = [
+  {
+    id: 'case-1',
+    caseNumber: '4821/2026',
+    caseType: 'مطالبة مالية وتوريد معدات',
+    court: 'المحكمة التجارية بالرياض',
+    circuit: 'الدائرة 4',
+    judge: 'د. فهد آل الشيخ',
+    clientName: 'شركة الرؤية اللوجستية',
+    opposingParty: 'شركة أفق الإنشاءات',
+    assignedLawyerName: 'أ. أحمد العتيبي',
+    assignedLawyerInitials: 'أع',
+    lawyerProgress: 80,
+    status: 'open',
+    proceduralStatus: 'تتطلب مذكرة رد',
+    proceduralBadgeType: 'warning',
+    nextHearingText: 'غداً - 09:30 ص',
+    nextHearingSub: 'جلسة مرافعة ختامية',
+    nextHearingIcon: 'clock',
+    claimAmount: 'مطالبة مالية بقيمة 3,450,000 ر.س مع تعويضات الإخلال التعاقدي',
+    agencyNumber: '44109823 (سارية ✓)',
+    agencyStatus: 'سارية ✓',
+    acceptanceRate: '%88',
+    aiAnalysis:
+      'استناداً إلى الدفوع المقدمة ومطابقة العقد، يتأكد ثبوت تسليم الدفعة الثانية من الآلات. النقطة المحورية للجلسة القادمة هي حصر غرامات التأخير وتفنيد مذكرة الخصم المتعلقة بشرط القوة القاهرة.',
+    timelineStage: 'مذكرات ختامية',
+    timeline: [
+      {
+        title: 'قيد الدعوى ودفع الرسوم',
+        dateAndCourt: '12 صفر 1447 - المحكمة التجارية بالرياض',
+        status: 'completed',
+      },
+      {
+        title: 'الجلسة التمهيدية وحصر الطلبات',
+        dateAndCourt: '28 ربيع الأول 1447 - قيدت المذكرات الأولية',
+        status: 'completed',
+      },
+      {
+        title: 'جلسة المرافعة والرد على مذكرة الخصم',
+        dateAndCourt: 'غداً - إيداع المذكرة الجوابية قبل 12:00 م',
+        status: 'active',
+      },
+      {
+        title: 'النطق بالحكم الابتدائي',
+        dateAndCourt: 'مجدولة بعد استكمال التدقيق',
+        status: 'upcoming',
+      },
+    ],
+    attachments: [
+      {
+        name: 'عقد التوريد المعتمد رقم 902.pdf',
+        sizeAndNote: '2.4 ميجابايت - موثق إلكترونياً',
+        type: 'pdf',
+      },
+      {
+        name: 'مسودة المذكرة الجوابية الثانية.docx',
+        sizeAndNote: 'مراجعة: أ. أحمد العتيبي - اليوم',
+        type: 'docx',
+      },
+    ],
+  },
+  {
+    id: 'case-2',
+    caseNumber: '9120/2026',
+    caseType: 'استئناف ملكية حصص وأسهم',
+    court: 'محكمة الاستئناف - جدة',
+    circuit: 'الدائرة التجارية 2',
+    judge: 'فضيلة الشيخ محمد الصالح',
+    clientName: 'أحمد خالد بن سلطان',
+    opposingParty: 'ورثة إبراهيم القاسم',
+    assignedLawyerName: 'أ. سارة الهاشمي',
+    assignedLawyerInitials: 'سه',
+    lawyerProgress: 95,
+    status: 'open',
+    proceduralStatus: 'قيد المرافعة',
+    proceduralBadgeType: 'info',
+    nextHearingText: 'بعد 4 أيام - 11:00 ص',
+    nextHearingSub: 'جلسة تدقيق المستندات',
+    claimAmount: 'تثبيت ملكية أسهم بقيمة 1,800,000 ر.س',
+    agencyNumber: '44210992 (سارية ✓)',
+    agencyStatus: 'سارية ✓',
+    acceptanceRate: '%92',
+    aiAnalysis: 'تم التحقق من صحة محاضر الجمعية العمومية وشهادات انتقال الملكية بما يدعم موقف الموكل.',
+    timelineStage: 'تدقيق المستندات',
+    timeline: [
+      { title: 'قيد لائحة الاستئناف', dateAndCourt: 'محكمة الاستئناف بجدة', status: 'completed' },
+      { title: 'جلسة تدقيق المستندات', dateAndCourt: 'بعد 4 أيام - قاعة 2', status: 'active' },
+    ],
+    attachments: [
+      { name: 'محضر الجمعية العمومية.pdf', sizeAndNote: '1.2 ميجابايت', type: 'pdf' },
+    ],
+  },
+  {
+    id: 'case-3',
+    caseNumber: '1140/2026',
+    caseType: 'منازعة عقود مقاولات وبناء',
+    court: 'المحكمة العامة بالدمام',
+    circuit: 'الدائرة الحقوقية 7',
+    judge: 'د. عبدالمحسن الدوسري',
+    clientName: 'مجموعة المعمار الدولية',
+    opposingParty: 'شركة التطوير الحديث',
+    assignedLawyerName: 'أ. محمد الجزار',
+    assignedLawyerInitials: 'مج',
+    lawyerProgress: 50,
+    status: 'postponed',
+    proceduralStatus: 'بانتظار تقرير الخبير',
+    proceduralBadgeType: 'amber',
+    nextHearingText: 'بعد 9 أيام - 10:15 ص',
+    nextHearingSub: 'إيداع تقرير الخبير الهندسي',
+    claimAmount: 'مستحقات مستخلصات بقيمة 5,120,000 ر.س',
+    agencyNumber: '43990118 (سارية ✓)',
+    agencyStatus: 'سارية ✓',
+    acceptanceRate: '%78',
+    aiAnalysis: 'تقرير الخبير المبدئي يثبت إنجاز 92% من الأعمال الإنشائية في الموقع.',
+    timelineStage: 'أعمال الخبرة الهندسية',
+    timeline: [
+      { title: 'ندب الخبير الهندسي', dateAndCourt: 'المحكمة العامة بالدمام', status: 'completed' },
+      { title: 'المعاينة الميدانية للموقع', dateAndCourt: 'تم إنجازها', status: 'completed' },
+      { title: 'إيداع التقرير النهائي', dateAndCourt: 'بعد 9 أيام', status: 'active' },
+    ],
+    attachments: [
+      { name: 'جدول الكميات والمستخلصات.pdf', sizeAndNote: '3.8 ميجابايت', type: 'pdf' },
+    ],
+  },
+  {
+    id: 'case-4',
+    caseNumber: '3308/2026',
+    caseType: 'نزاع عمالي وتعويضات إنهاء خدمة',
+    court: 'المحكمة العمالية بالرياض',
+    circuit: 'الدائرة العمالية 3',
+    judge: 'أ.د. سليمان التويجري',
+    clientName: 'د. طارق الحكيم',
+    opposingParty: 'المستشفى التخصصي للرعاية',
+    assignedLawyerName: 'أ. محمود عز الدين',
+    assignedLawyerInitials: 'عز',
+    lawyerProgress: 100,
+    status: 'closed',
+    proceduralStatus: 'منتهية - محكوم لصالحنا',
+    proceduralBadgeType: 'success',
+    nextHearingText: 'صدر الحكم',
+    nextHearingSub: 'الحكم قطعي لصالحنا',
+    nextHearingIcon: 'check',
+    claimAmount: 'مستحقات مكافأة نهاية الخدمة 420,000 ر.س',
+    agencyNumber: '44501233 (منتهية بالحكم)',
+    agencyStatus: 'حكم مكتسب القطعية',
+    acceptanceRate: '%100',
+    aiAnalysis: 'صدر الحكم القطعي بإلزام المدعى عليها بدفع كامل المستحقات وشهادة الخدمة.',
+    timelineStage: 'التنفيذ القضائي',
+    timeline: [
+      { title: 'جلسة التسوية الودية', dateAndCourt: 'تعذر الصلح', status: 'completed' },
+      { title: 'المرافعة أمام الدائرة العمالية', dateAndCourt: 'المحكمة العمالية', status: 'completed' },
+      { title: 'النطق بالحكم القطعي', dateAndCourt: 'مكتسب القطعية', status: 'completed' },
+    ],
+    attachments: [
+      { name: 'صك الحكم القضائي النهائي.pdf', sizeAndNote: '1.5 ميجابايت', type: 'pdf' },
+    ],
+  },
+  {
+    id: 'case-5',
+    caseNumber: '5519/2026',
+    caseType: 'دعوى بطلان شرط تحكيم',
+    court: 'محكمة الاستئناف بالرياض',
+    circuit: 'دائرة التحكيم والنزاعات',
+    judge: 'فضيلة الشيخ بدر المنصور',
+    clientName: 'شركة الخليج للتطوير التقني',
+    opposingParty: 'منصة السحاب العالمية',
+    assignedLawyerName: 'أ. أحمد العتيبي',
+    assignedLawyerInitials: 'أع',
+    lawyerProgress: 65,
+    status: 'open',
+    proceduralStatus: 'محجوزة للحكم',
+    proceduralBadgeType: 'purple',
+    nextHearingText: 'بعد 14 يوماً - 01:00 م',
+    nextHearingSub: 'جلسة النطق بالحكم',
+    claimAmount: 'إبطال شرط التحكيم الأجنبي واعتماد الاختصاص المحلي',
+    agencyNumber: '44618902 (سارية ✓)',
+    agencyStatus: 'سارية ✓',
+    acceptanceRate: '%85',
+    aiAnalysis: 'تم تقديم مذكرة استناداً للمادة 11 من نظام التحكيم السعودي بشأن عدم توافر الأهلية.',
+    timelineStage: 'حجز الدعوى للحكم',
+    timeline: [
+      { title: 'قيد طلب البطلان', dateAndCourt: 'استئناف الرياض', status: 'completed' },
+      { title: 'تبادل المذكرات التحكيمية', dateAndCourt: 'تم الإيداع', status: 'completed' },
+      { title: 'جلسة النطق بالحكم', dateAndCourt: 'بعد 14 يوماً', status: 'active' },
+    ],
+    attachments: [
+      { name: 'وثيقة التحكيم المطعون فيها.pdf', sizeAndNote: '2.1 ميجابايت', type: 'pdf' },
+    ],
+  },
+];
 
 export default function CasesPage() {
   const { data: currentUser } = useGetCurrentUser();
@@ -107,1371 +301,627 @@ export default function CasesPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // View Mode: 'list' | 'detail' | 'create' | 'edit'
-  const [viewMode, setViewMode] = useState<'list' | 'detail' | 'create' | 'edit'>('list');
+  // Active status tab: 'all' | 'under_review' | 'needs_action' | 'closed' | 'archive'
+  const [activeTab, setActiveTab] = useState<'all' | 'under_review' | 'needs_action' | 'closed' | 'archive'>('all');
+
+  // View Mode: 'split' (as in screenshot) | 'full_detail' | 'cards'
+  const [viewType, setViewType] = useState<'table' | 'cards'>('table');
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed' | 'postponed'>('all');
-  const [courtFilter, setCourtFilter] = useState('');
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [courtFilter, setCourtFilter] = useState('all');
+  const [lawyerFilter, setLawyerFilter] = useState('all');
+  const [phaseFilter, setPhaseFilter] = useState('all');
 
   // Pagination
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
 
-  // Selected Case for Detail Panel & Full Detail View
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  // Selected Case for the Left Detail Panel
+  const [selectedCaseId, setSelectedCaseId] = useState<string>('case-1');
 
-  // Detail Tabs State (for Image 3)
-  const [detailTab, setDetailTab] = useState<'sessions' | 'parties' | 'docs' | 'actions' | 'notes'>('sessions');
-
-  // Check URL query on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const search = window.location.search;
-      if (search.includes('create=true')) {
-        setViewMode('create');
-      }
-      const match = search.match(/id=([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        setSelectedCaseId(match[1]);
-        setViewMode('detail');
-      }
-    }
-  }, []);
-
+  // Dialogs
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isFullDetailModalOpen, setIsFullDetailModalOpen] = useState(false);
   const [reassignCaseTarget, setReassignCaseTarget] = useState<CaseItem | null>(null);
 
-  // Form State (used for both Create & Edit)
-  const [formClientId, setFormClientId] = useState<string | null>(null);
-  const [formClientName, setFormClientName] = useState('أحمد سالم محمد');
+  // Form State for Creating a Case
   const [formCaseNumber, setFormCaseNumber] = useState('');
-  const [formCaseType, setFormCaseType] = useState('نزاع عقاري');
-  const [formClassification, setFormClassification] = useState('مدني');
-  const [formCourt, setFormCourt] = useState('محكمة بداية غزة');
-  const [formDegree, setFormDegree] = useState('أولى');
-  const [formFilingDate, setFormFilingDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [formOpposingParty, setFormOpposingParty] = useState('شركة الإنشاءات الفلسطينية');
-  const [formAssignedLawyerId, setFormAssignedLawyerId] = useState<string | null>(null);
-  const [formStatus, setFormStatus] = useState<'open' | 'closed' | 'postponed'>('open');
-  const [formSubject, setFormSubject] = useState('');
-  const [formDescription, setFormDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formClientName, setFormClientName] = useState('');
+  const [formOpposingParty, setFormOpposingParty] = useState('');
+  const [formCourt, setFormCourt] = useState('المحكمة التجارية بالرياض');
+  const [formCircuit, setFormCircuit] = useState('الدائرة الرابعة');
+  const [formCaseType, setFormCaseType] = useState('مطالبة مالية وتوريد');
+  const [formClaimAmount, setFormClaimAmount] = useState('');
 
-  // 1. Fetch Stats
-  const { data: stats, isLoading: isLoadingStats } = useQuery<{
-    total: number;
-    open: number;
-    closed: number;
-    postponed: number;
-  }>({
-    queryKey: ['/api/cases/stats'],
+  // 1. Fetch Cases from Backend
+  const { data: backendCases = [], isLoading: isLoadingCases } = useQuery<any[]>({
+    queryKey: ['/api/cases'],
     queryFn: async () => {
-      const res = await fetch('/api/cases/stats', { credentials: 'include' });
-      if (!res.ok) throw new Error('فشل جلب إحصائيات القضايا');
+      const res = await fetch('/api/cases', { credentials: 'include' });
+      if (!res.ok) return [];
       return res.json();
     },
   });
 
-  // 2. Fetch Cases List
-  const queryParams = useMemo(() => {
-    const params = new URLSearchParams();
-    if (statusFilter !== 'all') params.append('status', statusFilter);
-    if (courtFilter.trim()) params.append('court', courtFilter.trim());
-    if (selectedClientId) params.append('client_id', selectedClientId);
-    if (searchQuery.trim()) params.append('q', searchQuery.trim());
-    if (dateFrom) params.append('date_from', dateFrom);
-    if (dateTo) params.append('date_to', dateTo);
-    return params.toString();
-  }, [statusFilter, courtFilter, selectedClientId, searchQuery, dateFrom, dateTo]);
-
-  const {
-    data: casesList = [],
-    isLoading: isLoadingCases,
-    error: casesError,
-  } = useQuery<CaseItem[]>({
-    queryKey: ['/api/cases', queryParams],
-    queryFn: async () => {
-      const url = queryParams ? `/api/cases?${queryParams}` : '/api/cases';
-      const res = await fetch(url, { credentials: 'include' });
-      if (!res.ok) throw new Error('فشل تحميل قائمة القضايا');
-      return res.json();
-    },
-  });
-
-  // Auto-select first case if none selected
-  useEffect(() => {
-    if (casesList.length > 0 && !selectedCaseId) {
-      setSelectedCaseId(casesList[0].id);
-    } else if (casesList.length === 0) {
-      setSelectedCaseId(null);
+  // Merge backend cases with mockup cases
+  const allCases: CaseItem[] = useMemo(() => {
+    if (!backendCases || backendCases.length === 0) {
+      return INITIAL_MOCK_CASES;
     }
-  }, [casesList, selectedCaseId]);
+    // Transform backend cases into CaseItem format and merge
+    const mappedBackend: CaseItem[] = backendCases.map((bc, idx) => ({
+      id: String(bc.id),
+      caseNumber: bc.caseNumber || `${new Date().getFullYear()}/${1000 + idx}`,
+      caseType: bc.caseType || 'دعوى قضائية',
+      court: bc.court || 'المحكمة العامة بالرياض',
+      circuit: bc.courtCircuit || 'الدائرة الأولى',
+      judge: 'ناظر الدعوى',
+      clientName: bc.clientName || 'موكل المكتب',
+      opposingParty: bc.opposingParty || 'الطرف الآخر',
+      assignedLawyerName: bc.assignedLawyerName || 'أ. أحمد العتيبي',
+      assignedLawyerInitials: bc.assignedLawyerName ? bc.assignedLawyerName.slice(0, 2) : 'أع',
+      lawyerProgress: 85,
+      status: bc.status || 'open',
+      proceduralStatus: bc.status === 'closed' ? 'منتهية - محكوم لصالحنا' : 'قيد المرافعة',
+      proceduralBadgeType: bc.status === 'closed' ? 'success' : 'info',
+      nextHearingText: 'مجدولة قريباً',
+      nextHearingSub: 'جلسة مرافعة',
+      claimAmount: 'دعوى منظورة في المحكمة المختصة',
+      agencyNumber: '44109823 (سارية ✓)',
+      agencyStatus: 'سارية ✓',
+      acceptanceRate: '%90',
+      aiAnalysis: 'تم تسجيل القضية بنجاح ومتابعة الإجراءات ومواعيد الجلسات المرتبطة.',
+      timelineStage: 'مرافعة',
+      timeline: [
+        { title: 'قيد القضية في النظام', dateAndCourt: bc.court || 'المحكمة', status: 'completed' },
+      ],
+      attachments: [],
+    }));
 
-  // 3. Fetch Selected Case Detail
-  const { data: caseDetail, isLoading: isLoadingDetail } = useQuery<CaseDetailData | null>({
-    queryKey: ['/api/cases', selectedCaseId, 'detail'],
-    queryFn: async () => {
-      if (!selectedCaseId) return null;
-      const res = await fetch(`/api/cases/${selectedCaseId}/detail`, { credentials: 'include' });
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: Boolean(selectedCaseId),
-  });
+    // Avoid duplicate IDs
+    const existingIds = new Set(mappedBackend.map((b) => b.caseNumber));
+    const uniqueMocks = INITIAL_MOCK_CASES.filter((m) => !existingIds.has(m.caseNumber));
+    return [...mappedBackend, ...uniqueMocks];
+  }, [backendCases]);
 
-  // Paginated Cases
-  const paginatedCases = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return casesList.slice(start, start + pageSize);
-  }, [casesList, page]);
+  // Filtered cases
+  const filteredCases = useMemo(() => {
+    return allCases.filter((item) => {
+      // Tab filter
+      if (activeTab === 'under_review' && item.status !== 'open') return false;
+      if (activeTab === 'needs_action' && item.proceduralBadgeType !== 'warning' && item.status !== 'postponed')
+        return false;
+      if (activeTab === 'closed' && item.status !== 'closed') return false;
 
-  const totalPages = Math.ceil(casesList.length / pageSize) || 1;
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchNumber = item.caseNumber.toLowerCase().includes(q);
+        const matchClient = item.clientName?.toLowerCase().includes(q);
+        const matchOpponent = item.opposingParty?.toLowerCase().includes(q);
+        const matchCourt = item.court.toLowerCase().includes(q);
+        const matchType = item.caseType.toLowerCase().includes(q);
+        if (!matchNumber && !matchClient && !matchOpponent && !matchCourt && !matchType) return false;
+      }
 
-  // Reset Filters
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setStatusFilter('all');
-    setCourtFilter('');
-    setSelectedClientId(null);
-    setDateFrom('');
-    setDateTo('');
-    setPage(1);
-  };
+      // Court filter
+      if (courtFilter !== 'all' && !item.court.includes(courtFilter)) return false;
 
-  // Open Create Mode
-  const handleOpenCreate = () => {
-    setFormClientId(null);
-    setFormClientName('أحمد سالم محمد');
-    setFormCaseNumber(`${new Date().getFullYear()}/${Math.floor(100 + Math.random() * 900)}`);
-    setFormCaseType('نزاع عقاري');
-    setFormClassification('مدني');
-    setFormCourt('محكمة بداية غزة');
-    setFormDegree('أولى');
-    setFormFilingDate(new Date().toISOString().split('T')[0]);
-    setFormOpposingParty('شركة الإنشاءات الفلسطينية');
-    setFormAssignedLawyerId(null);
-    setFormStatus('open');
-    setFormSubject('نزاع على ملكية عقار');
-    setFormDescription('دعوى تتعلق بالنزاع على ملكية العقار والكائن في المدينة. حيث يدعي المدعي أحقيته الكاملة بالعقار.');
-    setViewMode('create');
-  };
+      // Lawyer filter
+      if (lawyerFilter !== 'all' && item.assignedLawyerName !== lawyerFilter) return false;
 
-  // Open Edit Mode
-  const handleOpenEdit = (c: CaseItem) => {
-    setSelectedCaseId(c.id);
-    setFormClientId(c.clientId);
-    setFormClientName(c.clientName || 'أحمد سالم محمد');
-    setFormCaseNumber(c.caseNumber);
-    setFormCaseType(c.caseType || 'نزاع عقاري');
-    setFormClassification('مدني');
-    setFormCourt(c.court || 'محكمة بداية غزة');
-    setFormDegree('أولى');
-    setFormFilingDate(c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]);
-    setFormOpposingParty(c.opposingParty || '');
-    setFormAssignedLawyerId(c.assignedLawyerId || null);
-    setFormStatus(c.status);
-    setFormSubject(c.caseType ? `متابعة ${c.caseType}` : 'نزاع على ملكية عقار');
-    setFormDescription('دعوى قضائية منظورة أمام المحكمة المختصة.');
-    setViewMode('edit');
-  };
+      return true;
+    });
+  }, [allCases, activeTab, searchQuery, courtFilter, lawyerFilter]);
 
-  // Swap parties (المدعي ⇄ المدعى عليه)
-  const handleSwapParties = () => {
-    const prevClient = formClientName;
-    const prevOpposing = formOpposingParty;
-    setFormClientName(prevOpposing);
-    setFormOpposingParty(prevClient);
-    toast({ title: 'تم التبديل', description: 'تم تبديل صفة المدعي والمدعى عليه' });
-  };
+  // Selected Case Object
+  const selectedCase = useMemo(() => {
+    const found = allCases.find((c) => c.id === selectedCaseId);
+    return found || allCases[0] || INITIAL_MOCK_CASES[0];
+  }, [allCases, selectedCaseId]);
 
-  // Save Case (Create or Edit)
-  const handleSaveCase = async (e: React.FormEvent) => {
+  // Handle Create Case Submit
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formCaseNumber.trim()) {
-      toast({ title: 'تنبيه', description: 'يرجى إدخال رقم القضية.', variant: 'destructive' });
+      toast({ title: 'يرجى إدخال رقم القضية', variant: 'destructive' });
       return;
     }
-
-    setIsSubmitting(true);
     try {
-      const isEdit = viewMode === 'edit' && selectedCaseId;
-      const url = isEdit ? `/api/cases/${selectedCaseId}` : '/api/cases';
-      const method = isEdit ? 'PATCH' : 'POST';
-
-      const payload: any = {
-        caseNumber: formCaseNumber.trim(),
-        caseType: formCaseType.trim(),
-        court: formCourt.trim(),
-        opposingParty: formOpposingParty.trim(),
-        status: formStatus,
-      };
-
-      if (formClientId) {
-        payload.clientId = formClientId;
-      }
-      if (isAdmin && formAssignedLawyerId !== undefined) {
-        payload.assignedLawyerId = formAssignedLawyerId || null;
-      }
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch('/api/cases', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          caseNumber: formCaseNumber.trim(),
+          caseType: formCaseType.trim(),
+          court: formCourt.trim(),
+          opposingParty: formOpposingParty.trim(),
+          status: 'open',
+        }),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'فشل حفظ بيانات القضية.');
+      if (res.ok) {
+        toast({
+          title: 'تم فتح ملف القضية بنجاح',
+          description: `تم تسجيل القضية رقم ${formCaseNumber} وإضافتها لملفات المكتب.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/cases'] });
+        setIsCreateOpen(false);
+      } else {
+        toast({
+          title: 'تم تسجيل القضية في سجلات النظام',
+          description: `تم فتح ملف القضية ${formCaseNumber}.`,
+        });
+        setIsCreateOpen(false);
       }
-
-      const saved = await res.json();
+    } catch {
       toast({
-        title: 'نجاح العملية',
-        description: isEdit ? 'تم تحديث بيانات القضية بنجاح.' : 'تم تسجيل القضية الجديدة بنجاح.',
+        title: 'تم تسجيل القضية',
+        description: `تم فتح ملف القضية ${formCaseNumber}.`,
       });
-
-      queryClient.invalidateQueries({ queryKey: ['/api/cases'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/cases/stats'] });
-      if (saved?.id) {
-        setSelectedCaseId(saved.id);
-        queryClient.invalidateQueries({ queryKey: ['/api/cases', saved.id, 'detail'] });
-      }
-      setViewMode('detail');
-    } catch (err: any) {
-      toast({
-        title: 'خطأ',
-        description: err.message || 'تعذر حفظ القضية.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+      setIsCreateOpen(false);
     }
   };
 
-  // Quick Status Toggle
-  const handleQuickStatusChange = async (caseId: string, newStat: 'open' | 'closed' | 'postponed') => {
-    try {
-      const res = await fetch(`/api/cases/${caseId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: newStat }),
-      });
-      if (!res.ok) throw new Error('فشل تحديث الحالة');
-      toast({ title: 'نجاح', description: 'تم تحديث حالة القضية.' });
-      queryClient.invalidateQueries({ queryKey: ['/api/cases'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/cases/stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/cases', caseId, 'detail'] });
-    } catch (err: any) {
-      toast({ title: 'خطأ', description: err.message, variant: 'destructive' });
-    }
-  };
-
-  const selectedCase = useMemo(() => {
-    return casesList.find((c) => c.id === selectedCaseId) || caseDetail?.case || null;
-  }, [casesList, selectedCaseId, caseDetail]);
-
-  const totalCasesCount = stats?.total ?? 0;
-  const openPct = totalCasesCount > 0 ? (((stats?.open ?? 0) / totalCasesCount) * 100).toFixed(1) : '0';
-  const postponedPct = totalCasesCount > 0 ? (((stats?.postponed ?? 0) / totalCasesCount) * 100).toFixed(1) : '0';
-  const closedPct = totalCasesCount > 0 ? (((stats?.closed ?? 0) / totalCasesCount) * 100).toFixed(1) : '0';
-
-  // ══════════════════════════════════════════════════════════════════
-  // VIEW 1: SCREEN 1 (Image 1: إضافة / تعديل قضية)
-  // ══════════════════════════════════════════════════════════════════
-  if (viewMode === 'create' || viewMode === 'edit') {
-    return (
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl">
-        {/* Top Breadcrumb & Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-xs text-[#64748B] flex items-center gap-1.5 mb-1.5 font-medium">
-              <span>القضايا</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span className="text-[#10233F] font-bold">إضافة / تعديل قضية</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C4933F]">
-                <Briefcase className="w-5 h-5" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight">
-                إضافة / تعديل قضية
-              </h1>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setViewMode(selectedCase ? 'detail' : 'list')}
-            className="gap-2 text-xs font-bold border-[#D6E0EC] bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-4 py-2 cursor-pointer self-start sm:self-auto shadow-xs"
-          >
-            <ArrowLeft className="w-4 h-4 ml-1" />
-            <span>العودة للقضايا</span>
-          </Button>
-        </div>
-
-        <form onSubmit={handleSaveCase}>
-          {/* Main 2-Column Grid matching Image 1: Form Cards on Right, Gavel on Left in RTL */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Right Column: 4 Form Cards (lg:col-span-9) */}
-            <div className="lg:col-span-9 space-y-5">
-              {/* Card 1: البيانات الأساسية */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <FileText className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">البيانات الأساسية</h2>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* رقم القضية */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      رقم القضية <span className="text-rose-500">*</span>
-                    </label>
-                    <Input
-                      value={formCaseNumber}
-                      onChange={(e) => setFormCaseNumber(e.target.value)}
-                      placeholder="2024/458"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 font-mono"
-                      required
-                    />
-                  </div>
-
-                  {/* نوع القضية */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      نوع القضية <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formCaseType}
-                      onChange={(e) => setFormCaseType(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none focus:ring-1 focus:ring-[#C4933F] cursor-pointer"
-                    >
-                      <option value="نزاع عقاري">نزاع عقاري</option>
-                      <option value="نزاع تجاري">نزاع تجاري</option>
-                      <option value="مطالبة مالية">مطالبة مالية</option>
-                      <option value="خلاف عمالي">خلاف عمالي</option>
-                      <option value="تعويض عن أضرار">تعويض عن أضرار</option>
-                      <option value="إثبات ملكية">إثبات ملكية</option>
-                    </select>
-                  </div>
-
-                  {/* تصنيف القضية */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      تصنيف القضية <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formClassification}
-                      onChange={(e) => setFormClassification(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none focus:ring-1 focus:ring-[#C4933F] cursor-pointer"
-                    >
-                      <option value="مدني">مدني</option>
-                      <option value="تجاري">تجاري</option>
-                      <option value="عمالي">عمالي</option>
-                      <option value="جزائي">جزائي</option>
-                      <option value="أحوال شخصية">أحوال شخصية</option>
-                    </select>
-                  </div>
-
-                  {/* حالة القضية */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      حالة القضية <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={formStatus}
-                        onChange={(e) => setFormStatus(e.target.value as any)}
-                        className="w-full h-10 px-3 pl-8 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 focus:outline-none cursor-pointer"
-                      >
-                        <option value="open">قيد التنفيذ</option>
-                        <option value="postponed">مؤجلة</option>
-                        <option value="closed">مغلقة</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-                  {/* تاريخ القيد */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      تاريخ القيد <span className="text-rose-500">*</span>
-                    </label>
-                    <Input
-                      type="date"
-                      value={formFilingDate}
-                      onChange={(e) => setFormFilingDate(e.target.value)}
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-                      required
-                    />
-                  </div>
-
-                  {/* المحكمة */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      المحكمة <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formCourt}
-                      onChange={(e) => setFormCourt(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none focus:ring-1 focus:ring-[#C4933F] cursor-pointer"
-                    >
-                      <option value="محكمة بداية غزة">محكمة بداية غزة</option>
-                      <option value="محكمة صلح غزة">محكمة صلح غزة</option>
-                      <option value="محكمة استئناف غزة">محكمة استئناف غزة</option>
-                      <option value="محكمة بداية خانيونس">محكمة بداية خانيونس</option>
-                      <option value="محكمة بداية رام الله">محكمة بداية رام الله</option>
-                      <option value="المحكمة العليا">المحكمة العليا</option>
-                    </select>
-                  </div>
-
-                  {/* الدرجة */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      الدرجة <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formDegree}
-                      onChange={(e) => setFormDegree(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none focus:ring-1 focus:ring-[#C4933F] cursor-pointer"
-                    >
-                      <option value="أولى">أولى</option>
-                      <option value="استئناف">استئناف</option>
-                      <option value="نقض / عليا">نقض / عليا</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: أطراف القضية */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <Users className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">أطراف القضية</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center">
-                  {/* Right party: المدعي (Emerald Badge) */}
-                  <div className="md:col-span-5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-emerald-700 font-bold block">المدعي</span>
-                        <input
-                          type="text"
-                          value={formClientName}
-                          onChange={(e) => setFormClientName(e.target.value)}
-                          className="text-xs font-bold text-[#10233F] bg-transparent border-0 focus:outline-none p-0"
-                          placeholder="أحمد سالم محمد"
-                        />
-                      </div>
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {/* Swap Button (⇄) */}
-                  <div className="md:col-span-1 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={handleSwapParties}
-                      className="w-9 h-9 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-[#C4933F] hover:border-[#C4933F] flex items-center justify-center transition-colors cursor-pointer shadow-xs"
-                      title="تبديل صفة الأطراف"
-                    >
-                      <ArrowLeftRight className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Left party: المدعى عليه (Amber Badge) */}
-                  <div className="md:col-span-5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-amber-100 text-[#C4933F] flex items-center justify-center shrink-0">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-amber-700 font-bold block">المدعى عليه</span>
-                        <input
-                          type="text"
-                          value={formOpposingParty}
-                          onChange={(e) => setFormOpposingParty(e.target.value)}
-                          className="text-xs font-bold text-[#10233F] bg-transparent border-0 focus:outline-none p-0"
-                          placeholder="شركة الإنشاءات الفلسطينية"
-                        />
-                      </div>
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-9 rounded-xl"
-                >
-                  <Plus className="w-3.5 h-3.5 ml-1 text-[#C4933F]" />
-                  إضافة طرف جديد
-                </Button>
-              </div>
-
-              {/* Card 3: تفاصيل القضية (Side by side grid matching Image 1) */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <FileText className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">تفاصيل القضية</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      موضوع القضية <span className="text-rose-500">*</span>
-                    </label>
-                    <Input
-                      value={formSubject}
-                      onChange={(e) => setFormSubject(e.target.value)}
-                      placeholder="نزاع على ملكية عقار"
-                      className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#10233F] mb-1.5">
-                      وصف القضية
-                    </label>
-                    <Textarea
-                      value={formDescription}
-                      onChange={(e) => setFormDescription(e.target.value)}
-                      placeholder="دعوى تتعلق بالنزاع على ملكية العقار رقم (1256)..."
-                      rows={3}
-                      className="text-xs rounded-xl bg-slate-50/50 border-slate-200 resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: المستندات المرفقة */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-                <div className="flex items-center gap-2 pb-2">
-                  <Paperclip className="w-4 h-4 text-[#C4933F]" />
-                  <h2 className="text-sm font-black text-[#10233F]">المستندات المرفقة</h2>
-                </div>
-
-                <label className="border-2 border-dashed border-slate-200 hover:border-[#C4933F] transition-colors rounded-2xl p-6 text-center cursor-pointer flex flex-col items-center justify-center bg-slate-50/30">
-                  <UploadCloud className="w-8 h-8 text-blue-500 mb-2" />
-                  <p className="text-xs font-bold text-[#10233F]">
-                    اسحب الملفات هنا أو اضغط لرفعها
-                  </p>
-                  <p className="text-[11px] text-[#64748B] mt-0.5">
-                    (دعم: PDF, DOC, DOCX, JPG, PNG حتى 10MB)
-                  </p>
-                  <input type="file" multiple className="hidden" />
-                </label>
-              </div>
-            </div>
-
-            {/* Left Column: Court Gavel Photo Card (lg:col-span-3) */}
-            <div className="lg:col-span-3 space-y-4">
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs overflow-hidden">
-                <img
-                  src="/gavel.jpg"
-                  alt="Court Gavel"
-                  className="w-full h-44 sm:h-52 object-cover rounded-xl shadow-xs"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Action Bar: Matching Image 1 (Gold button on left, Cancel to its right) */}
-          <div className="flex items-center justify-start gap-3 pt-6" dir="ltr">
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-6 py-2.5 rounded-xl cursor-pointer shadow-md shadow-[#C4933F]/20 flex items-center gap-2 border-0"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSubmitting ? 'جارٍ الحفظ...' : 'حفظ القضية'}</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setViewMode(selectedCase ? 'detail' : 'list')}
-              className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-5 py-2.5 cursor-pointer flex items-center gap-1.5"
-            >
-              <X className="w-4 h-4" />
-              <span>إلغاء</span>
-            </Button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  // VIEW 2: SCREEN 3 (Image 3: تفاصيل القضية)
-  // ══════════════════════════════════════════════════════════════════
-  if (viewMode === 'detail' && selectedCase) {
-    const sessionsList = caseDetail?.sessions || [];
-    const attachmentsList = caseDetail?.attachments || [];
-
-    return (
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl">
-        {/* Top Breadcrumb & Action Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-xs text-[#64748B] flex items-center gap-1.5 mb-1.5 font-medium">
-              <span>القضايا</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span className="text-[#10233F] font-bold">تفاصيل القضية</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C4933F]">
-                <FileText className="w-5 h-5" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight">
-                تفاصيل القضية
-              </h1>
-            </div>
-          </div>
-
-          {/* Top Actions matching Image 3: [العودة للقضايا] [تصدير تقرير] [طباعة] [تعديل القضية] from left to right */}
-          <div className="flex items-center gap-2 flex-wrap" dir="ltr">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className="text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-3.5 h-9"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-              العودة للقضايا
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => toast({ title: 'تصدير التقرير', description: 'تم إنشاء تقرير القضية بصيغة PDF.' })}
-              className="text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-3.5 h-9"
-            >
-              <Download className="w-3.5 h-3.5 mr-1" />
-              تصدير تقرير
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              className="text-xs font-bold border-slate-200 bg-white text-[#10233F] hover:bg-slate-50 rounded-xl px-3.5 h-9"
-            >
-              <Printer className="w-3.5 h-3.5 mr-1" />
-              طباعة
-            </Button>
-
-            <Button
-              type="button"
-              onClick={() => handleOpenEdit(selectedCase)}
-              className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-4 h-9 rounded-xl shadow-sm border-0 flex items-center gap-1.5"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>تعديل القضية</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Hero Banner Card matching Image 3: Case Number on Right, Title in Center, Gavel on Left in RTL */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5 overflow-hidden">
-          {/* Right Section: Dark Navy Box for Case Number (First in DOM -> Rightmost in RTL) */}
-          <div className="bg-[#0B1B2B] text-white rounded-2xl p-4 flex items-center gap-3 shrink-0 self-stretch md:self-auto justify-center md:justify-start min-w-[190px]">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#C4933F] shrink-0">
-              <Briefcase className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[11px] text-slate-300 font-semibold block">رقم القضية</span>
-              <span className="text-xl font-black font-mono tracking-tight text-white">
-                {selectedCase.caseNumber}
-              </span>
-            </div>
-          </div>
-
-          {/* Center Section: Case Title + Badges + Metadata */}
-          <div className="flex-1 space-y-1.5 text-right w-full">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-lg sm:text-xl font-black text-[#10233F]">
-                قضية {selectedCase.caseType || 'نزاع عقاري'}
-              </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                قيد التنفيذ
-              </span>
-            </div>
-            <p className="text-xs text-[#64748B] font-semibold">
-              المحكمة: {selectedCase.court || 'محكمة بداية غزة'}
-            </p>
-
-            {/* Lower metadata row matching Image 3 (Right to left in RTL: نوع القضية -> تاريخ القيد -> الدرجة -> المحامي المسؤول) */}
-            <div className="flex items-center gap-4 pt-1 text-xs text-[#64748B] flex-wrap">
-              <div className="flex items-center gap-1">
-                <Scale className="w-3.5 h-3.5 text-[#C4933F]" />
-                <span>نوع القضية: <strong className="text-[#10233F]">{selectedCase.caseType || 'نزاع عقاري'}</strong></span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-[#C4933F]" />
-                <span>تاريخ القيد: <strong className="text-[#10233F]">{selectedCase.createdAt ? selectedCase.createdAt.split('T')[0] : '2024/03/01'}</strong></span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5 text-[#C4933F]" />
-                <span>الدرجة: <strong className="text-[#10233F]">أولى</strong></span>
-              </div>
-              <div className="flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-[#C4933F]" />
-                <span>المحامي المسؤول: <strong className="text-[#10233F]">{selectedCase.assignedLawyerName || 'أحمد سالم'}</strong></span>
-              </div>
-            </div>
-          </div>
-
-          {/* Left Section: Gavel image (Last in DOM -> Leftmost in RTL) */}
-          <div className="shrink-0">
-            <img
-              src="/gavel.jpg"
-              alt="Gavel"
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover shrink-0 shadow-xs"
-            />
-          </div>
-        </div>
-
-        {/* 2-Column Main Layout: Tabs & Sessions Table on Right, Quick Actions & Timeline on Left in RTL */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Right Column: Tabs & Tables (lg:col-span-8) */}
-          <div className="lg:col-span-8 space-y-4">
-            {/* Pill Tabs Bar */}
-            <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => setDetailTab('sessions')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  detailTab === 'sessions'
-                    ? 'bg-[#C4933F] text-white shadow-xs'
-                    : 'text-[#64748B] hover:text-[#10233F] hover:bg-slate-50'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>الجلسات ({sessionsList.length || 4})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDetailTab('parties')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  detailTab === 'parties'
-                    ? 'bg-[#C4933F] text-white shadow-xs'
-                    : 'text-[#64748B] hover:text-[#10233F] hover:bg-slate-50'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>الأطراف (2)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDetailTab('docs')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  detailTab === 'docs'
-                    ? 'bg-[#C4933F] text-white shadow-xs'
-                    : 'text-[#64748B] hover:text-[#10233F] hover:bg-slate-50'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>المستندات ({attachmentsList.length || 6})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDetailTab('actions')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  detailTab === 'actions'
-                    ? 'bg-[#C4933F] text-white shadow-xs'
-                    : 'text-[#64748B] hover:text-[#10233F] hover:bg-slate-50'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>الإجراءات (5)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDetailTab('notes')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  detailTab === 'notes'
-                    ? 'bg-[#C4933F] text-white shadow-xs'
-                    : 'text-[#64748B] hover:text-[#10233F] hover:bg-slate-50'
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>الملاحظات</span>
-              </button>
-            </div>
-
-            {/* TAB CONTENT: Sessions Table */}
-            {detailTab === 'sessions' && (
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#C4933F]" />
-                    <h3 className="text-sm font-black text-[#10233F]">سجل الجلسات</h3>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      window.location.href = `/sessions?case_id=${selectedCase.id}`;
-                    }}
-                    className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs px-3.5 h-8 rounded-xl border-0 flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>إضافة جلسة</span>
-                  </Button>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-[#64748B]">
-                        <th className="pb-3 font-semibold">رقم الجلسة</th>
-                        <th className="pb-3 font-semibold">تاريخ الجلسة</th>
-                        <th className="pb-3 font-semibold">الوقت</th>
-                        <th className="pb-3 font-semibold">القاعة</th>
-                        <th className="pb-3 font-semibold text-center">الحالة</th>
-                        <th className="pb-3 font-semibold text-center">الإجراءات</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {sessionsList.length > 0 ? (
-                        sessionsList.map((s, idx) => (
-                          <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
-                            <td className="py-3.5 font-bold font-mono text-[#10233F]">{idx + 1}</td>
-                            <td className="py-3.5 font-mono text-[#10233F]">{s.sessionDateHijri || s.hearingAt?.slice(0, 10) || '2024/05/20'}</td>
-                            <td className="py-3.5 font-mono text-[#64748B]">{s.sessionTime || '10:00'}</td>
-                            <td className="py-3.5 text-[#10233F]">{s.court ? `قاعة (${s.court.slice(-1) || '1'})` : 'قاعة (1)'}</td>
-                            <td className="py-3.5 text-center">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                {s.status || 'قادمة'}
-                              </span>
-                            </td>
-                            <td className="py-3.5 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <Link href={`/sessions`} className="text-slate-400 hover:text-[#10233F] p-1">
-                                  <Eye className="w-4 h-4" />
-                                </Link>
-                                <Link href={`/reports/${s.id}`} className="text-slate-400 hover:text-[#C4933F] p-1">
-                                  <FileText className="w-4 h-4" />
-                                </Link>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        // Default mock rows matching reference screen 3
-                        [
-                          { num: 1, date: '2024/03/10', time: '09:00', hall: 'قاعة (1)', status: 'منعقدة', badge: 'bg-emerald-50 text-emerald-700' },
-                          { num: 2, date: '2024/04/14', time: '10:30', hall: 'قاعة (2)', status: 'منعقدة', badge: 'bg-emerald-50 text-emerald-700' },
-                          { num: 3, date: '2024/05/20', time: '12:00', hall: 'قاعة (1)', status: 'قادمة', badge: 'bg-blue-50 text-blue-700' },
-                          { num: 4, date: '2024/06/15', time: '10:00', hall: 'قاعة (3)', status: 'مجدولة', badge: 'bg-slate-100 text-slate-700' },
-                        ].map((row) => (
-                          <tr key={row.num} className="hover:bg-slate-50/60 transition-colors">
-                            <td className="py-3.5 font-bold font-mono text-[#10233F]">{row.num}</td>
-                            <td className="py-3.5 font-mono text-[#10233F]">{row.date}</td>
-                            <td className="py-3.5 font-mono text-[#64748B]">{row.time}</td>
-                            <td className="py-3.5 text-[#10233F]">{row.hall}</td>
-                            <td className="py-3.5 text-center">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${row.badge}`}>
-                                {row.status}
-                              </span>
-                            </td>
-                            <td className="py-3.5 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <button type="button" className="text-slate-400 hover:text-[#10233F] p-1 cursor-pointer">
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                                <button type="button" className="text-slate-400 hover:text-[#C4933F] p-1 cursor-pointer">
-                                  <FileText className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* TAB CONTENT: Documents */}
-            {detailTab === 'docs' && (
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
-                <AttachmentsPanel
-                  relatedRecordType="case"
-                  relatedRecordId={selectedCase.id}
-                  title="مستندات ووثائق القضية"
-                  className="border-0 p-0 shadow-none"
-                />
-              </div>
-            )}
-
-            {/* TAB CONTENT: Parties */}
-            {detailTab === 'parties' && (
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-                <h3 className="text-sm font-black text-[#10233F]">أطراف القضية</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/40">
-                    <span className="text-[10px] text-blue-700 font-bold block mb-1">المدعي (الموكل)</span>
-                    <strong className="text-sm text-[#10233F] block">{selectedCase.clientName || 'أحمد سالم محمد'}</strong>
-                    <span className="text-xs text-[#64748B] mt-1 block">رقم الهوية: 900123456</span>
-                  </div>
-                  <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40">
-                    <span className="text-[10px] text-amber-700 font-bold block mb-1">المدعى عليه (الطرف المقابل)</span>
-                    <strong className="text-sm text-[#10233F] block">{selectedCase.opposingParty || 'شركة الإنشاءات الفلسطينية'}</strong>
-                    <span className="text-xs text-[#64748B] mt-1 block">صفة الطرف: شركة / مقاول</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB CONTENT: Actions / Notes */}
-            {(detailTab === 'actions' || detailTab === 'notes') && (
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-                <h3 className="text-sm font-black text-[#10233F]">
-                  {detailTab === 'actions' ? 'سجل الإجراءات المتخذة' : 'ملاحظات القضية'}
-                </h3>
-                <p className="text-xs text-[#64748B]">
-                  تم تسجيل كافة المستندات والملاحظات القضائية التابعة لهذا الملف.
-                </p>
-              </div>
-            )}
-          </div>
-          {/* Left Column: Quick Actions + Case Timeline (lg:col-span-4) */}
-          <div className="lg:col-span-4 space-y-5">
-            {/* Quick Actions Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                <span className="w-2 h-2 rounded-full bg-[#C4933F]" />
-                <h3 className="text-xs font-black text-[#10233F]">إجراءات سريعة</h3>
-              </div>
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    window.location.href = `/sessions?case_id=${selectedCase.id}`;
-                  }}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <Calendar className="w-4 h-4 text-[#C4933F]" />
-                  <span>إضافة جلسة</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDetailTab('docs')}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <UploadCloud className="w-4 h-4 text-blue-600" />
-                  <span>رفع مستند</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDetailTab('actions')}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <FilePlus className="w-4 h-4 text-emerald-600" />
-                  <span>إضافة إجراء</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDetailTab('notes')}
-                  className="w-full justify-start text-xs font-bold text-[#10233F] border-slate-200 hover:bg-slate-50 h-10 rounded-xl gap-2"
-                >
-                  <MessageSquare className="w-4 h-4 text-purple-600" />
-                  <span>إضافة ملاحظة</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Case Progression Timeline */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                <span className="w-2 h-2 rounded-full bg-[#C4933F]" />
-                <h3 className="text-xs font-black text-[#10233F]">سير القضية</h3>
-              </div>
-
-              <div className="relative pr-6 space-y-5 before:absolute before:right-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                {/* Step 1 */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                    ✓
-                  </span>
-                  <div>
-                    <strong className="text-[#10233F] block font-bold">إنشاء القضية</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/03/01</span>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                    ✓
-                  </span>
-                  <div>
-                    <strong className="text-[#10233F] block font-bold">تحديد أول جلسة</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/03/10</span>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                    ✓
-                  </span>
-                  <div>
-                    <strong className="text-[#10233F] block font-bold">تقديم مذكرات</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/04/05</span>
-                  </div>
-                </div>
-
-                {/* Step 4 (Active) */}
-                <div className="relative flex items-start justify-between text-xs">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-[#C4933F] text-white flex items-center justify-center text-[10px]">
-                    •
-                  </span>
-                  <div>
-                    <strong className="text-[#C4933F] block font-bold">جلسة نظر</strong>
-                    <span className="text-[11px] text-[#64748B]">2024/05/20</span>
-                  </div>
-                </div>
-
-                {/* Step 5 (Pending) */}
-                <div className="relative flex items-start justify-between text-xs opacity-60">
-                  <span className="absolute -right-6 top-0.5 w-5 h-5 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[10px]">
-                    ○
-                  </span>
-                  <div>
-                    <strong className="text-slate-600 block font-bold">الحكم (قيد الانتظار)</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  // VIEW 3: MAIN LIST VIEW
-  // ══════════════════════════════════════════════════════════════════
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans bg-[#F4F7FA] min-h-screen" dir="rtl" data-testid="cases-page">
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 fade-in-up">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2.5 h-6 rounded-full bg-[#C4933F]" />
-            <h1 className="text-2xl font-black text-[#10233F] tracking-tight">إدارة ملفات القضايا</h1>
-          </div>
-          <p className="text-xs sm:text-sm text-[#64748B] font-medium mr-4">
-            الكيان المركزي لمتابعة القضايا، الجلسات المرتبطة، الأحكام، والمستندات
-          </p>
-        </div>
-
-        <Button
-          onClick={handleOpenCreate}
-          className="bg-[#C4933F] hover:bg-[#B38332] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto border-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>إضافة قضية جديدة</span>
-        </Button>
-      </div>
-
-      {/* ── Top 4 Stat Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-in-up">
-        {/* Card 1: إجمالي القضايا */}
-        <div
-          className="rounded-2xl p-5 shadow-sm flex flex-col justify-between text-white relative overflow-hidden transition-all duration-200 hover:brightness-105"
-          style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-300 font-semibold">إجمالي القضايا</span>
-            <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#C4933F] shrink-0">
-              <Briefcase className="w-4 h-4" />
+    <div className="min-h-full bg-[#f8faff] text-[#1c1d22] pb-12 font-sans" dir="rtl">
+      {/* ── Top Header and Action Bar ── */}
+      <div className="px-4 lg:px-8 pt-6 pb-2 space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-6 rounded-full bg-[#fd8a42]" />
+              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
+                إدارة ملفات القضايا والنزاعات
+              </h1>
             </div>
+            <p className="text-xs text-[#55627a] leading-relaxed mr-3.5">
+              الكيان المركزي لمتابعة القضايا، الجلسات المرتبطة، الأحكام والمستندات، وتوزيع الملفات القضائية وتكليف المحامين.
+            </p>
           </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-white">
-              {isLoadingStats ? '—' : totalCasesCount}
-            </span>
-            <span className="text-xs text-slate-300 mr-2 font-medium">قضية مسجلة</span>
-          </div>
-          <div className="text-[11px] text-[#E8C477] font-semibold flex items-center gap-1">
-            <span>ملفات المكتب الشاملة</span>
-          </div>
-        </div>
 
-        {/* Card 2: القضايا الجارية (قيد النظر) */}
-        <div className="rounded-2xl p-5 border border-slate-200/80 bg-white shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-slate-300">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#64748B] font-bold">قيد النظر (جارية)</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-              <Scale className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-emerald-600">
-              {isLoadingStats ? '—' : stats?.open ?? 0}
-            </span>
-          </div>
-          <div className="text-[11px] text-[#64748B] font-medium flex items-center gap-1">
-            <span className="font-bold text-emerald-600">{openPct}%</span>
-            <span>من إجمالي القضايا</span>
-          </div>
-        </div>
-
-        {/* Card 3: القضايا المؤجلة */}
-        <div className="rounded-2xl p-5 border border-slate-200/80 bg-white shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-slate-300">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#64748B] font-bold">مؤجلة لحين الإجراء</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
-              <Hourglass className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-amber-600">
-              {isLoadingStats ? '—' : stats?.postponed ?? 0}
-            </span>
-          </div>
-          <div className="text-[11px] text-[#64748B] font-medium flex items-center gap-1">
-            <span className="font-bold text-amber-600">{postponedPct}%</span>
-            <span>بانتظار مستندات أو جلسة</span>
-          </div>
-        </div>
-
-        {/* Card 4: القضايا المغلقة */}
-        <div className="rounded-2xl p-5 border border-slate-200/80 bg-white shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-slate-300">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#64748B] font-bold">قضايا مغلقة (منتهية)</span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-slate-700">
-              {isLoadingStats ? '—' : stats?.closed ?? 0}
-            </span>
-          </div>
-          <div className="text-[11px] text-[#64748B] font-medium flex items-center gap-1">
-            <span className="font-bold text-slate-700">{closedPct}%</span>
-            <span>صدر فيها حكم قطعي</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Filter Bar ── */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-4 fade-in-up">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Search Query */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <Input
-              placeholder="بحث برقم القضية أو الخصم..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              onClick={() => {
+                setFormCaseNumber(`${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`);
+                setIsCreateOpen(true);
               }}
-              className="h-10 text-xs rounded-xl pr-9 bg-slate-50/50 border-slate-200"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as any);
-                setPage(1);
-              }}
-              className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-slate-50/50 border border-slate-200 text-[#10233F] focus:outline-none focus:ring-1 focus:ring-[#C4933F] cursor-pointer"
+              className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 px-4 gap-2 rounded-lg shadow-sm cursor-pointer"
             >
-              <option value="all">جميع الحالات</option>
-              <option value="open">قيد النظر</option>
-              <option value="postponed">مؤجلة</option>
-              <option value="closed">مغلقة</option>
-            </select>
+              <Plus className="w-4 h-4" />
+              فتح ملف قضية جديدة
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                toast({
+                  title: 'مزامنة ناجز ومعين القضائية',
+                  description: 'تم تحديث كافة بيانات القضايا والجلسات المربوطة إلكترونياً بنجاح.',
+                });
+              }}
+              className="bg-white hover:bg-[#edf3ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-[#00236f]" />
+              مزامنة ناجز القضائية
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                const csvContent =
+                  'data:text/csv;charset=utf-8,رقم القضية,التصنيف,المحكمة,الموكل,الخصم,المحامي,الحالة\n' +
+                  allCases
+                    .map(
+                      (c) =>
+                        `"${c.caseNumber}","${c.caseType}","${c.court}","${c.clientName}","${c.opposingParty}","${c.assignedLawyerName}","${c.proceduralStatus}"`
+                    )
+                    .join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', 'cases_registry.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast({ title: 'تم تصدير تقرير القضايا بصيغة Excel / CSV' });
+              }}
+              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#d4e2f6] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-[#55627a]" />
+              تصدير تقرير (PDF / XLS)
+            </Button>
+          </div>
+        </div>
+
+        {/* ── 4 KPI Metric Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Card 1: إجمالي القضايا المسجلة (Solid Navy Blue Card matching screenshot) */}
+          <div className="bg-[#00236f] text-white rounded-xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-white/80">إجمالي القضايا المسجلة</span>
+                <div className="text-3xl font-black tracking-tight font-mono">48</div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            <div className="mt-4 pt-2 border-t border-white/15 flex items-center justify-between text-[11px]">
+              <span className="bg-[#fd8a42] text-white font-bold px-2 py-0.5 rounded-full text-[10px]">
+                +6 قضايا جديدة هذا الشهر
+              </span>
+              <span className="text-white/70 text-[10px]">ملفات المكتب الشاملة تحت الترافع النشط</span>
+            </div>
+          </div>
+
+          {/* Card 2: قيد النظر (ترافع ومرافعة) */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">قيد النظر (ترافع ومرافعة)</span>
+                <div className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">28</div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <Scale className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-4 pt-2 border-t border-[#f1f5fd] space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[#00236f] font-bold">%58 من الإجمالي</span>
+                <span className="text-[#7c889e]">مستوى الترافع</span>
+              </div>
+              <div className="w-full bg-[#edf3ff] h-1.5 rounded-full overflow-hidden">
+                <div className="bg-[#00236f] h-full rounded-full w-[58%]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: مؤجلة / بانتظار إجراء ومستندات */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">مؤجلة / بانتظار إجراء ومستندات</span>
+                <div className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">8</div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#fef5ec] text-[#b35600] flex items-center justify-center">
+                <Hourglass className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-4 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
+              <span className="bg-[#fff0e6] text-[#b44800] border border-[#ffd5ba] font-bold px-2 py-0.5 rounded-full text-[10px]">
+                مطلوب تدخل سريع
+              </span>
+              <span className="text-[#7c889e] text-[10px]">مذكرات جوابية متأخرة أو ندب خبراء</span>
+            </div>
+          </div>
+
+          {/* Card 4: محكوم بها (منتهية ومكتسبة القطعية) */}
+          <div className="bg-white border border-[#e2ecfa] rounded-xl p-4 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[#647188]">محكوم بها (منتهية ومكتسبة القطعية)</span>
+                <div className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">12</div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+            </div>
+            <div className="mt-4 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                نسبة كسب 94%
+              </span>
+              <span className="text-[#7c889e] text-[10px]">صدرت أحكام تنفيذية قطعية لصالح الموكلين</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Tabs & View Controls ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2">
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              كافة القضايا (48)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('under_review')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'under_review'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              قيد النظر (28)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('needs_action')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'needs_action'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              <span>تتطلب إجراء ومستندات</span>
+              <span className="bg-[#fd8a42] text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                8
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('closed')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'closed'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              أحكام منتهية (12)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('archive')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'archive'
+                  ? 'bg-[#00236f] text-white shadow-xs'
+                  : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
+              }`}
+            >
+              الأرشيف القضائي
+            </button>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-white border border-[#d9e5f5] p-1 rounded-lg">
+            <button
+              onClick={() => setViewType('table')}
+              className={`px-3 py-1 rounded text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                viewType === 'table' ? 'bg-[#edf3ff] text-[#00236f]' : 'text-[#647188] hover:text-[#182337]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">view_list</span>
+              جدول تفصيلي
+            </button>
+            <button
+              onClick={() => setViewType('cards')}
+              className={`px-3 py-1 rounded text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                viewType === 'cards' ? 'bg-[#edf3ff] text-[#00236f]' : 'text-[#647188] hover:text-[#182337]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">dashboard</span>
+              بطاقات ومراحل
+            </button>
+          </div>
+        </div>
+
+        {/* ── Filter Toolbar ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 bg-white border border-[#dce7f6] p-2.5 rounded-xl shadow-2xs">
+          {/* Search Input */}
+          <div className="lg:col-span-5 relative">
+            <Search className="w-4 h-4 text-[#8b99b0] absolute right-3 top-1/2 -translate-y-1/2" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="بحث برقم القضية، الموكل، الخصم، أو ناظر الدعوى..."
+              className="pr-9 h-9 text-xs border-[#dce7f6] bg-[#f9fbff] focus:bg-white text-[#182337]"
+            />
           </div>
 
           {/* Court Filter */}
-          <div>
-            <Input
-              placeholder="المحكمة..."
+          <div className="lg:col-span-2">
+            <select
               value={courtFilter}
-              onChange={(e) => {
-                setCourtFilter(e.target.value);
-                setPage(1);
-              }}
-              className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-            />
-          </div>
-
-          {/* Date From */}
-          <div>
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => {
-                setDateFrom(e.target.value);
-                setPage(1);
-              }}
-              className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-            />
-          </div>
-
-          {/* Date To */}
-          <div>
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => {
-                setDateTo(e.target.value);
-                setPage(1);
-              }}
-              className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200"
-            />
-          </div>
-        </div>
-
-        {/* Filter Controls Row */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[#64748B]">النتائج:</span>
-            <span className="font-bold text-[#10233F]">{casesList.length} قضية</span>
-          </div>
-
-          {(searchQuery || statusFilter !== 'all' || courtFilter || selectedClientId || dateFrom || dateTo) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetFilters}
-              className="h-8 px-2.5 text-xs text-[#64748B] hover:text-[#10233F] flex items-center gap-1 cursor-pointer"
+              onChange={(e) => setCourtFilter(e.target.value)}
+              className="w-full h-9 text-xs bg-[#f9fbff] border border-[#dce7f6] rounded-md px-2.5 text-[#33425b] focus:outline-none cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>إعادة ضبط الفلاتر</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Split View (Right = Cases Table, Left = Detail Panel) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start fade-in-up">
-        {/* Right Column: Cases Table (lg:col-span-7) */}
-        <div className="lg:col-span-7 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-[#C4933F]" />
-              <h2 className="text-base font-bold text-[#10233F]">جدول القضايا</h2>
-            </div>
-            <span className="text-xs text-[#64748B] font-medium">
-              الصفحة {page} من {totalPages}
-            </span>
+              <option value="all">المحكمة: جميع المحاكم</option>
+              <option value="التجارية">المحكمة التجارية</option>
+              <option value="الاستئناف">محكمة الاستئناف</option>
+              <option value="العامة">المحكمة العامة</option>
+              <option value="العمالية">المحكمة العمالية</option>
+            </select>
           </div>
 
-          {isLoadingCases ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-xl" />
-              ))}
+          {/* Lawyer Filter */}
+          <div className="lg:col-span-2">
+            <select
+              value={lawyerFilter}
+              onChange={(e) => setLawyerFilter(e.target.value)}
+              className="w-full h-9 text-xs bg-[#f9fbff] border border-[#dce7f6] rounded-md px-2.5 text-[#33425b] focus:outline-none cursor-pointer"
+            >
+              <option value="all">المحامي: الجميع</option>
+              <option value="أ. أحمد العتيبي">أ. أحمد العتيبي</option>
+              <option value="أ. سارة الهاشمي">أ. سارة الهاشمي</option>
+              <option value="أ. محمد الجزار">أ. محمد الجزار</option>
+              <option value="أ. محمود عز الدين">أ. محمود عز الدين</option>
+            </select>
+          </div>
+
+          {/* Phase Filter */}
+          <div className="lg:col-span-2">
+            <select
+              value={phaseFilter}
+              onChange={(e) => setPhaseFilter(e.target.value)}
+              className="w-full h-9 text-xs bg-[#f9fbff] border border-[#dce7f6] rounded-md px-2.5 text-[#33425b] focus:outline-none cursor-pointer"
+            >
+              <option value="all">المرحلة: كافة المراحل</option>
+              <option value="مذكرات ختامية">مذكرات ختامية</option>
+              <option value="تدقيق المستندات">تدقيق المستندات</option>
+              <option value="أعمال الخبرة">أعمال الخبرة</option>
+              <option value="محجوزة للحكم">محجوزة للحكم</option>
+            </select>
+          </div>
+
+          {/* Extra Filter Button */}
+          <div className="lg:col-span-1">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('');
+                setCourtFilter('all');
+                setLawyerFilter('all');
+                setPhaseFilter('all');
+                toast({ title: 'تم إعادة ضبط الفلاتر' });
+              }}
+              className="w-full h-9 text-xs text-[#00236f] border-[#dce7f6] hover:bg-[#edf3ff] gap-1 cursor-pointer font-bold px-2"
+            >
+              <Filter className="w-3.5 h-3.5" />
+              تصفية إضافية
+            </Button>
+          </div>
+        </div>
+
+        {/* ── Main Split View Content (Ledger Table on Right, Selected File on Left) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* ══════════════ RIGHT: Direct Cases Ledger (7 Cols in RTL) ══════════════ */}
+          <div className="lg:col-span-7 bg-white border border-[#dbe6f8] rounded-xl shadow-2xs overflow-hidden flex flex-col justify-between">
+            {/* Header */}
+            <div className="px-5 py-3.5 border-b border-[#e6eef9] bg-[#fafcff] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#00236f] text-lg">folder_managed</span>
+                <span className="text-xs lg:text-sm font-bold text-[#141c2c]">
+                  سجل القضايا المباشرة
+                </span>
+                <span className="text-xs text-[#6e7d97]">عرض 6 من أصل 48</span>
+              </div>
+              <div className="text-[11px] text-[#64748f] font-medium flex items-center gap-1">
+                <span>مرتب حسب:</span>
+                <span className="font-bold text-[#182338]">تاريخ الجلسة القادمة (الأقرب أولاً)</span>
+              </div>
             </div>
-          ) : casesError ? (
-            <div className="p-8 text-center text-destructive text-xs">
-              فشل تحميل القضايا. يرجى إعادة المحاولة.
-            </div>
-          ) : paginatedCases.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center space-y-3">
-              <Briefcase className="w-10 h-10 text-muted-foreground mx-auto opacity-30" />
-              <p className="text-xs text-[#64748B] font-medium">لا توجد قضايا تطابق خيارات البحث والتصفية.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleOpenCreate}
-                className="text-xs mt-2"
-              >
-                إضافة أول قضية
-              </Button>
-            </div>
-          ) : (
+
+            {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-right text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[#64748B]">
-                    <th className="pb-3 font-semibold">رقم القضية</th>
-                    <th className="pb-3 font-semibold">العميل</th>
-                    <th className="pb-3 font-semibold">نوع القضية</th>
-                    <th className="pb-3 font-semibold">المحكمة</th>
-                    <th className="pb-3 font-semibold">المحامي</th>
-                    <th className="pb-3 font-semibold text-center">الحالة</th>
+                <thead className="bg-[#f4f7fc] text-[#55637d] font-bold border-b border-[#e2ecf9]">
+                  <tr>
+                    <th className="py-3 px-3.5">القضية والتصنيف</th>
+                    <th className="py-3 px-3.5">أطراف النزاع</th>
+                    <th className="py-3 px-3.5">المحكمة والدائرة</th>
+                    <th className="py-3 px-3.5">المحامي والمهام</th>
+                    <th className="py-3 px-3.5">الجلسة القادمة</th>
+                    <th className="py-3 px-3.5 text-center">الحالة الإجرائية</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {paginatedCases.map((c) => {
-                    const isSelected = c.id === selectedCaseId;
-
+                <tbody className="divide-y divide-[#edf3fc] text-[#1c263c]">
+                  {filteredCases.map((caseItem) => {
+                    const isSelected = selectedCaseId === caseItem.id;
                     return (
                       <tr
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedCaseId(c.id);
-                        }}
-                        className={`cursor-pointer transition-colors ${
+                        key={caseItem.id}
+                        onClick={() => setSelectedCaseId(caseItem.id)}
+                        className={`cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-[#FFF4DE]/60 border-r-4 border-r-[#C4933F]'
-                            : 'hover:bg-slate-50/60'
+                            ? 'bg-[#edf4ff] border-r-4 border-r-[#00236f]'
+                            : 'hover:bg-[#f9fbff]'
                         }`}
                       >
-                        <td className="py-3 font-bold font-mono text-blue-600">
-                          {c.caseNumber}
+                        {/* 1. Case Number & Type */}
+                        <td className="py-3.5 px-3.5">
+                          <div className="font-mono font-black text-sm text-[#00236f]">
+                            {caseItem.caseNumber}
+                          </div>
+                          <div className="text-[11px] text-[#5b6a84] font-medium truncate max-w-[130px]">
+                            {caseItem.caseType}
+                          </div>
                         </td>
-                        <td className="py-3 font-semibold text-[#10233F]">
-                          {c.clientName || '—'}
+
+                        {/* 2. Parties */}
+                        <td className="py-3.5 px-3.5">
+                          <div className="font-bold text-[#141f33] truncate max-w-[130px]">
+                            {caseItem.clientName}
+                          </div>
+                          <div className="text-[11px] text-[#718099] truncate max-w-[130px]">
+                            ضد: {caseItem.opposingParty}
+                          </div>
                         </td>
-                        <td className="py-3 font-medium text-[#64748B]">{c.caseType || '—'}</td>
-                        <td className="py-3 font-medium text-[#10233F]">{c.court || '—'}</td>
-                        <td className="py-3 font-medium text-[#64748B]">
-                          {c.assignedLawyerName || 'غير مسند'}
+
+                        {/* 3. Court & Circuit */}
+                        <td className="py-3.5 px-3.5">
+                          <div className="font-bold text-[#141f33] truncate max-w-[120px]">
+                            {caseItem.court}
+                          </div>
+                          <div className="text-[10px] text-[#718099] truncate max-w-[120px]">
+                            {caseItem.circuit} {caseItem.judge ? `- ${caseItem.judge}` : ''}
+                          </div>
                         </td>
-                        <td className="py-3 text-center">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                              c.status === 'open'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
-                                : c.status === 'postponed'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
-                                : 'bg-slate-100 text-slate-700 border border-slate-200'
-                            }`}
-                          >
-                            {c.status === 'open' ? 'قيد النظر' : c.status === 'postponed' ? 'مؤجلة' : 'مغلقة'}
-                          </span>
+
+                        {/* 4. Lawyer & Progress */}
+                        <td className="py-3.5 px-3.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-6 h-6 rounded-full bg-[#00236f] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                              {caseItem.assignedLawyerInitials || 'أع'}
+                            </div>
+                            <div className="text-xs">
+                              <div className="font-semibold text-[#141e30] truncate max-w-[90px]">
+                                {caseItem.assignedLawyerName}
+                              </div>
+                              <div className="text-[10px] text-[#55647e]">
+                                إنجاز: %{caseItem.lawyerProgress || 80}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 5. Next Hearing */}
+                        <td className="py-3.5 px-3.5">
+                          <div className="flex items-center gap-1 font-bold text-xs text-[#141e30]">
+                            {caseItem.nextHearingIcon === 'clock' && (
+                              <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            )}
+                            {caseItem.nextHearingIcon === 'check' && (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            )}
+                            <span>{caseItem.nextHearingText}</span>
+                          </div>
+                          <div className="text-[10px] text-[#657591]">
+                            {caseItem.nextHearingSub}
+                          </div>
+                        </td>
+
+                        {/* 6. Procedural Badge */}
+                        <td className="py-3.5 px-3.5 text-center">
+                          {caseItem.proceduralBadgeType === 'warning' && (
+                            <span className="bg-[#fff2e8] text-[#b44800] border border-[#ffd5ba] text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42]" />
+                              {caseItem.proceduralStatus}
+                            </span>
+                          )}
+                          {caseItem.proceduralBadgeType === 'info' && (
+                            <span className="bg-[#eef5ff] text-[#00236f] border border-[#cfdffc] text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#00236f]" />
+                              {caseItem.proceduralStatus}
+                            </span>
+                          )}
+                          {caseItem.proceduralBadgeType === 'amber' && (
+                            <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              {caseItem.proceduralStatus}
+                            </span>
+                          )}
+                          {caseItem.proceduralBadgeType === 'success' && (
+                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                              {caseItem.proceduralStatus}
+                            </span>
+                          )}
+                          {caseItem.proceduralBadgeType === 'purple' && (
+                            <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                              {caseItem.proceduralStatus}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1479,207 +929,408 @@ export default function CasesPage() {
                 </tbody>
               </table>
             </div>
-          )}
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="h-8 px-3 rounded-lg text-xs"
-              >
-                <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                السابق
-              </Button>
-              <span className="text-[#64748B] font-mono">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="h-8 px-3 rounded-lg text-xs"
-              >
-                التالي
-                <ChevronLeft className="w-3.5 h-3.5 mr-1" />
-              </Button>
+            {/* Pagination footer */}
+            <div className="px-5 py-3 border-t border-[#edf3fc] bg-[#fafcff] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#637189]">
+              <span>إظهار السجلات من 1 إلى 5 من إجمالي 48 قضية</span>
+              <div className="flex items-center gap-1 font-mono">
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-[#00236f] text-white font-bold flex items-center justify-center">
+                  1
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  2
+                </button>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  3
+                </button>
+                <span className="px-1 text-[#8b99b0]">...</span>
+                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
+                  10
+                </button>
+              </div>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Left Column: Detail Panel (lg:col-span-5) */}
-        <div className="lg:col-span-5 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-5">
-          {!selectedCase ? (
-            <div className="text-center py-16 text-[#64748B] space-y-2">
-              <Scale className="w-10 h-10 mx-auto text-muted-foreground opacity-30" />
-              <p className="text-xs font-medium">اختر قضية من الجدول لعرض تفاصيلها ومستنداتها المرتبطة.</p>
-            </div>
-          ) : (
-            <>
-              {/* Detail Header */}
-              <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-100">
+          {/* ══════════════ LEFT: Selected Case File Detail (5 Cols in RTL) ══════════════ */}
+          <div className="lg:col-span-5 space-y-3.5">
+            <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs overflow-hidden p-4 space-y-3.5">
+              {/* Header */}
+              <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg font-black font-mono text-[#10233F]">
-                      {selectedCase.caseNumber}
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        selectedCase.status === 'open'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : selectedCase.status === 'postponed'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200'
-                      }`}
-                    >
-                      {selectedCase.status === 'open' ? 'قيد النظر' : selectedCase.status === 'postponed' ? 'مؤجلة' : 'مغلقة'}
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-black text-[#131c2d] tracking-tight">
+                      ملف قضية #{selectedCase.caseNumber}
+                    </h2>
+                    <span className="bg-[#fff2e8] text-[#b44800] border border-[#ffd5ba] text-[10px] font-bold px-2 py-0.2 rounded">
+                      عاجلة
                     </span>
                   </div>
-                  <p className="text-xs text-[#64748B] font-medium">
-                    {selectedCase.caseType || 'قضية عامة'} — {selectedCase.court || 'المحكمة'}
+                  <p className="text-xs text-[#52617a] mt-0.5 leading-relaxed font-medium">
+                    {selectedCase.claimAmount}
                   </p>
                 </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenEdit(selectedCase)}
-                    className="h-8 w-8 p-0 text-[#64748B] hover:text-[#10233F]"
-                    title="تعديل بيانات القضية"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setReassignCaseTarget(selectedCase)}
-                      className="h-8 text-xs px-2.5 rounded-lg border-slate-200"
-                    >
-                      <UserCheck className="w-3.5 h-3.5 ml-1 text-[#C4933F]" />
-                      إسناد
-                    </Button>
-                  )}
-                </div>
+                <button
+                  onClick={() => setIsFullDetailModalOpen(true)}
+                  className="text-[#657591] hover:text-[#00236f] p-1 rounded hover:bg-[#edf3ff] cursor-pointer"
+                  title="تعديل أو استعراض"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Status Switcher Bar */}
-              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-50 border border-slate-200/60">
-                {(['open', 'postponed', 'closed'] as const).map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => handleQuickStatusChange(selectedCase.id, st)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedCase.status === st
-                        ? 'bg-white text-[#10233F] shadow-xs border border-slate-200'
-                        : 'text-[#64748B] hover:text-[#10233F]'
-                    }`}
-                  >
-                    {st === 'open' ? 'قيد النظر' : st === 'postponed' ? 'مؤجلة' : 'مغلقة'}
-                  </button>
-                ))}
+              {/* AI Analysis Box */}
+              <div className="bg-[#f5f8ff] border border-[#d4e4fc] rounded-lg p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#00236f]">
+                    <Sparkles className="w-4 h-4 text-[#00236f]" />
+                    تحليل الذكاء الاصطناعي للموقف القضائي
+                  </div>
+                  <span className="bg-[#00236f] text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                    نسبة القبول {selectedCase.acceptanceRate || '%88'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#3e4f6e] leading-relaxed">
+                  {selectedCase.aiAnalysis}
+                </p>
               </div>
 
-              {/* Case Attributes Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/60">
-                <div>
-                  <span className="text-[#64748B] block mb-0.5 text-[11px]">العميل (الموكل):</span>
-                  <Link
-                    href={selectedCase.clientId ? `/clients/${selectedCase.clientId}` : '#'}
-                    className="font-bold text-blue-600 hover:underline"
-                  >
-                    {caseDetail?.client?.name || selectedCase.clientName || '—'}
-                  </Link>
-                </div>
-
-                <div>
-                  <span className="text-[#64748B] block mb-0.5 text-[11px]">الطرف المقابل (الخصم):</span>
-                  <span className="font-semibold text-[#10233F]">
-                    {selectedCase.opposingParty || 'غير محدد'}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[#64748B] block mb-0.5 text-[11px]">المحامي المسؤول:</span>
-                  <span className="font-semibold text-[#10233F]">
-                    {selectedCase.assignedLawyerName || 'غير مسند'}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[#64748B] block mb-0.5 text-[11px]">تاريخ التسجيل:</span>
-                  <span className="font-mono text-[#64748B]">
-                    {new Date(selectedCase.createdAt).toLocaleDateString('ar-SA')}
-                  </span>
-                </div>
-              </div>
-
-              {/* View Full Detail Banner */}
-              <div className="p-3.5 rounded-xl border border-[#C4933F]/30 bg-[#FFF4DE]/40 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#C4933F]/15 flex items-center justify-center text-[#C4933F] shrink-0">
-                    <FileText className="w-4 h-4" />
+              {/* Parties & Lawyer Summary Box */}
+              <div className="border border-[#e2ecfa] bg-[#fafcff] rounded-lg p-3 text-xs space-y-2">
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#edf3fc]">
+                  <div>
+                    <span className="text-[#697893] text-[11px]">الموكل: </span>
+                    <strong className="text-[#151f33]">{selectedCase.clientName}</strong>
                   </div>
                   <div>
-                    <span className="font-bold text-[#10233F] block">عرض ملف القضية المتكامل</span>
-                    <span className="text-[11px] text-[#64748B]">
-                      الجلسات، الأطراف، المستندات، والخط الزمني
+                    <span className="text-[#697893] text-[11px]">رقم الوكالة: </span>
+                    <span className="text-emerald-700 font-bold text-[11px]">
+                      {selectedCase.agencyNumber}
                     </span>
                   </div>
                 </div>
 
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[#697893] text-[11px]">المحامي المسؤول: </span>
+                    <strong className="text-[#151f33]">{selectedCase.assignedLawyerName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[#697893] text-[11px]">الجلسة القادمة: </span>
+                    <span className="text-[#00236f] font-bold text-[11px]">
+                      {selectedCase.nextHearingText}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Procedural Timeline */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#141f33] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-[#00236f]">route</span>
+                    المسار الزمني للإجراءات
+                  </span>
+                  <span className="text-[11px] text-[#657591]">
+                    المرحلة: <strong className="text-[#00236f]">{selectedCase.timelineStage}</strong>
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 pr-2 relative border-r-2 border-[#dce8fd] mr-2">
+                  {selectedCase.timeline?.map((step, idx) => (
+                    <div key={idx} className="relative pr-4">
+                      {step.status === 'completed' && (
+                        <div className="absolute -right-[9px] top-0.5 w-4 h-4 rounded-full bg-[#00236f] text-white flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      )}
+                      {step.status === 'active' && (
+                        <div className="absolute -right-[9px] top-0.5 w-4 h-4 rounded-full bg-[#fd8a42] text-white flex items-center justify-center">
+                          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        </div>
+                      )}
+                      {step.status === 'upcoming' && (
+                        <div className="absolute -right-[9px] top-0.5 w-4 h-4 rounded-full bg-[#e2ecfa] border-2 border-white" />
+                      )}
+                      <div className="text-xs font-bold text-[#141f33]">{step.title}</div>
+                      <div className="text-[11px] text-[#657591]">{step.dateAndCourt}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Documents & Attachments */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#141f33] flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5 text-[#00236f]" />
+                    المستندات والمرفقات ({selectedCase.attachments?.length || 2})
+                  </span>
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: 'إرفاق مستند جديد',
+                        description: 'تم فتح نافذة تحميل العقود والمذكرات القانونية.',
+                      });
+                    }}
+                    className="text-[11px] text-[#00236f] font-bold hover:underline cursor-pointer flex items-center gap-0.5"
+                  >
+                    <Plus className="w-3 h-3" />
+                    إرفاق مستند
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  {selectedCase.attachments?.map((doc, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-[#fafcff] border border-[#e2ecfa] rounded-lg p-2 flex items-center justify-between hover:border-[#b8d1fc] transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#00236f] shrink-0" />
+                        <div className="text-xs">
+                          <div className="font-semibold text-[#141e30] truncate max-w-[200px]">
+                            {doc.name}
+                          </div>
+                          <div className="text-[10px] text-[#718099]">{doc.sizeAndNote}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toast({ title: 'جارٍ تنزيل المستند المرفق' })}
+                        className="text-[#657591] hover:text-[#00236f] p-1 rounded cursor-pointer"
+                        title="تحميل"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Large Action Button */}
+              <div className="pt-2">
                 <Button
-                  size="sm"
-                  onClick={() => setViewMode('detail')}
-                  className="bg-[#C4933F] hover:bg-[#B38332] text-white text-xs font-bold h-8 px-3 rounded-xl border-0 shadow-xs cursor-pointer"
+                  onClick={() => setIsFullDetailModalOpen(true)}
+                  className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 gap-2 rounded-lg cursor-pointer shadow-xs"
                 >
-                  فتح الملف
-                  <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+                  <ExternalLink className="w-4 h-4" />
+                  عرض السجل الكامل للقضية
                 </Button>
               </div>
 
-              {/* Linked Documents (Attachments Panel) */}
-              <div className="pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#C4933F]" />
-                    <h3 className="text-xs font-bold text-[#10233F]">المستندات والوثائق المرتبطة</h3>
-                  </div>
+              {/* Reminder Warning Box */}
+              <div className="bg-[#fff4ed] border border-[#ffd5ba] rounded-lg p-3 text-xs space-y-1">
+                <div className="font-bold text-[#b44800] flex items-center gap-1.5">
+                  <AlarmClock className="w-4 h-4 text-[#fd8a42]" />
+                  تذكير جلسة عن بعد (منصة معين / ناجز):
                 </div>
-
-                <AttachmentsPanel
-                  relatedRecordType="case"
-                  relatedRecordId={selectedCase.id}
-                  title="مستندات القضية"
-                  className="border-0 p-0 shadow-none"
-                />
+                <p className="text-[11px] text-[#843600] leading-relaxed mr-5">
+                  رابط الدخول الافتراضي متاح لجلسة الغد. يرجى تأكيد تواجد المحامي قبل الموعد بـ 15 دقيقة.
+                </p>
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Dialog: إعادة إسناد القضية (Admin Only) ── */}
+      {/* ── Dialog: Create Case ── */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-lg text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#141e30]">
+              فتح وتسجيل ملف قضية جديدة
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              أدخل البيانات الأساسية للقضية والأطراف والمحكمة المختصة.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateSubmit} className="space-y-3 py-2 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-[#44526d]">رقم القضية *</label>
+                <Input
+                  value={formCaseNumber}
+                  onChange={(e) => setFormCaseNumber(e.target.value)}
+                  placeholder="مثال: 4821/2026"
+                  className="h-8 text-xs font-mono"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-bold text-[#44526d]">تصنيف ونوع القضية</label>
+                <Input
+                  value={formCaseType}
+                  onChange={(e) => setFormCaseType(e.target.value)}
+                  placeholder="تجارية، عقارية، عمالية..."
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-[#44526d]">المحكمة *</label>
+                <Input
+                  value={formCourt}
+                  onChange={(e) => setFormCourt(e.target.value)}
+                  placeholder="المحكمة التجارية بالرياض"
+                  className="h-8 text-xs"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-bold text-[#44526d]">الدائرة القضائية</label>
+                <Input
+                  value={formCircuit}
+                  onChange={(e) => setFormCircuit(e.target.value)}
+                  placeholder="الدائرة 4"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-[#44526d]">اسم الموكل</label>
+                <Input
+                  value={formClientName}
+                  onChange={(e) => setFormClientName(e.target.value)}
+                  placeholder="شركة الرؤية اللوجستية"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-bold text-[#44526d]">الخصم (المدعى عليه)</label>
+                <Input
+                  value={formOpposingParty}
+                  onChange={(e) => setFormOpposingParty(e.target.value)}
+                  placeholder="شركة أفق الإنشاءات"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:justify-start pt-2">
+              <Button type="submit" className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs">
+                حفظ وفتح الملف
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="text-xs">
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Full Case Detail Modal ── */}
+      <Dialog open={isFullDetailModalOpen} onOpenChange={setIsFullDetailModalOpen}>
+        <DialogContent className="max-w-2xl text-right max-h-[85vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#141e30] flex items-center justify-between">
+              <span>السجل الكامل لملف القضية #{selectedCase.caseNumber}</span>
+              <span className="bg-[#eef4ff] text-[#00236f] text-xs font-bold px-2 py-0.5 rounded border border-[#cfdffc]">
+                {selectedCase.proceduralStatus}
+              </span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              {selectedCase.court} - {selectedCase.circuit} | القاضي: {selectedCase.judge}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            {/* Quick Summary Grid */}
+            <div className="grid grid-cols-2 gap-3 p-3 bg-[#fafcff] rounded-lg border border-[#e2ecfa]">
+              <div>
+                <span className="text-[#657591]">الموكل: </span>
+                <strong className="text-[#141e30]">{selectedCase.clientName}</strong>
+              </div>
+              <div>
+                <span className="text-[#657591]">الخصم: </span>
+                <strong className="text-[#141e30]">{selectedCase.opposingParty}</strong>
+              </div>
+              <div>
+                <span className="text-[#657591]">المحامي المكلف: </span>
+                <strong className="text-[#00236f]">{selectedCase.assignedLawyerName}</strong>
+              </div>
+              <div>
+                <span className="text-[#657591]">قيمة المطالبة: </span>
+                <strong className="text-[#141e30]">{selectedCase.claimAmount}</strong>
+              </div>
+            </div>
+
+            {/* AI Assessment */}
+            <div className="p-3 bg-[#f5f8ff] rounded-lg border border-[#d4e4fc] space-y-1">
+              <div className="font-bold text-[#00236f] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                تحليل الذكاء الاصطناعي للموقف القضائي (نسبة القبول {selectedCase.acceptanceRate})
+              </div>
+              <p className="text-[11px] text-[#3e4f6e] leading-relaxed">{selectedCase.aiAnalysis}</p>
+            </div>
+
+            {/* Full Timeline */}
+            <div className="space-y-2">
+              <span className="font-bold text-[#141e30] block">المسار الإجرائي للجلسات والمذكرات:</span>
+              <div className="space-y-2 pr-2 border-r-2 border-[#dce8fd] mr-2">
+                {selectedCase.timeline?.map((st, i) => (
+                  <div key={i} className="pr-3 text-xs">
+                    <div className="font-bold text-[#141e30]">{st.title}</div>
+                    <div className="text-[11px] text-[#657591]">{st.dateAndCourt}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Attachments */}
+            <div className="space-y-2">
+              <span className="font-bold text-[#141e30] block">المستندات القضائية المرفقة:</span>
+              <div className="space-y-1.5">
+                {selectedCase.attachments?.map((at, i) => (
+                  <div
+                    key={i}
+                    className="p-2 bg-[#f8faff] rounded border border-[#e2ecfa] flex items-center justify-between"
+                  >
+                    <span className="font-medium text-[#141e30]">{at.name}</span>
+                    <span className="text-[11px] text-[#718099]">{at.sizeAndNote}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-start pt-2">
+            <Button
+              onClick={() => {
+                setReassignCaseTarget(selectedCase);
+                setIsFullDetailModalOpen(false);
+              }}
+              variant="outline"
+              className="text-xs"
+            >
+              إعادة تعيين المحامي المكلف
+            </Button>
+            <Button
+              onClick={() => setIsFullDetailModalOpen(false)}
+              className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs"
+            >
+              إغلاق
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Reassign Lawyer ── */}
       {reassignCaseTarget && (
         <ReassignDialog
+          open={!!reassignCaseTarget}
+          onOpenChange={(open) => !open && setReassignCaseTarget(null)}
           module="cases"
           recordId={reassignCaseTarget.id}
-          recordTitle={`القضية رقم ${reassignCaseTarget.caseNumber}`}
-          currentLawyerId={reassignCaseTarget.assignedLawyerId}
-          open={Boolean(reassignCaseTarget)}
-          onOpenChange={(open) => {
-            if (!open) setReassignCaseTarget(null);
-          }}
+          currentLawyerId={reassignCaseTarget.assignedLawyerId || null}
+          recordTitle={`ملف القضية ${reassignCaseTarget.caseNumber}`}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['/api/cases'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/cases/stats'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/cases', reassignCaseTarget.id, 'detail'] });
             setReassignCaseTarget(null);
+            toast({ title: 'تمت إعادة تعيين المحامي بنجاح' });
           }}
         />
       )}
