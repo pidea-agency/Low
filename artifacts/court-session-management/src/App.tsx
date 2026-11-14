@@ -7,6 +7,7 @@ import { AuthGuard } from '@/components/auth-guard';
 import { SuperAdminGuard, AdminGuard } from '@/components/admin-guard';
 import { RequireRole } from '@/components/require-role';
 import { Sidebar } from '@/components/sidebar';
+import { SidebarCollapseProvider, useSidebarCollapse } from '@/context/sidebar-context';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Route, Switch, Redirect, Router as WouterRouter } from 'wouter';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -51,28 +52,33 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: currentUser } = useGetCurrentUser();
   const officeName = (currentUser as any)?.officeName || (currentUser as any)?.office_name || 'إدارة الجلسات';
+  const { isExpanded } = useSidebarCollapse();
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#F5F7FB] dark:bg-background" dir="rtl">
-      {/* Desktop Sidebar */}
-      <aside className="w-64 flex-shrink-0 hidden md:block h-full">
+    <div className="flex h-[100dvh] overflow-hidden bg-white" dir="rtl">
+      {/* Desktop Sidebar Container */}
+      <aside
+        className={`flex-shrink-0 hidden md:block h-full transition-[width] duration-300 ease-in-out relative z-30 ${
+          isExpanded ? 'w-[270px]' : 'w-[72px]'
+        }`}
+      >
         <Sidebar />
       </aside>
 
       {/* Main Column */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0 bg-[#f8f9ff]">
         {/* Desktop Top Header */}
         <div className="hidden md:block shrink-0">
           <TopHeader />
         </div>
 
         {/* Mobile Top Header & Drawer */}
-        <div className="md:hidden flex items-center justify-between p-3 border-b border-[#071D34] bg-[#0B2A4A] text-white shrink-0 gap-2">
+        <div className="md:hidden flex items-center justify-between p-3 border-b bg-white border-slate-200 text-slate-800 dark:bg-[#071322] dark:border-white/10 dark:text-white shrink-0 gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <button
-                  className="w-9 h-9 rounded-lg border border-white/20 bg-white/10 flex items-center justify-center text-white hover:bg-white/20 shrink-0 cursor-pointer"
+                  className="w-9 h-9 rounded-lg border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 flex items-center justify-center shrink-0 cursor-pointer"
                   aria-label="فتح القائمة الجانبية"
                   data-testid="button-mobile-menu-trigger"
                 >
@@ -80,30 +86,30 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="p-0 w-72 border-none bg-transparent shadow-2xl">
-                <Sidebar onNavigate={() => setMobileOpen(false)} />
+                <Sidebar forceExpanded onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>
 
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-[#C99732] flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-[#C49A45] flex items-center justify-center shrink-0">
                 <Scale className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-bold text-xs truncate max-w-[120px] text-white">{officeName}</span>
+              <span className="font-bold text-xs truncate max-w-[120px] text-slate-900 dark:text-white">{officeName}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
             <div className="w-32 sm:w-48">
-              <GlobalSearch className="bg-white/10 text-white placeholder:text-white/60 border-white/20 hover:bg-white/15 h-8 text-xs" />
+              <GlobalSearch className="bg-slate-50 text-slate-800 placeholder:text-slate-400 border-slate-200 hover:bg-slate-100 dark:bg-white/10 dark:text-white dark:placeholder:text-white/60 dark:border-white/20 dark:hover:bg-white/15 h-8 text-xs" />
             </div>
-            <NotificationsDropdown buttonClassName="text-white hover:bg-white/10 border-0 h-8 w-8" />
+            <NotificationsDropdown buttonClassName="text-slate-700 hover:bg-slate-100 dark:text-white dark:hover:bg-white/10 border-0 h-8 w-8" />
           </div>
         </div>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-[#F5F7FB] dark:bg-background text-foreground p-3 sm:p-5 lg:p-6">
+        <main className="flex-1 overflow-y-auto bg-transparent text-foreground">
           <ErrorBoundary>
-            <Suspense fallback={<div className="flex h-full items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C99732]"></div></div>}>
+            <Suspense fallback={<div className="flex h-full items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C49A45]"></div></div>}>
               {children}
             </Suspense>
           </ErrorBoundary>
@@ -300,10 +306,12 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
+            <SidebarCollapseProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </SidebarCollapseProvider>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>

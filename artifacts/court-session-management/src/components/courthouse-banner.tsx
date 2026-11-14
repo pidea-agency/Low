@@ -1,156 +1,196 @@
 import React from 'react';
+import { THEME_COLORS } from '@/config/theme';
 
 export function CourthouseBannerIllustration({ className = 'h-full w-auto' }: { className?: string }) {
   return (
-    <div className={`relative overflow-hidden flex items-center justify-center select-none pointer-events-none ${className}`}>
+    <div className={`relative flex items-center justify-center select-none pointer-events-none ${className}`}>
       <svg
-        viewBox="0 0 380 200"
-        className="h-full w-full object-cover"
+        viewBox="0 0 340 180"
+        className="h-full w-full object-contain overflow-visible"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidYMid meet"
       >
         <defs>
-          <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#EBF3FA" />
-            <stop offset="70%" stopColor="#DFEAF5" />
-            <stop offset="100%" stopColor="#CFDFEE" />
+          {/* Rich Gold Gradient */}
+          <linearGradient id="heroGoldPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFF7E6" />
+            <stop offset="25%" stopColor="#F5D485" />
+            <stop offset="60%" stopColor="#C99732" />
+            <stop offset="100%" stopColor="#966A16" />
           </linearGradient>
 
-          <linearGradient id="facadeGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="40%" stopColor="#F5F7FA" />
-            <stop offset="100%" stopColor="#E2E8F0" />
+          {/* Soft Gold Light */}
+          <linearGradient id="heroGoldSoft" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFF9EB" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#E8C477" stopOpacity="0.4" />
           </linearGradient>
 
-          <linearGradient id="columnGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#CBD5E1" />
-            <stop offset="25%" stopColor="#F8FAFC" />
-            <stop offset="70%" stopColor="#E2E8F0" />
-            <stop offset="100%" stopColor="#94A3B8" />
+          {/* Architectural Marble / Slate Gradients */}
+          <linearGradient id="marbleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+            <stop offset="60%" stopColor="#E2E8F0" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#CBD5E1" stopOpacity="0.6" />
           </linearGradient>
 
-          <linearGradient id="columnFlute" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#64748B" stopOpacity="0.4" />
-            <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#475569" stopOpacity="0.4" />
+          <linearGradient id="columnShine" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#94A3B8" stopOpacity="0.3" />
+            <stop offset="35%" stopColor="#FFFFFF" stopOpacity="0.9" />
+            <stop offset="70%" stopColor="#E2E8F0" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#64748B" stopOpacity="0.4" />
           </linearGradient>
 
-          <linearGradient id="pedimentGold" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#E8C477" />
-            <stop offset="50%" stopColor="#C99732" />
-            <stop offset="100%" stopColor="#A87A1E" />
-          </linearGradient>
+          {/* Ambient Glow */}
+          <radialGradient id="heroAmbientGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#C99732" stopOpacity="0.22" />
+            <stop offset="60%" stopColor="#C99732" stopOpacity="0.06" />
+            <stop offset="100%" stopColor="#C99732" stopOpacity="0" />
+          </radialGradient>
 
-          <linearGradient id="shadowGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1E293B" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#1E293B" stopOpacity="0.02" />
-          </linearGradient>
+          {/* Soft Floor Shadow */}
+          <radialGradient id="plinthShadow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#0B2A4A" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#0B2A4A" stopOpacity="0" />
+          </radialGradient>
         </defs>
 
-        {/* Soft Background Sky */}
-        <rect width="380" height="200" fill="url(#skyGrad)" />
+        {/* ── 1. Soft Ambient Backlight ── */}
+        <circle cx="170" cy="90" r="95" fill="url(#heroAmbientGlow)" />
 
-        {/* Distant building wings / background walls */}
-        <rect x="20" y="70" width="80" height="130" fill="#CBD5E1" opacity="0.6" />
-        <rect x="280" y="70" width="80" height="130" fill="#CBD5E1" opacity="0.6" />
+        {/* ── 2. Classical Courthouse Portico (Background) ── */}
+        <g opacity="0.85">
+          {/* Triangular Pediment Roof */}
+          <polygon
+            points="170,22 65,58 275,58"
+            fill="url(#marbleGrad)"
+            stroke="#94A3B8"
+            strokeWidth="1"
+            strokeLinejoin="round"
+          />
+          <polygon
+            points="170,27 80,55 260,55"
+            fill="none"
+            stroke="#CBD5E1"
+            strokeWidth="0.8"
+          />
 
-        {/* Windows on background wings */}
-        {[35, 60].map((wx) => (
-          <g key={wx}>
-            <rect x={wx} y="85" width="16" height="26" rx="2" fill="#334155" opacity="0.75" />
-            <rect x={wx} y="125" width="16" height="26" rx="2" fill="#334155" opacity="0.75" />
-          </g>
-        ))}
-        {[295, 320].map((wx) => (
-          <g key={wx}>
-            <rect x={wx} y="85" width="16" height="26" rx="2" fill="#334155" opacity="0.75" />
-            <rect x={wx} y="125" width="16" height="26" rx="2" fill="#334155" opacity="0.75" />
-          </g>
-        ))}
+          {/* Roof Entablature & Cornice */}
+          <rect x="60" y="58" width="220" height="7" rx="1" fill="url(#marbleGrad)" stroke="#94A3B8" strokeWidth="0.8" />
+          <rect x="68" y="65" width="204" height="4" fill="#E2E8F0" stroke="#CBD5E1" strokeWidth="0.5" />
 
-        {/* Main Courthouse Colonnade Back Wall & Dark Recess */}
-        <rect x="80" y="55" width="220" height="120" fill="#1E293B" opacity="0.7" />
-        <rect x="80" y="55" width="220" height="120" fill="url(#shadowGrad)" />
+          {/* Columns (4 Classical Ionic Columns) */}
+          {[88, 142, 198, 252].map((cx, idx) => (
+            <g key={idx}>
+              {/* Capital */}
+              <rect x={cx - 11} y="69" width="22" height="4" rx="1" fill="#FFFFFF" stroke="#94A3B8" strokeWidth="0.6" />
+              {/* Shaft */}
+              <rect x={cx - 8} y="73" width="16" height="72" rx="1" fill="url(#columnShine)" stroke="#94A3B8" strokeWidth="0.6" />
+              {/* Fluting */}
+              <line x1={cx - 3} y1="74" x2={cx - 3} y2="144" stroke="#FFFFFF" strokeWidth="0.8" strokeOpacity="0.6" />
+              <line x1={cx + 3} y1="74" x2={cx + 3} y2="144" stroke="#94A3B8" strokeWidth="0.8" strokeOpacity="0.4" />
+              {/* Base */}
+              <rect x={cx - 10} y="145" width="20" height="4" rx="0.5" fill="#CBD5E1" stroke="#94A3B8" strokeWidth="0.5" />
+            </g>
+          ))}
 
-        {/* Recessed Portico Windows & Center Entrance */}
-        <rect x="168" y="100" width="44" height="65" rx="3" fill="#0F172A" />
-        <rect x="108" y="90" width="22" height="40" rx="2" fill="#0F172A" opacity="0.8" />
-        <rect x="250" y="90" width="22" height="40" rx="2" fill="#0F172A" opacity="0.8" />
-
-        {/* Entablature (Architrave + Frieze + Cornice) */}
-        <rect x="65" y="44" width="250" height="12" fill="url(#facadeGrad)" stroke="#94A3B8" strokeWidth="0.8" />
-        <rect x="60" y="40" width="260" height="5" fill="#FFFFFF" stroke="#94A3B8" strokeWidth="0.6" />
-
-        {/* Triangular Pediment (Tympanum) */}
-        <polygon
-          points="190,4 60,40 320,40"
-          fill="url(#facadeGrad)"
-          stroke="#94A3B8"
-          strokeWidth="1.2"
-        />
-        <polygon
-          points="190,9 75,37 305,37"
-          fill="#F1F5F9"
-          stroke="#CBD5E1"
-          strokeWidth="0.8"
-        />
-
-        {/* Pediment Scales of Justice Relief Emblem */}
-        <g transform="translate(190, 24) scale(0.18)">
-          <polygon points="0,-25 6,-15 -6,-15" fill="url(#pedimentGold)" />
-          <rect x="-2" y="-15" width="4" height="35" rx="1.5" fill="url(#pedimentGold)" />
-          <rect x="-14" y="20" width="28" height="4" rx="1" fill="url(#pedimentGold)" />
-          {/* Beam */}
-          <path d="M -30,-4 C -15,-7 15,-7 30,-4" stroke="url(#pedimentGold)" strokeWidth="3" strokeLinecap="round" />
-          <circle cx="0" cy="-6" r="3.5" fill="url(#pedimentGold)" />
-          {/* Left Pan */}
-          <line x1="-30" y1="-3" x2="-38" y2="12" stroke="url(#pedimentGold)" strokeWidth="1.5" />
-          <line x1="-30" y1="-3" x2="-22" y2="12" stroke="url(#pedimentGold)" strokeWidth="1.5" />
-          <path d="M -42,12 Q -30,21 -18,12 Z" fill="url(#pedimentGold)" />
-          {/* Right Pan */}
-          <line x1="30" y1="-3" x2="22" y2="12" stroke="url(#pedimentGold)" strokeWidth="1.5" />
-          <line x1="30" y1="-3" x2="38" y2="12" stroke="url(#pedimentGold)" strokeWidth="1.5" />
-          <path d="M 18,12 Q 30,21 42,12 Z" fill="url(#pedimentGold)" />
+          {/* Grand Courthouse Steps (Plinth) */}
+          <polygon points="54,149 286,149 292,156 48,156" fill="url(#marbleGrad)" stroke="#94A3B8" strokeWidth="0.8" />
+          <polygon points="46,156 294,156 302,164 38,164" fill="#CBD5E1" stroke="#94A3B8" strokeWidth="0.6" />
+          <polygon points="36,164 304,164 312,172 28,172" fill="#94A3B8" stroke="#64748B" strokeWidth="0.6" />
         </g>
 
-        {/* Classical Columns (6 Columns) */}
-        {[85, 127, 169, 211, 253, 295].map((colCenter, idx) => (
-          <g key={idx}>
-            {/* Capital (Top) */}
-            <rect x={colCenter - 10} y="54" width="20" height="4" rx="1" fill="#FFFFFF" stroke="#94A3B8" strokeWidth="0.6" />
+        {/* Floor Shadow under Steps */}
+        <ellipse cx="170" cy="174" rx="145" ry="6" fill="url(#plinthShadow)" />
+
+        {/* ── 3. Prominent Golden Scales of Justice (Foreground Focal Center) ── */}
+        <g transform="translate(170, 94)">
+          {/* Subtle Golden Glow behind the scale */}
+          <circle cx="0" cy="0" r="46" fill="url(#heroAmbientGlow)" opacity="0.7" />
+
+          {/* Laurel Wreath Crown behind Scales */}
+          <g opacity="0.85">
+            {/* Left Wreath Branch */}
             <path
-              d={`M ${colCenter - 9} 58 C ${colCenter - 8} 61 ${colCenter + 8} 61 ${colCenter + 9} 58 Z`}
-              fill="#E2E8F0"
-              stroke="#94A3B8"
-              strokeWidth="0.5"
+              d="M -6 38 C -28 32 -42 14 -42 -8 C -42 -24 -28 -38 -12 -44"
+              stroke="url(#heroGoldPrimary)"
+              strokeWidth="1.8"
+              strokeLinecap="round"
             />
-            {/* Column Shaft */}
-            <rect
-              x={colCenter - 8}
-              y="59"
-              width="16"
-              height="104"
-              fill="url(#columnGrad)"
-              stroke="#94A3B8"
-              strokeWidth="0.7"
-            />
-            {/* Fluting lines */}
-            <line x1={colCenter - 4} y1="60" x2={colCenter - 4} y2="162" stroke="url(#columnFlute)" strokeWidth="1.2" />
-            <line x1={colCenter} y1="60" x2={colCenter} y2="162" stroke="url(#columnFlute)" strokeWidth="1.5" />
-            <line x1={colCenter + 4} y1="60" x2={colCenter + 4} y2="162" stroke="url(#columnFlute)" strokeWidth="1.2" />
+            {[-38, -26, -14, -2, 10, 22].map((y, i) => (
+              <ellipse
+                key={`lw-${i}`}
+                cx={-36 + Math.abs(y) * 0.3}
+                cy={y}
+                rx="4.5"
+                ry="2.5"
+                transform={`rotate(${i * 12 - 30}, ${-36 + Math.abs(y) * 0.3}, ${y})`}
+                fill="url(#heroGoldPrimary)"
+              />
+            ))}
 
-            {/* Column Base */}
-            <rect x={colCenter - 10} y="163" width="20" height="4" rx="0.5" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="0.6" />
-            <rect x={colCenter - 12} y="167" width="24" height="4" rx="0.5" fill="#CBD5E1" stroke="#94A3B8" strokeWidth="0.6" />
+            {/* Right Wreath Branch */}
+            <path
+              d="M 6 38 C 28 32 42 14 42 -8 C 42 -24 28 -38 12 -44"
+              stroke="url(#heroGoldPrimary)"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+            {[-38, -26, -14, -2, 10, 22].map((y, i) => (
+              <ellipse
+                key={`rw-${i}`}
+                cx={36 - Math.abs(y) * 0.3}
+                cy={y}
+                rx="4.5"
+                ry="2.5"
+                transform={`rotate(${-i * 12 + 30}, ${36 - Math.abs(y) * 0.3}, ${y})`}
+                fill="url(#heroGoldPrimary)"
+              />
+            ))}
           </g>
-        ))}
 
-        {/* Grand Steps (Plinth & Stylobate) */}
-        <polygon points="50,171 330,171 336,177 44,177" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="0.6" />
-        <polygon points="44,177 336,177 344,185 36,185" fill="#CBD5E1" stroke="#94A3B8" strokeWidth="0.6" />
-        <polygon points="36,185 344,185 352,193 28,193" fill="#94A3B8" stroke="#64748B" strokeWidth="0.6" />
-        <polygon points="28,193 352,193 360,200 20,200" fill="#64748B" stroke="#475569" strokeWidth="0.6" />
+          {/* The Central Pillar & Base */}
+          <path d="M 0,-48 L 5,-40 L -5,-40 Z" fill="url(#heroGoldPrimary)" />
+          <circle cx="0" cy="-38" r="4.5" fill="url(#heroGoldPrimary)" />
+          <rect x="-3" y="-38" width="6" height="76" rx="2" fill="url(#heroGoldPrimary)" />
+          <rect x="-18" y="34" width="36" height="5" rx="2" fill="url(#heroGoldPrimary)" />
+          <rect x="-22" y="38" width="44" height="4" rx="1.5" fill="url(#heroGoldPrimary)" />
+
+          {/* The Balanced Crossbeam */}
+          <path
+            d="M -48,-24 C -24,-28 24,-28 48,-24"
+            stroke="url(#heroGoldPrimary)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+          />
+          <circle cx="0" cy="-26" r="5" fill="url(#heroGoldPrimary)" />
+          <circle cx="-48" cy="-24" r="3" fill="url(#heroGoldPrimary)" />
+          <circle cx="48" cy="-24" r="3" fill="url(#heroGoldPrimary)" />
+
+          {/* Left Pan (Chains & Dish) */}
+          <line x1="-48" y1="-22" x2="-60" y2="4" stroke="url(#heroGoldPrimary)" strokeWidth="1.4" strokeDasharray="2,2" />
+          <line x1="-48" y1="-22" x2="-36" y2="4" stroke="url(#heroGoldPrimary)" strokeWidth="1.4" strokeDasharray="2,2" />
+          <path
+            d="M -66,4 C -66,16 -30,16 -30,4 Z"
+            fill="url(#heroGoldPrimary)"
+            stroke="#966A16"
+            strokeWidth="0.8"
+          />
+
+          {/* Right Pan (Chains & Dish) */}
+          <line x1="48" y1="-22" x2="36" y2="4" stroke="url(#heroGoldPrimary)" strokeWidth="1.4" strokeDasharray="2,2" />
+          <line x1="48" y1="-22" x2="60" y2="4" stroke="url(#heroGoldPrimary)" strokeWidth="1.4" strokeDasharray="2,2" />
+          <path
+            d="M 30,4 C 30,16 66,16 66,4 Z"
+            fill="url(#heroGoldPrimary)"
+            stroke="#966A16"
+            strokeWidth="0.8"
+          />
+        </g>
+
+        {/* ── 4. Subtle Sparkling Light Accents ── */}
+        <g opacity="0.8">
+          <path d="M 52,38 L 54,34 L 56,38 L 60,40 L 56,42 L 54,46 L 52,42 L 48,40 Z" fill="#FFF7E6" />
+          <path d="M 284,36 L 286,32 L 288,36 L 292,38 L 288,40 L 286,44 L 284,40 L 280,38 Z" fill="#FFF7E6" />
+        </g>
       </svg>
     </div>
   );

@@ -1,24 +1,8 @@
 import React from 'react';
 import { useLocation } from 'wouter';
-import {
-  Bell,
-  MessageSquare,
-  Search,
-  ChevronDown,
-  User,
-  LogOut,
-  ShieldAlert,
-  Building2,
-  Scale,
-  Sun,
-  Moon,
-} from 'lucide-react';
 import { useGetCurrentUser, useLogout } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTheme } from '@/components/theme-provider';
 import { NotificationsDropdown } from './notifications/notifications-dropdown';
-import { GlobalSearch } from './global-search';
-import { THEME_COLORS } from '@/config/theme';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,24 +18,24 @@ interface TopHeaderProps {
 }
 
 export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const logoutMutation = useLogout();
-  const { theme, setTheme } = useTheme();
   const { data: currentUser } = useGetCurrentUser();
   const user = currentUser as any;
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = user?.role === 'admin';
-  const isStaff = user?.role === 'staff';
 
-  const username = user?.username || user?.display_name || 'المستخدم';
-  const officeName = user?.officeName || user?.office_name || (isAdmin ? 'مكتب المحاماة' : 'المكتب');
+  const userDisplayName = user?.displayName || user?.name || user?.username || 'أ. عبدالله المنصوري';
+  const officeName = user?.officeName || user?.office_name || 'مكتب المحاماة الرئيسي';
   const roleLabel = isSuperAdmin
     ? 'المشرف العام'
     : isAdmin
-    ? 'مدير النظام'
-    : `محامٍ لدى ${officeName}`;
+    ? 'مدير المكتب'
+    : 'محامٍ ممارس';
+
+  const avatarInitial = userDisplayName.charAt(0).toUpperCase() || 'A';
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -62,101 +46,118 @@ export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
     });
   };
 
+  const openSearch = () => {
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'k',
+        metaKey: true,
+        ctrlKey: true,
+        bubbles: true,
+      })
+    );
+  };
+
   return (
     <header
-      className="w-full h-16 shrink-0 flex items-center justify-between px-4 sm:px-6 z-20 text-white select-none border-b border-[#071D34]"
-      style={{
-        background: `linear-gradient(90deg, ${THEME_COLORS.deepNavy} 0%, ${THEME_COLORS.primaryNavy} 100%)`,
-      }}
+      className="w-full h-16 shrink-0 flex items-center justify-between px-4 sm:px-6 z-40 select-none bg-white/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-[#eff4ff] text-[#0b1c30]"
       dir="rtl"
     >
-      {/* ── Right side: Global Search ── */}
-      <div className="flex items-center gap-3 min-w-0 flex-1 max-w-md">
-        <GlobalSearch
-          className="bg-white/10 hover:bg-white/15 text-white placeholder:text-white/60 border border-white/15 rounded-xl h-10 text-xs w-full focus:border-[#C99732] focus:ring-1 focus:ring-[#C99732]"
-        />
-      </div>
+      {/* ── Right side: Search Input + AI Assistant Button ── */}
+      <div className="flex items-center gap-3 w-full max-w-lg">
+        {/* Search Input Container */}
+        <div className="relative w-full max-w-md hidden sm:block">
+          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#757682] text-lg">
+            search
+          </span>
+          <input
+            type="text"
+            onClick={openSearch}
+            readOnly
+            placeholder="بحث في القضايا، الموكلين، الجلسات، أو الوثائق..."
+            className="w-full h-10 pr-9 pl-16 rounded-lg bg-[#eff4ff] text-xs font-normal text-[#0b1c30] placeholder:text-[#757682] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] transition-all cursor-pointer"
+          />
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[#dce9ff] text-[#444651]">
+            Ctrl + K
+          </span>
+        </div>
 
-      {/* ── Left side: Quick actions + User Profile ── */}
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        {/* Chat / Messages Button */}
+        {/* AI Assistant Button */}
         <button
           onClick={() => setLocation('/chat')}
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer relative"
-          title="المحادثة والمساعد الذكي"
+          className="flex items-center gap-1.5 px-3.5 h-9 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white transition-all shadow-sm shrink-0 font-medium text-xs cursor-pointer"
+          title="مساعد الذكاء الاصطناعي"
         >
-          <MessageSquare className="w-4 h-4" />
+          <span className="material-symbols-outlined text-base text-amber-300">auto_awesome</span>
+          <span className="hidden md:inline">مساعد الذكاء الاصطناعي</span>
         </button>
+      </div>
+
+      {/* ── Left side: Office Switcher, Notifications, User Profile ── */}
+      <div className="flex items-center gap-3 shrink-0">
+        {/* Office Switcher */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#eff4ff] cursor-pointer hover:bg-[#dce9ff] transition-colors text-xs">
+              <span className="material-symbols-outlined text-base text-[#00236f]">account_balance</span>
+              <span className="text-[#0b1c30] font-medium">{officeName}</span>
+              <span className="material-symbols-outlined text-sm text-[#757682]">expand_more</span>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 text-right font-sans text-xs">
+            <DropdownMenuLabel>المكاتب والصلاحيات</DropdownMenuLabel>
+            <DropdownMenuItem className="font-semibold text-[#00236f]">
+              {officeName} (الافتراضي)
+            </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem onClick={() => setLocation('/settings')}>
+                إعدادات المكتب والربط
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Notifications Dropdown */}
         <NotificationsDropdown
-          buttonClassName="text-white/80 hover:text-white hover:bg-white/10 border-0 h-9 w-9 rounded-xl"
+          buttonClassName="relative p-2 rounded-lg text-[#444651] hover:bg-[#dce9ff] hover:text-[#0b1c30] transition-colors cursor-pointer border-0"
         />
 
         {/* Vertical Divider */}
-        <div className="h-6 w-px bg-white/15 hidden sm:block" />
+        <div className="h-6 w-px bg-[#dce9ff]"></div>
 
-        {/* User Profile Dropdown */}
+        {/* User Profile */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-right group">
-              <div className="w-9 h-9 rounded-full bg-white/15 border border-white/20 flex items-center justify-center shrink-0 text-white group-hover:border-[#C99732] transition-colors">
-                <User className="w-4 h-4 text-[#FFF4DE]" />
+            <div className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-[#eff4ff] transition-colors">
+              <div className="w-8 h-8 rounded-full bg-[#dce1ff] text-[#00236f] flex items-center justify-center font-bold text-xs shrink-0">
+                {avatarInitial}
               </div>
-              <div className="hidden sm:flex flex-col text-right">
-                <span className="text-xs font-bold text-white leading-tight truncate max-w-[130px]">
-                  {username}
-                </span>
-                <span className="text-[10px] text-[#D6E0EC]/80 leading-tight truncate max-w-[130px]">
-                  {roleLabel}
-                </span>
+              <div className="flex flex-col text-right leading-tight">
+                <span className="text-xs font-semibold text-[#0b1c30]">{userDisplayName}</span>
+                <span className="text-[11px] text-[#757682]">{roleLabel}</span>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-white/60 group-hover:text-white transition-colors" />
-            </button>
+            </div>
           </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="start" className="w-56 text-right font-sans">
-            <DropdownMenuLabel className="font-bold text-xs text-[#10233F]">
-              <div className="truncate font-bold">{username}</div>
-              <div className="text-[10px] text-[#64748B] font-normal truncate mt-0.5">{roleLabel}</div>
+          <DropdownMenuContent align="start" sideOffset={8} className="w-56 text-right font-sans text-xs p-1.5">
+            <DropdownMenuLabel className="p-2 border-b border-[#eff4ff] mb-1">
+              <div className="font-bold text-sm text-[#0b1c30] truncate">{userDisplayName}</div>
+              <div className="text-[11px] text-[#757682] font-medium truncate mt-0.5">{roleLabel}</div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              className="gap-2 cursor-pointer text-xs"
-            >
-              {theme === 'light' ? (
-                <>
-                  <Moon className="w-4 h-4 text-[#64748B]" />
-                  <span>الوضع الداكن</span>
-                </>
-              ) : (
-                <>
-                  <Sun className="w-4 h-4 text-[#C99732]" />
-                  <span>الوضع الفاتح</span>
-                </>
-              )}
-            </DropdownMenuItem>
-
             {isAdmin && (
-              <DropdownMenuItem
-                onClick={() => setLocation('/settings')}
-                className="gap-2 cursor-pointer text-xs"
-              >
-                <Building2 className="w-4 h-4 text-[#64748B]" />
-                <span>إعدادات المكتب</span>
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => setLocation('/subscription')} className="p-2 cursor-pointer">
+                  الاشتراك والحصص
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/settings')} className="p-2 cursor-pointer">
+                  الإعدادات والربط
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-1 bg-[#eff4ff]" />
+              </>
             )}
-
-            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="gap-2 text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer text-xs font-bold"
+              className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer rounded-lg"
             >
-              <LogOut className="w-4 h-4" />
-              <span>{logoutMutation.isPending ? 'جارٍ تسجيل الخروج...' : 'تسجيل الخروج'}</span>
+              تسجيل الخروج
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

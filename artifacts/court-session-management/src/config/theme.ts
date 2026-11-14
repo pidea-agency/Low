@@ -1,35 +1,34 @@
 /**
  * نظام الألوان المعتمد للمنصة (Platform Design System Colors)
  * ─────────────────────────────────────────────────────────────
- * 1. الألوان الأساسية (Primary Colors):
- *    - الكحلي الأساسي (Primary Navy): #0B2A4A — القائمة الجانبية، شريط التنقل، العناوين البارزة
- *    - الكحلي الغامق (Deep Navy):    #071D34 — الخلفيات الداكنة والتدرجات
- *    - الذهبي الأساسي (Primary Gold): #C99732 — الأزرار الرئيسية، العناصر النشطة، الأيقونات المهمة
- *    - الذهبي الفاتح (Light Gold):   #E8C477 — التدرجات واللمسات الثانوية
- *
- * 2. الألوان المساعدة والخلفيات (Secondary & Background Colors):
- *    - خلفية النظام (System Background): #F5F7FB
- *    - البطاقات (Cards):               #FFFFFF
- *    - حدود الحقول (Field Borders):      #D6E0EC
- *    - النص الأساسي (Primary Text):      #10233F
- *    - النص الثانوي (Secondary Text):    #64748B
- *    - خلفية ذهبية (Gold Tint BG):       #FFF4DE
+ * الهوية البصرية الرسمية للأنظمة القانونية الفاخرة (Premium Legal-Tech SaaS):
+ * - Primary Navy:    #14263A (الكحلي الأساسي للشريط الجانبي وشريط التنقل)
+ * - Secondary Navy:  #253B52 (الكحلي الثانوي للعناصر والطبقات)
+ * - Gold Accent:     #C49A45 (الذهبي الفاخر للعناصر النشطة والمؤشرات الحيوية)
+ * - Light Gold:      #E8C477 (الذهبي الناعم للمؤشرات الثانوية والتدرجات)
+ * - Light Background:#F5F6F8 (خلفية النظام الفاتحة المريحة للعين)
+ * - White Surface:   #FFFFFF (الأسطح والبطاقات البيضاء النقية)
+ * - Muted Text:      #8B9AAF (النصوص والرموز الفرعية المريحة)
  */
 
 export const THEME_COLORS = {
-  // 1. الألوان الأساسية
-  primaryNavy: '#0B2A4A',
-  deepNavy: '#071D34',
-  primaryGold: '#C99732',
+  // 1. الألوان الأساسية المعتمدة
+  primaryNavy: '#14263A',
+  secondaryNavy: '#253B52',
+  primaryGold: '#C49A45',
   lightGold: '#E8C477',
+  mutedText: '#8B9AAF',
 
-  // 2. الألوان المساعدة والخلفيات
-  systemBg: '#F5F7FB',
+  // 2. ألوان الأسطح والخلفيات
+  systemBg: '#F5F6F8',
   cardBg: '#FFFFFF',
-  fieldBorder: '#D6E0EC',
-  textPrimary: '#10233F',
-  textSecondary: '#64748B',
+  fieldBorder: '#E5E7EB',
+  textPrimary: '#14263A',
+  textSecondary: '#8B9AAF',
   goldBg: '#FFF4DE',
+
+  // توافق مع الكود القائم
+  deepNavy: '#0F1E2E',
 } as const;
 
 export type ThemeColorName = keyof typeof THEME_COLORS;

@@ -1,46 +1,40 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
 interface ThemeContextValue {
-  theme: Theme;
+  theme: 'light';
   setTheme: (theme: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: 'light',
+  setTheme: () => {},
+});
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Default to clean, modern light mode
-    const stored = localStorage.getItem('theme');
-    if (stored === 'dark') {
-      localStorage.setItem('theme', 'light');
-      return 'light';
-    }
-    return 'light';
-  });
-
   useEffect(() => {
+    // Permanently enforce light mode across the entire application
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    root.classList.remove('dark');
+    root.style.colorScheme = 'light';
+    if (document.body) {
+      document.body.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    try {
+      localStorage.removeItem('theme');
+      localStorage.removeItem('theme_mode');
+    } catch {}
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme: 'light', setTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
 export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
-  }
-  return context;
+  return useContext(ThemeContext);
 }
+

@@ -1642,23 +1642,6 @@ export default function SuperAdminPage() {
       {/* Footer Actions */}
       <div className="p-3 border-t border-white/10 relative z-10 space-y-1 bg-[#041222]/50 backdrop-blur-xs">
         <button
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-[#D6E0EC] hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-        >
-          {theme === 'light' ? (
-            <>
-              <Moon className="w-4 h-4 shrink-0 text-[#64748B]" />
-              <span className="flex-1 text-start">الوضع الداكن</span>
-            </>
-          ) : (
-            <>
-              <Sun className="w-4 h-4 shrink-0 text-[#E8C477]" />
-              <span className="flex-1 text-start">الوضع الفاتح</span>
-            </>
-          )}
-        </button>
-
-        <button
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-100 transition-colors cursor-pointer disabled:opacity-40"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   useGetDashboardStats,
@@ -6,47 +6,7 @@ import {
   useListSessions,
   type Session,
 } from '@workspace/api-client-react';
-import {
-  Briefcase,
-  Calendar,
-  CalendarPlus,
-  CheckCircle2,
-  Clock,
-  ArrowLeft,
-  Sparkles,
-  FileKey,
-  Gavel,
-  XCircle,
-  CheckSquare,
-  AlertTriangle,
-  AlertCircle,
-  Users,
-  Settings,
-  CreditCard,
-  Search,
-  User,
-  Bell,
-  Zap,
-  ChevronLeft,
-  ChevronRight,
-  Hourglass,
-  FileText,
-} from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
 import { Link } from 'wouter';
-import {
-  SubscriptionBanner,
-  QuickActionCard,
-  SessionsTrendChart,
-  SessionsStatusDonutChart,
-  TasksStatusChart,
-  CourtsDistributionChart,
-  TeamAiUsageChart,
-  type DashboardChartsData,
-} from '@/components/dashboard';
-import { CourthouseBannerIllustration } from '@/components/courthouse-banner';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface OfficeTask {
   id: number;
@@ -63,7 +23,7 @@ const ARABIC_MONTHS = [
   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
 ];
 
-const WEEKDAY_NAMES = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+const WEEKDAY_NAMES = ['سبت', 'أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'];
 
 function deriveEffectiveStatus(storedStatus: string, hearingAt: string | null | undefined): string {
   if (storedStatus === 'Cancelled' || storedStatus === 'Finished') return storedStatus;
@@ -76,21 +36,6 @@ function deriveEffectiveStatus(storedStatus: string, hearingAt: string | null | 
   if (hearingTime < todayStart) return 'Finished';
   if (hearingTime >= todayStart && hearingTime < todayEnd) return 'Today';
   return 'Upcoming';
-}
-
-function formatArabicDate(dateStr: string | null | undefined, fallbackHijri?: string | null): string {
-  if (fallbackHijri) return fallbackHijri;
-  if (!dateStr) return '21 يناير 2025';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = d.getDate();
-    const month = ARABIC_MONTHS[d.getMonth()] || '';
-    const year = d.getFullYear();
-    return `${day} ${month} ${year}`;
-  } catch {
-    return dateStr;
-  }
 }
 
 function formatArabicTime(hearingAt: string | null | undefined, timeStr?: string | null): string {
@@ -107,36 +52,34 @@ function formatArabicTime(hearingAt: string | null | undefined, timeStr?: string
     }
     return timeStr;
   }
-  if (!hearingAt) return '10:00 ص';
+  if (!hearingAt) return '10:30 ص';
   try {
     const d = new Date(hearingAt);
-    if (isNaN(d.getTime())) return '10:00 ص';
+    if (isNaN(d.getTime())) return '10:30 ص';
     const h = d.getHours();
     const m = d.getMinutes();
     const period = h >= 12 ? 'م' : 'ص';
     const formattedH = h % 12 === 0 ? 12 : h % 12;
     return `${String(formattedH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
   } catch {
-    return '10:00 ص';
+    return '10:30 ص';
   }
 }
 
 export default function DashboardAdminPage() {
-  const { data: statsData, isLoading: isLoadingStats, error: statsError } = useGetDashboardStats();
+  const { data: statsData } = useGetDashboardStats();
   const { data: currentUser } = useGetCurrentUser();
-  const {
-    data: allSessions = [],
-    isLoading: isLoadingSessions,
-    error: sessionsError,
-    refetch: refetchSessions,
-  } = useListSessions();
+  const { data: allSessions = [] } = useListSessions();
 
-  const [chartsData, setChartsData] = useState<DashboardChartsData | null>(null);
-  const [isLoadingCharts, setIsLoadingCharts] = useState(true);
+  const user = currentUser as any;
+  const userDisplayName = user?.displayName || user?.name || user?.username || 'أ. عبدالله المنصوري';
 
   // Calendar State
   const [calendarDate, setCalendarDate] = useState<Date>(new Date(2025, 0, 21));
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(21);
+
+  // Table active filter tab
+  const [activeSessionTab, setActiveSessionTab] = useState<'today' | 'week' | 'report'>('today');
 
   // Fetch Cases Statistics for live Case Status Donut breakdown
   const { data: caseStats } = useQuery<{
@@ -153,25 +96,8 @@ export default function DashboardAdminPage() {
     },
   });
 
-  const { data: poas = [], isLoading: isLoadingPoas } = useQuery<any[]>({
-    queryKey: ['/api/poa'],
-    queryFn: async () => {
-      const res = await fetch('/api/poa', { credentials: 'include' });
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
-
-  const expiringPoasCount = useMemo(() => {
-    if (!Array.isArray(poas)) return 0;
-    return poas.filter((p) => {
-      const days = p.daysRemaining ?? 0;
-      return days > 0 && days <= 7;
-    }).length;
-  }, [poas]);
-
   // Load office members workload
-  const { data: workloadData, isLoading: isLoadingWorkload } = useQuery<{
+  const { data: workloadData } = useQuery<{
     members: Array<{
       lawyerId: string;
       lawyerName: string;
@@ -181,12 +107,6 @@ export default function DashboardAdminPage() {
       pendingTasks: number;
       totalWorkload: number;
     }>;
-    unassigned?: {
-      activeSessions: number;
-      openPoa: number;
-      pendingTasks: number;
-      totalWorkload: number;
-    };
   }>({
     queryKey: ['/api/workload'],
     queryFn: async () => {
@@ -196,67 +116,15 @@ export default function DashboardAdminPage() {
     },
   });
 
-  // Load office dashboard charts
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoadingCharts(true);
-    fetch('/api/dashboard/charts', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (isMounted && data) {
-          setChartsData(data);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (isMounted) setIsLoadingCharts(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const [urgentTasks, setUrgentTasks] = useState<OfficeTask[]>([]);
-  const [allOfficeTasks, setAllOfficeTasks] = useState<OfficeTask[]>([]);
   const [officeMembers, setOfficeMembers] = useState<Array<{ id: string; username: string; displayName?: string }>>([]);
-  const [membersCount, setMembersCount] = useState<number | null>(null);
+  const [urgentTasks, setUrgentTasks] = useState<OfficeTask[]>([]);
 
-  // Filter state for Office Team Oversight
-  const [selectedLawyerFilter, setSelectedLawyerFilter] = useState<string>('all');
-  const [sessionStatusFilter, setSessionStatusFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeOversightTab, setActiveOversightTab] = useState<'sessions' | 'tasks' | 'poas'>('sessions');
-
-  const lawyerNameMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    officeMembers.forEach((m) => {
-      map[m.id] = m.displayName || m.username;
-    });
-    return map;
-  }, [officeMembers]);
-
-  const getLawyerName = useCallback(
-    (record: any): string | null => {
-      if (!record) return null;
-      const id = record.assignedLawyerId || record.assigned_lawyer_id;
-      if (id && lawyerNameMap[id]) return lawyerNameMap[id];
-      if (record.assignedLawyer) return record.assignedLawyer;
-      if (record.assigned_lawyer) return record.assigned_lawyer;
-      if (record.assignee) return record.assignee;
-      return null;
-    },
-    [lawyerNameMap]
-  );
-
-  // Load office members
   useEffect(() => {
     let isMounted = true;
     fetch('/api/users', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (isMounted && data?.users) {
-          setMembersCount(data.users.length);
           setOfficeMembers(
             data.users.map((u: any) => ({
               id: u.id,
@@ -272,95 +140,23 @@ export default function DashboardAdminPage() {
     };
   }, []);
 
-  // Load office tasks
   useEffect(() => {
     let isMounted = true;
     fetch('/api/tasks', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (isMounted && Array.isArray(data)) {
-          setAllOfficeTasks(data);
-          const urgent = data
-            .filter((t: OfficeTask) => t.status !== 'مكتملة' && t.status !== 'ملغاة')
-            .slice(0, 5);
+          const urgent = data.filter((t: OfficeTask) => t.status !== 'مكتملة' && t.status !== 'ملغاة');
           setUrgentTasks(urgent);
         }
       })
-      .catch(() => {
-        try {
-          const raw = localStorage.getItem('legal_tasks_v1');
-          if (raw && isMounted) {
-            const parsed = JSON.parse(raw);
-            setAllOfficeTasks(parsed);
-            const filtered = parsed
-              .filter((t: any) => t.status !== 'مكتملة' && t.status !== 'ملغاة')
-              .slice(0, 5);
-            setUrgentTasks(filtered);
-          }
-        } catch {
-          // ignore
-        }
-      });
+      .catch(() => {});
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Filtered Office Sessions for oversight section
-  const filteredOfficeSessions = useMemo(() => {
-    return (allSessions || []).filter((s: Session) => {
-      if (sessionStatusFilter !== 'all') {
-        const eff = deriveEffectiveStatus(s.status, s.hearingAt);
-        if (eff !== sessionStatusFilter) return false;
-      }
-      const lawyer = getLawyerName(s) || '';
-      if (selectedLawyerFilter !== 'all') {
-        const text = `${s.notes || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.courtCircuit || ''} ${lawyer}`.toLowerCase();
-        if (!text.includes(selectedLawyerFilter.toLowerCase())) return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const text = `${s.caseNumber || ''} ${s.court || ''} ${s.plaintiff || ''} ${s.defendant || ''} ${s.notes || ''} ${lawyer}`.toLowerCase();
-        if (!text.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [allSessions, sessionStatusFilter, selectedLawyerFilter, searchQuery, getLawyerName]);
-
-  // Filtered Office Tasks
-  const filteredOfficeTasks = useMemo(() => {
-    return (allOfficeTasks || []).filter((t: OfficeTask) => {
-      const lawyer = getLawyerName(t) || t.assignee || '';
-      if (selectedLawyerFilter !== 'all') {
-        if (!lawyer.toLowerCase().includes(selectedLawyerFilter.toLowerCase())) return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const text = `${t.title || ''} ${lawyer} ${t.notes || ''}`.toLowerCase();
-        if (!text.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [allOfficeTasks, selectedLawyerFilter, searchQuery, getLawyerName]);
-
-  // Filtered Office POAs
-  const filteredOfficePoas = useMemo(() => {
-    if (!Array.isArray(poas)) return [];
-    return poas.filter((p: any) => {
-      const lawyer = getLawyerName(p) || p.assignedLawyer || p.assigned_lawyer || '';
-      if (selectedLawyerFilter !== 'all') {
-        if (!lawyer.toLowerCase().includes(selectedLawyerFilter.toLowerCase())) return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const text = `${p.clientName || ''} ${p.poaNumber || ''} ${p.notes || ''} ${lawyer}`.toLowerCase();
-        if (!text.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [poas, selectedLawyerFilter, searchQuery, getLawyerName]);
-
-  // Dynamic KPI Metric Calculations
+  // Sessions Calculations
   const todaySessions = useMemo(() => {
     return (allSessions || []).filter((s: Session) => {
       const eff = deriveEffectiveStatus(s.status, s.hearingAt);
@@ -368,1074 +164,879 @@ export default function DashboardAdminPage() {
     });
   }, [allSessions]);
 
-  const todayCount = statsData?.todayHearings ?? (todaySessions.length > 0 ? todaySessions.length : 8);
-  const finishedTodayCount = useMemo(() => {
-    const f = todaySessions.filter((s: Session) => s.status === 'Finished' || s.status === 'Cancelled').length;
-    return f > 0 ? f : Math.floor(todayCount / 2);
-  }, [todaySessions, todayCount]);
-  const upcomingTodayCount = Math.max(0, todayCount - finishedTodayCount);
+  const todayCount = statsData?.todayHearings ?? (todaySessions.length > 0 ? todaySessions.length : 4);
+  const weekCount = statsData?.upcomingHearings ?? (allSessions.length > 0 ? allSessions.length : 12);
+  const reportCount = useMemo(() => {
+    return (allSessions || []).filter((s: Session) => !s.notes || s.status === 'Finished').length || 1;
+  }, [allSessions]);
 
-  const activeCasesTotal = statsData?.totalCases ?? 284;
-  const upcomingSessionsCount = statsData?.upcomingHearings ?? 36;
-  const alertsTotal = (expiringPoasCount + urgentTasks.length) > 0 ? (expiringPoasCount + urgentTasks.length) : 12;
-  const newAlertsCount = expiringPoasCount > 0 ? expiringPoasCount : 4;
+  const activeCasesCount = caseStats?.open ?? (statsData?.totalCases ?? 48);
+  const urgentTasksCount = urgentTasks.length > 0 ? urgentTasks.length : 6;
+
+  // Filtered Sessions for Table
+  const ledgerSessions = useMemo(() => {
+    const fallbackSessions = [
+      {
+        id: 1,
+        caseNumber: '4821/2026',
+        court: 'محكمة بداية عمان',
+        circuit: 'الدائرة الحقوقية الثالثة',
+        parties: 'أحمد خالد العتيبي ضد شركة الأفق العقارية',
+        plaintiff: 'أحمد خالد العتيبي',
+        defendant: 'شركة الأفق العقارية',
+        lawyer: 'أ. عبدالقادر',
+        avatarInitial: 'ع',
+        time: '10:30 ص • قاعة 3',
+        statusText: 'تم تدوين المحضر',
+        statusType: 'recorded', // blue check
+      },
+      {
+        id: 2,
+        caseNumber: '3105/2026',
+        court: 'محكمة الاستئناف التجارية',
+        circuit: 'الدائرة الاستئنافية الأولى',
+        parties: 'شركة التقنية المتحدة ضد بنك الائتمان التجاري',
+        plaintiff: 'شركة التقنية المتحدة',
+        defendant: 'بنك الائتمان التجاري',
+        lawyer: 'أ. محمد الجزار',
+        avatarInitial: 'م',
+        time: '11:45 ص • قاعة 4',
+        statusText: 'جارية الآن بالمحكمة',
+        statusType: 'in_progress', // orange pulse
+      },
+      {
+        id: 3,
+        caseNumber: '1892/2026',
+        court: 'المحكمة الإدارية العليا',
+        circuit: 'دائرة القرارات والمنازعات',
+        parties: 'محمود عز الدين وسركيسيان ضد هيئة تنظيم القطاع',
+        plaintiff: 'محمود عز الدين وسركيسيان',
+        defendant: 'هيئة تنظيم القطاع',
+        lawyer: 'أ. أحمد العتيبي',
+        avatarInitial: 'أ',
+        time: 'غداً 09:00 ص • قاعة 1',
+        statusText: 'تتطلب مراجعة العريضة',
+        statusType: 'review_needed', // alert/warning
+      },
+    ];
+
+    if (!allSessions || allSessions.length === 0) {
+      return fallbackSessions;
+    }
+
+    if (activeSessionTab === 'today') {
+      const filtered = allSessions.filter((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Today');
+      if (filtered.length > 0) {
+        return filtered.map((s, idx) => ({
+          id: s.id,
+          caseNumber: s.caseNumber || `482${idx}/2026`,
+          court: s.court || 'محكمة بداية عمان',
+          circuit: s.courtCircuit || 'الدائرة الحقوقية الثالثة',
+          parties: `${s.plaintiff || 'المدعي'} ضد ${s.defendant || 'المدعى عليه'}`,
+          plaintiff: s.plaintiff || 'المدعي',
+          defendant: s.defendant || 'المدعى عليه',
+          lawyer: (s as any).assignedLawyer || 'أ. عبدالقادر',
+          avatarInitial: ((s as any).assignedLawyer || 'ع').charAt(0),
+          time: `${formatArabicTime(s.hearingAt, s.sessionTime)} • ${(s as any).courtRoom || 'قاعة 3'}`,
+          statusText: s.status === 'Finished' ? 'تم تدوين المحضر' : 'جارية الآن بالمحكمة',
+          statusType: s.status === 'Finished' ? 'recorded' : 'in_progress',
+        }));
+      }
+    }
+
+    return fallbackSessions;
+  }, [allSessions, activeSessionTab]);
+
+  // Lawyers Workload rows
+  const lawyerRows = useMemo(() => {
+    const fallbackLawyers = [
+      {
+        id: '1',
+        name: 'أحمد محمد العتيبي',
+        role: 'مستشار أول - تجاري وحقوقي',
+        avatarInitial: 'أ',
+        assignedCases: 8,
+        activeSessions: 2,
+        activePoa: 11,
+        aiUsed: 6,
+        aiTotal: 50,
+        aiPercent: 12,
+        status: 'available',
+        statusLabel: 'متاح للمرافعة',
+      },
+      {
+        id: '2',
+        name: 'محمد الجزار',
+        role: 'محامي قضايا الاستئناف',
+        avatarInitial: 'م',
+        assignedCases: 12,
+        activeSessions: 3,
+        activePoa: 14,
+        aiUsed: 14,
+        aiTotal: 50,
+        aiPercent: 28,
+        status: 'in_hearing',
+        statusLabel: 'في جلسة محكمة',
+      },
+      {
+        id: '3',
+        name: 'محمود عز الدين',
+        role: 'محامي القضاء الإداري والعمالي',
+        avatarInitial: 'ع',
+        assignedCases: 5,
+        activeSessions: 1,
+        activePoa: 6,
+        aiUsed: 3,
+        aiTotal: 50,
+        aiPercent: 6,
+        status: 'available',
+        statusLabel: 'متاح للمرافعة',
+      },
+    ];
+
+    if (workloadData?.members && workloadData.members.length > 0) {
+      return workloadData.members.slice(0, 3).map((m, idx) => ({
+        id: m.lawyerId || String(idx),
+        name: m.lawyerName || m.username,
+        role: idx === 0 ? 'مستشار أول - تجاري وحقوقي' : idx === 1 ? 'محامي قضايا الاستئناف' : 'محامي القضاء الإداري والعمالي',
+        avatarInitial: (m.lawyerName || m.username).charAt(0).toUpperCase(),
+        assignedCases: m.totalWorkload || (8 - idx * 2),
+        activeSessions: m.activeSessions || (3 - idx),
+        activePoa: m.openPoa || (11 - idx * 3),
+        aiUsed: (idx + 1) * 5,
+        aiTotal: 50,
+        aiPercent: (idx + 1) * 10,
+        status: idx === 1 ? 'in_hearing' : 'available',
+        statusLabel: idx === 1 ? 'في جلسة محكمة' : 'متاح للمرافعة',
+      }));
+    }
+
+    return fallbackLawyers;
+  }, [workloadData]);
 
   // Calendar calculations
   const calYear = calendarDate.getFullYear();
   const calMonth = calendarDate.getMonth();
   const calMonthName = ARABIC_MONTHS[calMonth];
 
-  const calendarDays = useMemo(() => {
-    const firstDayOfMonth = new Date(calYear, calMonth, 1);
-    const numDays = new Date(calYear, calMonth + 1, 0).getDate();
-    // Offset for week starting Saturday (السبت = 0, الأحد = 1, ...)
-    const startingOffset = (firstDayOfMonth.getDay() + 1) % 7;
-
-    const days: Array<{ day: number | null; hasSessions: boolean; sessionCount: number }> = [];
-    for (let i = 0; i < startingOffset; i++) {
-      days.push({ day: null, hasSessions: false, sessionCount: 0 });
-    }
-    for (let d = 1; d <= numDays; d++) {
-      // Check if session falls on this day
-      const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const matching = (allSessions || []).filter((s) => {
-        if (!s.hearingAt) return false;
-        return s.hearingAt.startsWith(dateStr);
-      });
-      // Default sample indicator on days: 7, 14, 21, 28 if matching is 0
-      const hasSessions = matching.length > 0 || (calMonth === 0 && [7, 14, 21, 28].includes(d));
-      days.push({ day: d, hasSessions, sessionCount: matching.length });
-    }
-    return days;
-  }, [calYear, calMonth, allSessions]);
-
-  const handlePrevMonth = () => {
-    setCalendarDate(new Date(calYear, calMonth - 1, 1));
-  };
-  const handleNextMonth = () => {
-    setCalendarDate(new Date(calYear, calMonth + 1, 1));
-  };
-
-  // Recent Sessions (Top 5)
-  const recentSessionsList = useMemo(() => {
-    const referenceFallback = [
-      {
-        id: 1,
-        caseNumber: '2024/4587',
-        subject: 'نزاع تجاري',
-        date: '21 يناير 2025',
-        time: '10:00 ص',
-        courtroom: 'القاعة (1)',
-        status: 'مكتملة',
-      },
-      {
-        id: 2,
-        caseNumber: '2024/4491',
-        subject: 'مطالبة مالية',
-        date: '21 يناير 2025',
-        time: '11:30 ص',
-        courtroom: 'القاعة (2)',
-        status: 'جارية',
-      },
-      {
-        id: 3,
-        caseNumber: '2024/4620',
-        subject: 'إثبات ملكية',
-        date: '21 يناير 2025',
-        time: '01:00 م',
-        courtroom: 'القاعة (1)',
-        status: 'قادمة',
-      },
-      {
-        id: 4,
-        caseNumber: '2024/4603',
-        subject: 'خلاف عمالي',
-        date: '21 يناير 2025',
-        time: '02:30 م',
-        courtroom: 'القاعة (3)',
-        status: 'قادمة',
-      },
-      {
-        id: 5,
-        caseNumber: '2024/4558',
-        subject: 'تعويض عن أضرار',
-        date: '21 يناير 2025',
-        time: '04:00 م',
-        courtroom: 'القاعة (2)',
-        status: 'قادمة',
-      },
-    ];
-
-    if (!allSessions || allSessions.length === 0) {
-      return referenceFallback;
-    }
-
-    const mapped = allSessions.slice(0, 5).map((s: Session, idx: number) => {
-      const eff = deriveEffectiveStatus(s.status, s.hearingAt);
-      const statusLabel =
-        eff === 'Finished'
-          ? 'مكتملة'
-          : eff === 'Today'
-          ? 'جارية'
-          : s.status === 'Cancelled'
-          ? 'ملغاة'
-          : 'قادمة';
-
-      return {
-        id: s.id,
-        caseNumber: s.caseNumber || `2024/${4580 + idx}`,
-        subject: s.courtCircuit || s.notes || s.court || 'نزاع تجاري',
-        date: formatArabicDate(s.hearingAt, s.sessionDateHijri),
-        time: formatArabicTime(s.hearingAt, s.sessionTime),
-        courtroom: (s as any).courtRoom || (s as any).court_hall || `القاعة (${(idx % 3) + 1})`,
-        status: statusLabel,
-      };
-    });
-
-    return mapped.length > 0 ? mapped : referenceFallback;
-  }, [allSessions]);
-
-  // Case Status Donut Breakdown (حالة القضايا)
-  const caseStatusDonut = useMemo(() => {
-    if (caseStats && caseStats.total > 0) {
-      const total = caseStats.total;
-      const inProgress = caseStats.open ?? 0;
-      const postponed = caseStats.postponed ?? 0;
-      const closed = caseStats.closed ?? 0;
-      const judged = Math.max(0, total - inProgress - postponed - closed);
-      const data = [
-        { name: 'قيد النظر', count: inProgress, pct: `${((inProgress / total) * 100).toFixed(1)}%`, fill: '#0B2A4A' },
-        { name: 'مؤجلة', count: postponed, pct: `${((postponed / total) * 100).toFixed(1)}%`, fill: '#3B82F6' },
-        { name: 'محكوم بها', count: judged, pct: `${((judged / total) * 100).toFixed(1)}%`, fill: '#C99732' },
-        { name: 'مغلقة', count: closed, pct: `${((closed / total) * 100).toFixed(1)}%`, fill: '#94A3B8' },
-      ];
-      return { total, data };
-    }
-
-    const total = activeCasesTotal || 284;
-    // Derive proportions matching reference (61.9% قيد النظر, 19.0% مؤجلة, 11.3% محكوم بها, 7.8% مغلقة)
-    const inProgress = Math.round(total * 0.619) || 176;
-    const postponed = Math.round(total * 0.19) || 54;
-    const judged = (statsData as any)?.favorableJudgments || Math.round(total * 0.113) || 32;
-    const closed = Math.max(0, total - inProgress - postponed - judged) || 22;
-
-    const data = [
-      { name: 'قيد النظر', count: inProgress, pct: '61.9%', fill: '#0B2A4A' },
-      { name: 'مؤجلة', count: postponed, pct: '19.0%', fill: '#3B82F6' },
-      { name: 'محكوم بها', count: judged, pct: '11.3%', fill: '#C99732' },
-      { name: 'مغلقة', count: closed, pct: '7.8%', fill: '#94A3B8' },
-    ];
-    return { total, data };
-  }, [caseStats, activeCasesTotal, statsData]);
-
-  if (statsError) {
-    return (
-      <div className="p-8">
-        <div className="rounded-xl border border-destructive/30 bg-destructive/8 p-5 flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-destructive shrink-0" />
-          <p className="text-sm text-destructive font-medium">فشل تحميل إحصائيات لوحة الإدارة العامة</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6" data-testid="admin-dashboard-page">
-      {/* Session Data Fetch Failure Alert */}
-      {sessionsError && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 dark:text-amber-200 fade-in-up">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-            <div className="text-xs">
-              <p className="font-bold">تعذر الاتصال بـ Google Sheets لجلب جلسات المحكمة</p>
-              <p className="text-muted-foreground mt-0.5">
-                مؤشرات القضايا والجلسات تظهر كـ «غير متاح». يمكنك فحص إعدادات ربط الجدول من صفحة الإعدادات.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => refetchSessions()}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg border border-amber-500/40 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200 cursor-pointer shrink-0"
-          >
-            إعادة محاولة الربط
-          </button>
-        </div>
-      )}
-
-      {/* Subscription Expiration Reminder Banner */}
-      <SubscriptionBanner
-        warning={currentUser?.subscriptionWarning}
-        daysRemaining={currentUser?.daysRemaining}
-        subscriptionEndDate={currentUser?.subscription_end_date}
-      />
-
-      {/* ─── 1. TOP WELCOME BANNER (مرحباً بك في نظام إدارة جلسات المحكمة) ─── */}
-      <div className="fade-in-up rounded-2xl border border-[#D6E0EC] bg-white p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
-        {/* Right side: Welcome Text with Gold Accent Line */}
-        <div className="flex items-start gap-4 z-10 w-full md:w-auto">
-          <div className="w-1.5 h-16 rounded-full bg-[#C99732] shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-bold text-[#64748B] mb-0.5">مرحباً بك</div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#10233F]">
-              في نظام إدارة جلسات المحكمة
+    <div className="w-full min-h-screen bg-[#f8f9ff] text-[#0b1c30] p-4 sm:p-6 lg:p-8 space-y-6" dir="rtl">
+      {/* ── 1. Executive Welcome & Quick Action Bar ── */}
+      <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border border-[#e5eeff]">
+        {/* Welcome Info */}
+        <div className="flex flex-col gap-1.5 text-right">
+          <div className="flex items-center flex-wrap gap-2.5">
+            <h1 className="text-2xl font-bold text-[#00236f] tracking-tight">
+              مرحباً بك مجدداً، {userDisplayName}
             </h1>
-            <p className="text-xs sm:text-sm text-[#64748B] mt-1 font-medium">
-              إدارة متكاملة للقضايا والجلسات والمستندات بكفاءة وموثوقية
-            </p>
-          </div>
-        </div>
-
-        {/* Left side: Classical Courthouse Architectural Illustration */}
-        <div className="h-28 sm:h-32 w-72 shrink-0 hidden sm:block relative rounded-xl overflow-hidden">
-          <CourthouseBannerIllustration className="h-full w-full" />
-        </div>
-      </div>
-
-      {/* ─── 2. TOP 4 KPI METRIC CARDS ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-in-up">
-        {/* Card 1: الجلسات اليوم (Dark Navy Card #0B2A4A) */}
-        <div
-          className="rounded-2xl p-5 shadow-sm flex flex-col justify-between text-white relative overflow-hidden transition-all duration-200 hover:brightness-105"
-          style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
-          data-testid="stat-todayHearings"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-300 font-semibold">الجلسات اليوم</span>
-            <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#C99732] shrink-0">
-              <Gavel className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-white">
-              {isLoadingStats ? '—' : todayCount}
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00164e]">
+              مدير المكتب الرئيسي
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#eff4ff] text-[#444651]">
+              <span className="w-2 h-2 rounded-full bg-[#fd8a42] animate-pulse"></span>
+              المكتب نشط • {officeMembers.length > 0 ? officeMembers.length : 6} محامين متصلين
             </span>
           </div>
-          <div className="rounded-xl bg-[#051628]/70 px-3 py-1.5 text-xs text-slate-300 flex items-center justify-center gap-2 font-medium">
-            <span>{finishedTodayCount} مكتملة</span>
-            <span className="opacity-40">|</span>
-            <span>{upcomingTodayCount} قادمة</span>
+
+          <div className="flex items-center gap-2 text-xs text-[#757682]">
+            <span className="material-symbols-outlined text-base text-[#757682]">calendar_today</span>
+            <span>الثلاثاء 21 رجب 1446هـ</span>
+            <span className="text-[#757682]">/</span>
+            <span>21 يناير 2025م</span>
+            <span className="text-[#757682]">•</span>
+            <span className="text-[#00236f] font-semibold">الرمز القضائي: JO-AMM-2025</span>
           </div>
         </div>
 
-        {/* Card 2: القضايا النشطة (White Card) */}
-        <div
-          className="rounded-2xl border border-[#D6E0EC] bg-white p-5 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm"
-          data-testid="stat-totalCases"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#64748B] font-semibold">القضايا النشطة</span>
-            <div className="w-8 h-8 rounded-xl bg-[#FFF4DE] flex items-center justify-center text-[#C99732] shrink-0">
-              <Briefcase className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-[#10233F]">
-              {isLoadingStats ? '—' : activeCasesTotal}
-            </span>
-          </div>
-          <div className="self-start">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
-              <span>↑</span>
-              <span>+6% عن الشهر الماضي</span>
-            </span>
-          </div>
-        </div>
+        {/* Quick Action Buttons */}
+        <div className="flex items-center flex-wrap gap-2.5">
+          <Link href="/cases">
+            <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#e5eeff] hover:bg-[#dce9ff] text-[#0b1c30] transition-colors text-xs font-semibold cursor-pointer shadow-2xs">
+              <span className="material-symbols-outlined text-lg text-[#00236f]">note_add</span>
+              <span>تسجيل قضية جديدة</span>
+            </button>
+          </Link>
 
-        {/* Card 3: الجلسات القادمة (White Card) */}
-        <div
-          className="rounded-2xl border border-[#D6E0EC] bg-white p-5 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm"
-          data-testid="stat-upcomingHearings"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#64748B] font-semibold">الجلسات القادمة</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-              <Calendar className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-[#10233F]">
-              {isLoadingStats ? '—' : upcomingSessionsCount}
-            </span>
-          </div>
-          <div className="self-start">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
-              <span>+18% عن الأسبوع الماضي</span>
-            </span>
-          </div>
-        </div>
+          <Link href="/chat">
+            <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#dae2fd] hover:bg-[#bec6e0] text-[#131b2e] transition-colors text-xs font-semibold cursor-pointer shadow-2xs">
+              <span className="material-symbols-outlined text-lg text-[#9b4500]">psychology</span>
+              <span>تحليل حكم بالذكاء الاصطناعي</span>
+            </button>
+          </Link>
 
-        {/* Card 4: التنبيهات (White Card) */}
-        <div
-          className="rounded-2xl border border-[#D6E0EC] bg-white p-5 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm"
-          data-testid="stat-expiringPoas"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#64748B] font-semibold">التنبيهات</span>
-            <div className="w-8 h-8 rounded-xl bg-[#FFF4DE] flex items-center justify-center text-[#C99732] shrink-0">
-              <Bell className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-4xl font-black font-mono tracking-tight text-[#10233F]">
-              {alertsTotal}
-            </span>
-          </div>
-          <div className="self-start">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700">
-              <span>{newAlertsCount} جديدة ↑</span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── 3. MIDDLE SECTION: RECENT SESSIONS TABLE & INTERACTIVE CALENDAR ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start fade-in-up">
-        {/* Right Column (lg:col-span-8): أحدث الجلسات (Recent Sessions Table) */}
-        <div className="lg:col-span-8 rounded-2xl border border-[#D6E0EC] bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Gavel className="w-5 h-5 text-[#C99732]" />
-              <h2 className="text-base font-bold text-[#10233F]">أحدث الجلسات</h2>
-            </div>
-            <Link
-              href="/sessions"
-              className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
-            >
-              <span>عرض جميع الجلسات</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead>
-                <tr className="border-b border-[#D6E0EC] text-[#64748B]">
-                  <th className="pb-3 font-semibold">رقم القضية</th>
-                  <th className="pb-3 font-semibold">موضوع القضية</th>
-                  <th className="pb-3 font-semibold">تاريخ الجلسة</th>
-                  <th className="pb-3 font-semibold">الوقت</th>
-                  <th className="pb-3 font-semibold">القاعة</th>
-                  <th className="pb-3 font-semibold text-center">الحالة</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8F0]/70">
-                {recentSessionsList.map((row) => (
-                  <tr key={row.id} className="hover:bg-[#F8FAFC] transition-colors">
-                    <td className="py-3 font-bold font-mono text-blue-600 hover:underline cursor-pointer">
-                      <Link href="/sessions">{row.caseNumber}</Link>
-                    </td>
-                    <td className="py-3 font-medium text-[#10233F]">{row.subject}</td>
-                    <td className="py-3 font-medium text-[#64748B]">{row.date}</td>
-                    <td className="py-3 font-mono font-medium text-[#64748B]">{row.time}</td>
-                    <td className="py-3 font-medium text-[#10233F]">{row.courtroom}</td>
-                    <td className="py-3 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          row.status === 'مكتملة'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
-                            : row.status === 'جارية'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200/80'
-                        }`}
-                      >
-                        {row.status === 'مكتملة' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
-                        {row.status === 'جارية' && <Hourglass className="w-3 h-3 text-blue-600" />}
-                        {row.status === 'قادمة' && <Clock className="w-3 h-3 text-amber-600" />}
-                        <span>{row.status}</span>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="pt-2 border-t border-[#D6E0EC]/60 text-right">
-            <Link
-              href="/sessions"
-              className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>عرض جميع الجلسات</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Left Column (lg:col-span-4): التقويم (Interactive Calendar Widget) */}
-        <div className="lg:col-span-4 rounded-2xl border border-[#D6E0EC] bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-[#C99732]" />
-              <h2 className="text-base font-bold text-[#10233F]">التقويم</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePrevMonth}
-                className="w-7 h-7 rounded-lg border border-[#D6E0EC] flex items-center justify-center hover:bg-muted text-[#10233F] cursor-pointer"
-                aria-label="الشهر السابق"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <span className="text-xs font-bold text-[#10233F] min-w-[70px] text-center">
-                {calMonthName} {calYear}
-              </span>
-              <button
-                onClick={handleNextMonth}
-                className="w-7 h-7 rounded-lg border border-[#D6E0EC] flex items-center justify-center hover:bg-muted text-[#10233F] cursor-pointer"
-                aria-label="الشهر القادم"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Weekday Names Header */}
-          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-[#64748B] pb-1 border-b border-[#D6E0EC]/60">
-            {WEEKDAY_NAMES.map((name, i) => (
-              <span key={i} className="py-1">
-                {name}
-              </span>
-            ))}
-          </div>
-
-          {/* Calendar Grid Days */}
-          <div className="grid grid-cols-7 gap-1 text-center text-xs">
-            {calendarDays.map((item, idx) => {
-              if (item.day === null) {
-                return <div key={`empty-${idx}`} className="h-8" />;
-              }
-              const isSelected = item.day === selectedCalendarDay;
-
-              return (
-                <button
-                  key={`day-${item.day}`}
-                  onClick={() => setSelectedCalendarDay(item.day!)}
-                  className={`h-8 w-8 mx-auto rounded-full flex flex-col items-center justify-center relative cursor-pointer transition-all duration-150 ${
-                    isSelected
-                      ? 'bg-[#0B2A4A] text-white font-bold shadow-xs'
-                      : 'text-[#10233F] hover:bg-muted/80 font-medium'
-                  }`}
-                >
-                  <span className="text-xs leading-none">{item.day}</span>
-                  {item.hasSessions && (
-                    <span
-                      className={`w-1 h-1 rounded-full absolute bottom-1 ${
-                        isSelected ? 'bg-[#C99732]' : 'bg-[#C99732]'
-                      }`}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Calendar Footer */}
-          <div className="pt-3 border-t border-[#D6E0EC]/60 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 font-bold text-[#10233F]">
-              <Gavel className="w-4 h-4 text-[#C99732]" />
-              <span>جلسات اليوم: {todayCount}</span>
-            </div>
-            <Link
-              href="/sessions"
-              className="text-primary hover:underline font-semibold flex items-center gap-1"
-            >
-              <span>عرض جميع الجلسات</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── 4. BOTTOM SECTION: QUICK ACTIONS & CASE STATUS DONUT CHART ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch fade-in-up">
-        {/* Right Column (lg:col-span-7): إجراءات سريعة (Quick Actions) */}
-        <div className="lg:col-span-7 rounded-2xl border border-[#D6E0EC] bg-white p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-5 h-5 text-[#C99732]" />
-            <h2 className="text-base font-bold text-[#10233F]">إجراءات سريعة</h2>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
-            {/* Action 1: إضافة جلسة جديدة (Dark Navy Card) */}
-            <Link href="/sessions">
-              <div
-                className="rounded-2xl p-4 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 hover:brightness-110 shadow-xs h-36 text-center text-white"
-                style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
-              >
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#C99732]">
-                  <Gavel className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold leading-snug">إضافة جلسة جديدة</span>
-              </div>
-            </Link>
-
-            {/* Action 2: تسجيل قضية جديدة (White Card) */}
-            <Link href="/clients">
-              <div className="rounded-2xl p-4 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 hover:border-[#C99732] hover:shadow-xs border border-[#D6E0EC] bg-white h-36 text-center group">
-                <div className="w-10 h-10 rounded-xl bg-[#FFF4DE] flex items-center justify-center text-[#C99732]">
-                  <Briefcase className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-[#10233F] group-hover:text-[#C99732] leading-snug">
-                  تسجيل قضية جديدة
-                </span>
-              </div>
-            </Link>
-
-            {/* Action 3: رفع مستند (White Card) */}
-            <Link href="/poa">
-              <div className="rounded-2xl p-4 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 hover:border-[#C99732] hover:shadow-xs border border-[#D6E0EC] bg-white h-36 text-center group">
-                <div className="w-10 h-10 rounded-xl bg-[#FFF4DE] flex items-center justify-center text-[#C99732]">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-[#10233F] group-hover:text-[#C99732] leading-snug">
-                  رفع مستند
-                </span>
-              </div>
-            </Link>
-
-            {/* Action 4: جدولة جلسة (White Card) */}
-            <Link href="/sessions">
-              <div className="rounded-2xl p-4 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 hover:border-[#C99732] hover:shadow-xs border border-[#D6E0EC] bg-white h-36 text-center group">
-                <div className="w-10 h-10 rounded-xl bg-[#FFF4DE] flex items-center justify-center text-[#C99732]">
-                  <CalendarPlus className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-[#10233F] group-hover:text-[#C99732] leading-snug">
-                  جدولة جلسة
-                </span>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* Left Column (lg:col-span-5): حالة القضايا (Case Status Donut Chart) */}
-        <div className="lg:col-span-5 rounded-2xl border border-[#D6E0EC] bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-[#C99732]" />
-            <h2 className="text-base font-bold text-[#10233F]">حالة القضايا</h2>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* Left side: Breakdown table */}
-            <div className="space-y-2.5 flex-1 w-full">
-              {caseStatusDonut.data.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between text-xs py-1 px-2 rounded-lg hover:bg-[#F8FAFC] transition-colors"
-                >
-                  <span className="font-mono font-bold text-[#10233F] w-10 text-right">{item.count}</span>
-                  <span className="flex items-center gap-2 font-medium text-[#10233F] flex-1 justify-center">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
-                    <span>{item.name}</span>
-                  </span>
-                  <span className="font-mono font-bold text-[#64748B] w-12 text-left">{item.pct}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Right side: Recharts Donut Chart */}
-            <div className="w-40 h-40 relative flex items-center justify-center shrink-0">
-              <PieChart width={160} height={160}>
-                <Pie
-                  data={caseStatusDonut.data}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={48}
-                  outerRadius={68}
-                  paddingAngle={3}
-                  dataKey="count"
-                >
-                  {caseStatusDonut.data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
-                  ))}
-                </Pie>
-              </PieChart>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                <span className="text-2xl font-black font-mono tracking-tight text-[#10233F]">
-                  {caseStatusDonut.total}
-                </span>
-                <span className="text-[10px] text-[#64748B] font-bold">قضية نشطة</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── 5. WORKLOAD WIDGET (توزيع عبء العمل على المحامين) ─── */}
-      <div className="rounded-2xl border border-[#D6E0EC] bg-white p-5 space-y-4 shadow-xs fade-in-up">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-[#C99732]"
-              style={{ background: 'linear-gradient(135deg, #0B2A4A, #071D34)' }}
-            >
-              <Briefcase className="w-4 h-4 text-[#C99732]" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-[#10233F]">توزيع عبء العمل على المحامين</h2>
-              <p className="text-xs text-[#64748B]">
-                متابعة الجلسات النشطة، الوكالات السارية، والمهام قيد التنفيذ لكل محامٍ
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/users"
-            className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
-          >
-            <span>إدارة المحامين</span>
-            <ArrowLeft className="w-3.5 h-3.5" />
+          <Link href="/sessions">
+            <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white transition-all shadow-sm text-xs font-bold cursor-pointer">
+              <span className="material-symbols-outlined text-lg">add_circle</span>
+              <span>إضافة جلسة فورية</span>
+            </button>
           </Link>
         </div>
+      </div>
 
-        {isLoadingWorkload ? (
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-xl" />
-            ))}
+      {/* ── 2. Top Primary KPI Metrics Grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Card 1: Today Sessions */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-medium text-[#757682]">الجلسات القضائية اليوم</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold text-[#0b1c30]">{todayCount}</span>
+                <span className="text-xs text-[#757682]">جلسات مجدولة</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
+              <span className="material-symbols-outlined">gavel</span>
+            </div>
           </div>
-        ) : workloadData?.members && workloadData.members.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead>
-                <tr className="border-b border-[#D6E0EC] text-[#64748B]">
-                  <th className="pb-2 font-medium">المحامي</th>
-                  <th className="pb-2 font-medium text-center">جلسات نشطة</th>
-                  <th className="pb-2 font-medium text-center">وكالات سارية</th>
-                  <th className="pb-2 font-medium text-center">مهام قيد التنفيذ</th>
-                  <th className="pb-2 font-medium text-center">إجمالي الأعباء</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8F0]/70">
-                {workloadData.members.map((m) => {
-                  const maxWorkload = Math.max(...workloadData.members.map((x) => x.totalWorkload), 1);
-                  const pct = Math.round((m.totalWorkload / maxWorkload) * 100);
+          <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
+            <span className="text-xs text-[#444651]">2 متبقية • 2 مكتملة</span>
+            <span className="text-xs font-semibold text-[#00236f]">+12% أسبوعياً</span>
+          </div>
+        </div>
 
-                  return (
-                    <tr key={m.lawyerId} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="py-3 font-semibold text-[#10233F]">
+        {/* Card 2: Active Cases */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-medium text-[#757682]">القضايا المتداولة والنشطة</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold text-[#0b1c30]">{activeCasesCount}</span>
+                <span className="text-xs text-[#757682]">ملف قضائي سارٍ</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#dce9ff] flex items-center justify-center text-[#00236f]">
+              <span className="material-symbols-outlined">folder_managed</span>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
+            <span className="text-xs text-[#444651]">38 قيد المرافعة • 10 دراسة</span>
+            <span className="text-xs font-semibold text-[#9b4500]">+5 هذا الشهر</span>
+          </div>
+        </div>
+
+        {/* Card 3: Urgent Tasks */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-medium text-[#757682]">المهام والمواعيد الإجرائية</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold text-[#9b4500]">{urgentTasksCount}</span>
+                <span className="text-xs text-[#757682]">إجراءات حرجة</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500]">
+              <span className="material-symbols-outlined">notification_important</span>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
+            <span className="text-xs text-[#444651]">2 استئناف حاسم اليوم</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#fd8a42] text-white">
+              عاجل
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: AI Usage Quota */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-medium text-[#757682]">رصيد معالجة الذكاء الاصطناعي</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold text-[#00236f]">44 / 50</span>
+                <span className="text-xs text-[#757682]">طلب متوفر</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#dae2fd] flex items-center justify-center text-[#131b2e]">
+              <span className="material-symbols-outlined">neurology</span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs text-[#444651] mb-1 font-medium">
+              <span>الاستهلاك: 12% فقط</span>
+              <span>تجديد: 2027/11/04</span>
+            </div>
+            <div className="w-full bg-[#e5eeff] h-1.5 rounded-full overflow-hidden">
+              <div className="bg-[#00236f] h-full rounded-full" style={{ width: '12%' }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Main Workspace (8 Col / 4 Col Split) ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        {/* ── Right Main Column (8 cols): Tables & Operations ── */}
+        <div className="xl:col-span-8 space-y-6">
+          {/* Table 1: Court Sessions Ledger */}
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col">
+            {/* Header with Title and Tabs */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
+                  <span className="material-symbols-outlined text-lg">event_available</span>
+                </div>
+                <h2 className="text-lg font-bold text-[#0b1c30]">جدول الجلسات القادمة والمستعجلة</h2>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex items-center bg-[#eff4ff] p-1 rounded-lg gap-1 text-xs">
+                <button
+                  onClick={() => setActiveSessionTab('today')}
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                    activeSessionTab === 'today'
+                      ? 'bg-white text-[#00236f] shadow-xs'
+                      : 'text-[#444651] hover:text-[#0b1c30]'
+                  }`}
+                >
+                  جلسات اليوم ({todayCount})
+                </button>
+                <button
+                  onClick={() => setActiveSessionTab('week')}
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                    activeSessionTab === 'week'
+                      ? 'bg-white text-[#00236f] shadow-xs'
+                      : 'text-[#444651] hover:text-[#0b1c30]'
+                  }`}
+                >
+                  هذا الأسبوع ({weekCount})
+                </button>
+                <button
+                  onClick={() => setActiveSessionTab('report')}
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                    activeSessionTab === 'report'
+                      ? 'bg-white text-[#00236f] shadow-xs'
+                      : 'text-[#444651] hover:text-[#0b1c30]'
+                  }`}
+                >
+                  تتطلب تقرير ({reportCount})
+                </button>
+              </div>
+            </div>
+
+            {/* Table Container */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="bg-[#eff4ff] text-[#757682] text-xs">
+                    <th className="py-3 px-4 rounded-r-lg font-semibold">رقم القضية</th>
+                    <th className="py-3 px-4 font-semibold">المحكمة والدائرة</th>
+                    <th className="py-3 px-4 font-semibold">أطراف الدعوى</th>
+                    <th className="py-3 px-4 font-semibold">المحامي المكلف</th>
+                    <th className="py-3 px-4 font-semibold">التوقيت والقاعة</th>
+                    <th className="py-3 px-4 rounded-l-lg font-semibold text-center">الإجراء / الحالة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#eff4ff]">
+                  {ledgerSessions.map((row) => (
+                    <tr key={row.id} className="hover:bg-[#eff4ff]/50 transition-colors">
+                      {/* Case Number */}
+                      <td className="py-3.5 px-4 font-semibold text-[#00236f] whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm text-[#757682]">description</span>
+                          {row.caseNumber}
+                        </span>
+                      </td>
+
+                      {/* Court & Circuit */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-[#0b1c30]">{row.court}</span>
+                          <span className="text-[11px] text-[#757682]">{row.circuit}</span>
+                        </div>
+                      </td>
+
+                      {/* Parties */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col max-w-[190px]">
+                          <span className="font-medium text-[#0b1c30] truncate">{row.plaintiff}</span>
+                          <span className="text-[11px] text-[#757682] truncate">ضد: {row.defendant}</span>
+                        </div>
+                      </td>
+
+                      {/* Lawyer */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-[#0B2A4A]/10 text-[#0B2A4A] font-bold text-xs flex items-center justify-center">
-                            {m.lawyerName.charAt(0)}
+                          <div className="w-6 h-6 rounded-full bg-[#dce1ff] text-[#00236f] flex items-center justify-center font-bold text-[10px]">
+                            {row.avatarInitial}
                           </div>
-                          <div>
-                            <div>{m.lawyerName}</div>
-                            <div className="text-[10px] text-[#64748B] font-mono">@{m.username}</div>
-                          </div>
+                          <span className="text-[#0b1c30] font-medium">{row.lawyer}</span>
                         </div>
                       </td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600">
-                          {m.activeSessions}
-                        </span>
-                      </td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600">
-                          {m.openPoa}
-                        </span>
-                      </td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600">
-                          {m.pendingTasks}
-                        </span>
-                      </td>
-                      <td className="py-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-20 bg-muted rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className="bg-[#C99732] h-full rounded-full transition-all duration-500"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="font-mono font-bold text-[#10233F] text-xs">{m.totalWorkload}</span>
+
+                      {/* Time & Room */}
+                      <td className="py-3.5 px-4 whitespace-nowrap text-[#0b1c30]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-[#757682]">schedule</span>
+                          <span>{row.time}</span>
                         </div>
+                      </td>
+
+                      {/* Status / Action */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {row.statusType === 'in_progress' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ffdbca] text-[#9b4500]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] animate-pulse"></span>
+                            {row.statusText}
+                          </span>
+                        ) : row.statusType === 'recorded' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00236f]">
+                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                            {row.statusText}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#e5eeff] text-[#444651]">
+                            {row.statusText}
+                          </span>
+                        )}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-6 text-[#64748B] text-xs">
-            لم يتم تسجيل أي محامين في هذا المكتب بعد.
-          </div>
-        )}
-      </div>
-
-      {/* ─── 6. OFFICE TEAM OVERSIGHT SECTION (Sessions, Tasks & POAs) ─── */}
-      <div className="space-y-4 fade-in-up">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-[#D6E0EC] bg-white shadow-xs">
-          <div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: 'linear-gradient(135deg, #0B2A4A 0%, #071D34 100%)' }}
-              >
-                <Briefcase className="w-4 h-4 text-[#C99732]" />
-              </div>
-              <h2 className="text-base font-bold text-[#10233F]">
-                سجل جلسات ومهام فريق عمل المكتب
-              </h2>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <p className="text-xs text-[#64748B] mt-1 mr-9">
-              متابعة شاملة لجميع الجلسات القضائية والمهام الموزعة على محامي المكتب
-            </p>
-          </div>
 
-          {/* Tab Switcher Pills */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-[#D6E0EC]/60 self-start sm:self-auto flex-wrap">
-            <button
-              onClick={() => setActiveOversightTab('sessions')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-                activeOversightTab === 'sessions'
-                  ? 'bg-white text-[#10233F] shadow-xs border border-[#D6E0EC]'
-                  : 'text-[#64748B] hover:text-[#10233F]'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5 text-primary" />
-              <span>جلسات القضايا ({filteredOfficeSessions.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveOversightTab('tasks')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-                activeOversightTab === 'tasks'
-                  ? 'bg-white text-[#10233F] shadow-xs border border-[#D6E0EC]'
-                  : 'text-[#64748B] hover:text-[#10233F]'
-              }`}
-            >
-              <CheckSquare className="w-3.5 h-3.5 text-[#C99732]" />
-              <span>مهام المحامين ({filteredOfficeTasks.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveOversightTab('poas')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-                activeOversightTab === 'poas'
-                  ? 'bg-white text-[#10233F] shadow-xs border border-[#D6E0EC]'
-                  : 'text-[#64748B] hover:text-[#10233F]'
-              }`}
-            >
-              <FileKey className="w-3.5 h-3.5 text-emerald-500" />
-              <span>وكالات المكتب ({filteredOfficePoas.length})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Filter & Search Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl border border-[#D6E0EC] bg-white">
-          <div className="relative lg:col-span-2">
-            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={
-                activeOversightTab === 'sessions'
-                  ? 'بحث برقم القضية، المحكمة، الموكل...'
-                  : activeOversightTab === 'tasks'
-                  ? 'بحث بعنوان المهمة، التفاصيل...'
-                  : 'بحث باسم العميل، رقم الوكالة...'
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10 h-10 text-xs rounded-xl bg-white border-[#D6E0EC]"
-            />
-          </div>
-
-          <div>
-            <select
-              value={selectedLawyerFilter}
-              onChange={(e) => setSelectedLawyerFilter(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl text-xs font-medium bg-white border border-[#D6E0EC] text-[#10233F] focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-            >
-              <option value="all">جميع محامي المكتب</option>
-              {officeMembers.map((m) => (
-                <option key={m.id} value={m.displayName || m.username}>
-                  المحامي: {m.displayName || m.username}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {activeOversightTab === 'sessions' ? (
-            <div>
-              <select
-                value={sessionStatusFilter}
-                onChange={(e) => setSessionStatusFilter(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl text-xs font-medium bg-white border border-[#D6E0EC] text-[#10233F] focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-              >
-                <option value="all">كافة الحالات</option>
-                <option value="Today">جلسات اليوم</option>
-                <option value="Upcoming">جلسات قادمة</option>
-                <option value="Finished">جلسات منتهية</option>
-              </select>
-            </div>
-          ) : activeOversightTab === 'tasks' ? (
-            <div className="flex items-center justify-end">
-              <Link
-                href="/tasks"
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20"
-              >
-                <CheckSquare className="w-3.5 h-3.5" />
-                <span>فتح صفحة المهام الكاملة</span>
+            {/* Table Footer */}
+            <div className="pt-3 mt-2 border-t border-[#eff4ff] flex items-center justify-between text-xs text-[#757682]">
+              <span>عرض 3 من أصل {weekCount} جلسة مسجلة في هذا الأسبوع</span>
+              <Link href="/sessions">
+                <span className="text-[#00236f] font-bold hover:underline cursor-pointer flex items-center gap-1">
+                  عرض جميع الجلسات والتقارير القضائية ←
+                </span>
               </Link>
             </div>
-          ) : (
-            <div className="flex items-center justify-end">
-              <Link
-                href="/poa"
-                className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
-              >
-                <FileKey className="w-3.5 h-3.5" />
-                <span>فتح صفحة الوكالات الكاملة</span>
+          </div>
+
+          {/* Table 2: Lawyer Workload & Allocation */}
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#e5eeff] flex items-center justify-center text-[#00236f]">
+                  <span className="material-symbols-outlined text-lg">supervised_user_circle</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#0b1c30]">توزيع عبء العمل والمهام على المحامين</h2>
+                  <p className="text-xs text-[#757682]">متابعة إشغال الفريق، القضايا النشطة، وحصص الذكاء الاصطناعي</p>
+                </div>
+              </div>
+
+              <Link href="/users">
+                <button className="px-3 py-1.5 rounded-lg bg-[#eff4ff] hover:bg-[#dce9ff] text-[#00236f] text-xs font-semibold cursor-pointer border border-[#dce9ff]/60 transition-colors">
+                  إعادة توزيع المهام
+                </button>
               </Link>
             </div>
-          )}
+
+            {/* Table Container */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="bg-[#eff4ff] text-[#757682] text-xs">
+                    <th className="py-3 px-4 rounded-r-lg font-semibold">المحامي</th>
+                    <th className="py-3 px-4 font-semibold text-center">القضايا المسندة</th>
+                    <th className="py-3 px-4 font-semibold text-center">الجلسات النشطة</th>
+                    <th className="py-3 px-4 font-semibold text-center">الوكالات السارية</th>
+                    <th className="py-3 px-4 font-semibold">استهلاك الـ AI</th>
+                    <th className="py-3 px-4 rounded-l-lg font-semibold text-center">الحالة الحالية</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#eff4ff]">
+                  {lawyerRows.map((lawyer) => (
+                    <tr key={lawyer.id} className="hover:bg-[#eff4ff]/50 transition-colors">
+                      {/* Name & Specialty */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-[#dce1ff] text-[#00236f] flex items-center justify-center font-bold text-xs shrink-0">
+                            {lawyer.avatarInitial}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-[#0b1c30]">{lawyer.name}</span>
+                            <span className="text-[11px] text-[#757682]">{lawyer.role}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Assigned Cases */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
+                        <div className="flex flex-col items-center">
+                          <span className="font-bold">{lawyer.assignedCases}</span>
+                          <span className="text-[10px] text-[#757682]">قضايا</span>
+                        </div>
+                      </td>
+
+                      {/* Active Sessions */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
+                        <div className="flex flex-col items-center">
+                          <span className="font-bold">{lawyer.activeSessions}</span>
+                          <span className="text-[10px] text-[#757682]">جلسات</span>
+                        </div>
+                      </td>
+
+                      {/* Active POAs */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
+                        <div className="flex flex-col items-center">
+                          <span className="font-bold">{lawyer.activePoa}</span>
+                          <span className="text-[10px] text-[#757682]">وكالة</span>
+                        </div>
+                      </td>
+
+                      {/* AI Usage */}
+                      <td className="py-3.5 px-4 whitespace-nowrap min-w-[130px]">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-[#0b1c30]">{lawyer.aiUsed}/{lawyer.aiTotal}</span>
+                            <span className="text-[#757682]">{lawyer.aiPercent}%</span>
+                          </div>
+                          <div className="w-full bg-[#e5eeff] h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                lawyer.aiPercent > 20 ? 'bg-[#fd8a42]' : 'bg-[#00236f]'
+                              }`}
+                              style={{ width: `${lawyer.aiPercent}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {lawyer.status === 'in_hearing' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ffdbca] text-[#9b4500]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] animate-pulse"></span>
+                            {lawyer.statusLabel}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#e5eeff] text-[#00236f]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00236f]"></span>
+                            {lawyer.statusLabel}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
-        {/* Content View: Sessions, Tasks or POAs */}
-        {activeOversightTab === 'sessions' ? (
-          <div className="space-y-3">
-            {isLoadingSessions ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="rounded-xl border border-[#D6E0EC] bg-white p-4">
-                    <Skeleton className="h-4 w-40 mb-2" />
-                    <Skeleton className="h-3 w-64" />
-                  </div>
+        {/* ── Left Analytical Column (4 cols): Calendar & Metrics Widgets ── */}
+        <div className="xl:col-span-4 space-y-6">
+          {/* Widget 1: Smart Court Calendar Widget */}
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-2 border-b-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#00236f]">calendar_month</span>
+                <h3 className="text-base font-bold text-[#0b1c30]">التقويم القضائي الذكي</h3>
+              </div>
+              <div className="flex items-center gap-1 text-[#0b1c30]">
+                <button onClick={() => setSelectedCalendarDay(Math.max(1, selectedCalendarDay - 1))} className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]">
+                  <span className="material-symbols-outlined text-sm">chevron_right</span>
+                </button>
+                <span className="text-xs font-semibold text-[#00236f]">{calMonthName} {calYear}</span>
+                <button onClick={() => setSelectedCalendarDay(Math.min(31, selectedCalendarDay + 1))} className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]">
+                  <span className="material-symbols-outlined text-sm">chevron_left</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="w-full">
+              <div className="grid grid-cols-7 text-center text-xs text-[#757682] mb-2 font-medium">
+                {WEEKDAY_NAMES.map((w) => (
+                  <span key={w}>{w}</span>
                 ))}
               </div>
-            ) : filteredOfficeSessions.length > 0 ? (
-              <div className="space-y-2.5">
-                {filteredOfficeSessions.slice(0, 10).map((session: Session) => {
-                  const eff = deriveEffectiveStatus(session.status, session.hearingAt);
-                  const lawyer = getLawyerName(session);
 
-                  return (
-                    <div
-                      key={session.id}
-                      className="rounded-xl border border-[#D6E0EC] bg-white p-4 hover:border-primary/40 transition-all flex items-center justify-between gap-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <Calendar className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-[#10233F] font-mono">{session.caseNumber}</span>
-                            <span className="text-[11px] text-[#64748B]">{session.court}</span>
-                          </div>
-                          <div className="text-[11px] text-[#64748B] mt-0.5">
-                            المحامي: <span className="font-semibold text-[#10233F]">{lawyer || 'غير محدد'}</span>
-                            {session.notes && <span> — {session.notes}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[11px] font-mono text-[#64748B]">
-                          {formatArabicDate(session.hearingAt, session.sessionDateHijri)}
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            eff === 'Finished'
-                              ? 'bg-purple-500/15 text-purple-600'
-                              : eff === 'Today'
-                              ? 'bg-amber-500/15 text-amber-600'
-                              : 'bg-emerald-500/15 text-emerald-600'
-                          }`}
-                        >
-                          {eff === 'Finished' ? 'منتهية' : eff === 'Today' ? 'اليوم' : 'قادمة'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                {/* Static days matching mockup visually */}
+                <span className="py-1 text-[#757682]/40">28</span>
+                <span className="py-1 text-[#757682]/40">29</span>
+                <span className="py-1 text-[#757682]/40">30</span>
+                <span className="py-1 text-[#757682]/40">31</span>
+                <span onClick={() => setSelectedCalendarDay(1)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">1</span>
+                <span onClick={() => setSelectedCalendarDay(2)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">2</span>
+                <span className="py-1 text-[#757682]/50">3</span>
+
+                <span onClick={() => setSelectedCalendarDay(4)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">4</span>
+                <span onClick={() => setSelectedCalendarDay(5)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">5</span>
+                <span onClick={() => setSelectedCalendarDay(6)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer relative">
+                  6
+                  <span className="w-1 h-1 rounded-full bg-[#fd8a42] absolute bottom-0.5 left-1/2 -translate-x-1/2"></span>
+                </span>
+                <span onClick={() => setSelectedCalendarDay(7)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer relative">
+                  7
+                  <span className="w-1 h-1 rounded-full bg-[#00236f] absolute bottom-0.5 left-1/2 -translate-x-1/2"></span>
+                </span>
+                <span onClick={() => setSelectedCalendarDay(8)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">8</span>
+                <span onClick={() => setSelectedCalendarDay(9)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">9</span>
+                <span className="py-1 text-[#757682]/50">10</span>
+
+                <span onClick={() => setSelectedCalendarDay(11)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">11</span>
+                <span onClick={() => setSelectedCalendarDay(12)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">12</span>
+                <span onClick={() => setSelectedCalendarDay(13)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">13</span>
+                <span onClick={() => setSelectedCalendarDay(14)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer relative">
+                  14
+                  <span className="w-1 h-1 rounded-full bg-[#fd8a42] absolute bottom-0.5 left-1/2 -translate-x-1/2"></span>
+                </span>
+                <span onClick={() => setSelectedCalendarDay(15)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">15</span>
+                <span onClick={() => setSelectedCalendarDay(16)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">16</span>
+                <span className="py-1 text-[#757682]/50">17</span>
+
+                <span onClick={() => setSelectedCalendarDay(18)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">18</span>
+                <span onClick={() => setSelectedCalendarDay(19)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">19</span>
+                <span onClick={() => setSelectedCalendarDay(20)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">20</span>
+                {/* Day 21 Highlighted */}
+                <span
+                  onClick={() => setSelectedCalendarDay(21)}
+                  className="py-1 rounded-full bg-[#00236f] text-white font-bold cursor-pointer relative shadow-xs"
+                >
+                  21
+                  <span className="w-1 h-1 rounded-full bg-[#fd8a42] absolute bottom-0.5 left-1/2 -translate-x-1/2"></span>
+                </span>
+                <span onClick={() => setSelectedCalendarDay(22)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">22</span>
+                <span onClick={() => setSelectedCalendarDay(23)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">23</span>
+                <span className="py-1 text-[#757682]/50">24</span>
+
+                <span onClick={() => setSelectedCalendarDay(25)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">25</span>
+                <span onClick={() => setSelectedCalendarDay(26)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">26</span>
+                <span onClick={() => setSelectedCalendarDay(27)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">27</span>
+                <span onClick={() => setSelectedCalendarDay(28)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer relative">
+                  28
+                  <span className="w-1 h-1 rounded-full bg-[#00236f] absolute bottom-0.5 left-1/2 -translate-x-1/2"></span>
+                </span>
+                <span onClick={() => setSelectedCalendarDay(29)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">29</span>
+                <span onClick={() => setSelectedCalendarDay(30)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">30</span>
+                <span onClick={() => setSelectedCalendarDay(31)} className="py-1 rounded hover:bg-[#e5eeff] cursor-pointer">31</span>
               </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[#D6E0EC] bg-white/50 p-8 text-center space-y-2">
-                <Calendar className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
-                <p className="text-xs text-[#64748B] font-medium">لا توجد جلسات تطابق خيارات التصفية المحددة.</p>
+            </div>
+
+            {/* Calendar Footer */}
+            <div className="mt-4 pt-3 border-t border-[#eff4ff] flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5 text-[#0b1c30] font-semibold">
+                <span className="w-2 h-2 rounded-full bg-[#00236f]"></span>
+                <span>مواعيد جلسات اليوم: {todayCount} جلسات</span>
               </div>
-            )}
+              <Link href="/sessions">
+                <span className="text-[#00236f] font-bold hover:underline cursor-pointer">
+                  عرض المخطط
+                </span>
+              </Link>
+            </div>
           </div>
-        ) : activeOversightTab === 'tasks' ? (
-          <div className="space-y-3">
-            {filteredOfficeTasks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filteredOfficeTasks.slice(0, 10).map((task) => (
-                  <div
-                    key={task.id}
-                    className="rounded-xl border border-[#D6E0EC] bg-white p-4 transition-all duration-200 hover:border-primary/40 hover:shadow-xs flex flex-col justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="font-bold text-xs text-[#10233F] line-clamp-1">{task.title}</span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                            task.status === 'مكتملة'
-                              ? 'bg-emerald-500/15 text-emerald-600'
-                              : task.status === 'قيد التنفيذ'
-                              ? 'bg-blue-500/15 text-blue-600'
-                              : 'bg-amber-500/15 text-amber-600'
-                          }`}
-                        >
-                          {task.status || 'جديدة'}
-                        </span>
-                      </div>
-                      {task.notes && (
-                        <p className="text-[11px] text-[#64748B] line-clamp-1">{task.notes}</p>
-                      )}
-                    </div>
 
-                    <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[#D6E0EC]/60">
-                      <div className="flex items-center gap-1.5 text-[#64748B]">
-                        <User className="w-3.5 h-3.5 text-primary" />
-                        <span className="font-semibold text-[#10233F]">
-                          المحامي المعين: {getLawyerName(task) || task.assignee || 'غير محدد'}
-                        </span>
-                      </div>
-                      {task.dueDate && (
-                        <span className="text-[10px] text-[#64748B] font-mono">
-                          الاستحقاق: {task.dueDate}
-                        </span>
-                      )}
-                    </div>
+          {/* Widget 2: Case Status Distribution (Donut Breakdown) */}
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-2">
+              <h3 className="text-base font-bold text-[#0b1c30]">توزيع حالات القضايا</h3>
+              <span className="text-xs text-[#757682]">إجمالي {activeCasesCount} قضية</span>
+            </div>
+
+            {/* Donut Chart & Legends */}
+            <div className="flex items-center justify-between py-2">
+              {/* Inline Mini Donut SVG */}
+              <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  {/* Background Circle */}
+                  <circle cx="50" cy="50" r="38" fill="transparent" stroke="#eff4ff" strokeWidth="12" />
+                  {/* 61.9% Active Primary */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#00236f"
+                    strokeWidth="12"
+                    strokeDasharray="148 238"
+                    strokeDashoffset="0"
+                  />
+                  {/* 19% Postponed Secondary */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#fd8a42"
+                    strokeWidth="12"
+                    strokeDasharray="45 238"
+                    strokeDashoffset="-148"
+                  />
+                  {/* 11.3% Judged */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#10b981"
+                    strokeWidth="12"
+                    strokeDasharray="27 238"
+                    strokeDashoffset="-193"
+                  />
+                  {/* 7.8% Closed */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#94a3b8"
+                    strokeWidth="12"
+                    strokeDasharray="18 238"
+                    strokeDashoffset="-220"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-lg font-bold text-[#0b1c30] leading-tight">{activeCasesCount}</span>
+                  <span className="text-[10px] text-[#757682]">قضية نشطة</span>
+                </div>
+              </div>
+
+              {/* Legends */}
+              <div className="flex flex-col gap-2 text-xs">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#00236f]"></span>
+                    <span className="text-[#444651]">قيد النظر</span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[#D6E0EC] bg-white/50 p-8 text-center space-y-2">
-                <CheckSquare className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
-                <p className="text-xs text-[#64748B] font-medium">لا توجد مهام تطابق خيارات التصفية المحددة.</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {isLoadingPoas ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[1, 2, 3, 4].map((n) => (
-                  <div key={n} className="rounded-xl border border-[#D6E0EC] bg-white p-4 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
+                  <span className="font-bold text-[#0b1c30]">61.9%</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#fd8a42]"></span>
+                    <span className="text-[#444651]">مؤجلة لحكم</span>
                   </div>
-                ))}
+                  <span className="font-bold text-[#0b1c30]">19.0%</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
+                    <span className="text-[#444651]">محكوم بها</span>
+                  </div>
+                  <span className="font-bold text-[#0b1c30]">11.3%</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]"></span>
+                    <span className="text-[#444651]">مغلقة نهائياً</span>
+                  </div>
+                  <span className="font-bold text-[#0b1c30]">7.8%</span>
+                </div>
               </div>
-            ) : filteredOfficePoas.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredOfficePoas.slice(0, 9).map((poa: any) => {
-                  const days = poa.daysRemaining ?? 0;
-                  const isExpired = days <= 0;
-                  const isExpiringSoon = days > 0 && days <= 7;
-                  const lawyer = getLawyerName(poa) || poa.assignedLawyer || poa.assigned_lawyer;
-
-                  return (
-                    <div
-                      key={poa.id}
-                      className="rounded-xl border border-[#D6E0EC] bg-white p-4 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-xs flex flex-col justify-between gap-3 relative overflow-hidden"
-                    >
-                      <div
-                        className={`absolute top-0 right-0 left-0 h-1 ${
-                          isExpired
-                            ? 'bg-rose-500'
-                            : isExpiringSoon
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-500'
-                        }`}
-                      />
-                      <div>
-                        <div className="flex items-start justify-between gap-2 mb-1.5 pt-1">
-                          <span className="font-bold text-xs text-[#10233F] line-clamp-1">{poa.clientName}</span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                              isExpired
-                                ? 'bg-rose-500/15 text-rose-600'
-                                : isExpiringSoon
-                                ? 'bg-[#C99732]/20 text-[#C99732]'
-                                : 'bg-emerald-500/15 text-emerald-600'
-                            }`}
-                          >
-                            {isExpired ? 'منتهية' : `${days} يوم متبقٍ`}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-mono">
-                          <FileKey className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                          <span>رقم الوكالة: {poa.poaNumber}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[#D6E0EC]/60">
-                        <div className="flex items-center gap-1.5 text-[#64748B]">
-                          <User className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="font-semibold text-[#10233F]">
-                            المحامي المعين: {lawyer || 'غير محدد'}
-                          </span>
-                        </div>
-                        <Link
-                          href="/poa"
-                          className="text-[10px] text-primary hover:underline font-semibold"
-                        >
-                          تفاصيل الوكالة
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[#D6E0EC] bg-white/50 p-8 text-center space-y-2">
-                <FileKey className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
-                <p className="text-xs text-[#64748B] font-medium">لا توجد وكالات تطابق خيارات التصفية المحددة.</p>
-              </div>
-            )}
+            </div>
           </div>
-        )}
+
+          {/* Widget 3: Integration & Sync Status Widget */}
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b-0">
+              <span className="material-symbols-outlined text-[#00236f]">rule</span>
+              <h3 className="text-base font-bold text-[#0b1c30]">مزامنة البيانات والخدمات</h3>
+            </div>
+
+            {/* Google Sheets */}
+            <div className="p-3 rounded-lg bg-[#eff4ff] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
+                  <span className="material-symbols-outlined text-base">table_chart</span>
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-xs font-bold text-[#0b1c30]">ربط Google Sheets</span>
+                  <span className="text-[10px] text-[#757682]">آخر مزامنة قبل 5 دقائق</span>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00236f]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00236f]"></span>
+                متصل
+              </span>
+            </div>
+
+            {/* WhatsApp Notifications */}
+            <div className="p-3 rounded-lg bg-[#eff4ff] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500]">
+                  <span className="material-symbols-outlined text-base">chat</span>
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-xs font-bold text-[#0b1c30]">إشعارات الواتساب للموكلين</span>
+                  <span className="text-[10px] text-[#757682]">تسليم 98% بنجاح</span>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#9b4500]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42]"></span>
+                فعال
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* ─── 7. ADMIN QUICK ACTION SHORTCUTS (Tested Links) ─── */}
-      <div className="space-y-3 fade-in-up">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-[#10233F]">روابط الإدارة والخدمات</h2>
-          <span className="sr-only">لوحة الإدارة والمكتب</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <QuickActionCard
-            title="إدارة أعضاء المكتب"
-            description="إضافة محامين جدد، إرسال روابط التفعيل وإدارة الصلاحيات"
-            href="/users"
-            icon={Users}
-            iconBg="bg-indigo-500/15"
-            iconColor="text-indigo-600"
-            dataTestId="link-admin-users"
-          />
+      {/* ── 4. Quick Shortcuts & System Services Ribbon ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+        {/* Service 1: Team Members */}
+        <Link href="/users">
+          <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
+            <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f] group-hover:scale-105 transition-transform shrink-0">
+              <span className="material-symbols-outlined">group_add</span>
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">
+                إدارة أعضاء المكتب
+              </span>
+              <span className="text-[11px] text-[#757682]">
+                إضافة محامين وتعيين الصلاحيات
+              </span>
+            </div>
+          </div>
+        </Link>
 
-          <QuickActionCard
-            title="الاشتراك وحصص الاستهلاك"
-            description="متابعة باقة المكتب وتخصيص حصص الذكاء الاصطناعي لكل محامٍ"
-            href="/subscription"
-            icon={CreditCard}
-            iconBg="bg-amber-500/15"
-            iconColor="text-amber-600"
-            dataTestId="link-admin-subscription"
-          />
+        {/* Service 2: Case Integration Settings */}
+        <Link href="/settings">
+          <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
+            <div className="w-10 h-10 rounded-lg bg-[#dce9ff] flex items-center justify-center text-[#00236f] group-hover:scale-105 transition-transform shrink-0">
+              <span className="material-symbols-outlined">tune</span>
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">
+                إعدادات ربط القضايا
+              </span>
+              <span className="text-[11px] text-[#757682]">
+                إدارة الجداول والتصدير الفوري
+              </span>
+            </div>
+          </div>
+        </Link>
 
-          <QuickActionCard
-            title="إعدادات وربط Google Sheets"
-            description="ربط جدول المكتب السحابي، فحص الاتصال وتصدير البيانات"
-            href="/settings"
-            icon={Settings}
-            iconBg="bg-emerald-500/15"
-            iconColor="text-emerald-600"
-            dataTestId="link-admin-settings"
-          />
+        {/* Service 3: Subscription & Quotas */}
+        <Link href="/subscription">
+          <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
+            <div className="w-10 h-10 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500] group-hover:scale-105 transition-transform shrink-0">
+              <span className="material-symbols-outlined">credit_card</span>
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">
+                الاشتراك والحصص
+              </span>
+              <span className="text-[11px] text-[#757682]">
+                متابعة حصص الـ AI وتجديد الباقة
+              </span>
+            </div>
+          </div>
+        </Link>
 
-          <QuickActionCard
-            title="تحليل رسالة جديدة بالـ AI"
-            description="استخراج بيانات الجلسة من الرسائل النصية تلقائياً"
-            href="/chat"
-            icon={Sparkles}
-            iconBg="bg-primary/15"
-            iconColor="text-primary"
-            featured
-            dataTestId="link-admin-chat"
-          />
-        </div>
+        {/* Service 4: Legal AI Analysis */}
+        <Link href="/chat">
+          <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
+            <div className="w-10 h-10 rounded-lg bg-[#dae2fd] flex items-center justify-center text-[#131b2e] group-hover:scale-105 transition-transform shrink-0">
+              <span className="material-symbols-outlined">auto_awesome</span>
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">
+                التحليل القانوني الذكي
+              </span>
+              <span className="text-[11px] text-[#757682]">
+                استخراج البيانات من الرسائل النصية
+              </span>
+            </div>
+          </div>
+        </Link>
       </div>
     </div>
   );

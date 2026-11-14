@@ -2,14 +2,10 @@ import React from 'react';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 import { Redirect } from 'wouter';
 import DashboardAdminPage from './dashboard-admin';
-import DashboardStaffPage from './dashboard-staff';
 
 /**
- * Dynamic Dashboard Dispatcher.
- * Automatically resolves "/" to:
- * - `DashboardAdminPage` for office admins.
- * - `DashboardStaffPage` for office staff lawyers.
- * - Redirects `super_admin` to `/super-admin`.
+ * Unified Modern LegalTech Dashboard.
+ * Resolves "/" to `DashboardAdminPage` with full light mode and real backend data.
  */
 export default function DashboardPage() {
   const { data: user, isLoading } = useGetCurrentUser();
@@ -28,9 +24,5 @@ export default function DashboardPage() {
     return <Redirect to="/super-admin" />;
   }
 
-  if (role === 'admin') {
-    return <DashboardAdminPage />;
-  }
-
-  return <DashboardStaffPage />;
+  return <DashboardAdminPage />;
 }
