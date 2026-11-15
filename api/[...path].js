@@ -832760,7 +832760,8 @@ async function updateOfficeMember(adminId, memberId, input) {
     display_name: input.display_name,
     email: input.email,
     phone: input.phone,
-    status: input.status
+    status: input.status,
+    role_title: input.role_title !== void 0 ? input.role_title : input.roleTitle
   });
   return {
     id: updated.id,
@@ -832771,6 +832772,7 @@ async function updateOfficeMember(adminId, memberId, input) {
     display_name: updated.display_name,
     status: updated.status,
     phone: updated.phone,
+    role_title: updated.role_title || null,
     created_at: updated.created_at
   };
 }
@@ -833073,6 +833075,16 @@ async function createSupabaseUser(input) {
   }
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
   let { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
+  if (error && error.message?.includes("role_title")) {
+    delete newUserData.role_title;
+    const retry = await client.from(tableName).insert([newUserData]).select(selectCols).single();
+    if (!retry.error && retry.data) {
+      data = retry.data;
+      error = null;
+    } else if (retry.error) {
+      error = retry.error;
+    }
+  }
   if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
     logger.warn({ err: error.message }, "[createSupabaseUser] DB app_users_status_check rejected 'pending_activation'; inserting with 'suspended' in DB and tracking pending_activation in app layer until migration 004 is applied.");
     newUserData.status = "suspended";
@@ -833248,7 +833260,17 @@ async function updateSupabaseUser(id, input) {
   }
   invalidateUserGoogleCache(id);
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
-  const { data, error } = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
+  let { data, error } = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
+  if (error && error.message?.includes("role_title")) {
+    delete updates.role_title;
+    const retry = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
+    if (!retry.error && retry.data) {
+      data = retry.data;
+      error = null;
+    } else if (retry.error) {
+      error = retry.error;
+    }
+  }
   if (error) {
     logger.error({ error, id }, "Failed to update user in Supabase");
     throw new Error(`\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
@@ -855588,7 +855610,9 @@ var UpdateOfficeMemberSchema = external_exports.object({
   displayName: external_exports.string().optional(),
   email: external_exports.string().trim().email("\u0635\u064A\u063A\u0629 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629.").optional(),
   status: external_exports.enum(["active", "suspended", "pending_activation"]).optional(),
-  phone: external_exports.string().nullable().optional()
+  phone: external_exports.string().nullable().optional(),
+  role_title: external_exports.string().nullable().optional(),
+  roleTitle: external_exports.string().nullable().optional()
 });
 var ToggleMemberStatusSchema = external_exports.object({
   status: external_exports.enum(["active", "suspended"]).optional()
@@ -855709,7 +855733,7 @@ router12.patch("/users/:id", async (req, res) => {
       res.status(400).json({ error: errorMsg });
       return;
     }
-    const { password, display_name, email, status, phone } = req.body;
+    const { password, display_name, displayName, email, status, phone, role_title, roleTitle } = req.body;
     if (password !== void 0 && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
       if (!passwordValidation.isValid) {
@@ -855719,10 +855743,11 @@ router12.patch("/users/:id", async (req, res) => {
     }
     const updated = await updateOfficeMember(adminId, id, {
       password,
-      display_name,
+      display_name: display_name || displayName,
       email,
       status,
-      phone
+      phone,
+      role_title: role_title !== void 0 ? role_title : roleTitle
     });
     res.json(updated);
   } catch (err) {

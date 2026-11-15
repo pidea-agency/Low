@@ -32,6 +32,8 @@ const UpdateOfficeMemberSchema = z.object({
   email: z.string().trim().email("صيغة البريد الإلكتروني غير صحيحة.").optional(),
   status: z.enum(["active", "suspended", "pending_activation"]).optional(),
   phone: z.string().nullable().optional(),
+  role_title: z.string().nullable().optional(),
+  roleTitle: z.string().nullable().optional(),
 });
 
 const ToggleMemberStatusSchema = z.object({
@@ -193,7 +195,7 @@ router.patch("/users/:id", async (req, res) => {
       res.status(400).json({ error: errorMsg });
       return;
     }
-    const { password, display_name, email, status, phone } = req.body;
+    const { password, display_name, displayName, email, status, phone, role_title, roleTitle } = req.body;
 
     if (password !== undefined && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
@@ -205,10 +207,11 @@ router.patch("/users/:id", async (req, res) => {
 
     const updated = await updateOfficeMember(adminId, id, {
       password,
-      display_name,
+      display_name: display_name || displayName,
       email,
       status,
       phone,
+      role_title: role_title !== undefined ? role_title : roleTitle,
     });
 
     res.json(updated);

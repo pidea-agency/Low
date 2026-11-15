@@ -3095,6 +3095,7 @@ export async function updateOfficeMember(
     email: input.email,
     phone: input.phone,
     status: input.status,
+    role_title: input.role_title !== undefined ? input.role_title : input.roleTitle,
   });
 
   return {
@@ -3106,6 +3107,7 @@ export async function updateOfficeMember(
     display_name: updated.display_name,
     status: updated.status,
     phone: updated.phone,
+    role_title: (updated as any).role_title || null,
     created_at: updated.created_at,
   };
 }
@@ -3595,6 +3597,21 @@ export async function createSupabaseUser(input: {
     .select(selectCols)
     .single();
 
+  if (error && error.message?.includes("role_title")) {
+    delete newUserData.role_title;
+    const retry = await client
+      .from(tableName)
+      .insert([newUserData])
+      .select(selectCols)
+      .single();
+    if (!retry.error && retry.data) {
+      data = retry.data;
+      error = null;
+    } else if (retry.error) {
+      error = retry.error;
+    }
+  }
+
   // If the remote DB still has the old check constraint (active, suspended) before migration 004 is run:
   if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
     logger.warn({ err: error.message }, "[createSupabaseUser] DB app_users_status_check rejected 'pending_activation'; inserting with 'suspended' in DB and tracking pending_activation in app layer until migration 004 is applied.");
@@ -3834,12 +3851,28 @@ export async function updateSupabaseUser(
 
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
 
-  const { data, error } = await client
+  let { data, error } = await client
     .from(tableName)
     .update(updates)
     .eq("id", id)
     .select(selectCols)
     .single();
+
+  if (error && error.message?.includes("role_title")) {
+    delete updates.role_title;
+    const retry = await client
+      .from(tableName)
+      .update(updates)
+      .eq("id", id)
+      .select(selectCols)
+      .single();
+    if (!retry.error && retry.data) {
+      data = retry.data;
+      error = null;
+    } else if (retry.error) {
+      error = retry.error;
+    }
+  }
 
   if (error) {
     logger.error({ error, id }, "Failed to update user in Supabase");

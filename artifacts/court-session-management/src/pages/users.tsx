@@ -99,17 +99,26 @@ export default function OfficeMembersPage() {
 
   // Dialog states
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OfficeMemberItem | null>(null);
   const [toggleStatusTarget, setToggleStatusTarget] = useState<OfficeMemberItem | null>(null);
 
-  // Form State
+  // Form State (Add)
   const [formDisplayName, setFormDisplayName] = useState('');
   const [formUsername, setFormUsername] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formRole, setFormRole] = useState<'lawyer' | 'consultant' | 'assistant'>('lawyer');
   const [formRoleTitle, setFormRoleTitle] = useState('محامٍ ممارس • قضايا المحاكم');
+
+  // Form State (Edit)
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editRoleTitle, setEditRoleTitle] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch real users from backend
@@ -289,6 +298,55 @@ export default function OfficeMembersPage() {
       toast({
         title: 'خطأ في الاتصال بالخادم',
         description: 'تعذر إنشاء حساب العضو. يرجى التحقق من الشبكة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    setIsSubmitting(true);
+    try {
+      const payload: any = {
+        display_name: editDisplayName.trim() || undefined,
+        email: editEmail.trim() || undefined,
+        phone: editPhone.trim() || null,
+        role_title: editRoleTitle.trim() || null,
+      };
+      if (editPassword.trim()) {
+        payload.password = editPassword.trim();
+      }
+
+      const res = await fetch(`/api/users/${editingMember.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast({
+          title: 'تم تحديث بيانات العضو بنجاح',
+          description: `تم حفظ التعديلات على حساب (${editDisplayName || editingMember.username}).`,
+        });
+        setIsEditOpen(false);
+        setEditingMember(null);
+        fetchMembers();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل تعديل بيانات العضو',
+          description: err.error || 'تعذر تحديث البيانات.',
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: 'خطأ في الاتصال بالخادم',
+        description: 'تعذر تعديل البيانات. يرجى التحقق من الشبكة.',
         variant: 'destructive',
       });
     } finally {
@@ -685,9 +743,12 @@ export default function OfficeMembersPage() {
                             <button
                               onClick={() => {
                                 setEditingMember(member);
-                                setFormDisplayName(member.display_name || '');
-                                setFormPhone(member.phone || '');
-                                setFormEmail(member.email || '');
+                                setEditDisplayName(member.display_name || '');
+                                setEditPhone(member.phone || '');
+                                setEditEmail(member.email || '');
+                                setEditRoleTitle(member.roleTitle || (member as any).role_title || '');
+                                setEditPassword('');
+                                setIsEditOpen(true);
                               }}
                               className="text-[#718099] hover:text-[#00236f] hover:bg-[#edf3ff] p-1.5 rounded cursor-pointer"
                               title="تعديل"
@@ -892,6 +953,109 @@ export default function OfficeMembersPage() {
                 {isSubmitting ? 'جارٍ الإرسال...' : 'إرسال دعوة الانضمام'}
               </Button>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="text-xs">
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Edit Member ── */}
+      <Dialog
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open);
+          if (!open) setEditingMember(null);
+        }}
+      >
+        <DialogContent className="max-w-md text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#141e30]">
+              تعديل بيانات العضو: {editingMember?.display_name || editingMember?.username}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              اسم المستخدم: {editingMember?.username} (معرف الحساب غير قابل للتغيير)
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdateMember} className="space-y-3 py-2 text-xs">
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">الاسم الكامل *</Label>
+              <Input
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder="أحمد محمد العتيبي"
+                className="h-8 text-xs"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">رقم الجوال</Label>
+                <Input
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="05XXXXXXXX"
+                  className="h-8 text-xs font-mono"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">المسمى / التخصص</Label>
+                <Input
+                  value={editRoleTitle}
+                  onChange={(e) => setEditRoleTitle(e.target.value)}
+                  placeholder="محامٍ ممارس • قضايا الشركات"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">البريد الإلكتروني المهني *</Label>
+              <Input
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="ahmed.alotaibi@court.gov.sa"
+                className="h-8 text-xs font-mono"
+                type="email"
+                required
+                dir="ltr"
+              />
+            </div>
+
+            <div className="space-y-1 pt-1 border-t border-[#e8edf7]">
+              <Label className="font-bold text-[#65738c]">
+                تعيين كلمة مرور جديدة (اتركه فارغاً للإبقاء على الحالية)
+              </Label>
+              <Input
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                placeholder="اتركه فارغاً ما لم ترغب في التغيير"
+                type="password"
+                className="h-8 text-xs font-mono"
+                dir="ltr"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 sm:justify-start pt-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold"
+              >
+                {isSubmitting ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditOpen(false);
+                  setEditingMember(null);
+                }}
+                className="text-xs"
+              >
                 إلغاء
               </Button>
             </DialogFooter>
