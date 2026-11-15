@@ -168,6 +168,53 @@ export function invalidateUserGoogleCache(userId?: string): void {
 }
 
 // ============================================================================
+// Test-only Activation Tokens Fallback
+// ============================================================================
+interface FallbackActivationRecord {
+  userId: string;
+  tokenHash: string;
+  expiresAt: string;
+}
+
+// Keyed by tokenHash AND by userId (TEST ENVIRONMENT ONLY)
+const fallbackActivationTokens = new Map<string, FallbackActivationRecord>();
+
+export function hasTestFallbackActivationToken(userId?: string | null, tokenHash?: string | null): boolean {
+  if (process.env.NODE_ENV !== "test") {
+    return false;
+  }
+  return Boolean(
+    (userId && fallbackActivationTokens.has(`user:${userId}`)) ||
+    (tokenHash && fallbackActivationTokens.has(tokenHash))
+  );
+}
+
+export function saveFallbackActivationToken(userId: string, tokenHash: string, expiresAt: Date): void {
+  if (process.env.NODE_ENV !== "test") return;
+  const record: FallbackActivationRecord = {
+    userId,
+    tokenHash,
+    expiresAt: expiresAt.toISOString(),
+  };
+  fallbackActivationTokens.set(tokenHash, record);
+  fallbackActivationTokens.set(`user:${userId}`, record);
+}
+
+export function getFallbackActivationTokenByHash(tokenHash: string): FallbackActivationRecord | undefined {
+  if (process.env.NODE_ENV !== "test") return undefined;
+  return fallbackActivationTokens.get(tokenHash);
+}
+
+export function clearFallbackActivationToken(userId: string): void {
+  if (process.env.NODE_ENV !== "test") return;
+  const userRec = fallbackActivationTokens.get(`user:${userId}`);
+  if (userRec) {
+    fallbackActivationTokens.delete(userRec.tokenHash);
+    fallbackActivationTokens.delete(`user:${userId}`);
+  }
+}
+
+// ============================================================================
 // Subscription Plans Default Definitions
 // ============================================================================
 
@@ -530,7 +577,7 @@ export async function verifySupabaseUser(
     const isPending =
       record.status === "pending_activation" ||
       record.password_hash === "!LOCKED:pending_activation!" ||
-      (process.env.NODE_ENV === "test" && fallbackActivationTokens.has(`user:${record.id}`));
+      hasTestFallbackActivationToken(record.id);
     if (isPending) {
       throw new UserPendingActivationError();
     }
@@ -637,10 +684,7 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
     const u: any = data[0];
     const isPending =
       u.status === "pending_activation" ||
-      (process.env.NODE_ENV === "test" && (
-        fallbackActivationTokens.has(`user:${u.id}`) ||
-        Boolean(u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash))
-      ));
+      hasTestFallbackActivationToken(u.id, u.activation_token_hash);
     const result: AppUser = {
       id: u.id,
       username: u.username,
@@ -1086,39 +1130,6 @@ export async function checkHasPlatformSettingsTable(client: any): Promise<boolea
     hasPlatformSettingsTableCache = false;
     lastPlatformSettingsTableCheck = now;
     return false;
-  }
-}
-
-export interface FallbackActivationRecord {
-  userId: string;
-  tokenHash: string;
-  expiresAt: string;
-}
-
-const fallbackActivationTokens = new Map<string, FallbackActivationRecord>(); // keyed by tokenHash AND by userId (TEST ENVIRONMENT ONLY)
-
-export function saveFallbackActivationToken(userId: string, tokenHash: string, expiresAt: Date): void {
-  if (process.env.NODE_ENV !== "test") return;
-  const record: FallbackActivationRecord = {
-    userId,
-    tokenHash,
-    expiresAt: expiresAt.toISOString(),
-  };
-  fallbackActivationTokens.set(tokenHash, record);
-  fallbackActivationTokens.set(`user:${userId}`, record);
-}
-
-export function getFallbackActivationTokenByHash(tokenHash: string): FallbackActivationRecord | undefined {
-  if (process.env.NODE_ENV !== "test") return undefined;
-  return fallbackActivationTokens.get(tokenHash);
-}
-
-export function clearFallbackActivationToken(userId: string): void {
-  if (process.env.NODE_ENV !== "test") return;
-  const userRec = fallbackActivationTokens.get(`user:${userId}`);
-  if (userRec) {
-    fallbackActivationTokens.delete(userRec.tokenHash);
-    fallbackActivationTokens.delete(`user:${userId}`);
   }
 }
 
@@ -2645,10 +2656,7 @@ export async function listOfficeMembers(adminId: string): Promise<AppUser[]> {
     .map((u) => {
       const isPending =
         u.status === "pending_activation" ||
-        (process.env.NODE_ENV === "test" && (
-          fallbackActivationTokens.has(`user:${u.id}`) ||
-          Boolean(u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash))
-        ));
+        hasTestFallbackActivationToken(u.id, (u as any).activation_token_hash);
       return {
         id: u.id,
         username: u.username,
@@ -3600,10 +3608,7 @@ export async function createSupabaseUser(input: {
   const isPending =
     input.status === "pending_activation" ||
     newUserData.status === "pending_activation" ||
-    (process.env.NODE_ENV === "test" && (
-      Boolean(input.activation_token_hash && fallbackActivationTokens.has(input.activation_token_hash)) ||
-      fallbackActivationTokens.has(`user:${row.id}`)
-    ));
+    hasTestFallbackActivationToken(row.id, input.activation_token_hash);
 
   return {
     id: row.id,

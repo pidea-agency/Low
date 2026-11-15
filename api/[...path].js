@@ -830493,6 +830493,7 @@ __export(supabase_service_exports, {
   getSuperAdminReportsOverview: () => getSuperAdminReportsOverview,
   getUserGoogleCredentials: () => getUserGoogleCredentials,
   getUserSessionVersion: () => getUserSessionVersion,
+  hasTestFallbackActivationToken: () => hasTestFallbackActivationToken,
   incrementUserAiUsage: () => incrementUserAiUsage,
   invalidateUserGoogleCache: () => invalidateUserGoogleCache,
   linkMemberToAdmin: () => linkMemberToAdmin,
@@ -830554,6 +830555,36 @@ function invalidateUserGoogleCache(userId) {
     userGoogleCredsCache.delete(userId);
   } else {
     userGoogleCredsCache.clear();
+  }
+}
+function hasTestFallbackActivationToken(userId, tokenHash) {
+  if (true) {
+    return false;
+  }
+  return Boolean(
+    userId && fallbackActivationTokens.has(`user:${userId}`) || tokenHash && fallbackActivationTokens.has(tokenHash)
+  );
+}
+function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
+  if (true) return;
+  const record = {
+    userId,
+    tokenHash,
+    expiresAt: expiresAt.toISOString()
+  };
+  fallbackActivationTokens.set(tokenHash, record);
+  fallbackActivationTokens.set(`user:${userId}`, record);
+}
+function getFallbackActivationTokenByHash(tokenHash) {
+  if (true) return void 0;
+  return fallbackActivationTokens.get(tokenHash);
+}
+function clearFallbackActivationToken(userId) {
+  if (true) return;
+  const userRec = fallbackActivationTokens.get(`user:${userId}`);
+  if (userRec) {
+    fallbackActivationTokens.delete(userRec.tokenHash);
+    fallbackActivationTokens.delete(`user:${userId}`);
   }
 }
 function resetInMemoryPayments() {
@@ -830741,7 +830772,7 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
       return null;
     }
     const record = data[0];
-    const isPending = record.status === "pending_activation" || record.password_hash === "!LOCKED:pending_activation!" || false;
+    const isPending = record.status === "pending_activation" || record.password_hash === "!LOCKED:pending_activation!" || hasTestFallbackActivationToken(record.id);
     if (isPending) {
       throw new UserPendingActivationError();
     }
@@ -830824,7 +830855,7 @@ async function findUserByIdOrUsername(identifier) {
       return null;
     }
     const u = data[0];
-    const isPending = u.status === "pending_activation" || false;
+    const isPending = u.status === "pending_activation" || hasTestFallbackActivationToken(u.id, u.activation_token_hash);
     const result = {
       id: u.id,
       username: u.username,
@@ -831178,28 +831209,6 @@ async function checkHasPlatformSettingsTable(client) {
     hasPlatformSettingsTableCache = false;
     lastPlatformSettingsTableCheck = now;
     return false;
-  }
-}
-function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
-  if (true) return;
-  const record = {
-    userId,
-    tokenHash,
-    expiresAt: expiresAt.toISOString()
-  };
-  fallbackActivationTokens.set(tokenHash, record);
-  fallbackActivationTokens.set(`user:${userId}`, record);
-}
-function getFallbackActivationTokenByHash(tokenHash) {
-  if (true) return void 0;
-  return fallbackActivationTokens.get(tokenHash);
-}
-function clearFallbackActivationToken(userId) {
-  if (true) return;
-  const userRec = fallbackActivationTokens.get(`user:${userId}`);
-  if (userRec) {
-    fallbackActivationTokens.delete(userRec.tokenHash);
-    fallbackActivationTokens.delete(`user:${userId}`);
   }
 }
 async function listSupabaseUsers() {
@@ -832282,7 +832291,7 @@ async function getSuperAdminReportsOverview() {
 async function listOfficeMembers(adminId) {
   const allUsers = await listSupabaseUsers();
   return allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId).map((u) => {
-    const isPending = u.status === "pending_activation" || false;
+    const isPending = u.status === "pending_activation" || hasTestFallbackActivationToken(u.id, u.activation_token_hash);
     return {
       id: u.id,
       username: u.username,
@@ -832912,7 +832921,7 @@ async function createSupabaseUser(input) {
     throw new Error(`\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
   }
   const row = data;
-  const isPending = input.status === "pending_activation" || newUserData.status === "pending_activation" || false;
+  const isPending = input.status === "pending_activation" || newUserData.status === "pending_activation" || hasTestFallbackActivationToken(row.id, input.activation_token_hash);
   return {
     id: row.id,
     username: row.username,
@@ -833132,7 +833141,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_crypto3, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError2, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, fallbackActivationTokens, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_crypto3, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError2, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, fallbackActivationTokens, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -833175,6 +833184,7 @@ var init_supabase_service = __esm({
     userAuthCache = /* @__PURE__ */ new Map();
     userGoogleCredsCache = /* @__PURE__ */ new Map();
     CACHE_TTL_MS = 60 * 1e3;
+    fallbackActivationTokens = /* @__PURE__ */ new Map();
     DEFAULT_SUBSCRIPTION_PLANS = [
       {
         id: "plan-basic",
@@ -833247,7 +833257,6 @@ var init_supabase_service = __esm({
     lastAuditLogTableCheck = 0;
     hasPlatformSettingsTableCache = null;
     lastPlatformSettingsTableCheck = 0;
-    fallbackActivationTokens = /* @__PURE__ */ new Map();
     OfficeMemberNotFoundError = class extends Error {
       statusCode = 404;
       constructor(message = "\u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.") {
@@ -857801,92 +857810,72 @@ function sanitizeFileName(name) {
 async function uploadFile(officeId, relatedRecordType, relatedRecordId, fileName, fileBuffer, mimeType) {
   const safeName = sanitizeFileName(fileName);
   const filePath = `${officeId}/${relatedRecordType}/${relatedRecordId}/${Date.now()}_${safeName}`;
+  if (isInMemoryFallbackAllowed()) {
+    memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
+    return { filePath };
+  }
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client.storage.from(ATTACHMENTS_BUCKET).upload(filePath, fileBuffer, {
-        contentType: mimeType,
-        upsert: true
-      });
-      if (!error && data) {
-        if (isInMemoryFallbackAllowed()) {
-          memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
-        }
-        return { filePath: data.path || filePath };
-      }
-      if (error) {
-        logger.error({ error, filePath }, "Supabase storage upload failed");
-        if (!isInMemoryFallbackAllowed()) {
-          throw new Error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
-        }
-      }
-    } catch (err) {
-      if (!isInMemoryFallbackAllowed()) {
-        logger.error({ err, filePath }, "Supabase storage upload exception");
-        throw new Error(err?.message && err.message.includes("\u0641\u0634\u0644") ? err.message : "\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
-      }
-      logger.warn({ err, filePath }, "Supabase storage upload error, using test memory fallback");
-    }
-  } else if (!isInMemoryFallbackAllowed()) {
+  if (!client) {
     logger.error({ filePath }, "Supabase storage client is not configured");
     throw new Error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
   }
-  if (!isInMemoryFallbackAllowed()) {
-    throw new Error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
+  try {
+    const { data, error } = await client.storage.from(ATTACHMENTS_BUCKET).upload(filePath, fileBuffer, {
+      contentType: mimeType,
+      upsert: true
+    });
+    if (error || !data) {
+      logger.error({ error, filePath }, "Supabase storage upload failed");
+      throw new Error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
+    }
+    return { filePath: data.path || filePath };
+  } catch (err) {
+    logger.error({ err, filePath }, "Supabase storage upload exception");
+    throw new Error(err?.message && err.message.includes("\u0641\u0634\u0644") ? err.message : "\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
   }
-  memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
-  return { filePath };
 }
 async function createSignedUrl(filePath, expiresInSeconds = 60) {
+  if (isInMemoryFallbackAllowed()) {
+    const expiresAt = Date.now() + expiresInSeconds * 1e3;
+    return `https://storage.supabase.local/${ATTACHMENTS_BUCKET}/${encodeURIComponent(filePath)}?token=test_signed_token&expires=${expiresAt}`;
+  }
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client.storage.from(ATTACHMENTS_BUCKET).createSignedUrl(filePath, expiresInSeconds);
-      if (!error && data?.signedUrl) {
-        return data.signedUrl;
-      }
-      if (error) {
-        logger.error({ error, filePath }, "Supabase storage createSignedUrl failed");
-        if (!isInMemoryFallbackAllowed()) {
-          throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
-        }
-      }
-    } catch (err) {
-      if (!isInMemoryFallbackAllowed()) {
-        logger.error({ err, filePath }, "Supabase storage createSignedUrl exception");
-        throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
-      }
-      logger.warn({ err, filePath }, "Supabase storage createSignedUrl error, falling back in test");
+  if (!client) {
+    logger.error({ filePath }, "Supabase storage client is not configured");
+    throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
+  }
+  try {
+    const { data, error } = await client.storage.from(ATTACHMENTS_BUCKET).createSignedUrl(filePath, expiresInSeconds);
+    if (error || !data?.signedUrl) {
+      logger.error({ error, filePath }, "Supabase storage createSignedUrl failed");
+      throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
     }
-  } else if (!isInMemoryFallbackAllowed()) {
-    throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
+    return data.signedUrl;
+  } catch (err) {
+    logger.error({ err, filePath }, "Supabase storage createSignedUrl exception");
+    throw new Error(err?.message && err.message.includes("\u0641\u0634\u0644") ? err.message : "\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
   }
-  if (!isInMemoryFallbackAllowed()) {
-    throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
-  }
-  const expiresAt = Date.now() + expiresInSeconds * 1e3;
-  return `https://storage.supabase.local/${ATTACHMENTS_BUCKET}/${encodeURIComponent(filePath)}?token=test_signed_token&expires=${expiresAt}`;
 }
 async function deleteFile(filePath) {
-  let success = false;
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { error } = await client.storage.from(ATTACHMENTS_BUCKET).remove([filePath]);
-      if (!error) {
-        success = true;
-      } else {
-        logger.error({ error, filePath }, "Supabase storage remove failed");
-      }
-    } catch (err) {
-      logger.error({ err, filePath }, "Supabase storage remove exception");
-    }
-  }
   if (isInMemoryFallbackAllowed()) {
-    const hadInMemory = memoryStorage.delete(filePath);
-    return success || hadInMemory;
+    return memoryStorage.delete(filePath);
   }
-  return success;
+  const client = getSupabaseClient();
+  if (!client) {
+    logger.error({ filePath }, "Supabase storage client is not configured for file deletion");
+    return false;
+  }
+  try {
+    const { error } = await client.storage.from(ATTACHMENTS_BUCKET).remove([filePath]);
+    if (error) {
+      logger.error({ error, filePath }, "Supabase storage remove failed");
+      return false;
+    }
+    return true;
+  } catch (err) {
+    logger.error({ err, filePath }, "Supabase storage remove exception");
+    return false;
+  }
 }
 
 // src/routes/attachments.ts

@@ -22,122 +22,109 @@ export async function uploadFile(
   const safeName = sanitizeFileName(fileName);
   const filePath = `${officeId}/${relatedRecordType}/${relatedRecordId}/${Date.now()}_${safeName}`;
 
+  // Test environment fallback ONLY
+  if (isInMemoryFallbackAllowed()) {
+    memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
+    return { filePath };
+  }
+
+  // Production: strictly uploaded to Supabase Storage or throws
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client.storage
-        .from(ATTACHMENTS_BUCKET)
-        .upload(filePath, fileBuffer, {
-          contentType: mimeType,
-          upsert: true,
-        });
-
-      if (!error && data) {
-        if (isInMemoryFallbackAllowed()) {
-          memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
-        }
-        return { filePath: data.path || filePath };
-      }
-
-      if (error) {
-        logger.error({ error, filePath }, "Supabase storage upload failed");
-        if (!isInMemoryFallbackAllowed()) {
-          throw new Error("فشل رفع الملف، حاول مرة أخرى");
-        }
-      }
-    } catch (err: any) {
-      if (!isInMemoryFallbackAllowed()) {
-        logger.error({ err, filePath }, "Supabase storage upload exception");
-        throw new Error(err?.message && err.message.includes("فشل") ? err.message : "فشل رفع الملف، حاول مرة أخرى");
-      }
-      logger.warn({ err, filePath }, "Supabase storage upload error, using test memory fallback");
-    }
-  } else if (!isInMemoryFallbackAllowed()) {
+  if (!client) {
     logger.error({ filePath }, "Supabase storage client is not configured");
     throw new Error("فشل رفع الملف، حاول مرة أخرى");
   }
 
-  // Fallback storage - test environment ONLY
-  if (!isInMemoryFallbackAllowed()) {
-    throw new Error("فشل رفع الملف، حاول مرة أخرى");
-  }
+  try {
+    const { data, error } = await client.storage
+      .from(ATTACHMENTS_BUCKET)
+      .upload(filePath, fileBuffer, {
+        contentType: mimeType,
+        upsert: true,
+      });
 
-  memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
-  return { filePath };
+    if (error || !data) {
+      logger.error({ error, filePath }, "Supabase storage upload failed");
+      throw new Error("فشل رفع الملف، حاول مرة أخرى");
+    }
+
+    return { filePath: data.path || filePath };
+  } catch (err: any) {
+    logger.error({ err, filePath }, "Supabase storage upload exception");
+    throw new Error(err?.message && err.message.includes("فشل") ? err.message : "فشل رفع الملف، حاول مرة أخرى");
+  }
 }
 
 export async function createSignedUrl(filePath: string, expiresInSeconds: number = 60): Promise<string> {
+  // Test environment fallback ONLY
+  if (isInMemoryFallbackAllowed()) {
+    const expiresAt = Date.now() + expiresInSeconds * 1000;
+    return `https://storage.supabase.local/${ATTACHMENTS_BUCKET}/${encodeURIComponent(filePath)}?token=test_signed_token&expires=${expiresAt}`;
+  }
+
+  // Production: strictly real signed URL or throws (no mock_signed_token)
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client.storage
-        .from(ATTACHMENTS_BUCKET)
-        .createSignedUrl(filePath, expiresInSeconds);
+  if (!client) {
+    logger.error({ filePath }, "Supabase storage client is not configured");
+    throw new Error("فشل استخراج رابط تحميل الملف");
+  }
 
-      if (!error && data?.signedUrl) {
-        return data.signedUrl;
-      }
-      if (error) {
-        logger.error({ error, filePath }, "Supabase storage createSignedUrl failed");
-        if (!isInMemoryFallbackAllowed()) {
-          throw new Error("فشل استخراج رابط تحميل الملف");
-        }
-      }
-    } catch (err: any) {
-      if (!isInMemoryFallbackAllowed()) {
-        logger.error({ err, filePath }, "Supabase storage createSignedUrl exception");
-        throw new Error("فشل استخراج رابط تحميل الملف");
-      }
-      logger.warn({ err, filePath }, "Supabase storage createSignedUrl error, falling back in test");
+  try {
+    const { data, error } = await client.storage
+      .from(ATTACHMENTS_BUCKET)
+      .createSignedUrl(filePath, expiresInSeconds);
+
+    if (error || !data?.signedUrl) {
+      logger.error({ error, filePath }, "Supabase storage createSignedUrl failed");
+      throw new Error("فشل استخراج رابط تحميل الملف");
     }
-  } else if (!isInMemoryFallbackAllowed()) {
-    throw new Error("فشل استخراج رابط تحميل الملف");
-  }
 
-  // Fallback signed URL - test environment ONLY
-  if (!isInMemoryFallbackAllowed()) {
-    throw new Error("فشل استخراج رابط تحميل الملف");
+    return data.signedUrl;
+  } catch (err: any) {
+    logger.error({ err, filePath }, "Supabase storage createSignedUrl exception");
+    throw new Error(err?.message && err.message.includes("فشل") ? err.message : "فشل استخراج رابط تحميل الملف");
   }
-
-  const expiresAt = Date.now() + expiresInSeconds * 1000;
-  return `https://storage.supabase.local/${ATTACHMENTS_BUCKET}/${encodeURIComponent(filePath)}?token=test_signed_token&expires=${expiresAt}`;
 }
 
 export async function deleteFile(filePath: string): Promise<boolean> {
-  let success = false;
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { error } = await client.storage
-        .from(ATTACHMENTS_BUCKET)
-        .remove([filePath]);
-
-      if (!error) {
-        success = true;
-      } else {
-        logger.error({ error, filePath }, "Supabase storage remove failed");
-      }
-    } catch (err) {
-      logger.error({ err, filePath }, "Supabase storage remove exception");
-    }
-  }
-
+  // Test environment fallback ONLY
   if (isInMemoryFallbackAllowed()) {
-    const hadInMemory = memoryStorage.delete(filePath);
-    return success || hadInMemory;
+    return memoryStorage.delete(filePath);
   }
 
-  // Production: strictly reflects real cloud deletion success
-  return success;
+  // Production: strictly reflects real cloud deletion result only
+  const client = getSupabaseClient();
+  if (!client) {
+    logger.error({ filePath }, "Supabase storage client is not configured for file deletion");
+    return false;
+  }
+
+  try {
+    const { error } = await client.storage
+      .from(ATTACHMENTS_BUCKET)
+      .remove([filePath]);
+
+    if (error) {
+      logger.error({ error, filePath }, "Supabase storage remove failed");
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    logger.error({ err, filePath }, "Supabase storage remove exception");
+    return false;
+  }
 }
 
 export function getMemoryFile(filePath: string) {
-  if (!isInMemoryFallbackAllowed()) return null;
-  return memoryStorage.get(filePath) || null;
+  if (isInMemoryFallbackAllowed()) {
+    return memoryStorage.get(filePath) || null;
+  }
+  return null;
 }
 
 export function clearMemoryStorage(): void {
-  memoryStorage.clear();
+  if (isInMemoryFallbackAllowed()) {
+    memoryStorage.clear();
+  }
 }
-
-

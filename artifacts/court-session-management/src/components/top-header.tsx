@@ -79,16 +79,7 @@ export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
             Ctrl + K
           </span>
         </div>
-
-        {/* AI Assistant Button */}
-        <button
-          onClick={() => setLocation('/chat')}
-          className="flex items-center gap-1.5 px-3.5 h-9 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white transition-all shadow-sm shrink-0 font-medium text-xs cursor-pointer"
-          title="مساعد الذكاء الاصطناعي"
-        >
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span className="hidden md:inline">مساعد الذكاء الاصطناعي</span>
-        </button>
+ 
       </div>
 
       {/* ── Left side: Office Switcher, Notifications, User Profile ── */}
