@@ -28913,7 +28913,7 @@ var init_util = __esm({
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/ZodError.js
-var ZodIssueCode, ZodError;
+var ZodIssueCode, quotelessJson, ZodError;
 var init_ZodError = __esm({
   "../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/ZodError.js"() {
     init_util();
@@ -28935,6 +28935,10 @@ var init_ZodError = __esm({
       "not_multiple_of",
       "not_finite"
     ]);
+    quotelessJson = (obj) => {
+      const json = JSON.stringify(obj, null, 2);
+      return json.replace(/"([^"]+)":/g, "$1:");
+    };
     ZodError = class _ZodError extends Error {
       get errors() {
         return this.issues;
@@ -29143,6 +29147,9 @@ var init_en = __esm({
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/errors.js
+function setErrorMap(map) {
+  overrideErrorMap = map;
+}
 function getErrorMap() {
   return overrideErrorMap;
 }
@@ -29174,7 +29181,7 @@ function addIssueToContext(ctx, issueData) {
   });
   ctx.common.issues.push(issue);
 }
-var makeIssue, ParseStatus, INVALID, DIRTY, OK, isAborted, isDirty, isValid, isAsync;
+var makeIssue, EMPTY_PATH, ParseStatus, INVALID, DIRTY, OK, isAborted, isDirty, isValid, isAsync;
 var init_parseUtil = __esm({
   "../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/parseUtil.js"() {
     init_errors();
@@ -29204,6 +29211,7 @@ var init_parseUtil = __esm({
         message: errorMessage
       };
     };
+    EMPTY_PATH = [];
     ParseStatus = class _ParseStatus {
       constructor() {
         this.value = "valid";
@@ -29452,7 +29460,34 @@ function createZodEnum(values, params) {
     ...processCreateParams(params)
   });
 }
-var ParseInputLazyPath, handleResult, ZodType, cuidRegex, cuid2Regex, ulidRegex, uuidRegex, nanoidRegex, jwtRegex, durationRegex, emailRegex, _emojiRegex, emojiRegex, ipv4Regex, ipv4CidrRegex, ipv6Regex, ipv6CidrRegex, base64Regex, base64urlRegex, dateRegexSource, dateRegex, ZodString, ZodNumber, ZodBigInt, ZodBoolean, ZodDate, ZodSymbol, ZodUndefined, ZodNull, ZodAny, ZodUnknown, ZodNever, ZodVoid, ZodArray, ZodObject, ZodUnion, getDiscriminator, ZodDiscriminatedUnion, ZodIntersection, ZodTuple, ZodRecord, ZodMap, ZodSet, ZodFunction, ZodLazy, ZodLiteral, ZodEnum, ZodNativeEnum, ZodPromise, ZodEffects, ZodOptional, ZodNullable, ZodDefault, ZodCatch, ZodNaN, ZodBranded, ZodPipeline, ZodReadonly, late, ZodFirstPartyTypeKind, stringType, numberType, nanType, bigIntType, booleanType, dateType, symbolType, undefinedType, nullType, anyType, unknownType, neverType, voidType, arrayType, objectType, strictObjectType, unionType, discriminatedUnionType, intersectionType, tupleType, recordType, mapType, setType, functionType, lazyType, literalType, enumType, nativeEnumType, promiseType, effectsType, optionalType, nullableType, preprocessType, pipelineType, coerce;
+function cleanParams(params, data) {
+  const p = typeof params === "function" ? params(data) : typeof params === "string" ? { message: params } : params;
+  const p2 = typeof p === "string" ? { message: p } : p;
+  return p2;
+}
+function custom(check, _params = {}, fatal) {
+  if (check)
+    return ZodAny.create().superRefine((data, ctx) => {
+      const r2 = check(data);
+      if (r2 instanceof Promise) {
+        return r2.then((r3) => {
+          if (!r3) {
+            const params = cleanParams(_params, data);
+            const _fatal = params.fatal ?? fatal ?? true;
+            ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+          }
+        });
+      }
+      if (!r2) {
+        const params = cleanParams(_params, data);
+        const _fatal = params.fatal ?? fatal ?? true;
+        ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+      }
+      return;
+    });
+  return ZodAny.create();
+}
+var ParseInputLazyPath, handleResult, ZodType, cuidRegex, cuid2Regex, ulidRegex, uuidRegex, nanoidRegex, jwtRegex, durationRegex, emailRegex, _emojiRegex, emojiRegex, ipv4Regex, ipv4CidrRegex, ipv6Regex, ipv6CidrRegex, base64Regex, base64urlRegex, dateRegexSource, dateRegex, ZodString, ZodNumber, ZodBigInt, ZodBoolean, ZodDate, ZodSymbol, ZodUndefined, ZodNull, ZodAny, ZodUnknown, ZodNever, ZodVoid, ZodArray, ZodObject, ZodUnion, getDiscriminator, ZodDiscriminatedUnion, ZodIntersection, ZodTuple, ZodRecord, ZodMap, ZodSet, ZodFunction, ZodLazy, ZodLiteral, ZodEnum, ZodNativeEnum, ZodPromise, ZodEffects, ZodOptional, ZodNullable, ZodDefault, ZodCatch, ZodNaN, BRAND, ZodBranded, ZodPipeline, ZodReadonly, late, ZodFirstPartyTypeKind, instanceOfType, stringType, numberType, nanType, bigIntType, booleanType, dateType, symbolType, undefinedType, nullType, anyType, unknownType, neverType, voidType, arrayType, objectType, strictObjectType, unionType, discriminatedUnionType, intersectionType, tupleType, recordType, mapType, setType, functionType, lazyType, literalType, enumType, nativeEnumType, promiseType, effectsType, optionalType, nullableType, preprocessType, pipelineType, ostring, onumber, oboolean, coerce, NEVER;
 var init_types = __esm({
   "../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js"() {
     init_ZodError();
@@ -32529,6 +32564,7 @@ var init_types = __esm({
         ...processCreateParams(params)
       });
     };
+    BRAND = /* @__PURE__ */ Symbol("zod_brand");
     ZodBranded = class extends ZodType {
       _parse(input) {
         const { ctx } = this._processInputParams(input);
@@ -32661,6 +32697,9 @@ var init_types = __esm({
       ZodFirstPartyTypeKind2["ZodPipeline"] = "ZodPipeline";
       ZodFirstPartyTypeKind2["ZodReadonly"] = "ZodReadonly";
     })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
+    instanceOfType = (cls, params = {
+      message: `Input not instance of ${cls.name}`
+    }) => custom((data) => data instanceof cls, params);
     stringType = ZodString.create;
     numberType = ZodNumber.create;
     nanType = ZodNaN.create;
@@ -32695,6 +32734,9 @@ var init_types = __esm({
     nullableType = ZodNullable.create;
     preprocessType = ZodEffects.createWithPreprocess;
     pipelineType = ZodPipeline.create;
+    ostring = () => stringType().optional();
+    onumber = () => numberType().optional();
+    oboolean = () => booleanType().optional();
     coerce = {
       string: ((arg) => ZodString.create({ ...arg, coerce: true })),
       number: ((arg) => ZodNumber.create({ ...arg, coerce: true })),
@@ -32705,10 +32747,121 @@ var init_types = __esm({
       bigint: ((arg) => ZodBigInt.create({ ...arg, coerce: true })),
       date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
     };
+    NEVER = INVALID;
   }
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
+var external_exports = {};
+__export(external_exports, {
+  BRAND: () => BRAND,
+  DIRTY: () => DIRTY,
+  EMPTY_PATH: () => EMPTY_PATH,
+  INVALID: () => INVALID,
+  NEVER: () => NEVER,
+  OK: () => OK,
+  ParseStatus: () => ParseStatus,
+  Schema: () => ZodType,
+  ZodAny: () => ZodAny,
+  ZodArray: () => ZodArray,
+  ZodBigInt: () => ZodBigInt,
+  ZodBoolean: () => ZodBoolean,
+  ZodBranded: () => ZodBranded,
+  ZodCatch: () => ZodCatch,
+  ZodDate: () => ZodDate,
+  ZodDefault: () => ZodDefault,
+  ZodDiscriminatedUnion: () => ZodDiscriminatedUnion,
+  ZodEffects: () => ZodEffects,
+  ZodEnum: () => ZodEnum,
+  ZodError: () => ZodError,
+  ZodFirstPartyTypeKind: () => ZodFirstPartyTypeKind,
+  ZodFunction: () => ZodFunction,
+  ZodIntersection: () => ZodIntersection,
+  ZodIssueCode: () => ZodIssueCode,
+  ZodLazy: () => ZodLazy,
+  ZodLiteral: () => ZodLiteral,
+  ZodMap: () => ZodMap,
+  ZodNaN: () => ZodNaN,
+  ZodNativeEnum: () => ZodNativeEnum,
+  ZodNever: () => ZodNever,
+  ZodNull: () => ZodNull,
+  ZodNullable: () => ZodNullable,
+  ZodNumber: () => ZodNumber,
+  ZodObject: () => ZodObject,
+  ZodOptional: () => ZodOptional,
+  ZodParsedType: () => ZodParsedType,
+  ZodPipeline: () => ZodPipeline,
+  ZodPromise: () => ZodPromise,
+  ZodReadonly: () => ZodReadonly,
+  ZodRecord: () => ZodRecord,
+  ZodSchema: () => ZodType,
+  ZodSet: () => ZodSet,
+  ZodString: () => ZodString,
+  ZodSymbol: () => ZodSymbol,
+  ZodTransformer: () => ZodEffects,
+  ZodTuple: () => ZodTuple,
+  ZodType: () => ZodType,
+  ZodUndefined: () => ZodUndefined,
+  ZodUnion: () => ZodUnion,
+  ZodUnknown: () => ZodUnknown,
+  ZodVoid: () => ZodVoid,
+  addIssueToContext: () => addIssueToContext,
+  any: () => anyType,
+  array: () => arrayType,
+  bigint: () => bigIntType,
+  boolean: () => booleanType,
+  coerce: () => coerce,
+  custom: () => custom,
+  date: () => dateType,
+  datetimeRegex: () => datetimeRegex,
+  defaultErrorMap: () => en_default,
+  discriminatedUnion: () => discriminatedUnionType,
+  effect: () => effectsType,
+  enum: () => enumType,
+  function: () => functionType,
+  getErrorMap: () => getErrorMap,
+  getParsedType: () => getParsedType,
+  instanceof: () => instanceOfType,
+  intersection: () => intersectionType,
+  isAborted: () => isAborted,
+  isAsync: () => isAsync,
+  isDirty: () => isDirty,
+  isValid: () => isValid,
+  late: () => late,
+  lazy: () => lazyType,
+  literal: () => literalType,
+  makeIssue: () => makeIssue,
+  map: () => mapType,
+  nan: () => nanType,
+  nativeEnum: () => nativeEnumType,
+  never: () => neverType,
+  null: () => nullType,
+  nullable: () => nullableType,
+  number: () => numberType,
+  object: () => objectType,
+  objectUtil: () => objectUtil,
+  oboolean: () => oboolean,
+  onumber: () => onumber,
+  optional: () => optionalType,
+  ostring: () => ostring,
+  pipeline: () => pipelineType,
+  preprocess: () => preprocessType,
+  promise: () => promiseType,
+  quotelessJson: () => quotelessJson,
+  record: () => recordType,
+  set: () => setType,
+  setErrorMap: () => setErrorMap,
+  strictObject: () => strictObjectType,
+  string: () => stringType,
+  symbol: () => symbolType,
+  transformer: () => effectsType,
+  tuple: () => tupleType,
+  undefined: () => undefinedType,
+  union: () => unionType,
+  unknown: () => unknownType,
+  util: () => util,
+  void: () => voidType
+});
 var init_external = __esm({
   "../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js"() {
     init_errors();
@@ -32723,6 +32876,7 @@ var init_external = __esm({
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/index.js
 var init_zod = __esm({
   "../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/index.js"() {
+    init_external();
     init_external();
   }
 });
@@ -56579,7 +56733,10 @@ var require_bcryptjs = __commonJS({
 
 // src/lib/encryption.ts
 function getEncryptionKey() {
-  const secret = process.env.SETTINGS_ENCRYPTION_KEY || env.sessionSecret || "court_system_secure_fallback_key";
+  const secret = process.env.SETTINGS_ENCRYPTION_KEY;
+  if (!secret || secret.trim().length === 0) {
+    throw new Error("SETTINGS_ENCRYPTION_KEY environment variable is required and cannot be empty.");
+  }
   return import_crypto.default.createHash("sha256").update(secret).digest();
 }
 function encryptSecret(plainText) {
@@ -56619,7 +56776,6 @@ var init_encryption = __esm({
   "src/lib/encryption.ts"() {
     "use strict";
     import_crypto = __toESM(require("crypto"), 1);
-    init_env();
     ALGORITHM = "aes-256-gcm";
     IV_LENGTH = 12;
   }
@@ -830473,6 +830629,7 @@ __export(supabase_service_exports, {
   createSubscriptionPlan: () => createSubscriptionPlan,
   createSupabaseAdmin: () => createSupabaseAdmin,
   createSupabaseUser: () => createSupabaseUser,
+  deleteFallbackActivationToken: () => deleteFallbackActivationToken,
   deleteOfficeMember: () => deleteOfficeMember,
   deleteSubscriptionPlan: () => deleteSubscriptionPlan,
   deleteSupabaseAdmin: () => deleteSupabaseAdmin,
@@ -830481,6 +830638,7 @@ __export(supabase_service_exports, {
   ensureDefaultAdmin: () => ensureDefaultAdmin,
   findUserByActivationToken: () => findUserByActivationToken,
   findUserByIdOrUsername: () => findUserByIdOrUsername,
+  getFallbackActivationToken: () => getFallbackActivationToken,
   getFallbackActivationTokenByHash: () => getFallbackActivationTokenByHash,
   getOfficeFeatures: () => getOfficeFeatures,
   getOfficeGoogleBinding: () => getOfficeGoogleBinding,
@@ -830513,6 +830671,7 @@ __export(supabase_service_exports, {
   revokeUserSessions: () => revokeUserSessions,
   saveFallbackActivationToken: () => saveFallbackActivationToken,
   saveOfficeGoogleBinding: () => saveOfficeGoogleBinding,
+  setFallbackActivationToken: () => setFallbackActivationToken,
   setupFirstSuperAdmin: () => setupFirstSuperAdmin,
   toggleAdminStatus: () => toggleAdminStatus,
   toggleOfficeMemberStatus: () => toggleOfficeMemberStatus,
@@ -830558,7 +830717,7 @@ function invalidateUserGoogleCache(userId) {
   }
 }
 function hasTestFallbackActivationToken(userId, tokenHash) {
-  if (true) {
+  if (!isInMemoryFallbackAllowed()) {
     return false;
   }
   return Boolean(
@@ -830566,7 +830725,7 @@ function hasTestFallbackActivationToken(userId, tokenHash) {
   );
 }
 function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
-  if (true) return;
+  if (!isInMemoryFallbackAllowed()) return;
   const record = {
     userId,
     tokenHash,
@@ -830575,17 +830734,26 @@ function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
   fallbackActivationTokens.set(tokenHash, record);
   fallbackActivationTokens.set(`user:${userId}`, record);
 }
+function setFallbackActivationToken(userId, tokenHash, expiresAt) {
+  saveFallbackActivationToken(userId, tokenHash, expiresAt);
+}
 function getFallbackActivationTokenByHash(tokenHash) {
-  if (true) return void 0;
+  if (!isInMemoryFallbackAllowed()) return void 0;
   return fallbackActivationTokens.get(tokenHash);
 }
+function getFallbackActivationToken(tokenHash) {
+  return getFallbackActivationTokenByHash(tokenHash);
+}
 function clearFallbackActivationToken(userId) {
-  if (true) return;
+  if (!isInMemoryFallbackAllowed()) return;
   const userRec = fallbackActivationTokens.get(`user:${userId}`);
   if (userRec) {
     fallbackActivationTokens.delete(userRec.tokenHash);
     fallbackActivationTokens.delete(`user:${userId}`);
   }
+}
+function deleteFallbackActivationToken(userId) {
+  clearFallbackActivationToken(userId);
 }
 function resetInMemoryPayments() {
 }
@@ -833153,6 +833321,7 @@ var init_supabase_service = __esm({
     init_logger();
     init_encryption();
     init_activation_delivery_service();
+    init_postgres_service();
     UserPendingActivationError = class extends Error {
       statusCode = 403;
       constructor(message = "\u064A\u062C\u0628 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644\u0627\u064B \u0639\u0628\u0631 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0631\u0633\u0644 \u0625\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643.") {
@@ -833563,6 +833732,9 @@ function parseDotEnvFile() {
               v = v.slice(1, -1);
             }
             parsed[k] = v;
+            if (process.env[k] === void 0 || process.env[k] === "") {
+              process.env[k] = v;
+            }
           }
         }
         return parsed;
@@ -833636,6 +833808,7 @@ var init_env = __esm({
         this.name = "MissingEnvVarError";
       }
     };
+    parseDotEnvFile();
     env = {
       get sessionSecret() {
         const val = readEnv("SESSION_SECRET");
@@ -835464,6 +835637,7 @@ var auth_default = router2;
 
 // src/routes/dashboard.ts
 var import_express3 = __toESM(require_express2(), 1);
+init_zod();
 init_src();
 
 // src/services/session.service.ts
@@ -836020,8 +836194,16 @@ async function getDashboardChartsData(userIdOrOfficeId, assignee, isAdmin = fals
 
 // src/routes/dashboard.ts
 init_logger();
+var DashboardQuerySchema = external_exports.object({
+  scope: external_exports.string().optional()
+});
 var router3 = (0, import_express3.Router)();
 router3.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
+  const queryResult = DashboardQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
     const isPersonal = req.query.scope === "personal";
@@ -836035,6 +836217,11 @@ router3.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFrom
   }
 });
 router3.get("/dashboard/charts", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
+  const queryResult = DashboardQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0645\u062E\u0637\u0637\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
     const isPersonal = req.query.scope === "personal";
@@ -852937,6 +853124,7 @@ var sessions_default = router5;
 
 // src/routes/settings.ts
 var import_express6 = __toESM(require_express2(), 1);
+init_zod();
 var import_googleapis2 = __toESM(require_src11(), 1);
 init_settings_store();
 init_logger();
@@ -852945,6 +853133,39 @@ init_supabase_service();
 init_googleSheets_service();
 init_encryption();
 init_notification_template_service();
+var GoogleTestSchema = external_exports.object({
+  service_account_json: external_exports.any().optional(),
+  spreadsheet_url_or_id: external_exports.string().optional(),
+  sheet_name: external_exports.string().optional(),
+  spreadsheetId: external_exports.string().optional(),
+  serviceAccountJson: external_exports.any().optional()
+});
+var GoogleBindSchema = external_exports.object({
+  service_account_json: external_exports.any().optional(),
+  spreadsheet_url_or_id: external_exports.string().optional(),
+  sheet_name: external_exports.string().optional(),
+  spreadsheetId: external_exports.string().optional(),
+  serviceAccountJson: external_exports.any().optional()
+});
+var UpdateSettingsSchema = external_exports.record(external_exports.any());
+var TestWhatsappConnectionSchema = external_exports.object({
+  instanceId: external_exports.string().optional(),
+  apiToken: external_exports.string().optional(),
+  apiUrl: external_exports.string().optional(),
+  phone: external_exports.string().optional()
+}).passthrough();
+var TestWhatsappSchema = external_exports.object({
+  phone: external_exports.string().optional(),
+  testPhone: external_exports.string().optional(),
+  message: external_exports.string().optional(),
+  testMessage: external_exports.string().optional()
+}).passthrough();
+var UpdateNotificationTemplateSchema = external_exports.object({
+  templateText: external_exports.string().optional(),
+  template_text: external_exports.string().optional(),
+  enabled: external_exports.boolean().optional(),
+  channel: external_exports.enum(["whatsapp", "in_app", "all"]).optional()
+}).passthrough();
 var router6 = (0, import_express6.Router)();
 var testAttemptsMap = /* @__PURE__ */ new Map();
 function checkTestRateLimit(key) {
@@ -853096,6 +853317,11 @@ async function verifyGoogleSheetAccess(params) {
 router6.post("/settings/google-test", async (req, res) => {
   const adminId = req.authUser.userId;
   const ip = req.ip || req.socket.remoteAddress || adminId;
+  const parseResult = GoogleTestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u062D\u0635 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   if (!checkTestRateLimit(`google-test:${ip}`)) {
     res.status(429).json({
       error: "\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 (\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 5 \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0641\u064A \u0627\u0644\u062F\u0642\u064A\u0642\u0629). \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 \u062F\u0642\u064A\u0642\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."
@@ -853135,6 +853361,11 @@ router6.post("/settings/google-test", async (req, res) => {
 });
 router6.post("/settings/google-bind", async (req, res) => {
   const adminId = req.authUser.userId;
+  const parseResult = GoogleBindSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0631\u0628\u0637 \u062C\u062F\u0627\u0648\u0644 \u062C\u0648\u062C\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   try {
     let { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
     if (!service_account_json) {
@@ -853213,6 +853444,11 @@ router6.get("/settings", async (_req, res) => {
   res.json(buildSettingsResponse(s3));
 });
 router6.put("/settings", async (req, res) => {
+  const parseResult = UpdateSettingsSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   try {
     const patch = { ...req.body };
     if (patch.whatsappToken && (patch.whatsappToken.includes("\u2022") || patch.whatsappToken.includes("*"))) {
@@ -853248,6 +853484,11 @@ router6.post("/settings/google-export", async (req, res) => {
   }
 });
 router6.post("/settings/test-whatsapp-connection", async (req, res) => {
+  const parseResult = TestWhatsappConnectionSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const s3 = await ensureSettingsLoaded();
   const rawInstanceId = String(req.body?.instanceId ?? "").trim();
   const rawToken = String(req.body?.token ?? "").trim();
@@ -853333,6 +853574,11 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
   }
 });
 router6.post("/settings/test-whatsapp", async (req, res) => {
+  const parseResult = TestWhatsappSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const s3 = await ensureSettingsLoaded();
   const phone = String(
     req.body?.whatsappNumber ?? req.body?.number ?? req.body?.recipientPhone ?? s3.whatsappNumber ?? ""
@@ -853393,6 +853639,11 @@ router6.get("/settings/notification-templates", async (req, res) => {
   }
 });
 router6.put("/settings/notification-templates/:eventType", async (req, res) => {
+  const parseResult = UpdateNotificationTemplateSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0642\u0627\u0644\u0628 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   try {
     const officeId = req.authUser.officeId || req.authUser.userId;
     const eventType = req.params.eventType;
@@ -853412,10 +853663,19 @@ var settings_default = router6;
 
 // src/routes/reports.ts
 var import_express7 = __toESM(require_express2(), 1);
+init_zod();
 init_googleSheets_service();
 init_logger();
 init_postgres_service();
 init_supabase_service();
+var UpdateSessionReportSchema = external_exports.union([
+  external_exports.string(),
+  external_exports.record(external_exports.any())
+]);
+var MonthlyReportQuerySchema = external_exports.object({
+  month: external_exports.string().optional(),
+  year: external_exports.string().optional()
+});
 var router7 = (0, import_express7.Router)();
 router7.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
   const id = Number(req.params.id);
@@ -853450,6 +853710,11 @@ router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
     res.status(400).json({ error: "Invalid session id." });
     return;
   }
+  const parseResult = UpdateSessionReportSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   try {
     logger.info({ id, body: req.body }, "Saving session report...");
     const officeId = req.authUser?.officeId || req.authUser?.userId;
@@ -853475,6 +853740,11 @@ router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
   }
 });
 router7.get("/reports/monthly", attachAuthUser, requireAdmin, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
+  const queryResult = MonthlyReportQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const officeId = req.authUser?.officeId || req.authUser?.userId;
   if (!officeId) {
     res.status(401).json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D: \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0641\u0642\u0648\u062F." });
@@ -853577,6 +853847,7 @@ var reports_default = router7;
 
 // src/routes/cron.ts
 var import_express8 = __toESM(require_express2(), 1);
+init_zod();
 var import_crypto5 = __toESM(require("crypto"), 1);
 init_env();
 init_logger();
@@ -854247,6 +854518,9 @@ async function runReminderSweep() {
 }
 
 // src/routes/cron.ts
+var CronSweepSchema = external_exports.object({
+  officeId: external_exports.string().optional()
+});
 var router8 = (0, import_express8.Router)();
 function safeCompare(a, b) {
   const hashA = import_crypto5.default.createHash("sha256").update(a).digest();
@@ -854299,6 +854573,11 @@ async function handlePoaExpiryCron(req, res) {
   }
   const startedAt = Date.now();
   try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const targetOfficeId = req.query.officeId || req.body?.officeId;
     const result = await runPoaExpirySweep(targetOfficeId);
     const durationMs = Date.now() - startedAt;
@@ -854328,6 +854607,11 @@ async function handleSubscriptionExpiryCron(req, res) {
   }
   const startedAt = Date.now();
   try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const targetOfficeId = req.query.officeId || req.body?.officeId;
     const result = await runSubscriptionExpirySweep(targetOfficeId);
     const durationMs = Date.now() - startedAt;
@@ -854345,8 +854629,50 @@ var cron_default = router8;
 
 // src/routes/poa.ts
 var import_express9 = __toESM(require_express2(), 1);
+init_zod();
 init_logger();
 init_postgres_service();
+var CreatePoaSchema = external_exports.object({
+  poaNumber: external_exports.string().trim().min(1, "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628."),
+  clientId: external_exports.string().nullable().optional(),
+  client_id: external_exports.string().nullable().optional(),
+  caseId: external_exports.string().nullable().optional(),
+  case_id: external_exports.string().nullable().optional(),
+  clientName: external_exports.string().optional(),
+  client_name: external_exports.string().optional(),
+  principalName: external_exports.string().optional(),
+  agentName: external_exports.string().optional(),
+  issueDate: external_exports.string().optional(),
+  expiryDate: external_exports.string().optional(),
+  status: external_exports.string().optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  assignedLawyer: external_exports.string().optional(),
+  notes: external_exports.string().optional()
+});
+var UpdatePoaSchema = external_exports.object({
+  poaNumber: external_exports.string().optional(),
+  clientId: external_exports.string().nullable().optional(),
+  client_id: external_exports.string().nullable().optional(),
+  caseId: external_exports.string().nullable().optional(),
+  case_id: external_exports.string().nullable().optional(),
+  clientName: external_exports.string().optional(),
+  client_name: external_exports.string().optional(),
+  principalName: external_exports.string().optional(),
+  agentName: external_exports.string().optional(),
+  issueDate: external_exports.string().optional(),
+  expiryDate: external_exports.string().optional(),
+  status: external_exports.string().optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  assignedLawyer: external_exports.string().optional(),
+  notes: external_exports.string().optional()
+});
+var ReassignPoaSchema = external_exports.object({
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  assignedLawyer: external_exports.string().optional()
+});
 var router9 = (0, import_express9.Router)();
 function generateRefId() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -854401,6 +854727,12 @@ router9.get("/poa/:rowId", async (req, res) => {
 });
 router9.post("/poa", async (req, res) => {
   const officeId = getOfficeId2(req);
+  const parseResult = CreatePoaSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
   const body = req.body;
   if (!body.poaNumber?.trim()) {
     res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628." });
@@ -854488,6 +854820,12 @@ router9.put("/poa/:rowId", async (req, res) => {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
+  const parseResult = UpdatePoaSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
   try {
     const existing = await getPoaById(rowId, officeId);
     if (!existing) {
@@ -854571,6 +854909,11 @@ router9.patch("/poa/:id/reassign", async (req, res) => {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
     return;
   }
+  const parseResult = ReassignPoaSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const targetLawyerId = req.body?.assignedLawyerId !== void 0 ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
   if (targetLawyerId) {
     const val = await validateOfficeLawyer(targetLawyerId, officeId);
@@ -854644,8 +854987,48 @@ var poa_default = router9;
 
 // src/routes/judgments.ts
 var import_express10 = __toESM(require_express2(), 1);
+init_zod();
 init_logger();
 init_postgres_service();
+var CreateJudgmentSchema = external_exports.object({
+  caseNumber: external_exports.string().trim().min(1, "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0645\u0637\u0644\u0648\u0628."),
+  judgmentNumber: external_exports.string().trim().min(1, "\u0631\u0642\u0645 \u0627\u0644\u0635\u0643 \u0645\u0637\u0644\u0648\u0628."),
+  court: external_exports.string().optional(),
+  plaintiff: external_exports.string().optional(),
+  defendant: external_exports.string().optional(),
+  assignedLawyer: external_exports.string().optional(),
+  judgmentDate: external_exports.string().optional(),
+  summary: external_exports.string().optional(),
+  isFavorable: external_exports.string().optional(),
+  clientId: external_exports.string().nullable().optional(),
+  client_id: external_exports.string().nullable().optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  clientRole: external_exports.string().nullable().optional(),
+  client_role: external_exports.string().nullable().optional()
+});
+var UpdateJudgmentSchema = external_exports.object({
+  caseNumber: external_exports.string().optional(),
+  court: external_exports.string().optional(),
+  plaintiff: external_exports.string().optional(),
+  defendant: external_exports.string().optional(),
+  assignedLawyer: external_exports.string().optional(),
+  judgmentNumber: external_exports.string().optional(),
+  judgmentDate: external_exports.string().optional(),
+  summary: external_exports.string().optional(),
+  isFavorable: external_exports.string().optional(),
+  clientId: external_exports.string().nullable().optional(),
+  client_id: external_exports.string().nullable().optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  clientRole: external_exports.string().nullable().optional(),
+  client_role: external_exports.string().nullable().optional()
+});
+var ReassignJudgmentSchema = external_exports.object({
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  assignedLawyer: external_exports.string().optional()
+});
 var router10 = (0, import_express10.Router)();
 function generateRefId2() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -854694,11 +855077,13 @@ router10.get("/judgments/:id", async (req, res) => {
 });
 router10.post("/judgments", async (req, res) => {
   const officeId = getOfficeId3(req);
-  const body = req.body;
-  if (!body.caseNumber?.trim() || !body.judgmentNumber?.trim()) {
-    res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0648\u0631\u0642\u0645 \u0627\u0644\u0635\u0643 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
+  const parseResult = CreateJudgmentSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0648\u0631\u0642\u0645 \u0627\u0644\u0635\u0643 \u0645\u0637\u0644\u0648\u0628\u0627\u0646.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
+  const body = req.body;
   const clientId = body.clientId || body.client_id || null;
   let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
   let assignedLawyer = body.assignedLawyer?.trim() || "";
@@ -854749,6 +855134,12 @@ router10.put("/judgments/:id", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  const parseResult = UpdateJudgmentSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
   try {
@@ -854814,6 +855205,11 @@ router10.patch("/judgments/:id/reassign", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  const parseResult = ReassignJudgmentSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u062D\u0643\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
     return;
   }
   const targetLawyerId = req.body?.assignedLawyerId !== void 0 ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
@@ -854883,8 +855279,44 @@ var judgments_default = router10;
 
 // src/routes/tasks.ts
 var import_express11 = __toESM(require_express2(), 1);
+init_zod();
 init_logger();
 init_postgres_service();
+var CreateTaskSchema = external_exports.object({
+  title: external_exports.string().trim().min(1, "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0645\u0637\u0644\u0648\u0628."),
+  assignee: external_exports.string().optional(),
+  priority: external_exports.enum(["\u0645\u0646\u062E\u0641\u0636\u0629", "\u0639\u0627\u062F\u064A\u0629", "\u0639\u0627\u062C\u0644\u0629"]).optional(),
+  dueDate: external_exports.string().optional(),
+  due_date: external_exports.string().optional(),
+  status: external_exports.enum(["\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630", "\u0645\u0643\u062A\u0645\u0644\u0629", "\u0645\u0639\u0644\u0642\u0629"]).optional(),
+  notes: external_exports.string().optional(),
+  clientId: external_exports.string().nullable().optional(),
+  client_id: external_exports.string().nullable().optional(),
+  caseId: external_exports.string().nullable().optional(),
+  case_id: external_exports.string().nullable().optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional()
+});
+var UpdateTaskSchema = external_exports.object({
+  title: external_exports.string().trim().min(1, "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0641\u0627\u0631\u063A\u0627\u064B.").optional(),
+  assignee: external_exports.string().optional(),
+  priority: external_exports.enum(["\u0645\u0646\u062E\u0641\u0636\u0629", "\u0639\u0627\u062F\u064A\u0629", "\u0639\u0627\u062C\u0644\u0629"]).optional(),
+  dueDate: external_exports.string().optional(),
+  due_date: external_exports.string().optional(),
+  status: external_exports.enum(["\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630", "\u0645\u0643\u062A\u0645\u0644\u0629", "\u0645\u0639\u0644\u0642\u0629"]).optional(),
+  notes: external_exports.string().optional(),
+  clientId: external_exports.string().nullable().optional(),
+  client_id: external_exports.string().nullable().optional(),
+  caseId: external_exports.string().nullable().optional(),
+  case_id: external_exports.string().nullable().optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional()
+});
+var ReassignTaskSchema = external_exports.object({
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  assignee: external_exports.string().optional()
+});
 var router11 = (0, import_express11.Router)();
 function generateRefId3() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -854944,11 +855376,13 @@ router11.get("/tasks/:id", async (req, res) => {
 });
 router11.post("/tasks", async (req, res) => {
   const officeId = getOfficeId4(req);
-  const body = req.body;
-  if (!body.title?.trim()) {
-    res.status(400).json({ error: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0645\u0637\u0644\u0648\u0628." });
+  const parseResult = CreateTaskSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0645\u0637\u0644\u0648\u0628.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
+  const body = req.body;
   const clientId = body.clientId || body.client_id || null;
   const caseId = body.caseId || body.case_id || null;
   let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
@@ -854998,6 +855432,12 @@ router11.put("/tasks/:id", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  const parseResult = UpdateTaskSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
   try {
@@ -855053,6 +855493,11 @@ router11.patch("/tasks/:id/reassign", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  const parseResult = ReassignTaskSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
     return;
   }
   const targetLawyerId = req.body?.assignedLawyerId !== void 0 ? req.body.assignedLawyerId : req.body?.assigned_lawyer_id;
@@ -855122,11 +855567,32 @@ var tasks_default = router11;
 
 // src/routes/users.ts
 var import_express12 = __toESM(require_express2(), 1);
+init_zod();
 init_src();
 init_supabase_service();
 init_env();
 init_logger();
 init_notification_template_service();
+var CreateOfficeMemberSchema = external_exports.object({
+  username: external_exports.string().trim().min(1, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628."),
+  email: external_exports.string().trim().email("\u0635\u064A\u063A\u0629 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629."),
+  display_name: external_exports.string().optional(),
+  displayName: external_exports.string().optional(),
+  phone: external_exports.string().nullable().optional(),
+  role_title: external_exports.string().nullable().optional(),
+  roleTitle: external_exports.string().nullable().optional()
+});
+var UpdateOfficeMemberSchema = external_exports.object({
+  password: external_exports.string().optional(),
+  display_name: external_exports.string().optional(),
+  displayName: external_exports.string().optional(),
+  email: external_exports.string().trim().email("\u0635\u064A\u063A\u0629 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629.").optional(),
+  status: external_exports.enum(["active", "suspended", "pending_activation"]).optional(),
+  phone: external_exports.string().nullable().optional()
+});
+var ToggleMemberStatusSchema = external_exports.object({
+  status: external_exports.enum(["active", "suspended"]).optional()
+});
 var router12 = (0, import_express12.Router)();
 var resendCooldowns = /* @__PURE__ */ new Map();
 var RESEND_COOLDOWN_MS = 6e4;
@@ -855151,6 +855617,12 @@ router12.get("/users", async (req, res) => {
 router12.post("/users", async (req, res) => {
   try {
     const adminId = req.authUser.userId;
+    const parseResult = CreateOfficeMemberSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+      res.status(400).json({ error: errorMsg });
+      return;
+    }
     const { username, email, display_name, phone, role_title, roleTitle } = req.body;
     if (!username || !username.trim()) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628." });
@@ -855231,6 +855703,12 @@ router12.patch("/users/:id", async (req, res) => {
   try {
     const adminId = req.authUser.userId;
     const id = String(req.params.id);
+    const parseResult = UpdateOfficeMemberSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+      res.status(400).json({ error: errorMsg });
+      return;
+    }
     const { password, display_name, email, status, phone } = req.body;
     if (password !== void 0 && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
@@ -855260,6 +855738,11 @@ router12.post("/users/:id/toggle-status", async (req, res) => {
   try {
     const adminId = req.authUser.userId;
     const id = String(req.params.id);
+    const parseResult = ToggleMemberStatusSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u062D\u0627\u0644\u0629 \u0627\u0644\u062D\u0633\u0627\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const { status } = req.body;
     const updated = await toggleOfficeMemberStatus(adminId, id, status);
     if (updated) {
@@ -855312,14 +855795,89 @@ var users_default = router12;
 
 // src/routes/super-admin.ts
 var import_express13 = __toESM(require_express2(), 1);
+init_zod();
 init_src();
 init_supabase_service();
 init_env();
 init_logger();
 init_notification_template_service();
+var SetupFirstSuperAdminSchema = external_exports.object({
+  username: external_exports.string().trim().min(1, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628."),
+  password: external_exports.string().min(1, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0629."),
+  email: external_exports.string().optional(),
+  display_name: external_exports.string().optional()
+});
+var UpdatePlatformSettingsSchema = external_exports.record(external_exports.any());
+var PlanSchema = external_exports.object({
+  name: external_exports.string().optional(),
+  slug: external_exports.string().optional(),
+  ai_quota_limit: external_exports.number().optional(),
+  price: external_exports.string().nullable().optional(),
+  features: external_exports.record(external_exports.any()).optional()
+}).passthrough();
+var CreateAdminSchema = external_exports.object({
+  username: external_exports.string().trim().min(1, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628."),
+  password: external_exports.string().optional(),
+  display_name: external_exports.string().optional(),
+  email: external_exports.string().optional(),
+  phone: external_exports.string().optional(),
+  plan_slug: external_exports.string().optional(),
+  planSlug: external_exports.string().optional(),
+  subscription_expires_at: external_exports.string().optional(),
+  subscriptionExpiresAt: external_exports.string().optional(),
+  ai_quota_limit: external_exports.number().optional(),
+  aiQuotaLimit: external_exports.number().optional()
+}).passthrough();
+var UpdateAdminSchema = external_exports.object({
+  password: external_exports.string().optional(),
+  display_name: external_exports.string().optional(),
+  email: external_exports.string().optional(),
+  phone: external_exports.string().optional(),
+  plan_slug: external_exports.string().optional(),
+  planSlug: external_exports.string().optional(),
+  subscription_expires_at: external_exports.string().optional(),
+  subscriptionExpiresAt: external_exports.string().optional(),
+  ai_quota_limit: external_exports.number().optional(),
+  aiQuotaLimit: external_exports.number().optional(),
+  status: external_exports.enum(["active", "suspended"]).optional()
+}).passthrough();
+var ExtendAdminSchema = external_exports.object({
+  days: external_exports.number().optional(),
+  months: external_exports.number().optional(),
+  years: external_exports.number().optional()
+}).passthrough();
+var ToggleAdminStatusSchema = external_exports.object({
+  status: external_exports.enum(["active", "suspended"]).optional()
+}).passthrough();
+var LinkMemberSchema = external_exports.object({
+  memberId: external_exports.string().optional(),
+  member_id: external_exports.string().optional(),
+  adminId: external_exports.string().optional(),
+  admin_id: external_exports.string().optional()
+}).passthrough();
+var CreatePaymentSchema = external_exports.object({
+  office_id: external_exports.string().optional(),
+  officeId: external_exports.string().optional(),
+  amount: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+  payment_method: external_exports.string().optional(),
+  paymentMethod: external_exports.string().optional(),
+  reference_number: external_exports.string().optional(),
+  referenceNumber: external_exports.string().optional(),
+  notes: external_exports.string().optional()
+}).passthrough();
+var UpdatePaymentSchema = external_exports.object({
+  status: external_exports.string().optional(),
+  notes: external_exports.string().optional()
+}).passthrough();
 var router13 = (0, import_express13.Router)();
 router13.post("/super-admin/setup-first", async (req, res) => {
   try {
+    const parseResult = SetupFirstSuperAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors[0]?.message || "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0627\u0646.";
+      res.status(400).json({ error: errorMsg });
+      return;
+    }
     const { username, password, email, display_name } = req.body;
     if (!username || !password) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
@@ -855370,6 +855928,11 @@ router13.get("/super-admin/settings", async (_req, res) => {
 });
 router13.patch("/super-admin/settings", async (req, res) => {
   try {
+    const parseResult = UpdatePlatformSettingsSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const {
       activation_link_expiry_hours,
       new_office_registration_enabled,
@@ -855456,6 +856019,11 @@ router13.get("/super-admin/plans", async (_req, res) => {
 });
 router13.post("/super-admin/plans", async (req, res) => {
   try {
+    const parseResult = PlanSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0628\u0627\u0642\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const { name, slug, ai_quota_limit, price, features } = req.body;
     if (!name || typeof name !== "string" || !name.trim()) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0628\u0627\u0642\u0629 \u0645\u0637\u0644\u0648\u0628." });
@@ -855490,6 +856058,11 @@ router13.post("/super-admin/plans", async (req, res) => {
 });
 router13.patch("/super-admin/plans/:id", async (req, res) => {
   try {
+    const parseResult = PlanSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u0627\u0642\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const id = String(req.params.id);
     const { name, slug, ai_quota_limit, price, features } = req.body;
     const plan = await updateSubscriptionPlan(id, {
@@ -855559,6 +856132,11 @@ router13.get("/super-admin/admins", async (_req, res) => {
 });
 router13.post("/super-admin/admins", async (req, res) => {
   try {
+    const parseResult = CreateAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const {
       username,
       password,
@@ -855618,6 +856196,11 @@ router13.post("/super-admin/admins", async (req, res) => {
 });
 router13.patch("/super-admin/admins/:id", async (req, res) => {
   try {
+    const parseResult = UpdateAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const id = String(req.params.id);
     const {
       password,
@@ -855676,6 +856259,11 @@ router13.patch("/super-admin/admins/:id", async (req, res) => {
 });
 router13.post("/super-admin/admins/:id/extend", async (req, res) => {
   try {
+    const parseResult = ExtendAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0645\u062F\u064A\u062F \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const id = String(req.params.id);
     const { period } = req.body;
     const admins = await listSupabaseAdmins();
@@ -855722,6 +856310,11 @@ router13.post("/super-admin/admins/:id/extend", async (req, res) => {
 });
 router13.post("/super-admin/admins/:id/toggle-status", async (req, res) => {
   try {
+    const parseResult = ToggleAdminStatusSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const id = String(req.params.id);
     const { status } = req.body;
     const updated = await toggleAdminStatus(id, status);
@@ -855805,6 +856398,11 @@ router13.get("/super-admin/unlinked-members", async (_req, res) => {
 });
 router13.post("/super-admin/link-member", async (req, res) => {
   try {
+    const parseResult = LinkMemberSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0631\u0628\u0637 \u0627\u0644\u0639\u0636\u0648 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const { memberId, adminId } = req.body;
     if (!memberId || !adminId) {
       res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0639\u0636\u0648 \u0648\u0645\u0639\u0631\u0641 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
@@ -855849,6 +856447,11 @@ router13.get("/super-admin/payments", async (req, res) => {
 });
 router13.post("/super-admin/payments", async (req, res) => {
   try {
+    const parseResult = CreatePaymentSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u0641\u0639\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const { office_id, amount, currency, payment_date, method, status, notes } = req.body;
     if (!office_id) {
       res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0637\u0644\u0648\u0628." });
@@ -855905,6 +856508,11 @@ router13.post("/super-admin/payments", async (req, res) => {
 });
 router13.patch("/super-admin/payments/:id", async (req, res) => {
   try {
+    const parseResult = UpdatePaymentSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062F\u0641\u0639\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const id = req.params.id;
     const { status, notes, amount, method, payment_date } = req.body;
     const updated = await updatePayment(id, {
@@ -855949,8 +856557,13 @@ var super_admin_default = router13;
 
 // src/routes/subscription.ts
 var import_express14 = __toESM(require_express2(), 1);
+init_zod();
 init_supabase_service();
 init_logger();
+var UpdateMemberQuotaSchema = external_exports.object({
+  ai_quota_limit: external_exports.union([external_exports.number(), external_exports.null()]).optional(),
+  aiQuotaLimit: external_exports.union([external_exports.number(), external_exports.null()]).optional()
+});
 var router14 = (0, import_express14.Router)();
 router14.use("/subscription", attachAuthUser, requireAdmin);
 router14.get("/subscription/overview", async (req, res) => {
@@ -855965,6 +856578,11 @@ router14.get("/subscription/overview", async (req, res) => {
 });
 router14.patch("/subscription/members/:id/quota", async (req, res) => {
   try {
+    const parseResult = UpdateMemberQuotaSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u062D\u0635\u0629 \u0627\u0644\u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const adminId = req.authUser.userId;
     const memberId = req.params.id;
     const { ai_quota_limit } = req.body;
@@ -855990,9 +856608,36 @@ var subscription_default = router14;
 
 // src/routes/clients.ts
 var import_express15 = __toESM(require_express2(), 1);
+init_zod();
 init_logger();
 init_postgres_service();
 init_supabase_service();
+var TriageLinkSchema = external_exports.object({
+  module: external_exports.enum(["sessions", "poa", "judgments", "tasks"]),
+  id: external_exports.union([external_exports.string(), external_exports.number()]),
+  clientId: external_exports.string().optional(),
+  client_id: external_exports.string().optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional()
+});
+var CreateClientSchema = external_exports.object({
+  name: external_exports.string().trim().min(1, "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628."),
+  phone: external_exports.string().optional(),
+  notes: external_exports.string().optional(),
+  client_type: external_exports.string().optional(),
+  clientType: external_exports.string().optional(),
+  type: external_exports.string().optional()
+});
+var UpdateClientSchema = external_exports.object({
+  name: external_exports.string().trim().min(1, "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628.").optional(),
+  phone: external_exports.string().optional(),
+  notes: external_exports.string().optional(),
+  client_type: external_exports.string().optional(),
+  clientType: external_exports.string().optional()
+});
+var CreateClientNoteSchema = external_exports.object({
+  body: external_exports.string().trim().min(1, "\u0646\u0635 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0637\u0644\u0648\u0628.")
+});
 var router15 = (0, import_express15.Router)();
 function generateRefId4() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -856049,6 +856694,11 @@ router15.post("/clients/triage-link", async (req, res) => {
     return;
   }
   const officeId = getOfficeId5(req);
+  const parseResult = TriageLinkSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0631\u0628\u0637 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const { module: module2, id, clientId, client_id, assignedLawyerId, assigned_lawyer_id } = req.body || {};
   const targetClientId = clientId !== void 0 ? clientId : client_id;
   const targetLawyerId = assignedLawyerId !== void 0 ? assignedLawyerId : assigned_lawyer_id;
@@ -856126,11 +856776,13 @@ router15.get("/clients", async (req, res) => {
 });
 router15.post("/clients", async (req, res) => {
   const officeId = getOfficeId5(req);
-  const body = req.body || {};
-  if (!body.name?.trim()) {
-    res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628." });
+  const parseResult = CreateClientSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
+  const body = req.body || {};
   try {
     const client = await createClient2(
       {
@@ -856174,6 +856826,12 @@ router15.get("/clients/:id", async (req, res) => {
 router15.patch("/clients/:id", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
+  const parseResult = UpdateClientSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
   const body = req.body || {};
   try {
     if (req.authUser?.role === "staff") {
@@ -856311,11 +856969,12 @@ router15.get("/clients/:id/notes", async (req, res) => {
 router15.post("/clients/:id/notes", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
-  const bodyText = req.body?.body ? String(req.body.body).trim() : "";
-  if (!bodyText) {
+  const parseResult = CreateClientNoteSchema.safeParse(req.body);
+  if (!parseResult.success) {
     res.status(400).json({ error: "\u0646\u0635 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
+  const bodyText = req.body?.body ? String(req.body.body).trim() : "";
   try {
     const client = await getClientById(id, officeId);
     if (!client) {
@@ -856357,7 +857016,12 @@ var clients_default = router15;
 
 // src/routes/notifications.ts
 var import_express16 = __toESM(require_express2(), 1);
+init_zod();
 init_postgres_service();
+var NotificationsQuerySchema = external_exports.object({
+  page: external_exports.string().optional(),
+  limit: external_exports.string().optional()
+});
 var router16 = (0, import_express16.Router)();
 function getOfficeId6(req) {
   const officeId = req.authUser?.officeId || req.authUser?.userId;
@@ -856376,6 +857040,11 @@ function getUserId(req) {
 router16.use("/notifications", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData);
 router16.get("/notifications", async (req, res) => {
   try {
+    const queryResult = NotificationsQuerySchema.safeParse(req.query);
+    if (!queryResult.success) {
+      res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u062A\u0635\u0641\u062D \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
     const officeId = getOfficeId6(req);
     const userId = getUserId(req);
     const page = parseInt(String(req.query.page || "1"), 10) || 1;
@@ -856428,6 +857097,7 @@ var notifications_default = router16;
 
 // src/routes/attachments.ts
 var import_express17 = __toESM(require_express2(), 1);
+init_zod();
 
 // ../../node_modules/.pnpm/formidable@3.5.4/node_modules/formidable/src/PersistentFile.js
 var import_node_fs2 = __toESM(require("node:fs"), 1);
@@ -857881,6 +858551,12 @@ async function deleteFile(filePath) {
 // src/routes/attachments.ts
 init_logger();
 init_notification_template_service();
+var AttachmentUploadFieldsSchema = external_exports.object({
+  relatedRecordType: external_exports.enum(["client", "poa", "judgment", "session", "task", "case"], {
+    errorMap: () => ({ message: "\u0646\u0648\u0639 \u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062A\u0627\u062D\u0629: client, poa, judgment, session, task, case" })
+  }),
+  relatedRecordId: external_exports.string().trim().min(1, "\u0645\u0639\u0631\u0641 \u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0645\u0637\u0644\u0648\u0628.")
+});
 var router17 = (0, import_express17.Router)();
 router17.use(
   "/attachments",
@@ -857980,25 +858656,17 @@ router17.post("/attachments", async (req, res) => {
   const relatedRecordId = String(
     Array.isArray(rawRecordId) ? rawRecordId[0] : rawRecordId || ""
   ).trim();
-  if (!relatedRecordType || !relatedRecordId) {
+  const parseFieldsResult = AttachmentUploadFieldsSchema.safeParse({
+    relatedRecordType,
+    relatedRecordId
+  });
+  if (!parseFieldsResult.success) {
     try {
       await import_promises2.default.unlink(uploadedFile.filepath);
     } catch {
     }
-    res.status(400).json({
-      error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0646\u0648\u0639 \u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0648\u0645\u0639\u0631\u0641\u0647 (relatedRecordType \u0648 relatedRecordId)."
-    });
-    return;
-  }
-  const validTypes = ["client", "poa", "judgment", "session", "task", "case"];
-  if (!validTypes.includes(relatedRecordType)) {
-    try {
-      await import_promises2.default.unlink(uploadedFile.filepath);
-    } catch {
-    }
-    res.status(400).json({
-      error: `\u0646\u0648\u0639 \u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062A\u0627\u062D\u0629: ${validTypes.join(", ")}`
-    });
+    const errorMsg = parseFieldsResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0631\u0641\u0642 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
   const accessCheck = await verifyRecordAccess(
@@ -858168,8 +858836,12 @@ var attachments_default = router17;
 
 // src/routes/search.ts
 var import_express18 = __toESM(require_express2(), 1);
+init_zod();
 init_logger();
 init_postgres_service();
+var SearchQuerySchema = external_exports.object({
+  q: external_exports.string().optional()
+});
 var router18 = (0, import_express18.Router)();
 function generateRefId5() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -858183,6 +858855,11 @@ function getOfficeId8(req) {
   return officeId;
 }
 router18.get("/search", async (req, res) => {
+  const queryResult = SearchQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0628\u062D\u062B \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const officeId = getOfficeId8(req);
   const q = String(req.query.q || "").trim();
   if (!q) {
@@ -858227,9 +858904,13 @@ var search_default = router18;
 
 // src/routes/workload.ts
 var import_express19 = __toESM(require_express2(), 1);
+init_zod();
 init_logger();
 init_postgres_service();
 init_supabase_service();
+var WorkloadQuerySchema = external_exports.object({
+  lawyerId: external_exports.string().optional()
+});
 var router19 = (0, import_express19.Router)();
 function generateRefId6() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -858243,6 +858924,11 @@ function getOfficeId9(req) {
   return officeId;
 }
 router19.get("/workload", async (req, res) => {
+  const queryResult = WorkloadQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0639\u0628\u0621 \u0627\u0644\u0639\u0645\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const officeId = getOfficeId9(req);
   const adminId = req.authUser.userId;
   try {
@@ -858308,8 +858994,51 @@ var workload_default = router19;
 
 // src/routes/cases.ts
 var import_express20 = __toESM(require_express2(), 1);
+init_zod();
 init_logger();
 init_postgres_service();
+var CreateCaseSchema = external_exports.object({
+  clientId: external_exports.string().optional(),
+  client_id: external_exports.string().optional(),
+  clientName: external_exports.string().optional(),
+  client_name: external_exports.string().optional(),
+  caseNumber: external_exports.string().optional(),
+  case_number: external_exports.string().optional(),
+  caseType: external_exports.string().optional(),
+  case_type: external_exports.string().optional(),
+  court: external_exports.string().optional(),
+  circuit: external_exports.string().optional(),
+  status: external_exports.enum(["open", "closed", "postponed"]).optional(),
+  claimAmount: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+  claim_amount: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  opposingParty: external_exports.string().optional(),
+  opposing_party: external_exports.string().optional(),
+  notes: external_exports.string().optional()
+});
+var UpdateCaseSchema = external_exports.object({
+  caseNumber: external_exports.string().optional(),
+  case_number: external_exports.string().optional(),
+  caseType: external_exports.string().optional(),
+  case_type: external_exports.string().optional(),
+  court: external_exports.string().optional(),
+  circuit: external_exports.string().optional(),
+  status: external_exports.enum(["open", "closed", "postponed"]).optional(),
+  claimAmount: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+  claim_amount: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional(),
+  opposingParty: external_exports.string().optional(),
+  opposing_party: external_exports.string().optional(),
+  notes: external_exports.string().optional(),
+  clientId: external_exports.string().optional(),
+  client_id: external_exports.string().optional()
+});
+var ReassignCaseSchema = external_exports.object({
+  assignedLawyerId: external_exports.string().nullable().optional(),
+  assigned_lawyer_id: external_exports.string().nullable().optional()
+});
 var router20 = (0, import_express20.Router)();
 function generateRefId7() {
   return `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -858362,6 +859091,12 @@ router20.get("/cases", async (req, res) => {
 });
 router20.post("/cases", async (req, res) => {
   const officeId = getOfficeId10(req);
+  const parseResult = CreateCaseSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
   const body = req.body || {};
   let clientId = body.clientId || body.client_id;
   const caseNumber = body.caseNumber || body.case_number;
@@ -858477,6 +859212,12 @@ router20.get("/cases/:id", async (req, res) => {
 router20.patch("/cases/:id", async (req, res) => {
   const officeId = getOfficeId10(req);
   const { id } = req.params;
+  const parseResult = UpdateCaseSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
   const body = req.body || {};
   try {
     const existing = await getCaseById(id, officeId);
@@ -858547,6 +859288,11 @@ router20.patch("/cases/:id/reassign", async (req, res) => {
   }
   const officeId = getOfficeId10(req);
   const { id } = req.params;
+  const parseResult = ReassignCaseSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0639\u0627\u062F\u0629 \u0625\u0633\u0646\u0627\u062F \u0627\u0644\u0642\u0636\u064A\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
   const body = req.body || {};
   const assignedLawyerId = body.assignedLawyerId ?? body.assigned_lawyer_id ?? null;
   if (assignedLawyerId) {
@@ -858642,6 +859388,10 @@ var import_meta = {};
 if (!isSupabaseConfigured() && true) {
   logger.fatal("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
   throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
+}
+if ((!process.env.SETTINGS_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY.trim().length === 0) && true) {
+  logger.fatal("FATAL: SETTINGS_ENCRYPTION_KEY is not configured. The server cannot start without a valid encryption key.");
+  throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY environment variable is required.");
 }
 void refreshSettingsFromSupabase().catch((err) => {
   logger.warn({ err }, "Initial settings sync from Supabase encountered error, falling back to disk/env");

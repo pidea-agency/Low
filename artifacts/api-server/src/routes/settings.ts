@@ -1,5 +1,45 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { google } from "googleapis";
+
+const GoogleTestSchema = z.object({
+  service_account_json: z.any().optional(),
+  spreadsheet_url_or_id: z.string().optional(),
+  sheet_name: z.string().optional(),
+  spreadsheetId: z.string().optional(),
+  serviceAccountJson: z.any().optional(),
+});
+
+const GoogleBindSchema = z.object({
+  service_account_json: z.any().optional(),
+  spreadsheet_url_or_id: z.string().optional(),
+  sheet_name: z.string().optional(),
+  spreadsheetId: z.string().optional(),
+  serviceAccountJson: z.any().optional(),
+});
+
+const UpdateSettingsSchema = z.record(z.any());
+
+const TestWhatsappConnectionSchema = z.object({
+  instanceId: z.string().optional(),
+  apiToken: z.string().optional(),
+  apiUrl: z.string().optional(),
+  phone: z.string().optional(),
+}).passthrough();
+
+const TestWhatsappSchema = z.object({
+  phone: z.string().optional(),
+  testPhone: z.string().optional(),
+  message: z.string().optional(),
+  testMessage: z.string().optional(),
+}).passthrough();
+
+const UpdateNotificationTemplateSchema = z.object({
+  templateText: z.string().optional(),
+  template_text: z.string().optional(),
+  enabled: z.boolean().optional(),
+  channel: z.enum(["whatsapp", "in_app", "all"]).optional(),
+}).passthrough();
 import {
   getSettings,
   saveSettings,
@@ -232,6 +272,12 @@ router.post("/settings/google-test", async (req, res) => {
   const adminId = req.authUser!.userId!;
   const ip = req.ip || req.socket.remoteAddress || adminId;
 
+  const parseResult = GoogleTestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات فحص الاتصال غير صالحة." });
+    return;
+  }
+
   if (!checkTestRateLimit(`google-test:${ip}`)) {
     res.status(429).json({
       error: "تم تجاوز عدد محاولات اختبار الاتصال (الحد الأقصى 5 محاولات في الدقيقة). يرجى الانتظار دقيقة والمحاولة مرة أخرى.",
@@ -282,6 +328,12 @@ router.post("/settings/google-test", async (req, res) => {
  */
 router.post("/settings/google-bind", async (req, res) => {
   const adminId = req.authUser!.userId!;
+
+  const parseResult = GoogleBindSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات ربط جداول جوجل غير صالحة." });
+    return;
+  }
   try {
     let { service_account_json, spreadsheet_url_or_id, sheet_name } = req.body;
 
@@ -383,6 +435,11 @@ router.get("/settings", async (_req, res) => {
 });
 
 router.put("/settings", async (req, res) => {
+  const parseResult = UpdateSettingsSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات الإعدادات غير صالحة." });
+    return;
+  }
   try {
     const patch = { ...req.body };
     if (patch.whatsappToken && (patch.whatsappToken.includes("•") || patch.whatsappToken.includes("*"))) {
@@ -425,6 +482,11 @@ router.post("/settings/google-export", async (req, res) => {
  * Confirms whether the instance is actually authorized/connected to WhatsApp.
  */
 router.post("/settings/test-whatsapp-connection", async (req, res) => {
+  const parseResult = TestWhatsappConnectionSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات اختبار اتصال الواتساب غير صالحة." });
+    return;
+  }
   const s = await ensureSettingsLoaded();
   const rawInstanceId = String(req.body?.instanceId ?? "").trim();
   const rawToken = String(req.body?.token ?? "").trim();
@@ -526,6 +588,11 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
 });
 
 router.post("/settings/test-whatsapp", async (req, res) => {
+  const parseResult = TestWhatsappSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات إرسال رسالة الواتساب غير صالحة." });
+    return;
+  }
   const s = await ensureSettingsLoaded();
   const phone = String(
     req.body?.whatsappNumber ?? req.body?.number ?? req.body?.recipientPhone ?? s.whatsappNumber ?? ""
@@ -603,6 +670,11 @@ router.get("/settings/notification-templates", async (req, res) => {
  * Updates channels (in_app, whatsapp) and custom body/title templates.
  */
 router.put("/settings/notification-templates/:eventType", async (req, res) => {
+  const parseResult = UpdateNotificationTemplateSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات قالب الإشعار غير صالحة." });
+    return;
+  }
   try {
     const officeId = req.authUser!.officeId || req.authUser!.userId!;
     const eventType = req.params.eventType as NotificationEventType;

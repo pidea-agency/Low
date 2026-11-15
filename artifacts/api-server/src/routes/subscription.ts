@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { attachAuthUser, requireAdmin } from "../middlewares/auth.middleware";
 import {
   getOfficeSubscriptionOverview,
@@ -7,6 +8,11 @@ import {
   QuotaExceededError,
 } from "../services/supabase.service";
 import { logger } from "../lib/logger";
+
+const UpdateMemberQuotaSchema = z.object({
+  ai_quota_limit: z.union([z.number(), z.null()]).optional(),
+  aiQuotaLimit: z.union([z.number(), z.null()]).optional(),
+});
 
 const router: IRouter = Router();
 
@@ -35,6 +41,11 @@ router.get("/subscription/overview", async (req, res) => {
  */
 router.patch("/subscription/members/:id/quota", async (req, res) => {
   try {
+    const parseResult = UpdateMemberQuotaSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات حصة الاستهلاك غير صالحة." });
+      return;
+    }
     const adminId = req.authUser!.userId!;
     const memberId = req.params.id;
     const { ai_quota_limit } = req.body;

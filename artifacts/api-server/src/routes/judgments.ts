@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
@@ -7,6 +8,48 @@ import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-acces
 import { notifyLawyerAssignment } from "../services/assignment-notification.service";
 
 export type { JudgmentRecord };
+
+const CreateJudgmentSchema = z.object({
+  caseNumber: z.string().trim().min(1, "رقم القضية مطلوب."),
+  judgmentNumber: z.string().trim().min(1, "رقم الصك مطلوب."),
+  court: z.string().optional(),
+  plaintiff: z.string().optional(),
+  defendant: z.string().optional(),
+  assignedLawyer: z.string().optional(),
+  judgmentDate: z.string().optional(),
+  summary: z.string().optional(),
+  isFavorable: z.string().optional(),
+  clientId: z.string().nullable().optional(),
+  client_id: z.string().nullable().optional(),
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+  clientRole: z.string().nullable().optional(),
+  client_role: z.string().nullable().optional(),
+});
+
+const UpdateJudgmentSchema = z.object({
+  caseNumber: z.string().optional(),
+  court: z.string().optional(),
+  plaintiff: z.string().optional(),
+  defendant: z.string().optional(),
+  assignedLawyer: z.string().optional(),
+  judgmentNumber: z.string().optional(),
+  judgmentDate: z.string().optional(),
+  summary: z.string().optional(),
+  isFavorable: z.string().optional(),
+  clientId: z.string().nullable().optional(),
+  client_id: z.string().nullable().optional(),
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+  clientRole: z.string().nullable().optional(),
+  client_role: z.string().nullable().optional(),
+});
+
+const ReassignJudgmentSchema = z.object({
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+  assignedLawyer: z.string().optional(),
+});
 
 const router: IRouter = Router();
 
@@ -77,11 +120,13 @@ router.get("/judgments/:id", async (req, res) => {
  */
 router.post("/judgments", async (req, res) => {
   const officeId = getOfficeId(req);
-  const body = req.body as any;
-  if (!body.caseNumber?.trim() || !body.judgmentNumber?.trim()) {
-    res.status(400).json({ error: "رقم القضية ورقم الصك مطلوبان." });
+  const parseResult = CreateJudgmentSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "رقم القضية ورقم الصك مطلوبان.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
+  const body = req.body as any;
 
   const clientId = body.clientId || body.client_id || null;
   let assignedLawyerId = body.assignedLawyerId || body.assigned_lawyer_id || null;
@@ -141,6 +186,13 @@ router.put("/judgments/:id", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الحكم غير صالح." });
+    return;
+  }
+
+  const parseResult = UpdateJudgmentSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "بيانات تحديث الحكم غير صالحة.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
 
@@ -218,6 +270,12 @@ router.patch("/judgments/:id/reassign", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الحكم غير صالح." });
+    return;
+  }
+
+  const parseResult = ReassignJudgmentSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات إعادة تعيين الحكم غير صالحة." });
     return;
   }
 

@@ -1,13 +1,14 @@
 import crypto from "crypto";
-import { env } from "../config/env";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12; // Standard 96-bit IV for GCM
 const AUTH_TAG_LENGTH = 16; // Standard 128-bit auth tag
 
 function getEncryptionKey(): Buffer {
-  // Read SETTINGS_ENCRYPTION_KEY or fall back to SHA-256 of sessionSecret
-  const secret = process.env.SETTINGS_ENCRYPTION_KEY || env.sessionSecret || "court_system_secure_fallback_key";
+  const secret = process.env.SETTINGS_ENCRYPTION_KEY;
+  if (!secret || secret.trim().length === 0) {
+    throw new Error("SETTINGS_ENCRYPTION_KEY environment variable is required and cannot be empty.");
+  }
   return crypto.createHash("sha256").update(secret).digest();
 }
 

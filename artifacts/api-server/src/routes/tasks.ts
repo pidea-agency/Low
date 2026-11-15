@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
@@ -7,6 +8,44 @@ import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-acces
 import { notifyLawyerAssignment } from "../services/assignment-notification.service";
 
 export type { TaskRecord };
+
+const CreateTaskSchema = z.object({
+  title: z.string().trim().min(1, "عنوان المهمة مطلوب."),
+  assignee: z.string().optional(),
+  priority: z.enum(["منخفضة", "عادية", "عاجلة"]).optional(),
+  dueDate: z.string().optional(),
+  due_date: z.string().optional(),
+  status: z.enum(["قيد التنفيذ", "مكتملة", "معلقة"]).optional(),
+  notes: z.string().optional(),
+  clientId: z.string().nullable().optional(),
+  client_id: z.string().nullable().optional(),
+  caseId: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+});
+
+const UpdateTaskSchema = z.object({
+  title: z.string().trim().min(1, "عنوان المهمة لا يمكن أن يكون فارغاً.").optional(),
+  assignee: z.string().optional(),
+  priority: z.enum(["منخفضة", "عادية", "عاجلة"]).optional(),
+  dueDate: z.string().optional(),
+  due_date: z.string().optional(),
+  status: z.enum(["قيد التنفيذ", "مكتملة", "معلقة"]).optional(),
+  notes: z.string().optional(),
+  clientId: z.string().nullable().optional(),
+  client_id: z.string().nullable().optional(),
+  caseId: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+});
+
+const ReassignTaskSchema = z.object({
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+  assignee: z.string().optional(),
+});
 
 const router: IRouter = Router();
 
@@ -88,11 +127,13 @@ router.get("/tasks/:id", async (req, res) => {
  */
 router.post("/tasks", async (req, res) => {
   const officeId = getOfficeId(req);
-  const body = req.body as any;
-  if (!body.title?.trim()) {
-    res.status(400).json({ error: "عنوان المهمة مطلوب." });
+  const parseResult = CreateTaskSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "عنوان المهمة مطلوب.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
+  const body = req.body as any;
 
   const clientId = body.clientId || body.client_id || null;
   const caseId = body.caseId || body.case_id || null;
@@ -150,6 +191,13 @@ router.put("/tasks/:id", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف المهمة غير صالح." });
+    return;
+  }
+
+  const parseResult = UpdateTaskSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "بيانات المهمة غير صالحة.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
 
@@ -213,6 +261,12 @@ router.patch("/tasks/:id/reassign", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف المهمة غير صالح." });
+    return;
+  }
+
+  const parseResult = ReassignTaskSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات إعادة التعيين غير صالحة." });
     return;
   }
 

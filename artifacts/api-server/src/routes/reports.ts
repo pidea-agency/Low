@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import {
   attachAuthUser,
   requireAuth,
@@ -12,6 +13,16 @@ import { GoogleSheetsError } from "../services/googleSheets.service";
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import { listOfficeMembers } from "../services/supabase.service";
+
+const UpdateSessionReportSchema = z.union([
+  z.string(),
+  z.record(z.any()),
+]);
+
+const MonthlyReportQuerySchema = z.object({
+  month: z.string().optional(),
+  year: z.string().optional(),
+});
 
 const router: IRouter = Router();
 
@@ -52,6 +63,11 @@ router.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
     res.status(400).json({ error: "Invalid session id." });
     return;
   }
+  const parseResult = UpdateSessionReportSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات التقرير غير صالحة." });
+    return;
+  }
   try {
     logger.info({ id, body: req.body }, "Saving session report...");
     const officeId = req.authUser?.officeId || req.authUser?.userId;
@@ -83,6 +99,11 @@ router.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
  * overall and per assigned lawyer.
  */
 router.get("/reports/monthly", attachAuthUser, requireAdmin, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
+  const queryResult = MonthlyReportQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "معايير تصفية التقرير غير صالحة." });
+    return;
+  }
   const officeId = req.authUser?.officeId || req.authUser?.userId;
   if (!officeId) {
     res.status(401).json({ error: "غير مصرح: معرف المكتب مفقود." });

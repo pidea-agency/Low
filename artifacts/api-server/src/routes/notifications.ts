@@ -7,8 +7,14 @@
  */
 
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { attachAuthUser, requireAuth, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
+
+const NotificationsQuerySchema = z.object({
+  page: z.string().optional(),
+  limit: z.string().optional(),
+});
 import {
   listNotifications,
   markNotificationRead,
@@ -43,6 +49,11 @@ router.use("/notifications", attachAuthUser, requireAuth, blockSuperAdminFromOff
  */
 router.get("/notifications", async (req, res) => {
   try {
+    const queryResult = NotificationsQuerySchema.safeParse(req.query);
+    if (!queryResult.success) {
+      res.status(400).json({ error: "معايير تصفح الإشعارات غير صالحة." });
+      return;
+    }
     const officeId = getOfficeId(req);
     const userId = getUserId(req);
 

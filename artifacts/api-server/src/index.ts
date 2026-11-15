@@ -11,6 +11,14 @@ if (!isSupabaseConfigured()) {
   }
 }
 
+// Startup check: Fail loudly if SETTINGS_ENCRYPTION_KEY is missing
+if (!process.env.SETTINGS_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY.trim().length === 0) {
+  logger.fatal("FATAL: SETTINGS_ENCRYPTION_KEY is not configured. The server cannot start without a valid encryption key.");
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY environment variable is required.");
+  }
+}
+
 // Validate required secrets on startup in production
 if (env.isProduction && !process.env.VERCEL) {
   void env.sessionSecret;

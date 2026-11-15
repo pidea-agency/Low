@@ -1,5 +1,10 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import crypto from "crypto";
+
+const CronSweepSchema = z.object({
+  officeId: z.string().optional(),
+});
 import { env, isGoogleSheetsConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { runReminderSweep } from "../scheduler/reminderScheduler";
@@ -100,6 +105,11 @@ async function handlePoaExpiryCron(req: any, res: any) {
 
   const startedAt = Date.now();
   try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "معايير الجدولة غير صالحة." });
+      return;
+    }
     const targetOfficeId = (req.query.officeId as string) || (req.body?.officeId as string);
     const result = await runPoaExpirySweep(targetOfficeId);
     const durationMs = Date.now() - startedAt;
@@ -143,6 +153,11 @@ async function handleSubscriptionExpiryCron(req: any, res: any) {
 
   const startedAt = Date.now();
   try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "معايير الجدولة غير صالحة." });
+      return;
+    }
     const targetOfficeId = (req.query.officeId as string) || (req.body?.officeId as string);
     const result = await runSubscriptionExpirySweep(targetOfficeId);
     const durationMs = Date.now() - startedAt;

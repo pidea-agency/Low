@@ -1,10 +1,55 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { attachAuthUser, requireAuth, requireActiveSubscription, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import type { PoaRecord } from "../services/postgres.service";
 import { canUserAccessRecord, validateOfficeLawyer } from "../utils/record-access";
 import { notifyLawyerAssignment } from "../services/assignment-notification.service";
+
+const CreatePoaSchema = z.object({
+  poaNumber: z.string().trim().min(1, "رقم الوكالة مطلوب."),
+  clientId: z.string().nullable().optional(),
+  client_id: z.string().nullable().optional(),
+  caseId: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+  clientName: z.string().optional(),
+  client_name: z.string().optional(),
+  principalName: z.string().optional(),
+  agentName: z.string().optional(),
+  issueDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+  status: z.string().optional(),
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+  assignedLawyer: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const UpdatePoaSchema = z.object({
+  poaNumber: z.string().optional(),
+  clientId: z.string().nullable().optional(),
+  client_id: z.string().nullable().optional(),
+  caseId: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+  clientName: z.string().optional(),
+  client_name: z.string().optional(),
+  principalName: z.string().optional(),
+  agentName: z.string().optional(),
+  issueDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+  status: z.string().optional(),
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+  assignedLawyer: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const ReassignPoaSchema = z.object({
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+  assignedLawyer: z.string().optional(),
+});
 
 const router: IRouter = Router();
 
@@ -83,6 +128,12 @@ router.get("/poa/:rowId", async (req, res) => {
  */
 router.post("/poa", async (req, res) => {
   const officeId = getOfficeId(req);
+  const parseResult = CreatePoaSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "بيانات الوكالة غير صالحة.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
   const body = req.body as any;
 
   if (!body.poaNumber?.trim()) {
@@ -189,6 +240,13 @@ router.put("/poa/:rowId", async (req, res) => {
     return;
   }
 
+  const parseResult = UpdatePoaSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "بيانات تحديث الوكالة غير صالحة.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
+
   try {
     const existing = await postgresService.getPoaById(rowId, officeId);
     if (!existing) {
@@ -290,6 +348,12 @@ router.patch("/poa/:id/reassign", async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "معرف الوكالة غير صالح." });
+    return;
+  }
+
+  const parseResult = ReassignPoaSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات إعادة تعيين الوكالة غير صالحة." });
     return;
   }
 

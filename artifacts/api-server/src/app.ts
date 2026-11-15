@@ -16,6 +16,12 @@ if (!isSupabaseConfigured() && process.env.NODE_ENV !== "test") {
   throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
 }
 
+// Startup check: Fail loudly if SETTINGS_ENCRYPTION_KEY is missing (outside tests)
+if ((!process.env.SETTINGS_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY.trim().length === 0) && process.env.NODE_ENV !== "test") {
+  logger.fatal("FATAL: SETTINGS_ENCRYPTION_KEY is not configured. The server cannot start without a valid encryption key.");
+  throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY environment variable is required.");
+}
+
 // Pre-load runtime settings from Supabase platform_settings into memory cache
 void refreshSettingsFromSupabase().catch((err) => {
   logger.warn({ err }, "Initial settings sync from Supabase encountered error, falling back to disk/env");

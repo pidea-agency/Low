@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { validatePassword } from "@workspace/api-zod";
 import { attachAuthUser, requireAdmin } from "../middlewares/auth.middleware";
 import {
@@ -13,6 +14,29 @@ import {
 import { isSupabaseConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { dispatchEventNotification } from "../services/notification-template.service";
+
+const CreateOfficeMemberSchema = z.object({
+  username: z.string().trim().min(1, "اسم المستخدم مطلوب."),
+  email: z.string().trim().email("صيغة البريد الإلكتروني غير صحيحة."),
+  display_name: z.string().optional(),
+  displayName: z.string().optional(),
+  phone: z.string().nullable().optional(),
+  role_title: z.string().nullable().optional(),
+  roleTitle: z.string().nullable().optional(),
+});
+
+const UpdateOfficeMemberSchema = z.object({
+  password: z.string().optional(),
+  display_name: z.string().optional(),
+  displayName: z.string().optional(),
+  email: z.string().trim().email("صيغة البريد الإلكتروني غير صحيحة.").optional(),
+  status: z.enum(["active", "suspended", "pending_activation"]).optional(),
+  phone: z.string().nullable().optional(),
+});
+
+const ToggleMemberStatusSchema = z.object({
+  status: z.enum(["active", "suspended"]).optional(),
+});
 
 const router: IRouter = Router();
 
@@ -54,6 +78,12 @@ router.get("/users", async (req, res) => {
 router.post("/users", async (req, res) => {
   try {
     const adminId = req.authUser!.userId!;
+    const parseResult = CreateOfficeMemberSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors[0]?.message || "بيانات عضو المكتب غير صالحة.";
+      res.status(400).json({ error: errorMsg });
+      return;
+    }
     const { username, email, display_name, phone, role_title, roleTitle } = req.body;
 
     if (!username || !username.trim()) {
@@ -156,6 +186,13 @@ router.patch("/users/:id", async (req, res) => {
   try {
     const adminId = req.authUser!.userId!;
     const id = String(req.params.id);
+
+    const parseResult = UpdateOfficeMemberSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors[0]?.message || "بيانات تحديث عضو المكتب غير صالحة.";
+      res.status(400).json({ error: errorMsg });
+      return;
+    }
     const { password, display_name, email, status, phone } = req.body;
 
     if (password !== undefined && typeof password === "string" && password.trim() !== "") {
@@ -194,6 +231,12 @@ router.post("/users/:id/toggle-status", async (req, res) => {
   try {
     const adminId = req.authUser!.userId!;
     const id = String(req.params.id);
+
+    const parseResult = ToggleMemberStatusSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "حالة الحساب غير صالحة." });
+      return;
+    }
     const { status } = req.body;
     const updated = await toggleOfficeMemberStatus(adminId, id, status);
     if (updated) {

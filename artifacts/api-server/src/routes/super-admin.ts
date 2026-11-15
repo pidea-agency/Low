@@ -1,5 +1,84 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { validatePassword } from "@workspace/api-zod";
+
+const SetupFirstSuperAdminSchema = z.object({
+  username: z.string().trim().min(1, "اسم المستخدم مطلوب."),
+  password: z.string().min(1, "كلمة المرور مطلوبة."),
+  email: z.string().optional(),
+  display_name: z.string().optional(),
+});
+
+const UpdatePlatformSettingsSchema = z.record(z.any());
+
+const PlanSchema = z.object({
+  name: z.string().optional(),
+  slug: z.string().optional(),
+  ai_quota_limit: z.number().optional(),
+  price: z.string().nullable().optional(),
+  features: z.record(z.any()).optional(),
+}).passthrough();
+
+const CreateAdminSchema = z.object({
+  username: z.string().trim().min(1, "اسم المستخدم مطلوب."),
+  password: z.string().optional(),
+  display_name: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  plan_slug: z.string().optional(),
+  planSlug: z.string().optional(),
+  subscription_expires_at: z.string().optional(),
+  subscriptionExpiresAt: z.string().optional(),
+  ai_quota_limit: z.number().optional(),
+  aiQuotaLimit: z.number().optional(),
+}).passthrough();
+
+const UpdateAdminSchema = z.object({
+  password: z.string().optional(),
+  display_name: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  plan_slug: z.string().optional(),
+  planSlug: z.string().optional(),
+  subscription_expires_at: z.string().optional(),
+  subscriptionExpiresAt: z.string().optional(),
+  ai_quota_limit: z.number().optional(),
+  aiQuotaLimit: z.number().optional(),
+  status: z.enum(["active", "suspended"]).optional(),
+}).passthrough();
+
+const ExtendAdminSchema = z.object({
+  days: z.number().optional(),
+  months: z.number().optional(),
+  years: z.number().optional(),
+}).passthrough();
+
+const ToggleAdminStatusSchema = z.object({
+  status: z.enum(["active", "suspended"]).optional(),
+}).passthrough();
+
+const LinkMemberSchema = z.object({
+  memberId: z.string().optional(),
+  member_id: z.string().optional(),
+  adminId: z.string().optional(),
+  admin_id: z.string().optional(),
+}).passthrough();
+
+const CreatePaymentSchema = z.object({
+  office_id: z.string().optional(),
+  officeId: z.string().optional(),
+  amount: z.union([z.number(), z.string()]).optional(),
+  payment_method: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  reference_number: z.string().optional(),
+  referenceNumber: z.string().optional(),
+  notes: z.string().optional(),
+}).passthrough();
+
+const UpdatePaymentSchema = z.object({
+  status: z.string().optional(),
+  notes: z.string().optional(),
+}).passthrough();
 import { attachAuthUser, requireSuperAdmin } from "../middlewares/auth.middleware";
 import {
   listSupabaseAdmins,
@@ -41,6 +120,12 @@ const router: IRouter = Router();
  */
 router.post("/super-admin/setup-first", async (req, res) => {
   try {
+    const parseResult = SetupFirstSuperAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors[0]?.message || "اسم المستخدم وكلمة المرور مطلوبان.";
+      res.status(400).json({ error: errorMsg });
+      return;
+    }
     const { username, password, email, display_name } = req.body;
     if (!username || !password) {
       res.status(400).json({ error: "اسم المستخدم وكلمة المرور مطلوبان." });
@@ -114,6 +199,11 @@ router.get("/super-admin/settings", async (_req, res) => {
  */
 router.patch("/super-admin/settings", async (req, res) => {
   try {
+    const parseResult = UpdatePlatformSettingsSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات إعدادات المنصة غير صالحة." });
+      return;
+    }
     const {
       activation_link_expiry_hours,
       new_office_registration_enabled,
@@ -236,6 +326,11 @@ router.get("/super-admin/plans", async (_req, res) => {
  */
 router.post("/super-admin/plans", async (req, res) => {
   try {
+    const parseResult = PlanSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات الباقة غير صالحة." });
+      return;
+    }
     const { name, slug, ai_quota_limit, price, features } = req.body;
     if (!name || typeof name !== "string" || !name.trim()) {
       res.status(400).json({ error: "اسم الباقة مطلوب." });
@@ -278,6 +373,11 @@ router.post("/super-admin/plans", async (req, res) => {
  */
 router.patch("/super-admin/plans/:id", async (req, res) => {
   try {
+    const parseResult = PlanSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات تحديث الباقة غير صالحة." });
+      return;
+    }
     const id = String(req.params.id);
     const { name, slug, ai_quota_limit, price, features } = req.body;
 
@@ -372,6 +472,11 @@ router.get("/super-admin/admins", async (_req, res) => {
  */
 router.post("/super-admin/admins", async (req, res) => {
   try {
+    const parseResult = CreateAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات مدير المكتب غير صالحة." });
+      return;
+    }
     const {
       username,
       password,
@@ -444,6 +549,11 @@ router.post("/super-admin/admins", async (req, res) => {
  */
 router.patch("/super-admin/admins/:id", async (req, res) => {
   try {
+    const parseResult = UpdateAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات تحديث المكتب غير صالحة." });
+      return;
+    }
     const id = String(req.params.id);
     const {
       password,
@@ -516,6 +626,11 @@ router.patch("/super-admin/admins/:id", async (req, res) => {
  */
 router.post("/super-admin/admins/:id/extend", async (req, res) => {
   try {
+    const parseResult = ExtendAdminSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات تمديد الاشتراك غير صالحة." });
+      return;
+    }
     const id = String(req.params.id);
     const { period } = req.body; // '1m' | '1y'
 
@@ -573,6 +688,11 @@ router.post("/super-admin/admins/:id/extend", async (req, res) => {
  */
 router.post("/super-admin/admins/:id/toggle-status", async (req, res) => {
   try {
+    const parseResult = ToggleAdminStatusSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "حالة المكتب غير صالحة." });
+      return;
+    }
     const id = String(req.params.id);
     const { status } = req.body;
     const updated = await toggleAdminStatus(id, status);
@@ -683,6 +803,11 @@ router.get("/super-admin/unlinked-members", async (_req, res) => {
  */
 router.post("/super-admin/link-member", async (req, res) => {
   try {
+    const parseResult = LinkMemberSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات ربط العضو غير صالحة." });
+      return;
+    }
     const { memberId, adminId } = req.body;
     if (!memberId || !adminId) {
       res.status(400).json({ error: "معرف العضو ومعرف مدير المكتب مطلوبان." });
@@ -744,6 +869,11 @@ router.get("/super-admin/payments", async (req, res) => {
  */
 router.post("/super-admin/payments", async (req, res) => {
   try {
+    const parseResult = CreatePaymentSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات الدفعة غير صالحة." });
+      return;
+    }
     const { office_id, amount, currency, payment_date, method, status, notes } = req.body;
     if (!office_id) {
       res.status(400).json({ error: "معرف المكتب مطلوب." });
@@ -809,6 +939,11 @@ router.post("/super-admin/payments", async (req, res) => {
  */
 router.patch("/super-admin/payments/:id", async (req, res) => {
   try {
+    const parseResult = UpdatePaymentSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: "بيانات تحديث الدفعة غير صالحة." });
+      return;
+    }
     const id = req.params.id;
     const { status, notes, amount, method, payment_date } = req.body;
 

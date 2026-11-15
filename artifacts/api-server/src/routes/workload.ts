@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import {
   attachAuthUser,
   requireAdmin,
@@ -8,6 +9,10 @@ import {
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import { listOfficeMembers } from "../services/supabase.service";
+
+const WorkloadQuerySchema = z.object({
+  lawyerId: z.string().optional(),
+});
 
 const router: IRouter = Router();
 
@@ -31,6 +36,11 @@ function getOfficeId(req: any): string {
  * (active sessions, open poa, pending tasks) grouped by assigned_lawyer_id.
  */
 router.get("/workload", async (req, res) => {
+  const queryResult = WorkloadQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "معايير عبء العمل غير صالحة." });
+    return;
+  }
   const officeId = getOfficeId(req);
   const adminId = req.authUser!.userId!;
 

@@ -1,3 +1,4 @@
+<!-- NEVER document real default login credentials here, even for local dev. See CONTRIBUTING or internal notes instead. -->
 # ⚖️ المنظومة القضائية السحابية لإدارة المحاكم والمكاتب القانونية
 ### Cloud Legal & Court Session Management SaaS Platform
 
@@ -52,12 +53,12 @@
 
 ---
 
-## 🔑 بيانات الدخول الافتراضية (Default Credentials)
+## 🔑 بوابات الدخول (Authentication Portals)
 
 | البوابة | الرابط المحلي | اسم المستخدم | كلمة المرور | الصلاحية |
 | :--- | :--- | :---: | :---: | :---: |
-| **بوابة المحامي** | [http://localhost:5173/login](http://localhost:5173/login) | **`12345`** | **`12345`** | مساحة عمل المحامي |
-| **بوابة المشرف العام** | [http://localhost:5173/admin/login](http://localhost:5173/admin/login) | **`123456`** | **`123456`** | إدارة المنصة والمستخدمين |
+| **بوابة المحامي** | [http://localhost:5173/login](http://localhost:5173/login) | `<username>` | `<password>` | مساحة عمل المحامي |
+| **بوابة المشرف العام** | [http://localhost:5173/admin/login](http://localhost:5173/admin/login) | `<admin-username>` | `<admin-password>` | إدارة المنصة والمستخدمين |
 
 ---
 

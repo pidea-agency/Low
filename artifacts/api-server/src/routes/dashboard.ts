@@ -1,13 +1,23 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { GetDashboardStatsResponse } from "@workspace/api-zod";
 import { getDashboardStats, getDashboardChartsData } from "../services/session.service";
 import { isGoogleSheetsConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { attachAuthUser, requireAuth, blockSuperAdminFromOfficeData } from "../middlewares/auth.middleware";
 
+const DashboardQuerySchema = z.object({
+  scope: z.string().optional(),
+});
+
 const router: IRouter = Router();
 
 router.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
+  const queryResult = DashboardQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "معايير لوحة التحكم غير صالحة." });
+    return;
+  }
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
     const isPersonal = req.query.scope === "personal";
@@ -22,6 +32,11 @@ router.get("/dashboard/stats", attachAuthUser, requireAuth, blockSuperAdminFromO
 });
 
 router.get("/dashboard/charts", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, async (req, res) => {
+  const queryResult = DashboardQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "معايير مخططات لوحة التحكم غير صالحة." });
+    return;
+  }
   try {
     const officeId = req.authUser?.officeId || req.authUser?.userId;
     const isPersonal = req.query.scope === "personal";

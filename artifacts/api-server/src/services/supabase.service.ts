@@ -9,6 +9,7 @@ import { logger } from "../lib/logger";
 import { encryptSecret, decryptSecret, isEncrypted } from "../lib/encryption";
 import { sendActivationEmail } from "./email.service";
 import { sendActivationInvitation } from "./activation-delivery.service";
+import { isInMemoryFallbackAllowed } from "./postgres.service";
 
 export interface SubscriptionPlanFeatures {
   google_sheets_export: boolean;
@@ -180,7 +181,7 @@ interface FallbackActivationRecord {
 const fallbackActivationTokens = new Map<string, FallbackActivationRecord>();
 
 export function hasTestFallbackActivationToken(userId?: string | null, tokenHash?: string | null): boolean {
-  if (process.env.NODE_ENV !== "test") {
+  if (process.env.NODE_ENV !== "test" && !isInMemoryFallbackAllowed()) {
     return false;
   }
   return Boolean(
@@ -190,7 +191,7 @@ export function hasTestFallbackActivationToken(userId?: string | null, tokenHash
 }
 
 export function saveFallbackActivationToken(userId: string, tokenHash: string, expiresAt: Date): void {
-  if (process.env.NODE_ENV !== "test") return;
+  if (process.env.NODE_ENV !== "test" && !isInMemoryFallbackAllowed()) return;
   const record: FallbackActivationRecord = {
     userId,
     tokenHash,
@@ -200,18 +201,30 @@ export function saveFallbackActivationToken(userId: string, tokenHash: string, e
   fallbackActivationTokens.set(`user:${userId}`, record);
 }
 
+export function setFallbackActivationToken(userId: string, tokenHash: string, expiresAt: Date): void {
+  saveFallbackActivationToken(userId, tokenHash, expiresAt);
+}
+
 export function getFallbackActivationTokenByHash(tokenHash: string): FallbackActivationRecord | undefined {
-  if (process.env.NODE_ENV !== "test") return undefined;
+  if (process.env.NODE_ENV !== "test" && !isInMemoryFallbackAllowed()) return undefined;
   return fallbackActivationTokens.get(tokenHash);
 }
 
+export function getFallbackActivationToken(tokenHash: string): FallbackActivationRecord | undefined {
+  return getFallbackActivationTokenByHash(tokenHash);
+}
+
 export function clearFallbackActivationToken(userId: string): void {
-  if (process.env.NODE_ENV !== "test") return;
+  if (process.env.NODE_ENV !== "test" && !isInMemoryFallbackAllowed()) return;
   const userRec = fallbackActivationTokens.get(`user:${userId}`);
   if (userRec) {
     fallbackActivationTokens.delete(userRec.tokenHash);
     fallbackActivationTokens.delete(`user:${userId}`);
   }
+}
+
+export function deleteFallbackActivationToken(userId: string): void {
+  clearFallbackActivationToken(userId);
 }
 
 // ============================================================================

@@ -1,7 +1,15 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import formidable from "formidable";
 import fs from "fs/promises";
 import path from "path";
+
+const AttachmentUploadFieldsSchema = z.object({
+  relatedRecordType: z.enum(["client", "poa", "judgment", "session", "task", "case"], {
+    errorMap: () => ({ message: "نوع السجل غير صالح. الأنواع المتاحة: client, poa, judgment, session, task, case" }),
+  }),
+  relatedRecordId: z.string().trim().min(1, "معرف السجل المرتبط مطلوب."),
+});
 import {
   attachAuthUser,
   requireAuth,
@@ -160,25 +168,17 @@ router.post("/attachments", async (req, res) => {
     Array.isArray(rawRecordId) ? rawRecordId[0] : rawRecordId || "",
   ).trim();
 
-  if (!relatedRecordType || !relatedRecordId) {
-    try {
-      await fs.unlink(uploadedFile.filepath);
-    } catch {}
-    res.status(400).json({
-      error:
-        "يجب تحديد نوع السجل المرتبط ومعرفه (relatedRecordType و relatedRecordId).",
-    });
-    return;
-  }
+  const parseFieldsResult = AttachmentUploadFieldsSchema.safeParse({
+    relatedRecordType,
+    relatedRecordId,
+  });
 
-  const validTypes = ["client", "poa", "judgment", "session", "task", "case"];
-  if (!validTypes.includes(relatedRecordType)) {
+  if (!parseFieldsResult.success) {
     try {
       await fs.unlink(uploadedFile.filepath);
     } catch {}
-    res.status(400).json({
-      error: `نوع السجل غير صالح. الأنواع المتاحة: ${validTypes.join(", ")}`,
-    });
+    const errorMsg = parseFieldsResult.error.errors[0]?.message || "بيانات المرفق غير صالحة.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
 

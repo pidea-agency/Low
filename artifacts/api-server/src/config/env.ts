@@ -52,6 +52,9 @@ function parseDotEnvFile(): Record<string, string> {
               v = v.slice(1, -1);
             }
             parsed[k] = v;
+            if (process.env[k] === undefined || process.env[k] === "") {
+              process.env[k] = v;
+            }
           }
         }
         return parsed;
@@ -60,6 +63,9 @@ function parseDotEnvFile(): Record<string, string> {
   } catch {}
   return {};
 }
+
+// Automatically ensure process.env has entries from .env
+parseDotEnvFile();
 
 function readEnv(key: string): string | undefined {
   const fromProcess = process.env[key];

@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import {
   attachAuthUser,
   requireAuth,
@@ -10,6 +11,36 @@ import * as postgresService from "../services/postgres.service";
 import type { ClientRecord } from "../services/postgres.service";
 import { canUserAccessRecord, validateOfficeLawyer, getStaffAccessibleClientIds } from "../utils/record-access";
 import { findUserByIdOrUsername } from "../services/supabase.service";
+
+const TriageLinkSchema = z.object({
+  module: z.enum(["sessions", "poa", "judgments", "tasks"]),
+  id: z.union([z.string(), z.number()]),
+  clientId: z.string().optional(),
+  client_id: z.string().optional(),
+  assignedLawyerId: z.string().nullable().optional(),
+  assigned_lawyer_id: z.string().nullable().optional(),
+});
+
+const CreateClientSchema = z.object({
+  name: z.string().trim().min(1, "اسم العميل مطلوب."),
+  phone: z.string().optional(),
+  notes: z.string().optional(),
+  client_type: z.string().optional(),
+  clientType: z.string().optional(),
+  type: z.string().optional(),
+});
+
+const UpdateClientSchema = z.object({
+  name: z.string().trim().min(1, "اسم العميل مطلوب.").optional(),
+  phone: z.string().optional(),
+  notes: z.string().optional(),
+  client_type: z.string().optional(),
+  clientType: z.string().optional(),
+});
+
+const CreateClientNoteSchema = z.object({
+  body: z.string().trim().min(1, "نص الملاحظة مطلوب."),
+});
 
 const router: IRouter = Router();
 
@@ -88,6 +119,13 @@ router.post("/clients/triage-link", async (req, res) => {
     return;
   }
   const officeId = getOfficeId(req);
+
+  const parseResult = TriageLinkSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات ربط السجلات غير صالحة." });
+    return;
+  }
+
   const { module, id, clientId, client_id, assignedLawyerId, assigned_lawyer_id } = req.body || {};
 
   const targetClientId = clientId !== undefined ? clientId : client_id;
@@ -185,11 +223,13 @@ router.get("/clients", async (req, res) => {
  */
 router.post("/clients", async (req, res) => {
   const officeId = getOfficeId(req);
-  const body = req.body || {};
-  if (!body.name?.trim()) {
-    res.status(400).json({ error: "اسم العميل مطلوب." });
+  const parseResult = CreateClientSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "اسم العميل مطلوب.";
+    res.status(400).json({ error: errorMsg });
     return;
   }
+  const body = req.body || {};
 
   try {
     const client = await postgresService.createClient(
@@ -247,6 +287,13 @@ router.get("/clients/:id", async (req, res) => {
 router.patch("/clients/:id", async (req, res) => {
   const officeId = getOfficeId(req);
   const id = String(req.params.id);
+
+  const parseResult = UpdateClientSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errorMsg = parseResult.error.errors[0]?.message || "بيانات تحديث العميل غير صالحة.";
+    res.status(400).json({ error: errorMsg });
+    return;
+  }
   const body = req.body || {};
 
   try {
@@ -426,12 +473,13 @@ router.get("/clients/:id/notes", async (req, res) => {
 router.post("/clients/:id/notes", async (req, res) => {
   const officeId = getOfficeId(req);
   const id = String(req.params.id);
-  const bodyText = req.body?.body ? String(req.body.body).trim() : "";
 
-  if (!bodyText) {
+  const parseResult = CreateClientNoteSchema.safeParse(req.body);
+  if (!parseResult.success) {
     res.status(400).json({ error: "نص الملاحظة مطلوب." });
     return;
   }
+  const bodyText = req.body?.body ? String(req.body.body).trim() : "";
 
   try {
     const client = await postgresService.getClientById(id, officeId);

@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import {
   attachAuthUser,
   requireAuth,
@@ -8,6 +9,10 @@ import {
 import { logger } from "../lib/logger";
 import * as postgresService from "../services/postgres.service";
 import { canUserAccessRecord, getStaffAccessibleClientIds } from "../utils/record-access";
+
+const SearchQuerySchema = z.object({
+  q: z.string().optional(),
+});
 
 const router: IRouter = Router();
 
@@ -41,6 +46,11 @@ function getOfficeId(req: any): string {
  * Limits each category to ~5 results.
  */
 router.get("/search", async (req, res) => {
+  const queryResult = SearchQuerySchema.safeParse(req.query);
+  if (!queryResult.success) {
+    res.status(400).json({ error: "معايير البحث غير صالحة." });
+    return;
+  }
   const officeId = getOfficeId(req);
   const q = String(req.query.q || "").trim();
 
