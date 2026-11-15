@@ -7,6 +7,29 @@ import {
   type Session,
 } from '@workspace/api-client-react';
 import { Link } from 'wouter';
+import {
+  Calendar,
+  FilePlus,
+  BrainCircuit,
+  PlusCircle,
+  Gavel,
+  FolderOpen,
+  AlertCircle,
+  CalendarCheck,
+  FileText,
+  Clock,
+  CheckCircle2,
+  Users,
+  ChevronRight,
+  ChevronLeft,
+  CheckCheck,
+  Table,
+  MessageSquare,
+  UserPlus,
+  Sliders,
+  CreditCard,
+  Sparkles,
+} from 'lucide-react';
 
 interface OfficeTask {
   id: number;
@@ -333,7 +356,7 @@ export default function DashboardAdminPage() {
           </div>
 
           <div className="flex items-center gap-2 text-xs text-[#757682]">
-            <span className="material-symbols-outlined text-base text-[#757682]">calendar_today</span>
+            <Calendar className="w-4 h-4 text-[#757682]" />
             <span>{hijriDateStr ? `${hijriDateStr} هـ` : 'التقويم القضائي'}</span>
             <span className="text-[#757682]">/</span>
             <span>{gregorianDateStr}</span>
@@ -346,21 +369,21 @@ export default function DashboardAdminPage() {
         <div className="flex items-center flex-wrap gap-2.5">
           <Link href="/cases">
             <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#e5eeff] hover:bg-[#dce9ff] text-[#0b1c30] transition-colors text-xs font-semibold cursor-pointer shadow-2xs">
-              <span className="material-symbols-outlined text-lg text-[#00236f]">note_add</span>
+              <FilePlus className="w-4.5 h-4.5 text-[#00236f]" />
               <span>تسجيل قضية جديدة</span>
             </button>
           </Link>
 
           <Link href="/chat">
             <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#dae2fd] hover:bg-[#bec6e0] text-[#131b2e] transition-colors text-xs font-semibold cursor-pointer shadow-2xs">
-              <span className="material-symbols-outlined text-lg text-[#9b4500]">psychology</span>
+              <BrainCircuit className="w-4.5 h-4.5 text-[#9b4500]" />
               <span>تحليل حكم بالذكاء الاصطناعي</span>
             </button>
           </Link>
 
           <Link href="/sessions">
             <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white transition-all shadow-sm text-xs font-bold cursor-pointer">
-              <span className="material-symbols-outlined text-lg">add_circle</span>
+              <PlusCircle className="w-4.5 h-4.5" />
               <span>إضافة جلسة فورية</span>
             </button>
           </Link>
@@ -380,7 +403,7 @@ export default function DashboardAdminPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">gavel</span>
+              <Gavel className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
@@ -404,7 +427,7 @@ export default function DashboardAdminPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce9ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">folder_managed</span>
+              <FolderOpen className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
@@ -428,7 +451,7 @@ export default function DashboardAdminPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500]">
-              <span className="material-symbols-outlined">notification_important</span>
+              <AlertCircle className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
@@ -456,7 +479,7 @@ export default function DashboardAdminPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dae2fd] flex items-center justify-center text-[#131b2e]">
-              <span className="material-symbols-outlined">neurology</span>
+              <BrainCircuit className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
@@ -484,7 +507,7 @@ export default function DashboardAdminPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
-                  <span className="material-symbols-outlined text-lg">event_available</span>
+                  <CalendarCheck className="w-4.5 h-4.5" />
                 </div>
                 <h2 className="text-lg font-bold text-[#0b1c30]">جدول الجلسات القادمة والمستعجلة</h2>
               </div>
@@ -550,7 +573,7 @@ export default function DashboardAdminPage() {
                       {/* Case Number */}
                       <td className="py-3.5 px-4 font-semibold text-[#00236f] whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm text-[#757682]">description</span>
+                          <FileText className="w-3.5 h-3.5 text-[#757682]" />
                           {row.caseNumber}
                         </span>
                       </td>
@@ -584,7 +607,7 @@ export default function DashboardAdminPage() {
                       {/* Time & Room */}
                       <td className="py-3.5 px-4 whitespace-nowrap text-[#0b1c30]">
                         <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm text-[#757682]">schedule</span>
+                          <Clock className="w-3.5 h-3.5 text-[#757682]" />
                           <span>{row.time}</span>
                         </div>
                       </td>
@@ -598,7 +621,7 @@ export default function DashboardAdminPage() {
                           </span>
                         ) : row.statusType === 'recorded' ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00236f]">
-                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
                             {row.statusText}
                           </span>
                         ) : (
@@ -631,7 +654,7 @@ export default function DashboardAdminPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-[#e5eeff] flex items-center justify-center text-[#00236f]">
-                  <span className="material-symbols-outlined text-lg">supervised_user_circle</span>
+                  <Users className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-[#0b1c30]">توزيع عبء العمل والمهام على المحامين</h2>
@@ -753,16 +776,16 @@ export default function DashboardAdminPage() {
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col">
             <div className="flex items-center justify-between pb-3 mb-2 border-b-0">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#00236f]">calendar_month</span>
+                <Calendar className="w-5 h-5 text-[#00236f]" />
                 <h3 className="text-base font-bold text-[#0b1c30]">التقويم القضائي الذكي</h3>
               </div>
               <div className="flex items-center gap-1 text-[#0b1c30]">
                 <button onClick={() => setSelectedCalendarDay(Math.max(1, selectedCalendarDay - 1))} className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]">
-                  <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
                 <span className="text-xs font-semibold text-[#00236f]">{calMonthName} {calYear}</span>
                 <button onClick={() => setSelectedCalendarDay(Math.min(31, selectedCalendarDay + 1))} className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]">
-                  <span className="material-symbols-outlined text-sm">chevron_left</span>
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -924,7 +947,7 @@ export default function DashboardAdminPage() {
           {/* Widget 3: Integration & Sync Status Widget */}
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b-0">
-              <span className="material-symbols-outlined text-[#00236f]">rule</span>
+              <CheckCheck className="w-5 h-5 text-[#00236f]" />
               <h3 className="text-base font-bold text-[#0b1c30]">مزامنة البيانات والخدمات</h3>
             </div>
 
@@ -932,7 +955,7 @@ export default function DashboardAdminPage() {
             <div className="p-3 rounded-lg bg-[#eff4ff] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
-                  <span className="material-symbols-outlined text-base">table_chart</span>
+                  <Table className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col text-right">
                   <span className="text-xs font-bold text-[#0b1c30]">ربط Google Sheets</span>
@@ -949,7 +972,7 @@ export default function DashboardAdminPage() {
             <div className="p-3 rounded-lg bg-[#eff4ff] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500]">
-                  <span className="material-symbols-outlined text-base">chat</span>
+                  <MessageSquare className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col text-right">
                   <span className="text-xs font-bold text-[#0b1c30]">إشعارات الواتساب للموكلين</span>
@@ -971,7 +994,7 @@ export default function DashboardAdminPage() {
         <Link href="/users">
           <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
             <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f] group-hover:scale-105 transition-transform shrink-0">
-              <span className="material-symbols-outlined">group_add</span>
+              <UserPlus className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-right">
               <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">
@@ -988,7 +1011,7 @@ export default function DashboardAdminPage() {
         <Link href="/settings">
           <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
             <div className="w-10 h-10 rounded-lg bg-[#dce9ff] flex items-center justify-center text-[#00236f] group-hover:scale-105 transition-transform shrink-0">
-              <span className="material-symbols-outlined">tune</span>
+              <Sliders className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-right">
               <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">
@@ -1005,7 +1028,7 @@ export default function DashboardAdminPage() {
         <Link href="/subscription">
           <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
             <div className="w-10 h-10 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500] group-hover:scale-105 transition-transform shrink-0">
-              <span className="material-symbols-outlined">credit_card</span>
+              <CreditCard className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-right">
               <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">
@@ -1022,7 +1045,7 @@ export default function DashboardAdminPage() {
         <Link href="/chat">
           <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow transition-shadow flex items-center gap-3 group border border-[#e5eeff] cursor-pointer">
             <div className="w-10 h-10 rounded-lg bg-[#dae2fd] flex items-center justify-center text-[#131b2e] group-hover:scale-105 transition-transform shrink-0">
-              <span className="material-symbols-outlined">auto_awesome</span>
+              <Sparkles className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-right">
               <span className="text-xs font-bold text-[#0b1c30] group-hover:text-[#00236f] transition-colors">

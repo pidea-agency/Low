@@ -5,6 +5,21 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useSidebarCollapse } from '@/context/sidebar-context';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import {
+  LayoutDashboard,
+  CalendarCheck,
+  ClipboardList,
+  Sparkles,
+  FolderOpen,
+  ShieldCheck,
+  Users,
+  Scale,
+  UserCheck,
+  CreditCard,
+  Sliders,
+  Landmark,
+  Gavel,
+} from 'lucide-react';
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -83,13 +98,13 @@ export function Sidebar({
       id: 'dashboard',
       name: 'لوحة التحكم',
       path: '/',
-      icon: 'dashboard',
+      icon: LayoutDashboard,
     },
     {
       id: 'sessions',
       name: 'الجلسات والمواعيد',
       path: '/sessions',
-      icon: 'event_available',
+      icon: CalendarCheck,
       badge: String(totalSessionsCount),
       badgeType: 'orange',
     },
@@ -97,13 +112,13 @@ export function Sidebar({
       id: 'tasks',
       name: 'المهام الإجرائية',
       path: '/tasks',
-      icon: 'assignment',
+      icon: ClipboardList,
     },
     {
       id: 'chat',
       name: 'تحليل الرسائل الذكي',
       path: '/chat',
-      icon: 'neurology',
+      icon: Sparkles,
       badge: 'AI',
       badgeType: 'ai',
     },
@@ -114,25 +129,25 @@ export function Sidebar({
       id: 'cases',
       name: 'ملفات القضايا',
       path: '/cases',
-      icon: 'folder_open',
+      icon: FolderOpen,
     },
     {
       id: 'poa',
       name: 'الوكالات الشرعية',
       path: '/poa',
-      icon: 'verified_user',
+      icon: ShieldCheck,
     },
     {
       id: 'clients',
       name: 'العملاء والموكلين',
       path: '/clients',
-      icon: 'group',
+      icon: Users,
     },
     {
       id: 'judgments',
       name: 'الأحكام القضائية',
       path: '/judgments',
-      icon: 'history_edu',
+      icon: Scale,
     },
   ];
 
@@ -141,19 +156,19 @@ export function Sidebar({
       id: 'office_members',
       name: 'أعضاء الفريق',
       path: '/users',
-      icon: 'badge',
+      icon: UserCheck,
     },
     {
       id: 'subscription',
       name: 'الاشتراك والحصص',
       path: '/subscription',
-      icon: 'credit_card',
+      icon: CreditCard,
     },
     {
       id: 'settings',
       name: 'الإعدادات والربط',
       path: '/settings',
-      icon: 'tune',
+      icon: Sliders,
     },
   ];
 
@@ -164,6 +179,7 @@ export function Sidebar({
 
   const renderNavItem = (item: any, collapsed = false) => {
     const active = isItemActive(item.path);
+    const Icon = item.icon;
 
     const content = (
       <Link
@@ -181,17 +197,15 @@ export function Sidebar({
         `}
       >
         <div className={`flex items-center gap-2.5 min-w-0 ${collapsed ? 'justify-center' : ''}`}>
-          <span
-            className={`material-symbols-outlined text-lg shrink-0 ${
+          <Icon
+            className={`w-4 h-4 shrink-0 ${
               active
                 ? 'text-white'
                 : item.id === 'chat'
                   ? 'text-[#9b4500]'
                   : 'text-[#757682]'
             }`}
-          >
-            {item.icon}
-          </span>
+          />
           {!collapsed && (
             <span className="truncate text-xs">{item.name}</span>
           )}
@@ -250,7 +264,7 @@ export function Sidebar({
             <div className="h-16 px-4 flex items-center justify-between shrink-0 bg-white">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[#00236f] flex items-center justify-center text-white shrink-0 shadow-xs">
-                  <span className="material-symbols-outlined text-lg">account_balance</span>
+                  <Landmark className="w-4.5 h-4.5 text-white" />
                 </div>
                 <div className="flex flex-col min-w-0 text-right">
                   <span className="font-bold text-sm text-[#00236f] truncate leading-tight">
@@ -271,7 +285,7 @@ export function Sidebar({
             <div className="px-4 py-2 shrink-0">
               <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#eff4ff] text-[#444651]">
                 <span className="text-xs font-medium">السنة القضائية 1446-1447</span>
-                <span className="material-symbols-outlined text-sm text-[#00236f]">gavel</span>
+                <Gavel className="w-3.5 h-3.5 text-[#00236f]" />
               </div>
             </div>
 
@@ -346,7 +360,7 @@ export function Sidebar({
               onClick={toggleCollapse}
               className="w-10 h-10 rounded-lg bg-[#00236f] flex items-center justify-center text-white"
             >
-              <span className="material-symbols-outlined text-lg">account_balance</span>
+              <Landmark className="w-5 h-5 text-white" />
             </button>
 
             <nav className="flex flex-col items-center gap-1.5 mt-2">

@@ -42,6 +42,10 @@ import {
   Sparkles,
   AlarmClock,
   Check,
+  List,
+  LayoutGrid,
+  FolderOpen,
+  Route,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -535,7 +539,7 @@ export default function CasesPage() {
                 viewType === 'table' ? 'bg-[#edf3ff] text-[#00236f]' : 'text-[#647188] hover:text-[#182337]'
               }`}
             >
-              <span className="material-symbols-outlined text-sm">view_list</span>
+              <List className="w-3.5 h-3.5" />
               جدول تفصيلي
             </button>
             <button
@@ -544,7 +548,7 @@ export default function CasesPage() {
                 viewType === 'cards' ? 'bg-[#edf3ff] text-[#00236f]' : 'text-[#647188] hover:text-[#182337]'
               }`}
             >
-              <span className="material-symbols-outlined text-sm">dashboard</span>
+              <LayoutGrid className="w-3.5 h-3.5" />
               بطاقات ومراحل
             </button>
           </div>
@@ -634,7 +638,7 @@ export default function CasesPage() {
             {/* Header */}
             <div className="px-5 py-3.5 border-b border-[#e6eef9] bg-[#fafcff] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#00236f] text-lg">folder_managed</span>
+                <FolderOpen className="w-4 h-4 text-[#00236f]" />
                 <span className="text-xs lg:text-sm font-bold text-[#141c2c]">
                   سجل القضايا المباشرة
                 </span>
@@ -916,7 +920,7 @@ export default function CasesPage() {
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-[#141f33] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-sm text-[#00236f]">route</span>
+                      <Route className="w-3.5 h-3.5 text-[#00236f]" />
                       المسار الزمني للإجراءات
                     </span>
                     <span className="text-[11px] text-[#657591]">

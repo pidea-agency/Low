@@ -23,6 +23,35 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  BrainCircuit,
+  Mail,
+  ShieldCheck,
+  Calendar,
+  Hourglass,
+  FileInput,
+  FileEdit,
+  ClipboardPaste,
+  ScanLine,
+  Shield,
+  Sparkles,
+  Sliders,
+  ClipboardCheck,
+  CheckCircle2,
+  Edit2,
+  AlarmClock,
+  ListChecks,
+  CalendarCheck,
+  CalendarPlus,
+  MessageSquare,
+  Download,
+  History,
+  Filter,
+  CheckCheck,
+  Clock,
+  Archive,
+  FileText,
+} from 'lucide-react';
 
 // Pre-packaged realistic Saudi judicial notices
 const PRESET_NOTICES = {
@@ -344,7 +373,7 @@ export default function ChatPage() {
           {/* User AI Plan Widget */}
           <div className="flex items-center gap-3 p-3 rounded-xl border border-[#dce8fd] bg-white shadow-2xs shrink-0">
             <div className="w-10 h-10 rounded-lg bg-[#eaf1ff] text-[#00236f] flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-xl">psychology</span>
+              <BrainCircuit className="w-5 h-5" />
             </div>
             <div className="text-xs space-y-0.5">
               <div className="flex items-center gap-1.5">
@@ -381,7 +410,7 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
-                <span className="material-symbols-outlined text-lg">mail</span>
+                <Mail className="w-4.5 h-4.5" />
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
@@ -403,7 +432,7 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-[#fef5ec] text-[#b35600] flex items-center justify-center">
-                <span className="material-symbols-outlined text-lg">verified</span>
+                <ShieldCheck className="w-4.5 h-4.5" />
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
@@ -423,7 +452,7 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
-                <span className="material-symbols-outlined text-lg">calendar_month</span>
+                <Calendar className="w-4.5 h-4.5" />
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
@@ -443,7 +472,7 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-[#fef5ec] text-[#b35600] flex items-center justify-center">
-                <span className="material-symbols-outlined text-lg">hourglass_bottom</span>
+                <Hourglass className="w-4.5 h-4.5" />
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
@@ -462,7 +491,7 @@ export default function ChatPage() {
               <div className="px-5 py-3.5 border-b border-[#e6eef9] bg-[#fafcff] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#00236f] text-white flex items-center justify-center">
-                    <span className="material-symbols-outlined text-lg">input</span>
+                    <FileInput className="w-4.5 h-4.5" />
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-[#141c2c]">مدخلات نص التبليغ القضائي</h2>
@@ -478,7 +507,7 @@ export default function ChatPage() {
                   }}
                   className="h-8 text-xs border-[#d1dff6] text-[#00236f] hover:bg-[#edf3ff] gap-1 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-sm">edit_note</span>
+                  <FileEdit className="w-3.5 h-3.5" />
                   نص تجريبي
                 </Button>
               </div>
@@ -490,7 +519,7 @@ export default function ChatPage() {
                     onClick={handlePasteClipboard}
                     className="flex items-center gap-1 hover:text-[#00236f] font-medium cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-sm">content_paste</span>
+                    <ClipboardPaste className="w-3.5 h-3.5" />
                     لصق من الحافظة
                   </button>
                   <span className="text-[#c7d5ea]">|</span>
@@ -498,12 +527,12 @@ export default function ChatPage() {
                     onClick={handleOcrUpload}
                     className="flex items-center gap-1 hover:text-[#00236f] font-medium cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-sm">document_scanner</span>
+                    <ScanLine className="w-3.5 h-3.5" />
                     استخراج من صورة / PDF (OCR)
                   </button>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  <span className="material-symbols-outlined text-xs">shield</span>
+                  <Shield className="w-3 h-3" />
                   عزل وتشفير بيانات الموكلين
                 </div>
               </div>
@@ -533,12 +562,12 @@ export default function ChatPage() {
                     disabled={analyzeMutation.isPending}
                     className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 px-6 gap-2 rounded-lg shadow-sm cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-base">auto_awesome</span>
+                    <Sparkles className="w-4 h-4" />
                     {analyzeMutation.isPending ? 'جارٍ تفكيك وتحليل التبليغ...' : 'تحليل الإشعار الآن'}
                   </Button>
 
                   <div className="flex items-center gap-1.5 text-xs text-[#52617a] bg-[#f4f7fc] border border-[#dbe6f8] px-3 py-1.5 rounded-lg">
-                    <span className="material-symbols-outlined text-sm text-[#00236f]">tune</span>
+                    <Sliders className="w-3.5 h-3.5 text-[#00236f]" />
                     <span className="font-semibold text-[#182337]">المحرك:</span>
                     <select
                       value={selectedEngine}
@@ -589,7 +618,7 @@ export default function ChatPage() {
             {/* Compliance & Security Card */}
             <div className="bg-white border border-[#e2ecf9] rounded-xl p-4 shadow-2xs space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-[#141d2e]">
-                <span className="material-symbols-outlined text-base text-[#00236f]">verified_user</span>
+                <ShieldCheck className="w-4 h-4 text-[#00236f]" />
                 الامتثال للأنظمة القضائية السعودية ومعايير الهيئة الوطنية للأمن السيبراني
               </div>
               <p className="text-[11px] text-[#55637c] leading-relaxed">
@@ -611,7 +640,7 @@ export default function ChatPage() {
             {!extractedData ? (
               <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs overflow-hidden p-8 flex flex-col items-center justify-center text-center gap-3 min-h-[460px]">
                 <div className="w-14 h-14 rounded-2xl bg-[#ebf3ff] text-[#00236f] flex items-center justify-center shadow-2xs">
-                  <span className="material-symbols-outlined text-3xl">psychology</span>
+                  <BrainCircuit className="w-8 h-8" />
                 </div>
                 <h3 className="text-base font-bold text-[#141c2c]">بانتظار إدخال النص القضائي والبدء بالتحليل</h3>
                 <p className="text-xs text-[#69748b] max-w-sm leading-relaxed">
@@ -644,7 +673,7 @@ export default function ChatPage() {
               <div className="px-5 py-3.5 border-b border-[#e6eef9] bg-[#fafcff] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-lg">fact_check</span>
+                    <ClipboardCheck className="w-4.5 h-4.5" />
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-[#141c2c]">البيانات والوقائع المستخلصة</h2>
@@ -653,7 +682,7 @@ export default function ChatPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">check_circle</span>
+                    <CheckCircle2 className="w-3 h-3" />
                     درجة الثقة: {extractedData.confidenceScore}
                   </span>
                   <Button
@@ -662,7 +691,7 @@ export default function ChatPage() {
                     onClick={() => setIsEditModalOpen(true)}
                     className="h-7 text-xs text-[#00236f] hover:bg-[#edf3ff] px-2 cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-sm">edit</span>
+                    <Edit2 className="w-3 h-3" />
                     تعديل
                   </Button>
                 </div>
@@ -672,7 +701,7 @@ export default function ChatPage() {
                 {/* Alert Banner: Upcoming procedural deadline */}
                 <div className="bg-[#fff4ed] border border-[#ffd5ba] rounded-lg p-3 flex items-start gap-2.5">
                   <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="material-symbols-outlined text-xs">alarm</span>
+                    <AlarmClock className="w-3.5 h-3.5 text-white" />
                   </div>
                   <div className="flex-1 text-xs">
                     <div className="flex items-center justify-between mb-0.5">
@@ -761,7 +790,7 @@ export default function ChatPage() {
                 <div className="border border-[#e0ebfa] bg-[#fcfdff] rounded-lg p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-[#151f33] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-sm text-[#00236f]">playlist_add_check</span>
+                      <ListChecks className="w-4 h-4 text-[#00236f]" />
                       الطلبات والإجراءات القضائية المستنتجة
                     </span>
                     <span className="bg-[#f0f5ff] text-[#00236f] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#d2e2fc]">
@@ -777,7 +806,7 @@ export default function ChatPage() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2">
-                            <span className="material-symbols-outlined text-[#00236f] text-sm mt-0.5">check_circle</span>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#00236f] mt-0.5" />
                             <span className="font-bold text-[#141e30]">{task.title}</span>
                           </div>
                         </div>
@@ -804,7 +833,7 @@ export default function ChatPage() {
                       disabled={createMutation.isPending}
                       className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 gap-2 rounded-lg cursor-pointer shadow-xs"
                     >
-                      <span className="material-symbols-outlined text-base">event_available</span>
+                      <CalendarCheck className="w-4 h-4" />
                       {createMutation.isPending ? 'جارٍ الحفظ في الجداول...' : 'تثبيت في جدول جلسات المحامي'}
                     </Button>
 
@@ -814,7 +843,7 @@ export default function ChatPage() {
                       onClick={handleCreateTasks}
                       className="bg-[#edf3ff] hover:bg-[#dce8fd] text-[#00236f] border-[#c7d9fc] text-xs font-bold h-10 gap-2 rounded-lg cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-base">add_task</span>
+                      <CalendarPlus className="w-4 h-4" />
                       {tasksCreated ? 'تم إنشاء المهام ✓' : 'إنشاء المهام لجدول العمل'}
                     </Button>
 
@@ -824,7 +853,7 @@ export default function ChatPage() {
                       onClick={handleSendWhatsApp}
                       className="bg-[#f6f9fc] hover:bg-[#edf2f8] text-[#1f2a3e] border-[#d8e3f2] text-xs font-bold h-10 gap-2 rounded-lg cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-base text-emerald-600">chat</span>
+                      <MessageSquare className="w-4 h-4 text-emerald-600" />
                       {whatsappSent ? 'تم إرسال الإشعار للموكل ✓' : 'إرسال إشعار للموكل (WhatsApp)'}
                     </Button>
 
@@ -834,7 +863,7 @@ export default function ChatPage() {
                       onClick={handleExportReport}
                       className="bg-[#f6f9fc] hover:bg-[#edf2f8] text-[#1f2a3e] border-[#d8e3f2] text-xs font-bold h-10 gap-2 rounded-lg cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-base text-[#00236f]">download</span>
+                      <Download className="w-4 h-4 text-[#00236f]" />
                       تصدير تقرير الجلسة (PDF / JSON)
                     </Button>
                   </div>
@@ -844,7 +873,7 @@ export default function ChatPage() {
                 <div className="pt-2 border-t border-[#edf3fc] flex flex-wrap items-center justify-between text-[11px] text-[#6b7891]">
                   <span>معرف التحليل: <strong className="font-mono text-[#253249]">AI-MSG-99201-SA#</strong></span>
                   <span className="flex items-center gap-1 text-emerald-700">
-                    <span className="material-symbols-outlined text-xs">verified</span>
+                    <ShieldCheck className="w-3.5 h-3.5" />
                     سجل التدقيق: محفوظ في ملف القضية {extractedData.caseNumber}
                   </span>
                 </div>
@@ -860,7 +889,7 @@ export default function ChatPage() {
           <div className="px-5 py-4 border-b border-[#e6eef9] bg-[#fafcff] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
-                <span className="material-symbols-outlined text-lg">history</span>
+                <History className="w-4.5 h-4.5" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-[#141c2c]">سجل التبليغات والرسائل المحللة مؤخراً</h3>
@@ -870,7 +899,7 @@ export default function ChatPage() {
 
             <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-1 text-xs text-[#52617a] bg-white border border-[#d3e2f8] px-2.5 py-1.5 rounded-lg">
-                <span className="material-symbols-outlined text-sm">filter_alt</span>
+                <Filter className="w-3.5 h-3.5 text-[#52617a]" />
                 <select
                   value={courtFilter}
                   onChange={(e) => setCourtFilter(e.target.value)}
@@ -906,7 +935,7 @@ export default function ChatPage() {
                 }}
                 className="h-8 text-xs border-[#d1dff6] text-[#00236f] hover:bg-[#edf3ff] gap-1 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">download</span>
+                <Download className="w-3.5 h-3.5" />
                 تصدير السجل الكامل
               </Button>
             </div>
@@ -960,19 +989,19 @@ export default function ChatPage() {
                     <td className="py-3.5 px-4">
                       {row.statusType === 'success' && (
                         <span className="bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2 py-1 rounded border border-emerald-200 inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">done_all</span>
+                          <CheckCheck className="w-3.5 h-3.5" />
                           {row.statusText}
                         </span>
                       )}
                       {row.statusType === 'warning' && (
                         <span className="bg-amber-50 text-amber-800 text-[11px] font-bold px-2 py-1 rounded border border-amber-200 inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">pending_actions</span>
+                          <Clock className="w-3.5 h-3.5" />
                           {row.statusText}
                         </span>
                       )}
                       {row.statusType === 'slate' && (
                         <span className="bg-[#f0f4fa] text-[#4d5c75] text-[11px] font-bold px-2 py-1 rounded border border-[#d8e2f0] inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">inventory_2</span>
+                          <Archive className="w-3.5 h-3.5" />
                           {row.statusText}
                         </span>
                       )}
@@ -1120,7 +1149,7 @@ export default function ChatPage() {
           <DialogContent className="max-w-lg text-right" dir="rtl">
             <DialogHeader>
               <DialogTitle className="text-base font-bold text-[#141e30] flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#00236f]">description</span>
+                <FileText className="w-5 h-5 text-[#00236f]" />
                 تفاصيل الإشعار القضائي المحلل
               </DialogTitle>
               <DialogDescription className="text-xs text-[#65738c]">

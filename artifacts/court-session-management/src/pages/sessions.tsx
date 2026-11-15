@@ -45,6 +45,13 @@ import {
   Table,
   Eye,
   SlidersHorizontal,
+  CalendarCheck,
+  FileSignature,
+  BellRing,
+  Laptop,
+  CalendarX,
+  Sparkles,
+  BarChart3,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -419,7 +426,7 @@ export default function SessionsPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">event_available</span>
+              <CalendarCheck className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg text-xs">
@@ -439,7 +446,7 @@ export default function SessionsPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce9ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">calendar_month</span>
+              <Calendar className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg text-xs">
@@ -459,7 +466,7 @@ export default function SessionsPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500]">
-              <span className="material-symbols-outlined">history_edu</span>
+              <FileSignature className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg text-xs">
@@ -479,7 +486,7 @@ export default function SessionsPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">balance</span>
+              <Scale className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg text-xs">
@@ -496,7 +503,7 @@ export default function SessionsPage() {
           <div className="bg-[#ffdbca]/40 rounded-xl p-4 sm:p-5 border border-[#fd8a42]/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
             <div className="flex items-start gap-3.5">
               <div className="w-10 h-10 rounded-lg bg-[#fd8a42] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <span className="material-symbols-outlined text-xl">notifications_active</span>
+                <BellRing className="w-5 h-5" />
               </div>
               <div className="flex flex-col text-right">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -515,12 +522,12 @@ export default function SessionsPage() {
                 onClick={() => window.open('https://najiz.sa', '_blank')}
                 className="px-4 h-9 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">laptop_mac</span>
+                <Laptop className="w-4 h-4" />
                 <span>دخول الجلسة (ناجز)</span>
               </button>
               <Link href="/chat">
                 <button className="px-3.5 h-9 rounded-lg bg-white hover:bg-[#eff4ff] text-[#00236f] text-xs font-semibold border border-[#dce9ff] flex items-center gap-1.5 transition-colors cursor-pointer">
-                  <span className="material-symbols-outlined text-sm">description</span>
+                  <FileText className="w-4 h-4" />
                   <span>مذكرة الجلسة</span>
                 </button>
               </Link>
@@ -690,7 +697,7 @@ export default function SessionsPage() {
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-[#757682]">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <span className="material-symbols-outlined text-4xl text-[#757682]">event_busy</span>
+                      <CalendarX className="w-10 h-10 text-[#757682]" />
                       <p className="text-sm font-semibold text-[#0b1c30]">لا توجد جلسات مسجلة تطابق البحث</p>
                       <p className="text-xs text-[#757682]">يمكنك إضافة جلسة قضائية جديدة أو إعادة ضبط الفلاتر</p>
                       <button
@@ -1011,7 +1018,7 @@ export default function SessionsPage() {
           {/* AI Helper Banner */}
           <div className="mt-5 p-3.5 bg-[#dce1ff]/50 rounded-xl border border-[#dce1ff] text-right space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#00236f]">
-              <span className="material-symbols-outlined text-sm">auto_awesome</span>
+              <Sparkles className="w-3.5 h-3.5" />
               <span>مساعد الترافع الذكي</span>
             </div>
             <p className="text-[11px] text-[#444651] leading-relaxed">
@@ -1030,7 +1037,7 @@ export default function SessionsPage() {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#eff4ff] gap-2">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#00236f]">analytics</span>
+                <BarChart3 className="w-5 h-5 text-[#00236f]" />
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-[#0b1c30]">التقرير الشهري لإنجاز الجلسات والمرافعات</h3>
@@ -1096,7 +1103,7 @@ export default function SessionsPage() {
         <DialogContent className="max-w-lg w-full bg-white text-[#0b1c30] p-6 rounded-xl border border-[#e5eeff]" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right text-[#00236f] flex items-center gap-2">
-              <span className="material-symbols-outlined">event_available</span>
+              <CalendarCheck className="w-5 h-5" />
               <span>إضافة جلسة قضائية جديدة</span>
             </DialogTitle>
           </DialogHeader>

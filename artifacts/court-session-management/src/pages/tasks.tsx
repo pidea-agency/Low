@@ -37,6 +37,12 @@ import {
   Calculator,
   ShieldCheck,
   FileSpreadsheet,
+  ClipboardList,
+  FileEdit,
+  ClipboardX,
+  MessageSquare,
+  CalendarPlus,
+  History,
 } from 'lucide-react';
 import { useGetCurrentUser } from '@workspace/api-client-react';
 import { ClientPicker } from '@/components/clients/client-picker';
@@ -459,7 +465,7 @@ export default function TasksPage() {
       <div className="bg-[#ffdbca]/40 rounded-xl p-4 sm:p-5 border border-[#fd8a42]/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
         <div className="flex items-start gap-3.5">
           <div className="w-10 h-10 rounded-lg bg-[#fd8a42] text-white flex items-center justify-center shrink-0 shadow-xs">
-            <span className="material-symbols-outlined text-xl">warning</span>
+            <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="flex flex-col text-right">
             <div className="flex items-center gap-2">
@@ -500,7 +506,7 @@ export default function TasksPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">assignment</span>
+              <ClipboardList className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
@@ -520,7 +526,7 @@ export default function TasksPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce9ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">edit_document</span>
+              <FileEdit className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex flex-col gap-1.5 bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
@@ -545,7 +551,7 @@ export default function TasksPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#ffdbca] flex items-center justify-center text-[#9b4500]">
-              <span className="material-symbols-outlined">schedule</span>
+              <Clock className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
@@ -569,7 +575,7 @@ export default function TasksPage() {
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
-              <span className="material-symbols-outlined">task_alt</span>
+              <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
@@ -707,7 +713,7 @@ export default function TasksPage() {
                   {paginatedTasks.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-[#757682]">
-                        <span className="material-symbols-outlined text-4xl text-[#a0acc0] mb-2 block mx-auto">assignment_late</span>
+                        <ClipboardX className="w-10 h-10 text-[#a0acc0] mb-2 block mx-auto" />
                         <p className="font-bold text-sm text-[#0b1c30] mb-1">لا توجد مهام إجرائية مسجلة</p>
                         <p className="text-xs text-[#757682]">لم يتم العثور على مهام قضائية مطابقة للتصفية أو البحث.</p>
                       </td>
@@ -797,7 +803,7 @@ export default function TasksPage() {
                                 daysRemaining <= 1 ? 'text-[#9b4500]' : 'text-[#0b1c30]'
                               }`}
                             >
-                              <span className="material-symbols-outlined text-sm">schedule</span>
+                              <Clock className="w-3.5 h-3.5" />
                               {daysRemaining <= 1
                                 ? 'متبقي 18 ساعة'
                                 : daysRemaining === 2
@@ -834,7 +840,7 @@ export default function TasksPage() {
                             {sendingWhatsappId === t.id ? (
                               <Loader2 className="w-4 h-4 animate-spin text-[#00236f]" />
                             ) : (
-                              <span className="material-symbols-outlined text-base">chat</span>
+                              <MessageSquare className="w-4 h-4" />
                             )}
                           </button>
                         </td>
@@ -905,7 +911,7 @@ export default function TasksPage() {
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-[#eff4ff]">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#00236f]">balance</span>
+                <Scale className="w-5 h-5 text-[#00236f]" />
                 <div>
                   <h3 className="text-sm font-bold text-[#0b1c30]">توازن الأعباء الإجرائية</h3>
                   <span className="text-[10px] text-[#757682]">توزيع المهام حسب الطاقة الاستيعابية</span>
@@ -950,7 +956,7 @@ export default function TasksPage() {
           {/* Widget 2: Deadline Calculator & Procedural Rules (حاسبة المهل) */}
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-[#eff4ff]">
-              <span className="material-symbols-outlined text-[#00236f]">calculate</span>
+              <Calculator className="w-5 h-5 text-[#00236f]" />
               <div>
                 <h3 className="text-sm font-bold text-[#0b1c30]">حاسبة المهل ونظام المرافعات</h3>
                 <span className="text-[10px] text-[#757682]">تحليل الذكاء الاصطناعي القضائي</span>
@@ -979,7 +985,7 @@ export default function TasksPage() {
                 onClick={() => setCalcModalOpen(true)}
                 className="w-full h-10 mt-1 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
               >
-                <span className="material-symbols-outlined text-base">calendar_add_on</span>
+                <CalendarPlus className="w-4 h-4" />
                 <span>احتساب مدة مهلة قضائية جديدة</span>
               </button>
             </div>
@@ -999,7 +1005,7 @@ export default function TasksPage() {
                 className="w-full p-2.5 rounded-lg bg-[#eff4ff] hover:bg-[#dce9ff] flex items-center justify-between text-[#0b1c30] font-semibold transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-[#00236f]">outgoing_mail</span>
+                  <Send className="w-4 h-4 text-[#00236f]" />
                   <span>إرسال تنبيه واتساب جماعي بالمهام</span>
                 </div>
                 <ChevronLeft className="w-4 h-4 text-[#757682]" />
@@ -1012,7 +1018,7 @@ export default function TasksPage() {
                 className="w-full p-2.5 rounded-lg bg-[#eff4ff] hover:bg-[#dce9ff] flex items-center justify-between text-[#0b1c30] font-semibold transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-[#00236f]">description</span>
+                  <FileText className="w-4 h-4 text-[#00236f]" />
                   <span>توليد نموذج تفويض ومراجعة إجرائي</span>
                 </div>
                 <ChevronLeft className="w-4 h-4 text-[#757682]" />
@@ -1023,7 +1029,7 @@ export default function TasksPage() {
                 className="w-full p-2.5 rounded-lg bg-[#eff4ff] hover:bg-[#dce9ff] flex items-center justify-between text-[#0b1c30] font-semibold transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-[#00236f]">verified</span>
+                  <ShieldCheck className="w-4 h-4 text-[#00236f]" />
                   <span>التحقق من سريان وكالة الموكل عبر ناجز</span>
                 </div>
                 <ChevronLeft className="w-4 h-4 text-[#757682]" />
@@ -1034,7 +1040,7 @@ export default function TasksPage() {
           {/* Widget 4: Judicial Notification History (سجل الإشعارات القضائية) */}
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-[#eff4ff]">
-              <span className="material-symbols-outlined text-[#00236f]">history</span>
+              <History className="w-4 h-4 text-[#00236f]" />
               <h3 className="text-sm font-bold text-[#0b1c30]">سجل الإشعارات القضائية</h3>
             </div>
 
@@ -1072,7 +1078,7 @@ export default function TasksPage() {
         <DialogContent className="max-w-lg w-full bg-white text-[#0b1c30] p-6 rounded-xl border border-[#e5eeff]" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right flex items-center gap-2 text-[#00236f]">
-              <span className="material-symbols-outlined">assignment</span>
+              <ClipboardList className="w-5 h-5" />
               <span>{editingTask ? 'تعديل المهمة الإجرائية' : 'تكليف بمهمة إجرائية جديدة'}</span>
             </DialogTitle>
           </DialogHeader>
@@ -1288,7 +1294,7 @@ export default function TasksPage() {
         <DialogContent className="max-w-md w-full bg-white text-[#0b1c30] p-6 rounded-xl border border-[#e5eeff]" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right flex items-center gap-2 text-[#00236f]">
-              <span className="material-symbols-outlined">calculate</span>
+              <Calculator className="w-5 h-5" />
               <span>حاسبة المهل القضائية الذكية</span>
             </DialogTitle>
           </DialogHeader>

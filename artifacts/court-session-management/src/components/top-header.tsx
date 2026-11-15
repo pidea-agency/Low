@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { useGetCurrentUser, useLogout } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { NotificationsDropdown } from './notifications/notifications-dropdown';
+import { Search, Sparkles, Landmark, ChevronDown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,9 +67,7 @@ export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
       <div className="flex items-center gap-3 w-full max-w-lg">
         {/* Search Input Container */}
         <div className="relative w-full max-w-md hidden sm:block">
-          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#757682] text-lg">
-            search
-          </span>
+          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#757682]" />
           <input
             type="text"
             onClick={openSearch}
@@ -87,7 +86,7 @@ export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
           className="flex items-center gap-1.5 px-3.5 h-9 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white transition-all shadow-sm shrink-0 font-medium text-xs cursor-pointer"
           title="مساعد الذكاء الاصطناعي"
         >
-          <span className="material-symbols-outlined text-base text-amber-300">auto_awesome</span>
+          <Sparkles className="w-4 h-4 text-amber-300" />
           <span className="hidden md:inline">مساعد الذكاء الاصطناعي</span>
         </button>
       </div>
@@ -98,9 +97,9 @@ export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#eff4ff] cursor-pointer hover:bg-[#dce9ff] transition-colors text-xs">
-              <span className="material-symbols-outlined text-base text-[#00236f]">account_balance</span>
+              <Landmark className="w-4 h-4 text-[#00236f]" />
               <span className="text-[#0b1c30] font-medium">{officeName}</span>
-              <span className="material-symbols-outlined text-sm text-[#757682]">expand_more</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#757682]" />
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56 text-right font-sans text-xs">

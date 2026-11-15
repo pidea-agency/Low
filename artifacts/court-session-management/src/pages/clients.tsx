@@ -33,6 +33,8 @@ import {
   Scale,
   Briefcase,
   Users,
+  Rows,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -551,10 +553,10 @@ export default function ClientsPage() {
             <span>طريقة العرض:</span>
             <div className="flex items-center gap-1 bg-white border border-[#dce7f6] p-1 rounded-md">
               <button className="p-1 rounded bg-[#edf3ff] text-[#00236f]">
-                <span className="material-symbols-outlined text-sm">view_agenda</span>
+                <Rows className="w-3.5 h-3.5" />
               </button>
               <button className="p-1 rounded text-[#71809a] hover:text-[#182337]">
-                <span className="material-symbols-outlined text-sm">grid_view</span>
+                <LayoutGrid className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
