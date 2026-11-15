@@ -32,15 +32,6 @@ router.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
     }
     res.json(report);
   } catch (err: any) {
-    if (
-      err?.statusCode === 503 ||
-      err?.code === "DATABASE_UNAVAILABLE" ||
-      err?.name === "DatabaseUnavailableError" ||
-      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
-    ) {
-      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
-      return;
-    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in GET /sessions/:id/report");
       res.status(err.statusCode).json({
@@ -49,8 +40,8 @@ router.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
       });
       return;
     }
-    logger.error({ err }, "Failed to fetch session report");
-    res.status(500).json({ error: err?.message || "Failed to fetch session report." });
+    const refId = `rep_get_${Date.now()}`;
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل جلب تقرير الجلسة");
   }
 });
 
@@ -73,15 +64,6 @@ router.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
     logger.info({ id }, "Session report saved successfully");
     res.json(updated);
   } catch (err: any) {
-    if (
-      err?.statusCode === 503 ||
-      err?.code === "DATABASE_UNAVAILABLE" ||
-      err?.name === "DatabaseUnavailableError" ||
-      String(err?.message || "").includes("قاعدة البيانات غير متصلة")
-    ) {
-      res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
-      return;
-    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in PUT /sessions/:id/report");
       res.status(err.statusCode).json({
@@ -90,8 +72,8 @@ router.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminF
       });
       return;
     }
-    logger.error({ err }, "Failed to save session report");
-    res.status(500).json({ error: err?.message || "Failed to save session report." });
+    const refId = `rep_put_${Date.now()}`;
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل حفظ تقرير الجلسة");
   }
 });
 

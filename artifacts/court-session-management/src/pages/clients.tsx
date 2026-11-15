@@ -157,8 +157,8 @@ export default function ClientsPage() {
       id: String(b.id),
       name: b.name || 'عميل مسجل',
       phone: b.phone || '',
-      type: (b.notes?.includes('شركة') || b.name?.includes('شركة')) ? 'company' : 'individual',
-      typeLabel: (b.notes?.includes('شركة') || b.name?.includes('شركة')) ? 'سجل تجاري' : 'فرد / موكل',
+      type: (b.client_type === 'company' || b.clientType === 'company') ? 'company' : 'individual',
+      typeLabel: (b.client_type === 'company' || b.clientType === 'company') ? 'سجل تجاري' : 'فرد / موكل',
       isVerified: true,
       assignedLawyer: b.assigned_lawyer_name || b.assigned_lawyer || 'غير محدد',
       poaNumber: b.poa_number || (b.poa_count ? `${b.poa_count} وكالات` : ''),
@@ -244,6 +244,7 @@ export default function ClientsPage() {
         name: formName.trim(),
         phone: formPhone.trim(),
         notes: formNotes.trim(),
+        client_type: formType,
       };
       const res = await fetch('/api/clients', {
         method: 'POST',

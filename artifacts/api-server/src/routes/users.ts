@@ -54,7 +54,7 @@ router.get("/users", async (req, res) => {
 router.post("/users", async (req, res) => {
   try {
     const adminId = req.authUser!.userId!;
-    const { username, email, display_name, phone } = req.body;
+    const { username, email, display_name, phone, role_title, roleTitle } = req.body;
 
     if (!username || !username.trim()) {
       res.status(400).json({ error: "اسم المستخدم مطلوب." });
@@ -77,6 +77,7 @@ router.post("/users", async (req, res) => {
       email: email.trim(),
       display_name: display_name?.trim() || username.trim(),
       phone: phone?.trim() || null,
+      role_title: role_title?.trim() || roleTitle?.trim() || null,
     });
 
     res.status(201).json({

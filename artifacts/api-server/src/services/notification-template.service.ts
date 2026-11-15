@@ -26,7 +26,7 @@
 import { logger } from "../lib/logger";
 import { getSupabaseClient } from "./supabase.service";
 import { findUserByIdOrUsername } from "./supabase.service";
-import { createNotification } from "./postgres.service";
+import { createNotification, isInMemoryFallbackAllowed, DatabaseUnavailableError } from "./postgres.service";
 import { WhatsappReminderChannel } from "./reminder/channels/whatsappChannel";
 
 export type NotificationEventType =
@@ -371,9 +371,11 @@ function createDefaultRecord(
 export async function listOfficeNotificationTemplates(
   officeId: string,
 ): Promise<NotificationTemplateRecord[]> {
-  const officeMap = memoryTemplateStore.get(officeId) || new Map<NotificationEventType, NotificationTemplateRecord>();
+  const officeMap = isInMemoryFallbackAllowed()
+    ? (memoryTemplateStore.get(officeId) || new Map<NotificationEventType, NotificationTemplateRecord>())
+    : new Map<NotificationEventType, NotificationTemplateRecord>();
 
-  // Attempt to load from Supabase if table exists
+  // Attempt to load from Supabase
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -382,7 +384,12 @@ export async function listOfficeNotificationTemplates(
         .select("*")
         .eq("office_id", officeId);
 
-      if (!error && data && Array.isArray(data)) {
+      if (error) {
+        logger.error({ error, officeId }, "Failed to query notification_templates from Supabase");
+        if (!isInMemoryFallbackAllowed()) {
+          throw new Error("فشل تحميل قوالب الإشعارات من قاعدة البيانات: " + error.message);
+        }
+      } else if (data && Array.isArray(data)) {
         for (const row of data) {
           if (row.event_type && NOTIFICATION_EVENT_DEFINITIONS[row.event_type as NotificationEventType]) {
             const def = NOTIFICATION_EVENT_DEFINITIONS[row.event_type as NotificationEventType];
@@ -410,12 +417,18 @@ export async function listOfficeNotificationTemplates(
           }
         }
       }
-    } catch {
-      // Supabase query failure falls back to memoryMap gracefully
+    } catch (err: any) {
+      if (!isInMemoryFallbackAllowed()) {
+        throw err;
+      }
     }
+  } else if (!isInMemoryFallbackAllowed()) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  memoryTemplateStore.set(officeId, officeMap);
+  if (isInMemoryFallbackAllowed()) {
+    memoryTemplateStore.set(officeId, officeMap);
+  }
 
   // Ensure all 12 events are returned
   const allEvents = Object.keys(NOTIFICATION_EVENT_DEFINITIONS) as NotificationEventType[];
@@ -425,7 +438,9 @@ export async function listOfficeNotificationTemplates(
       return existing;
     }
     const defRecord = createDefaultRecord(officeId, eventType);
-    officeMap.set(eventType, defRecord);
+    if (isInMemoryFallbackAllowed()) {
+      officeMap.set(eventType, defRecord);
+    }
     return defRecord;
   });
 }
@@ -437,9 +452,11 @@ export async function getOfficeNotificationTemplate(
   officeId: string,
   eventType: NotificationEventType,
 ): Promise<NotificationTemplateRecord> {
-  const officeMap = memoryTemplateStore.get(officeId);
-  if (officeMap && officeMap.has(eventType)) {
-    return officeMap.get(eventType)!;
+  if (isInMemoryFallbackAllowed()) {
+    const officeMap = memoryTemplateStore.get(officeId);
+    if (officeMap && officeMap.has(eventType)) {
+      return officeMap.get(eventType)!;
+    }
   }
 
   const all = await listOfficeNotificationTemplates(officeId);
@@ -483,36 +500,46 @@ export async function updateOfficeNotificationTemplate(
     updated_at: new Date().toISOString(),
   };
 
-  // 1. Update in-memory
-  let officeMap = memoryTemplateStore.get(officeId);
-  if (!officeMap) {
-    officeMap = new Map();
-    memoryTemplateStore.set(officeId, officeMap);
-  }
-  officeMap.set(eventType, updatedRecord);
-
-  // 2. Persist to Supabase if available
   const client = getSupabaseClient();
   if (client) {
-    try {
-      const payload = {
-        office_id: officeId,
-        event_type: eventType,
-        name: updatedRecord.name,
-        category: updatedRecord.category,
-        title_template: updatedRecord.title_template,
-        body_template: updatedRecord.body_template,
-        channels: updatedRecord.channels,
-        default_recipient_role: updatedRecord.default_recipient_role,
-        updated_at: updatedRecord.updated_at,
-      };
+    const payload = {
+      office_id: officeId,
+      event_type: eventType,
+      name: updatedRecord.name,
+      category: updatedRecord.category,
+      title_template: updatedRecord.title_template,
+      body_template: updatedRecord.body_template,
+      channels: updatedRecord.channels,
+      default_recipient_role: updatedRecord.default_recipient_role,
+      updated_at: updatedRecord.updated_at,
+    };
 
-      await client
-        .from("notification_templates")
-        .upsert(payload, { onConflict: "office_id,event_type" });
-    } catch (err) {
-      logger.warn({ err, officeId, eventType }, "Failed to upsert notification template to Supabase (in-memory preserved)");
+    const { data, error } = await client
+      .from("notification_templates")
+      .upsert(payload, { onConflict: "office_id,event_type" })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error({ error, officeId, eventType }, "Failed to upsert notification template to Supabase");
+      if (!isInMemoryFallbackAllowed()) {
+        throw new Error("فشل حفظ وتحديث قالب الإشعار في قاعدة البيانات: " + (error.message || "خطأ غير معروف"));
+      }
+    } else if (data) {
+      updatedRecord.id = data.id;
     }
+  } else if (!isInMemoryFallbackAllowed()) {
+    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
+  }
+
+  // Update in-memory cache ONLY in test environment
+  if (isInMemoryFallbackAllowed()) {
+    let officeMap = memoryTemplateStore.get(officeId);
+    if (!officeMap) {
+      officeMap = new Map();
+      memoryTemplateStore.set(officeId, officeMap);
+    }
+    officeMap.set(eventType, updatedRecord);
   }
 
   return updatedRecord;

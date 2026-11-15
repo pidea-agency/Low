@@ -32,6 +32,8 @@ export interface ClientRecord {
   name: string;
   phone: string;
   notes: string;
+  clientType?: "individual" | "company" | string;
+  client_type?: "individual" | "company" | string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -523,6 +525,8 @@ export async function listClients(officeId: string): Promise<ClientRecord[]> {
           name: r.name,
           phone: r.phone || "",
           notes: r.notes || "",
+          clientType: r.client_type || "individual",
+          client_type: r.client_type || "individual",
           createdAt: r.created_at,
           updatedAt: r.updated_at,
         }));
@@ -535,6 +539,10 @@ export async function listClients(officeId: string): Promise<ClientRecord[]> {
     }
   } else {
     handleSupabaseFailure("listClients", new Error("Supabase client is not configured"));
+  }
+
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
   }
 
   return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
@@ -558,6 +566,8 @@ export async function getClientById(id: string, officeId: string): Promise<Clien
           name: data.name,
           phone: data.phone || "",
           notes: data.notes || "",
+          clientType: data.client_type || "individual",
+          client_type: data.client_type || "individual",
           createdAt: data.created_at,
           updatedAt: data.updated_at,
         };
@@ -580,17 +590,22 @@ export async function getClientById(id: string, officeId: string): Promise<Clien
     handleSupabaseFailure("getClientById", new Error("Supabase client is not configured"));
   }
 
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
+  }
+
   const list = memoryClients.get(officeId) || [];
   const found = list.find((c) => c.id === id);
   return found ? { ...found } : null;
 }
 
 export async function createClient(
-  data: { name: string; phone?: string; notes?: string },
+  data: { name: string; phone?: string; notes?: string; client_type?: string; clientType?: string },
   officeId: string,
 ): Promise<ClientRecord> {
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
+  const clientType = data.client_type || data.clientType || "individual";
 
   const client = getSupabaseClient();
   if (client) {
@@ -604,6 +619,7 @@ export async function createClient(
             name: data.name,
             phone: data.phone || "",
             notes: data.notes || "",
+            client_type: clientType,
             created_at: now,
             updated_at: now,
           },
@@ -618,6 +634,8 @@ export async function createClient(
           name: inserted.name,
           phone: inserted.phone || "",
           notes: inserted.notes || "",
+          clientType: inserted.client_type || clientType,
+          client_type: inserted.client_type || clientType,
           createdAt: inserted.created_at,
           updatedAt: inserted.updated_at,
         };
@@ -638,19 +656,24 @@ export async function createClient(
     name: data.name,
     phone: data.phone || "",
     notes: data.notes || "",
+    clientType,
+    client_type: clientType,
     createdAt: now,
     updatedAt: now,
   };
 
-  const list = memoryClients.get(officeId) || [];
-  list.unshift(record);
-  memoryClients.set(officeId, list);
+  if (isInMemoryFallbackAllowed()) {
+    const list = memoryClients.get(officeId) || [];
+    list.unshift(record);
+    memoryClients.set(officeId, list);
+  }
+
   return { ...record };
 }
 
 export async function updateClient(
   id: string,
-  data: { name?: string; phone?: string; notes?: string },
+  data: { name?: string; phone?: string; notes?: string; client_type?: string; clientType?: string },
   officeId: string,
 ): Promise<ClientRecord | null> {
   const now = new Date().toISOString();
@@ -661,6 +684,8 @@ export async function updateClient(
       if (data.name !== undefined) payload.name = data.name;
       if (data.phone !== undefined) payload.phone = data.phone;
       if (data.notes !== undefined) payload.notes = data.notes;
+      if (data.client_type !== undefined) payload.client_type = data.client_type;
+      if (data.clientType !== undefined) payload.client_type = data.clientType;
 
       const { data: updated, error } = await client
         .from("clients")
@@ -677,6 +702,8 @@ export async function updateClient(
           name: updated.name,
           phone: updated.phone || "",
           notes: updated.notes || "",
+          clientType: updated.client_type || "individual",
+          client_type: updated.client_type || "individual",
           createdAt: updated.created_at,
           updatedAt: updated.updated_at,
         };
@@ -694,6 +721,10 @@ export async function updateClient(
     handleSupabaseFailure("updateClient", new Error("Supabase client is not configured"));
   }
 
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
+  }
+
   const list = memoryClients.get(officeId) || [];
   const idx = list.findIndex((c) => c.id === id);
   if (idx === -1) return null;
@@ -704,6 +735,8 @@ export async function updateClient(
     name: data.name !== undefined ? data.name : current.name,
     phone: data.phone !== undefined ? data.phone : current.phone,
     notes: data.notes !== undefined ? data.notes : current.notes,
+    clientType: data.client_type || data.clientType || current.clientType || "individual",
+    client_type: data.client_type || data.clientType || current.client_type || "individual",
     updatedAt: now,
   };
   list[idx] = updated;
@@ -745,10 +778,6 @@ export async function deleteClient(id: string, officeId: string): Promise<boolea
 // ============================================================================
 
 export async function listSessions(officeId: string, statusFilter?: string): Promise<Session[]> {
-  const memList = (memorySessions.get(officeId) || [])
-    .filter((s) => !statusFilter || statusFilter === "All" || s.status === statusFilter)
-    .map(formatSession);
-
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -758,6 +787,9 @@ export async function listSessions(officeId: string, statusFilter?: string): Pro
       }
       const { data, error } = await query.order("id", { ascending: false });
       if (!error && data) {
+        if (!isInMemoryFallbackAllowed()) {
+          return data.map(formatSession);
+        }
         const dbSessions = data.map((d: any) => {
           const formatted = formatSession(d);
           const fromMem = (memorySessions.get(officeId) || []).find((m) => m.id === d.id);
@@ -776,6 +808,9 @@ export async function listSessions(officeId: string, statusFilter?: string): Pro
           }
           return formatted;
         });
+        const memList = (memorySessions.get(officeId) || [])
+          .filter((s) => !statusFilter || statusFilter === "All" || s.status === statusFilter)
+          .map(formatSession);
         const dbIds = new Set(dbSessions.map((s) => s.id));
         return [...dbSessions, ...memList.filter((m) => !dbIds.has(m.id))];
       }
@@ -789,7 +824,13 @@ export async function listSessions(officeId: string, statusFilter?: string): Pro
     handleSupabaseFailure("listSessions", new Error("Supabase client is not configured"));
   }
 
-  return memList;
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
+
+  return (memorySessions.get(officeId) || [])
+    .filter((s) => !statusFilter || statusFilter === "All" || s.status === statusFilter)
+    .map(formatSession);
 }
 
 export async function getSessionById(id: number, officeId: string): Promise<Session | null> {
@@ -806,6 +847,9 @@ export async function getSessionById(id: number, officeId: string): Promise<Sess
         .eq("office_id", officeId)
         .single();
       if (!error && data) {
+        if (!isInMemoryFallbackAllowed()) {
+          return formatSession(data);
+        }
         const formatted = formatSession(data);
         if (fromMem) {
           return {
@@ -836,6 +880,10 @@ export async function getSessionById(id: number, officeId: string): Promise<Sess
     }
   } else {
     handleSupabaseFailure("getSessionById", new Error("Supabase client is not configured"));
+  }
+
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
 
   if (!fromMem) return null;
@@ -1365,6 +1413,10 @@ export async function listTasks(officeId: string): Promise<TaskRecord[]> {
     handleSupabaseFailure("listTasks", new Error("Supabase client is not configured"));
   }
 
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
+
   return (memoryTasks.get(officeId) || []).map(formatTask);
 }
 
@@ -1397,6 +1449,10 @@ export async function getTaskById(id: number, officeId: string): Promise<TaskRec
     }
   } else {
     handleSupabaseFailure("getTaskById", new Error("Supabase client is not configured"));
+  }
+
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
 
   const memList = memoryTasks.get(officeId) || [];
@@ -1674,6 +1730,10 @@ export async function listPoa(officeId: string): Promise<PoaRecord[]> {
     handleSupabaseFailure("listPoa", new Error("Supabase client is not configured"));
   }
 
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
+
   return (memoryPoa.get(officeId) || []).map(formatPoa);
 }
 
@@ -1706,6 +1766,10 @@ export async function getPoaById(id: number, officeId: string): Promise<PoaRecor
     }
   } else {
     handleSupabaseFailure("getPoaById", new Error("Supabase client is not configured"));
+  }
+
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
 
   const memList = memoryPoa.get(officeId) || [];
@@ -1986,6 +2050,10 @@ export async function listJudgments(officeId: string): Promise<JudgmentRecord[]>
     handleSupabaseFailure("listJudgments", new Error("Supabase client is not configured"));
   }
 
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
+
   return (memoryJudgments.get(officeId) || []).map(formatJudgment);
 }
 
@@ -2018,6 +2086,10 @@ export async function getJudgmentById(id: number, officeId: string): Promise<Jud
     }
   } else {
     handleSupabaseFailure("getJudgmentById", new Error("Supabase client is not configured"));
+  }
+
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
 
   const memList = memoryJudgments.get(officeId) || [];
@@ -2837,6 +2909,8 @@ export async function searchClients(officeId: string, query: string): Promise<Cl
           name: r.name,
           phone: r.phone || "",
           notes: r.notes || "",
+          clientType: r.client_type || "individual",
+          client_type: r.client_type || "individual",
           createdAt: r.created_at,
           updatedAt: r.updated_at,
         }));

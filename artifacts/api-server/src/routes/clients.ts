@@ -197,6 +197,7 @@ router.post("/clients", async (req, res) => {
         name: body.name.trim(),
         phone: body.phone?.trim() || "",
         notes: body.notes?.trim() || "",
+        client_type: body.client_type || body.clientType || body.type || "individual",
       },
       officeId,
     );

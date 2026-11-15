@@ -277,7 +277,7 @@ router.post("/attachments", async (req, res) => {
       res.status(503).json({ error: "قاعدة البيانات غير متصلة حالياً", code: "DATABASE_UNAVAILABLE" });
       return;
     }
-    res.status(500).json({ error: "فشل حفظ المرفق وتخزينه." });
+    res.status(500).json({ error: err?.message || "فشل رفع الملف، حاول مرة أخرى." });
   }
 });
 

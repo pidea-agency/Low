@@ -168,15 +168,7 @@ BEGIN
   END IF;
 END $$;
 
--- 10. Seed default office for existing accounts if not present
-INSERT INTO public.offices (id, name, admin_id)
-SELECT 'local-office-admin', 'مكتب المحاماة الرئيسي', 'local-office-admin'
-WHERE NOT EXISTS (SELECT 1 FROM public.offices WHERE id = 'local-office-admin');
-
-UPDATE public.app_users
-SET office_id = 'local-office-admin'
-WHERE id = 'local-office-admin' AND (office_id IS NULL OR office_id = '');
-
+-- 10. Backfill office_id for existing staff accounts linked to an office admin
 UPDATE public.app_users
 SET office_id = admin_id
 WHERE role = 'staff' AND admin_id IS NOT NULL AND (office_id IS NULL OR office_id = '');

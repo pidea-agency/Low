@@ -259,7 +259,8 @@ export default function OfficeMembersPage() {
         display_name: formDisplayName.trim() || undefined,
         email: formEmail.trim(),
         phone: formPhone.trim() || undefined,
-        role: formRole === 'lawyer' ? 'lawyer' : 'staff',
+        role: 'staff',
+        role_title: formRoleTitle.trim() || undefined,
       };
 
       const res = await fetch('/api/users', {
@@ -720,9 +721,9 @@ export default function OfficeMembersPage() {
           </div>
         </div>
 
-        {/* ── Bottom Analytical & Quick Action Grid (3 Boxes matching Mockup) ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          {/* Box 1 (Right): استهلاك حصص الذكاء الاصطناعي */}
+        {/* ── Bottom Analytical & Quick Action Grid ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {/* Box 1: استهلاك حصص الذكاء الاصطناعي */}
           <div className="bg-white border border-[#dbe6f8] rounded-xl p-4 shadow-2xs space-y-2.5">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
@@ -768,43 +769,7 @@ export default function OfficeMembersPage() {
             </div>
           </div>
 
-          {/* Box 2 (Middle): صلاحيات الترافع والاعتماد */}
-          <div className="bg-white border border-[#dbe6f8] rounded-xl p-4 shadow-2xs space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4 text-[#00236f]" />
-                </div>
-                <h3 className="text-xs font-bold text-[#141e30]">صلاحيات الترافع والاعتماد</h3>
-              </div>
-              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
-                محمي 2FA
-              </span>
-            </div>
-
-            <p className="text-[11px] text-[#556480] leading-relaxed">
-              التحقق الثنائي عبر نفاذ الوطني الرامي لجميع المحامين قبل إيداع المذكرات القضائية.
-            </p>
-
-            <div className="pt-2 flex items-center gap-2 text-[11px] text-[#3e4f6e]">
-              <div className="flex -space-x-2 overflow-hidden rtl:space-x-reverse">
-                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-[#00236f] text-white text-[9px] font-bold flex items-center justify-center">
-                  أع
-                </div>
-                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-[#b44800] text-white text-[9px] font-bold flex items-center justify-center">
-                  مج
-                </div>
-                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-[#43536f] text-white text-[9px] font-bold flex items-center justify-center">
-                  3+
-                </div>
-              </div>
-              <span className="font-medium text-[#5a6a84]">
-                جميع الحسابات موثقة ومربوطة بالهيئة السعودية للمحامين
-              </span>
-            </div>
-          </div>
-
-          {/* Box 3 (Left): دعوة سريعة (Solid Blue Accent Card) */}
+          {/* Box 2: دعوة سريعة (Solid Blue Accent Card) */}
           <div className="bg-[#00236f] text-white rounded-xl p-4 shadow-sm space-y-2 flex flex-col justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-xs text-white/80 font-bold">

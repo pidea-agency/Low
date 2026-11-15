@@ -827394,6 +827394,8 @@ async function listClients(officeId) {
           name: r2.name,
           phone: r2.phone || "",
           notes: r2.notes || "",
+          clientType: r2.client_type || "individual",
+          client_type: r2.client_type || "individual",
           createdAt: r2.created_at,
           updatedAt: r2.updated_at
         }));
@@ -827406,6 +827408,9 @@ async function listClients(officeId) {
     }
   } else {
     handleSupabaseFailure("listClients", new Error("Supabase client is not configured"));
+  }
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
   }
   return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
 }
@@ -827421,6 +827426,8 @@ async function getClientById(id, officeId) {
           name: data.name,
           phone: data.phone || "",
           notes: data.notes || "",
+          clientType: data.client_type || "individual",
+          client_type: data.client_type || "individual",
           createdAt: data.created_at,
           updatedAt: data.updated_at
         };
@@ -827442,6 +827449,9 @@ async function getClientById(id, officeId) {
   } else {
     handleSupabaseFailure("getClientById", new Error("Supabase client is not configured"));
   }
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
+  }
   const list = memoryClients.get(officeId) || [];
   const found = list.find((c) => c.id === id);
   return found ? { ...found } : null;
@@ -827449,6 +827459,7 @@ async function getClientById(id, officeId) {
 async function createClient2(data, officeId) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const id = import_crypto2.default.randomUUID();
+  const clientType = data.client_type || data.clientType || "individual";
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -827459,6 +827470,7 @@ async function createClient2(data, officeId) {
           name: data.name,
           phone: data.phone || "",
           notes: data.notes || "",
+          client_type: clientType,
           created_at: now,
           updated_at: now
         }
@@ -827470,6 +827482,8 @@ async function createClient2(data, officeId) {
           name: inserted.name,
           phone: inserted.phone || "",
           notes: inserted.notes || "",
+          clientType: inserted.client_type || clientType,
+          client_type: inserted.client_type || clientType,
           createdAt: inserted.created_at,
           updatedAt: inserted.updated_at
         };
@@ -827489,12 +827503,16 @@ async function createClient2(data, officeId) {
     name: data.name,
     phone: data.phone || "",
     notes: data.notes || "",
+    clientType,
+    client_type: clientType,
     createdAt: now,
     updatedAt: now
   };
-  const list = memoryClients.get(officeId) || [];
-  list.unshift(record);
-  memoryClients.set(officeId, list);
+  if (isInMemoryFallbackAllowed()) {
+    const list = memoryClients.get(officeId) || [];
+    list.unshift(record);
+    memoryClients.set(officeId, list);
+  }
   return { ...record };
 }
 async function updateClient(id, data, officeId) {
@@ -827506,6 +827524,8 @@ async function updateClient(id, data, officeId) {
       if (data.name !== void 0) payload.name = data.name;
       if (data.phone !== void 0) payload.phone = data.phone;
       if (data.notes !== void 0) payload.notes = data.notes;
+      if (data.client_type !== void 0) payload.client_type = data.client_type;
+      if (data.clientType !== void 0) payload.client_type = data.clientType;
       const { data: updated2, error } = await client.from("clients").update(payload).eq("id", id).eq("office_id", officeId).select().single();
       if (!error && updated2) {
         return {
@@ -827514,6 +827534,8 @@ async function updateClient(id, data, officeId) {
           name: updated2.name,
           phone: updated2.phone || "",
           notes: updated2.notes || "",
+          clientType: updated2.client_type || "individual",
+          client_type: updated2.client_type || "individual",
           createdAt: updated2.created_at,
           updatedAt: updated2.updated_at
         };
@@ -827530,6 +827552,9 @@ async function updateClient(id, data, officeId) {
   } else {
     handleSupabaseFailure("updateClient", new Error("Supabase client is not configured"));
   }
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
+  }
   const list = memoryClients.get(officeId) || [];
   const idx = list.findIndex((c) => c.id === id);
   if (idx === -1) return null;
@@ -827539,6 +827564,8 @@ async function updateClient(id, data, officeId) {
     name: data.name !== void 0 ? data.name : current.name,
     phone: data.phone !== void 0 ? data.phone : current.phone,
     notes: data.notes !== void 0 ? data.notes : current.notes,
+    clientType: data.client_type || data.clientType || current.clientType || "individual",
+    client_type: data.client_type || data.clientType || current.client_type || "individual",
     updatedAt: now
   };
   list[idx] = updated;
@@ -827568,7 +827595,6 @@ async function deleteClient(id, officeId) {
   return true;
 }
 async function listSessions(officeId, statusFilter) {
-  const memList = (memorySessions.get(officeId) || []).filter((s3) => !statusFilter || statusFilter === "All" || s3.status === statusFilter).map(formatSession);
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -827578,6 +827604,9 @@ async function listSessions(officeId, statusFilter) {
       }
       const { data, error } = await query.order("id", { ascending: false });
       if (!error && data) {
+        if (!isInMemoryFallbackAllowed()) {
+          return data.map(formatSession);
+        }
         const dbSessions = data.map((d) => {
           const formatted = formatSession(d);
           const fromMem = (memorySessions.get(officeId) || []).find((m2) => m2.id === d.id);
@@ -827596,6 +827625,7 @@ async function listSessions(officeId, statusFilter) {
           }
           return formatted;
         });
+        const memList = (memorySessions.get(officeId) || []).filter((s3) => !statusFilter || statusFilter === "All" || s3.status === statusFilter).map(formatSession);
         const dbIds = new Set(dbSessions.map((s3) => s3.id));
         return [...dbSessions, ...memList.filter((m2) => !dbIds.has(m2.id))];
       }
@@ -827608,7 +827638,10 @@ async function listSessions(officeId, statusFilter) {
   } else {
     handleSupabaseFailure("listSessions", new Error("Supabase client is not configured"));
   }
-  return memList;
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
+  return (memorySessions.get(officeId) || []).filter((s3) => !statusFilter || statusFilter === "All" || s3.status === statusFilter).map(formatSession);
 }
 async function getSessionById(id, officeId) {
   const memList = memorySessions.get(officeId) || [];
@@ -827618,6 +827651,9 @@ async function getSessionById(id, officeId) {
     try {
       const { data, error } = await client.from("sessions").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
+        if (!isInMemoryFallbackAllowed()) {
+          return formatSession(data);
+        }
         const formatted = formatSession(data);
         if (fromMem) {
           return {
@@ -827648,6 +827684,9 @@ async function getSessionById(id, officeId) {
     }
   } else {
     handleSupabaseFailure("getSessionById", new Error("Supabase client is not configured"));
+  }
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
   if (!fromMem) return null;
   return formatSession(fromMem);
@@ -828083,6 +828122,9 @@ async function listTasks(officeId) {
   } else {
     handleSupabaseFailure("listTasks", new Error("Supabase client is not configured"));
   }
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
   return (memoryTasks.get(officeId) || []).map(formatTask);
 }
 async function getTaskById(id, officeId) {
@@ -828109,6 +828151,9 @@ async function getTaskById(id, officeId) {
     }
   } else {
     handleSupabaseFailure("getTaskById", new Error("Supabase client is not configured"));
+  }
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
   const memList = memoryTasks.get(officeId) || [];
   const fromMem = memList.find((item) => item.id === id);
@@ -828323,6 +828368,9 @@ async function listPoa(officeId) {
   } else {
     handleSupabaseFailure("listPoa", new Error("Supabase client is not configured"));
   }
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
   return (memoryPoa.get(officeId) || []).map(formatPoa);
 }
 async function getPoaById(id, officeId) {
@@ -828349,6 +828397,9 @@ async function getPoaById(id, officeId) {
     }
   } else {
     handleSupabaseFailure("getPoaById", new Error("Supabase client is not configured"));
+  }
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
   const memList = memoryPoa.get(officeId) || [];
   const fromMem = memList.find((item) => item.id === id);
@@ -828562,6 +828613,9 @@ async function listJudgments(officeId) {
   } else {
     handleSupabaseFailure("listJudgments", new Error("Supabase client is not configured"));
   }
+  if (!isInMemoryFallbackAllowed()) {
+    return [];
+  }
   return (memoryJudgments.get(officeId) || []).map(formatJudgment);
 }
 async function getJudgmentById(id, officeId) {
@@ -828588,6 +828642,9 @@ async function getJudgmentById(id, officeId) {
     }
   } else {
     handleSupabaseFailure("getJudgmentById", new Error("Supabase client is not configured"));
+  }
+  if (!isInMemoryFallbackAllowed()) {
+    return null;
   }
   const memList = memoryJudgments.get(officeId) || [];
   const fromMem = memList.find((item) => item.id === id);
@@ -829173,6 +829230,8 @@ async function searchClients(officeId, query) {
           name: r2.name,
           phone: r2.phone || "",
           notes: r2.notes || "",
+          clientType: r2.client_type || "individual",
+          client_type: r2.client_type || "individual",
           createdAt: r2.created_at,
           updatedAt: r2.updated_at
         }));
@@ -829777,12 +829836,17 @@ function createDefaultRecord(officeId, eventType) {
   };
 }
 async function listOfficeNotificationTemplates(officeId) {
-  const officeMap = memoryTemplateStore.get(officeId) || /* @__PURE__ */ new Map();
+  const officeMap = isInMemoryFallbackAllowed() ? memoryTemplateStore.get(officeId) || /* @__PURE__ */ new Map() : /* @__PURE__ */ new Map();
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("notification_templates").select("*").eq("office_id", officeId);
-      if (!error && data && Array.isArray(data)) {
+      if (error) {
+        logger.error({ error, officeId }, "Failed to query notification_templates from Supabase");
+        if (!isInMemoryFallbackAllowed()) {
+          throw new Error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0648\u0627\u0644\u0628 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: " + error.message);
+        }
+      } else if (data && Array.isArray(data)) {
         for (const row of data) {
           if (row.event_type && NOTIFICATION_EVENT_DEFINITIONS[row.event_type]) {
             const def = NOTIFICATION_EVENT_DEFINITIONS[row.event_type];
@@ -829808,10 +829872,17 @@ async function listOfficeNotificationTemplates(officeId) {
           }
         }
       }
-    } catch {
+    } catch (err) {
+      if (!isInMemoryFallbackAllowed()) {
+        throw err;
+      }
     }
+  } else if (!isInMemoryFallbackAllowed()) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  memoryTemplateStore.set(officeId, officeMap);
+  if (isInMemoryFallbackAllowed()) {
+    memoryTemplateStore.set(officeId, officeMap);
+  }
   const allEvents = Object.keys(NOTIFICATION_EVENT_DEFINITIONS);
   return allEvents.map((eventType) => {
     const existing = officeMap.get(eventType);
@@ -829819,14 +829890,18 @@ async function listOfficeNotificationTemplates(officeId) {
       return existing;
     }
     const defRecord = createDefaultRecord(officeId, eventType);
-    officeMap.set(eventType, defRecord);
+    if (isInMemoryFallbackAllowed()) {
+      officeMap.set(eventType, defRecord);
+    }
     return defRecord;
   });
 }
 async function getOfficeNotificationTemplate(officeId, eventType) {
-  const officeMap = memoryTemplateStore.get(officeId);
-  if (officeMap && officeMap.has(eventType)) {
-    return officeMap.get(eventType);
+  if (isInMemoryFallbackAllowed()) {
+    const officeMap = memoryTemplateStore.get(officeId);
+    if (officeMap && officeMap.has(eventType)) {
+      return officeMap.get(eventType);
+    }
   }
   const all = await listOfficeNotificationTemplates(officeId);
   const found = all.find((t2) => t2.event_type === eventType);
@@ -829848,30 +829923,38 @@ async function updateOfficeNotificationTemplate(officeId, eventType, patch) {
     channels: updatedChannels,
     updated_at: (/* @__PURE__ */ new Date()).toISOString()
   };
-  let officeMap = memoryTemplateStore.get(officeId);
-  if (!officeMap) {
-    officeMap = /* @__PURE__ */ new Map();
-    memoryTemplateStore.set(officeId, officeMap);
-  }
-  officeMap.set(eventType, updatedRecord);
   const client = getSupabaseClient();
   if (client) {
-    try {
-      const payload = {
-        office_id: officeId,
-        event_type: eventType,
-        name: updatedRecord.name,
-        category: updatedRecord.category,
-        title_template: updatedRecord.title_template,
-        body_template: updatedRecord.body_template,
-        channels: updatedRecord.channels,
-        default_recipient_role: updatedRecord.default_recipient_role,
-        updated_at: updatedRecord.updated_at
-      };
-      await client.from("notification_templates").upsert(payload, { onConflict: "office_id,event_type" });
-    } catch (err) {
-      logger.warn({ err, officeId, eventType }, "Failed to upsert notification template to Supabase (in-memory preserved)");
+    const payload = {
+      office_id: officeId,
+      event_type: eventType,
+      name: updatedRecord.name,
+      category: updatedRecord.category,
+      title_template: updatedRecord.title_template,
+      body_template: updatedRecord.body_template,
+      channels: updatedRecord.channels,
+      default_recipient_role: updatedRecord.default_recipient_role,
+      updated_at: updatedRecord.updated_at
+    };
+    const { data, error } = await client.from("notification_templates").upsert(payload, { onConflict: "office_id,event_type" }).select().single();
+    if (error) {
+      logger.error({ error, officeId, eventType }, "Failed to upsert notification template to Supabase");
+      if (!isInMemoryFallbackAllowed()) {
+        throw new Error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0648\u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0644\u0628 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: " + (error.message || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"));
+      }
+    } else if (data) {
+      updatedRecord.id = data.id;
     }
+  } else if (!isInMemoryFallbackAllowed()) {
+    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+  }
+  if (isInMemoryFallbackAllowed()) {
+    let officeMap = memoryTemplateStore.get(officeId);
+    if (!officeMap) {
+      officeMap = /* @__PURE__ */ new Map();
+      memoryTemplateStore.set(officeId, officeMap);
+    }
+    officeMap.set(eventType, updatedRecord);
   }
   return updatedRecord;
 }
@@ -830658,7 +830741,7 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
       return null;
     }
     const record = data[0];
-    const isPending = record.status === "pending_activation" || record.password_hash === "!LOCKED:pending_activation!" || fallbackActivationTokens.has(`user:${record.id}`);
+    const isPending = record.status === "pending_activation" || record.password_hash === "!LOCKED:pending_activation!" || false;
     if (isPending) {
       throw new UserPendingActivationError();
     }
@@ -830741,7 +830824,7 @@ async function findUserByIdOrUsername(identifier) {
       return null;
     }
     const u = data[0];
-    const isPending = u.status === "pending_activation" || fallbackActivationTokens.has(`user:${u.id}`) || u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash);
+    const isPending = u.status === "pending_activation" || false;
     const result = {
       id: u.id,
       username: u.username,
@@ -831098,6 +831181,7 @@ async function checkHasPlatformSettingsTable(client) {
   }
 }
 function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
+  if (true) return;
   const record = {
     userId,
     tokenHash,
@@ -831107,9 +831191,11 @@ function saveFallbackActivationToken(userId, tokenHash, expiresAt) {
   fallbackActivationTokens.set(`user:${userId}`, record);
 }
 function getFallbackActivationTokenByHash(tokenHash) {
+  if (true) return void 0;
   return fallbackActivationTokens.get(tokenHash);
 }
 function clearFallbackActivationToken(userId) {
+  if (true) return;
   const userRec = fallbackActivationTokens.get(`user:${userId}`);
   if (userRec) {
     fallbackActivationTokens.delete(userRec.tokenHash);
@@ -832196,7 +832282,7 @@ async function getSuperAdminReportsOverview() {
 async function listOfficeMembers(adminId) {
   const allUsers = await listSupabaseUsers();
   return allUsers.filter((u) => u.role === "staff" && u.admin_id === adminId).map((u) => {
-    const isPending = u.status === "pending_activation" || fallbackActivationTokens.has(`user:${u.id}`) || u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash);
+    const isPending = u.status === "pending_activation" || false;
     return {
       id: u.id,
       username: u.username,
@@ -832204,6 +832290,8 @@ async function listOfficeMembers(adminId) {
       role: "staff",
       admin_id: adminId,
       display_name: u.display_name,
+      role_title: u.role_title || null,
+      roleTitle: u.role_title || null,
       status: isPending ? "pending_activation" : u.status || "active",
       phone: u.phone,
       created_at: u.created_at
@@ -832242,6 +832330,7 @@ async function createOfficeMember(adminId, input) {
     email: input.email.trim(),
     phone: input.phone,
     role: "staff",
+    role_title: input.role_title || input.roleTitle || null,
     admin_id: adminId,
     status: input.status || "pending_activation",
     activation_token_hash: tokenHash,
@@ -832346,37 +832435,39 @@ async function findUserByActivationToken(rawToken) {
   const cleanToken = rawToken.trim();
   const tokenHash = import_crypto3.default.createHash("sha256").update(cleanToken).digest("hex");
   const now = Date.now();
-  const fallback = getFallbackActivationTokenByHash(tokenHash);
-  if (fallback) {
-    const expiryTime = new Date(fallback.expiresAt).getTime();
-    if (expiryTime < now) {
+  if (false) {
+    const fallback = getFallbackActivationTokenByHash(tokenHash);
+    if (fallback) {
+      const expiryTime = new Date(fallback.expiresAt).getTime();
+      if (expiryTime < now) {
+        return {
+          valid: false,
+          reason: "expired",
+          error: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0645\u0643\u062A\u0628\u0643 \u0644\u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u062C\u062F\u064A\u062F."
+        };
+      }
+      const user = await findUserByIdOrUsername(fallback.userId);
+      if (!user) {
+        return { valid: false, reason: "invalid", error: "\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u062A\u0645 \u062D\u0630\u0641\u0647." };
+      }
+      if (user.status !== "pending_activation") {
+        return {
+          valid: false,
+          reason: "already_active",
+          error: "\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0645\u0643\u0646\u0643 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0628\u0627\u0634\u0631\u0629."
+        };
+      }
+      let officeName = null;
+      if (user.admin_id) {
+        const officeAdmin = await findUserByIdOrUsername(user.admin_id);
+        officeName = officeAdmin?.office_name || null;
+      }
       return {
-        valid: false,
-        reason: "expired",
-        error: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0645\u0643\u062A\u0628\u0643 \u0644\u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u062A\u0641\u0639\u064A\u0644 \u062C\u062F\u064A\u062F."
+        valid: true,
+        user,
+        officeName
       };
     }
-    const user = await findUserByIdOrUsername(fallback.userId);
-    if (!user) {
-      return { valid: false, reason: "invalid", error: "\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u062A\u0645 \u062D\u0630\u0641\u0647." };
-    }
-    if (user.status !== "pending_activation") {
-      return {
-        valid: false,
-        reason: "already_active",
-        error: "\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0645\u0643\u0646\u0643 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0628\u0627\u0634\u0631\u0629."
-      };
-    }
-    let officeName = null;
-    if (user.admin_id) {
-      const officeAdmin = await findUserByIdOrUsername(user.admin_id);
-      officeName = officeAdmin?.office_name || null;
-    }
-    return {
-      valid: true,
-      user,
-      officeName
-    };
   }
   const client = getSupabaseClient();
   if (client) {
@@ -832800,6 +832891,9 @@ async function createSupabaseUser(input) {
     if (input.plan_id !== void 0) newUserData.plan_id = input.plan_id || null;
     if (input.ai_quota_limit_override !== void 0) newUserData.ai_quota_limit_override = input.ai_quota_limit_override;
   }
+  if (input.role_title !== void 0 || input.roleTitle !== void 0) {
+    newUserData.role_title = input.role_title || input.roleTitle || null;
+  }
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
   let { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
   if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
@@ -832818,7 +832912,7 @@ async function createSupabaseUser(input) {
     throw new Error(`\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${error.message}`);
   }
   const row = data;
-  const isPending = input.status === "pending_activation" || newUserData.status === "pending_activation" || input.activation_token_hash && fallbackActivationTokens.has(input.activation_token_hash) || fallbackActivationTokens.has(`user:${row.id}`);
+  const isPending = input.status === "pending_activation" || newUserData.status === "pending_activation" || false;
   return {
     id: row.id,
     username: row.username,
@@ -832827,6 +832921,8 @@ async function createSupabaseUser(input) {
     admin_id: row.admin_id || null,
     office_name: row.office_name || null,
     display_name: row.display_name,
+    role_title: row.role_title || input.role_title || input.roleTitle || null,
+    roleTitle: row.role_title || input.role_title || input.roleTitle || null,
     status: isPending ? "pending_activation" : row.status || "active",
     phone: row.phone || null,
     subscription_end_date: row.subscription_end_date || null,
@@ -832993,6 +833089,8 @@ async function updateSupabaseUser(id, input) {
     admin_id: row.admin_id || null,
     office_name: row.office_name || null,
     display_name: row.display_name,
+    role_title: row.role_title || input.role_title || input.roleTitle || null,
+    roleTitle: row.role_title || input.role_title || input.roleTitle || null,
     status: row.status || "active",
     phone: row.phone || null,
     subscription_end_date: row.subscription_end_date || null,
@@ -853325,10 +853423,6 @@ router7.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
     }
     res.json(report);
   } catch (err) {
-    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
-      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
-      return;
-    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in GET /sessions/:id/report");
       res.status(err.statusCode).json({
@@ -853337,8 +853431,8 @@ router7.get("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
       });
       return;
     }
-    logger.error({ err }, "Failed to fetch session report");
-    res.status(500).json({ error: err?.message || "Failed to fetch session report." });
+    const refId = `rep_get_${Date.now()}`;
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062C\u0644\u0628 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629");
   }
 });
 router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
@@ -853359,10 +853453,6 @@ router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
     logger.info({ id }, "Session report saved successfully");
     res.json(updated);
   } catch (err) {
-    if (err?.statusCode === 503 || err?.code === "DATABASE_UNAVAILABLE" || err?.name === "DatabaseUnavailableError" || String(err?.message || "").includes("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629")) {
-      res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
-      return;
-    }
     if (err instanceof GoogleSheetsError) {
       logger.error({ err, refId: err.refId, id }, "Google Sheets failure in PUT /sessions/:id/report");
       res.status(err.statusCode).json({
@@ -853371,8 +853461,8 @@ router7.put("/sessions/:id/report", attachAuthUser, requireAuth, blockSuperAdmin
       });
       return;
     }
-    logger.error({ err }, "Failed to save session report");
-    res.status(500).json({ error: err?.message || "Failed to save session report." });
+    const refId = `rep_put_${Date.now()}`;
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062D\u0641\u0638 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629");
   }
 });
 router7.get("/reports/monthly", attachAuthUser, requireAdmin, blockSuperAdminFromOfficeData, requireActiveSubscription, async (req, res) => {
@@ -855052,7 +855142,7 @@ router12.get("/users", async (req, res) => {
 router12.post("/users", async (req, res) => {
   try {
     const adminId = req.authUser.userId;
-    const { username, email, display_name, phone } = req.body;
+    const { username, email, display_name, phone, role_title, roleTitle } = req.body;
     if (!username || !username.trim()) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628." });
       return;
@@ -855070,7 +855160,8 @@ router12.post("/users", async (req, res) => {
       username: username.trim(),
       email: email.trim(),
       display_name: display_name?.trim() || username.trim(),
-      phone: phone?.trim() || null
+      phone: phone?.trim() || null,
+      role_title: role_title?.trim() || roleTitle?.trim() || null
     });
     res.status(201).json({
       ...result.member,
@@ -856036,7 +856127,8 @@ router15.post("/clients", async (req, res) => {
       {
         name: body.name.trim(),
         phone: body.phone?.trim() || "",
-        notes: body.notes?.trim() || ""
+        notes: body.notes?.trim() || "",
+        client_type: body.client_type || body.clientType || body.type || "individual"
       },
       officeId
     );
@@ -857699,6 +857791,7 @@ init_postgres_service();
 
 // src/services/storage.service.ts
 init_supabase_service();
+init_postgres_service();
 init_logger();
 var ATTACHMENTS_BUCKET = "attachments";
 var memoryStorage = /* @__PURE__ */ new Map();
@@ -857716,15 +857809,30 @@ async function uploadFile(officeId, relatedRecordType, relatedRecordId, fileName
         upsert: true
       });
       if (!error && data) {
-        memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
+        if (isInMemoryFallbackAllowed()) {
+          memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
+        }
         return { filePath: data.path || filePath };
       }
       if (error) {
-        logger.warn({ error, filePath }, "Supabase storage upload failed, using memory fallback");
+        logger.error({ error, filePath }, "Supabase storage upload failed");
+        if (!isInMemoryFallbackAllowed()) {
+          throw new Error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
+        }
       }
     } catch (err) {
-      logger.warn({ err, filePath }, "Supabase storage upload error, using memory fallback");
+      if (!isInMemoryFallbackAllowed()) {
+        logger.error({ err, filePath }, "Supabase storage upload exception");
+        throw new Error(err?.message && err.message.includes("\u0641\u0634\u0644") ? err.message : "\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
+      }
+      logger.warn({ err, filePath }, "Supabase storage upload error, using test memory fallback");
     }
+  } else if (!isInMemoryFallbackAllowed()) {
+    logger.error({ filePath }, "Supabase storage client is not configured");
+    throw new Error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
+  }
+  if (!isInMemoryFallbackAllowed()) {
+    throw new Error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649");
   }
   memoryStorage.set(filePath, { buffer: fileBuffer, mimeType, uploadedAt: Date.now() });
   return { filePath };
@@ -857738,14 +857846,26 @@ async function createSignedUrl(filePath, expiresInSeconds = 60) {
         return data.signedUrl;
       }
       if (error) {
-        logger.warn({ error, filePath }, "Supabase storage createSignedUrl failed, falling back to mock signed URL");
+        logger.error({ error, filePath }, "Supabase storage createSignedUrl failed");
+        if (!isInMemoryFallbackAllowed()) {
+          throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
+        }
       }
     } catch (err) {
-      logger.warn({ err, filePath }, "Supabase storage createSignedUrl error, falling back to mock signed URL");
+      if (!isInMemoryFallbackAllowed()) {
+        logger.error({ err, filePath }, "Supabase storage createSignedUrl exception");
+        throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
+      }
+      logger.warn({ err, filePath }, "Supabase storage createSignedUrl error, falling back in test");
     }
+  } else if (!isInMemoryFallbackAllowed()) {
+    throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
+  }
+  if (!isInMemoryFallbackAllowed()) {
+    throw new Error("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0631\u0627\u0628\u0637 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641");
   }
   const expiresAt = Date.now() + expiresInSeconds * 1e3;
-  return `https://storage.supabase.local/${ATTACHMENTS_BUCKET}/${encodeURIComponent(filePath)}?token=mock_signed_token&expires=${expiresAt}`;
+  return `https://storage.supabase.local/${ATTACHMENTS_BUCKET}/${encodeURIComponent(filePath)}?token=test_signed_token&expires=${expiresAt}`;
 }
 async function deleteFile(filePath) {
   let success = false;
@@ -857755,13 +857875,18 @@ async function deleteFile(filePath) {
       const { error } = await client.storage.from(ATTACHMENTS_BUCKET).remove([filePath]);
       if (!error) {
         success = true;
+      } else {
+        logger.error({ error, filePath }, "Supabase storage remove failed");
       }
     } catch (err) {
-      logger.warn({ err, filePath }, "Supabase storage remove error, falling back to memory");
+      logger.error({ err, filePath }, "Supabase storage remove exception");
     }
   }
-  const hadInMemory = memoryStorage.delete(filePath);
-  return success || hadInMemory;
+  if (isInMemoryFallbackAllowed()) {
+    const hadInMemory = memoryStorage.delete(filePath);
+    return success || hadInMemory;
+  }
+  return success;
 }
 
 // src/routes/attachments.ts
@@ -857965,7 +858090,7 @@ router17.post("/attachments", async (req, res) => {
       res.status(503).json({ error: "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", code: "DATABASE_UNAVAILABLE" });
       return;
     }
-    res.status(500).json({ error: "\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0631\u0641\u0642 \u0648\u062A\u062E\u0632\u064A\u0646\u0647." });
+    res.status(500).json({ error: err?.message || "\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649." });
   }
 });
 router17.get("/attachments", async (req, res) => {

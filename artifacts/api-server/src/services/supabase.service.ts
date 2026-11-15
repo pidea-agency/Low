@@ -54,6 +54,8 @@ export interface AppUser {
   display_name?: string | null;
   status?: "active" | "suspended" | "pending_activation";
   phone?: string | null;
+  role_title?: string | null;
+  roleTitle?: string | null;
   subscription_end_date?: string | null;
   subscription_notes?: string | null;
   plan_tier?: "plus" | "pro" | string;
@@ -528,7 +530,7 @@ export async function verifySupabaseUser(
     const isPending =
       record.status === "pending_activation" ||
       record.password_hash === "!LOCKED:pending_activation!" ||
-      fallbackActivationTokens.has(`user:${record.id}`);
+      (process.env.NODE_ENV === "test" && fallbackActivationTokens.has(`user:${record.id}`));
     if (isPending) {
       throw new UserPendingActivationError();
     }
@@ -635,8 +637,10 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
     const u: any = data[0];
     const isPending =
       u.status === "pending_activation" ||
-      fallbackActivationTokens.has(`user:${u.id}`) ||
-      (u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash));
+      (process.env.NODE_ENV === "test" && (
+        fallbackActivationTokens.has(`user:${u.id}`) ||
+        Boolean(u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash))
+      ));
     const result: AppUser = {
       id: u.id,
       username: u.username,
@@ -1091,9 +1095,10 @@ export interface FallbackActivationRecord {
   expiresAt: string;
 }
 
-const fallbackActivationTokens = new Map<string, FallbackActivationRecord>(); // keyed by tokenHash AND by userId
+const fallbackActivationTokens = new Map<string, FallbackActivationRecord>(); // keyed by tokenHash AND by userId (TEST ENVIRONMENT ONLY)
 
 export function saveFallbackActivationToken(userId: string, tokenHash: string, expiresAt: Date): void {
+  if (process.env.NODE_ENV !== "test") return;
   const record: FallbackActivationRecord = {
     userId,
     tokenHash,
@@ -1104,10 +1109,12 @@ export function saveFallbackActivationToken(userId: string, tokenHash: string, e
 }
 
 export function getFallbackActivationTokenByHash(tokenHash: string): FallbackActivationRecord | undefined {
+  if (process.env.NODE_ENV !== "test") return undefined;
   return fallbackActivationTokens.get(tokenHash);
 }
 
 export function clearFallbackActivationToken(userId: string): void {
+  if (process.env.NODE_ENV !== "test") return;
   const userRec = fallbackActivationTokens.get(`user:${userId}`);
   if (userRec) {
     fallbackActivationTokens.delete(userRec.tokenHash);
@@ -1617,6 +1624,8 @@ export async function updateSupabaseAdmin(
     display_name?: string;
     email?: string;
     phone?: string | null;
+  role_title?: string | null;
+  roleTitle?: string | null;
     status?: "active" | "suspended";
     plan_id?: string;
     plan_tier?: string;
@@ -2458,6 +2467,8 @@ export async function listSuperAdminUsers(): Promise<Array<{
   status: string;
   display_name?: string | null;
   phone?: string | null;
+  role_title?: string | null;
+  roleTitle?: string | null;
   office_id?: string | null;
   office_name?: string | null;
   created_at?: string;
@@ -2634,8 +2645,10 @@ export async function listOfficeMembers(adminId: string): Promise<AppUser[]> {
     .map((u) => {
       const isPending =
         u.status === "pending_activation" ||
-        fallbackActivationTokens.has(`user:${u.id}`) ||
-        (u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash));
+        (process.env.NODE_ENV === "test" && (
+          fallbackActivationTokens.has(`user:${u.id}`) ||
+          Boolean(u.activation_token_hash && fallbackActivationTokens.has(u.activation_token_hash))
+        ));
       return {
         id: u.id,
         username: u.username,
@@ -2643,6 +2656,8 @@ export async function listOfficeMembers(adminId: string): Promise<AppUser[]> {
         role: "staff" as const,
         admin_id: adminId,
         display_name: u.display_name,
+        role_title: (u as any).role_title || null,
+        roleTitle: (u as any).role_title || null,
         status: isPending ? ("pending_activation" as const) : (u.status || "active"),
         phone: u.phone,
         created_at: u.created_at,
@@ -2668,6 +2683,8 @@ export async function createOfficeMember(
     display_name?: string;
     phone?: string;
     status?: "active" | "suspended" | "pending_activation";
+    role_title?: string | null;
+    roleTitle?: string | null;
   },
 ): Promise<CreateOfficeMemberResult> {
   // Validate office admin exists and is active
@@ -2709,6 +2726,7 @@ export async function createOfficeMember(
     email: input.email.trim(),
     phone: input.phone,
     role: "staff",
+    role_title: input.role_title || input.roleTitle || null,
     admin_id: adminId,
     status: input.status || "pending_activation",
     activation_token_hash: tokenHash,
@@ -2855,41 +2873,43 @@ export async function findUserByActivationToken(rawToken: string): Promise<{
   const tokenHash = crypto.createHash("sha256").update(cleanToken).digest("hex");
   const now = Date.now();
 
-  // 1. Check fallback store first
-  const fallback = getFallbackActivationTokenByHash(tokenHash);
-  if (fallback) {
-    const expiryTime = new Date(fallback.expiresAt).getTime();
-    if (expiryTime < now) {
+  // 1. In test environment ONLY: check fallback store
+  if (process.env.NODE_ENV === "test") {
+    const fallback = getFallbackActivationTokenByHash(tokenHash);
+    if (fallback) {
+      const expiryTime = new Date(fallback.expiresAt).getTime();
+      if (expiryTime < now) {
+        return {
+          valid: false,
+          reason: "expired",
+          error: "انتهت صلاحية رابط التفعيل. يرجى التواصل مع مدير مكتبك لإعادة إرسال رابط تفعيل جديد.",
+        };
+      }
+
+      const user = await findUserByIdOrUsername(fallback.userId);
+      if (!user) {
+        return { valid: false, reason: "invalid", error: "رابط التفعيل غير صالح أو تم حذفه." };
+      }
+      if (user.status !== "pending_activation") {
+        return {
+          valid: false,
+          reason: "already_active",
+          error: "تم تفعيل هذا الحساب مسبقاً. يمكنك تسجيل الدخول مباشرة.",
+        };
+      }
+
+      let officeName: string | null = null;
+      if (user.admin_id) {
+        const officeAdmin = await findUserByIdOrUsername(user.admin_id);
+        officeName = officeAdmin?.office_name || null;
+      }
+
       return {
-        valid: false,
-        reason: "expired",
-        error: "انتهت صلاحية رابط التفعيل. يرجى التواصل مع مدير مكتبك لإعادة إرسال رابط تفعيل جديد.",
+        valid: true,
+        user,
+        officeName,
       };
     }
-
-    const user = await findUserByIdOrUsername(fallback.userId);
-    if (!user) {
-      return { valid: false, reason: "invalid", error: "رابط التفعيل غير صالح أو تم حذفه." };
-    }
-    if (user.status !== "pending_activation") {
-      return {
-        valid: false,
-        reason: "already_active",
-        error: "تم تفعيل هذا الحساب مسبقاً. يمكنك تسجيل الدخول مباشرة.",
-      };
-    }
-
-    let officeName: string | null = null;
-    if (user.admin_id) {
-      const officeAdmin = await findUserByIdOrUsername(user.admin_id);
-      officeName = officeAdmin?.office_name || null;
-    }
-
-    return {
-      valid: true,
-      user,
-      officeName,
-    };
   }
 
   // 2. Query Supabase
@@ -3038,6 +3058,8 @@ export async function updateOfficeMember(
     display_name?: string;
     email?: string;
     phone?: string | null;
+  role_title?: string | null;
+  roleTitle?: string | null;
     status?: "active" | "suspended";
   },
 ): Promise<AppUser> {
@@ -3420,6 +3442,8 @@ export async function createSupabaseUser(input: {
   display_name?: string;
   status?: "active" | "suspended" | "pending_activation";
   phone?: string | null;
+  role_title?: string | null;
+  roleTitle?: string | null;
   subscription_end_date?: string;
   subscription_notes?: string;
   plan_tier?: "plus" | "pro" | string;
@@ -3538,6 +3562,9 @@ export async function createSupabaseUser(input: {
     if (input.plan_id !== undefined) newUserData.plan_id = input.plan_id || null;
     if (input.ai_quota_limit_override !== undefined) newUserData.ai_quota_limit_override = input.ai_quota_limit_override;
   }
+  if (input.role_title !== undefined || (input as any).roleTitle !== undefined) {
+    newUserData.role_title = input.role_title || (input as any).roleTitle || null;
+  }
 
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
 
@@ -3573,8 +3600,10 @@ export async function createSupabaseUser(input: {
   const isPending =
     input.status === "pending_activation" ||
     newUserData.status === "pending_activation" ||
-    (input.activation_token_hash && fallbackActivationTokens.has(input.activation_token_hash)) ||
-    fallbackActivationTokens.has(`user:${row.id}`);
+    (process.env.NODE_ENV === "test" && (
+      Boolean(input.activation_token_hash && fallbackActivationTokens.has(input.activation_token_hash)) ||
+      fallbackActivationTokens.has(`user:${row.id}`)
+    ));
 
   return {
     id: row.id,
@@ -3584,6 +3613,8 @@ export async function createSupabaseUser(input: {
     admin_id: row.admin_id || null,
     office_name: row.office_name || null,
     display_name: row.display_name,
+    role_title: row.role_title || input.role_title || (input as any).roleTitle || null,
+    roleTitle: row.role_title || input.role_title || (input as any).roleTitle || null,
     status: isPending ? "pending_activation" : (row.status || "active"),
     phone: row.phone || null,
     subscription_end_date: row.subscription_end_date || null,
@@ -3662,6 +3693,8 @@ export async function updateSupabaseUser(
     email?: string;
     status?: "active" | "suspended" | "pending_activation";
     phone?: string | null;
+  role_title?: string | null;
+  roleTitle?: string | null;
     subscription_end_date?: string | null;
     subscription_notes?: string | null;
     plan_tier?: "plus" | "pro" | string;
@@ -3809,6 +3842,8 @@ export async function updateSupabaseUser(
     admin_id: row.admin_id || null,
     office_name: row.office_name || null,
     display_name: row.display_name,
+    role_title: row.role_title || input.role_title || (input as any).roleTitle || null,
+    roleTitle: row.role_title || input.role_title || (input as any).roleTitle || null,
     status: row.status || "active",
     phone: row.phone || null,
     subscription_end_date: row.subscription_end_date || null,
