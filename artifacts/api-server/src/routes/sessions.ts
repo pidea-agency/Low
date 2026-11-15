@@ -537,12 +537,61 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
       return;
     }
 
-    const { listSupabaseUsers } = await import("../services/supabase.service");
-    const users = await listSupabaseUsers();
+    const { listSupabaseUsers, getPlatformSettings } = await import("../services/supabase.service");
+    const users = await listSupabaseUsers().catch(() => []);
     const officeUser = users.find((u) => u.id === officeId || u.username === officeId || u.id === req.authUser?.userId);
-    const recipientPhone = (req.body as any)?.recipientPhone?.trim() || officeUser?.phone?.trim();
-    if (!recipientPhone) {
-      res.status(400).json({ error: "لا يوجد رقم واتساب مسجل للمكتب لإرسال التذكير إليه." });
+
+    // 1. Resolve Client phone
+    let clientPhone: string | null = null;
+    if (session.clientId) {
+      try {
+        const client = await getClientById(session.clientId, officeId);
+        if (client?.phone?.trim()) {
+          clientPhone = client.phone.trim();
+        }
+      } catch {}
+    }
+
+    // 2. Resolve Assigned Lawyer phone
+    let lawyerPhone: string | null = null;
+    if (session.assignedLawyerId) {
+      const lawyer = users.find((u) => u.id === session.assignedLawyerId);
+      if (lawyer?.phone?.trim()) {
+        lawyerPhone = lawyer.phone.trim();
+      }
+    }
+    if (!lawyerPhone && officeUser?.phone?.trim()) {
+      lawyerPhone = officeUser.phone.trim();
+    }
+
+    // Fallback: check platform settings or direct input
+    const directPhone = (req.body as any)?.recipientPhone?.trim();
+    if (directPhone) {
+      if (!clientPhone) clientPhone = directPhone;
+      else if (!lawyerPhone) lawyerPhone = directPhone;
+    }
+
+    if (!clientPhone && !lawyerPhone) {
+      try {
+        const settings = await getPlatformSettings();
+        if ((settings as any)?.whatsapp_default_phone?.trim()) {
+          lawyerPhone = (settings as any).whatsapp_default_phone.trim();
+        }
+      } catch {}
+    }
+
+    const recipients: Array<{ phone: string; label: string }> = [];
+    if (clientPhone) {
+      recipients.push({ phone: clientPhone, label: "الموكل" });
+    }
+    if (lawyerPhone && lawyerPhone !== clientPhone) {
+      recipients.push({ phone: lawyerPhone, label: "المحامي المكلف" });
+    }
+
+    if (recipients.length === 0) {
+      res.status(400).json({
+        error: "لا يوجد رقم واتساب مسجل للمكتب أو للموكل أو للمحامي لإرسال التذكير إليه.",
+      });
       return;
     }
 
@@ -572,23 +621,32 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
     }
 
     const channel = new WhatsappReminderChannel();
-    await channel.send({
-      officeId,
-      recipientPhone,
-      sessionId: session.id,
-      caseNumber: session.caseNumber,
-      sessionDateHijri: session.sessionDateHijri,
-      sessionTime: session.sessionTime,
-      kind: "instant",
-      remainingText,
-      court: session.court,
-      courtCircuit: session.courtCircuit,
-      plaintiff: session.plaintiff,
-      defendant: session.defendant,
-      caseSubject: session.caseSubject,
-    });
+    const sentLabels: string[] = [];
 
-    res.json({ message: "تم إرسال تذكير الواتساب بنجاح!" });
+    for (const recipient of recipients) {
+      await channel.send({
+        officeId,
+        recipientPhone: recipient.phone,
+        sessionId: session.id,
+        caseNumber: session.caseNumber,
+        sessionDateHijri: session.sessionDateHijri,
+        sessionTime: session.sessionTime,
+        kind: "instant",
+        remainingText,
+        court: session.court,
+        courtCircuit: session.courtCircuit,
+        plaintiff: session.plaintiff,
+        defendant: session.defendant,
+        caseSubject: session.caseSubject,
+      });
+      sentLabels.push(recipient.label);
+    }
+
+    const summaryText = sentLabels.length > 1
+      ? `تم إرسال تذكير الجلسة عبر الواتساب بنجاح إلى (${sentLabels.join(" و ")})`
+      : `تم إرسال تذكير الجلسة عبر الواتساب بنجاح إلى ${sentLabels[0]}`;
+
+    res.json({ message: summaryText, recipients: sentLabels });
   } catch (err: any) {
     logger.error({ err, id }, "Failed to send instant WhatsApp reminder");
     const errMsg = err?.message || "فشل إرسال تذكير الواتساب.";

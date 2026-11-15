@@ -599,6 +599,26 @@ export async function getClientById(id: string, officeId: string): Promise<Clien
   return found ? { ...found } : null;
 }
 
+let hasClientTypeColumnCache: boolean | null = null;
+let lastClientTypeCheck = 0;
+
+export async function checkHasClientTypeColumn(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasClientTypeColumnCache !== null && now - lastClientTypeCheck < 60_000) {
+    return hasClientTypeColumnCache;
+  }
+  try {
+    const testRes = await client.from("clients").select("client_type").limit(1);
+    hasClientTypeColumnCache = !testRes.error;
+    lastClientTypeCheck = now;
+    return hasClientTypeColumnCache;
+  } catch {
+    hasClientTypeColumnCache = false;
+    lastClientTypeCheck = now;
+    return false;
+  }
+}
+
 export async function createClient(
   data: { name: string; phone?: string; notes?: string; client_type?: string; clientType?: string },
   officeId: string,
@@ -610,22 +630,40 @@ export async function createClient(
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: inserted, error } = await client
+      const hasClientType = await checkHasClientTypeColumn(client);
+      const payload: Record<string, any> = {
+        id,
+        office_id: officeId,
+        name: data.name,
+        phone: data.phone || "",
+        notes: data.notes || "",
+        created_at: now,
+        updated_at: now,
+      };
+      if (hasClientType) {
+        payload.client_type = clientType;
+      }
+
+      let { data: inserted, error } = await client
         .from("clients")
-        .insert([
-          {
-            id,
-            office_id: officeId,
-            name: data.name,
-            phone: data.phone || "",
-            notes: data.notes || "",
-            client_type: clientType,
-            created_at: now,
-            updated_at: now,
-          },
-        ])
+        .insert([payload])
         .select()
         .single();
+
+      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
+        delete payload.client_type;
+        const retry = await client
+          .from("clients")
+          .insert([payload])
+          .select()
+          .single();
+        if (!retry.error && retry.data) {
+          inserted = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
 
       if (!error && inserted) {
         return {
@@ -687,13 +725,35 @@ export async function updateClient(
       if (data.client_type !== undefined) payload.client_type = data.client_type;
       if (data.clientType !== undefined) payload.client_type = data.clientType;
 
-      const { data: updated, error } = await client
+      const hasClientType = await checkHasClientTypeColumn(client);
+      if (!hasClientType) {
+        delete payload.client_type;
+      }
+
+      let { data: updated, error } = await client
         .from("clients")
         .update(payload)
         .eq("id", id)
         .eq("office_id", officeId)
         .select()
         .single();
+
+      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
+        delete payload.client_type;
+        const retry = await client
+          .from("clients")
+          .update(payload)
+          .eq("id", id)
+          .eq("office_id", officeId)
+          .select()
+          .single();
+        if (!retry.error && retry.data) {
+          updated = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
 
       if (!error && updated) {
         return {
@@ -2688,6 +2748,20 @@ export async function hasRecentNotification(
 // Attachments (Supabase table: attachments)
 // ============================================================================
 
+let attachmentsColumnNamingCache: 'record' | 'related_record' | null = null;
+export async function getAttachmentsColumnNaming(client: any): Promise<'record' | 'related_record'> {
+  if (attachmentsColumnNamingCache) return attachmentsColumnNamingCache;
+  try {
+    const { error } = await client.from("attachments").select("record_id").limit(1);
+    if (!error) {
+      attachmentsColumnNamingCache = 'record';
+      return 'record';
+    }
+  } catch {}
+  attachmentsColumnNamingCache = 'related_record';
+  return 'related_record';
+}
+
 function formatAttachment(row: any): AttachmentRecord {
   return {
     id: row.id,
@@ -2697,8 +2771,8 @@ function formatAttachment(row: any): AttachmentRecord {
     filePath: row.filePath ?? row.file_path,
     fileSize: Number(row.fileSize ?? row.file_size ?? 0),
     mimeType: row.mimeType ?? row.mime_type,
-    relatedRecordType: row.relatedRecordType ?? row.related_record_type,
-    relatedRecordId: String(row.relatedRecordId ?? row.related_record_id),
+    relatedRecordType: row.relatedRecordType ?? row.related_record_type ?? row.record_type,
+    relatedRecordId: String(row.relatedRecordId ?? row.related_record_id ?? row.record_id),
     createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
     uploaderName: row.uploaderName ?? row.uploader_name,
   };
@@ -2734,24 +2808,57 @@ export async function createAttachment(data: {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: inserted, error } = await client
+      const naming = await getAttachmentsColumnNaming(client);
+      const insertObj: Record<string, any> = {
+        id: record.id,
+        office_id: record.officeId,
+        uploaded_by: record.uploadedBy,
+        file_name: record.fileName,
+        file_path: record.filePath,
+        file_size: record.fileSize,
+        mime_type: record.mimeType,
+        created_at: record.createdAt,
+      };
+      if (naming === 'record') {
+        insertObj.record_type = record.relatedRecordType;
+        insertObj.record_id = record.relatedRecordId;
+      } else {
+        insertObj.related_record_type = record.relatedRecordType;
+        insertObj.related_record_id = record.relatedRecordId;
+      }
+
+      let { data: inserted, error } = await client
         .from("attachments")
-        .insert([
-          {
-            id: record.id,
-            office_id: record.officeId,
-            uploaded_by: record.uploadedBy,
-            file_name: record.fileName,
-            file_path: record.filePath,
-            file_size: record.fileSize,
-            mime_type: record.mimeType,
-            related_record_type: record.relatedRecordType,
-            related_record_id: record.relatedRecordId,
-            created_at: record.createdAt,
-          },
-        ])
+        .insert([insertObj])
         .select()
         .single();
+
+      if (error && (error.code === 'PGRST204' || error.message?.includes('related_record') || error.message?.includes('record_id') || error.message?.includes('record_type'))) {
+        const retryObj = { ...insertObj };
+        if ('related_record_id' in retryObj) {
+          delete retryObj.related_record_type;
+          delete retryObj.related_record_id;
+          retryObj.record_type = record.relatedRecordType;
+          retryObj.record_id = record.relatedRecordId;
+        } else {
+          delete retryObj.record_type;
+          delete retryObj.record_id;
+          retryObj.related_record_type = record.relatedRecordType;
+          retryObj.related_record_id = record.relatedRecordId;
+        }
+        const retry = await client
+          .from("attachments")
+          .insert([retryObj])
+          .select()
+          .single();
+        if (!retry.error && retry.data) {
+          inserted = retry.data;
+          error = null;
+          attachmentsColumnNamingCache = 'related_record_id' in retryObj ? 'related_record' : 'record';
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
 
       if (!error && inserted) {
         const formatted = formatAttachment({ ...inserted, uploaderName: data.uploaderName });
@@ -2786,13 +2893,34 @@ export async function listAttachments(
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data, error } = await client
+      const naming = await getAttachmentsColumnNaming(client);
+      const typeCol = naming === 'record' ? 'record_type' : 'related_record_type';
+      const idCol = naming === 'record' ? 'record_id' : 'related_record_id';
+
+      let { data, error } = await client
         .from("attachments")
         .select("*")
         .eq("office_id", officeId)
-        .eq("related_record_type", relatedRecordType)
-        .eq("related_record_id", String(relatedRecordId))
+        .eq(typeCol, relatedRecordType)
+        .eq(idCol, String(relatedRecordId))
         .order("created_at", { ascending: false });
+
+      if (error && (error.code === 'PGRST204' || error.message?.includes('related_record') || error.message?.includes('record_id') || error.message?.includes('record_type'))) {
+        const altTypeCol = typeCol === 'record_type' ? 'related_record_type' : 'record_type';
+        const altIdCol = idCol === 'record_id' ? 'related_record_id' : 'record_id';
+        const retry = await client
+          .from("attachments")
+          .select("*")
+          .eq("office_id", officeId)
+          .eq(altTypeCol, relatedRecordType)
+          .eq(altIdCol, String(relatedRecordId))
+          .order("created_at", { ascending: false });
+        if (!retry.error && retry.data) {
+          data = retry.data;
+          error = null;
+          attachmentsColumnNamingCache = altTypeCol === 'record_type' ? 'record' : 'related_record';
+        }
+      }
 
       if (!error && data) {
         return data.map(formatAttachment);

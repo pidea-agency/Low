@@ -173,12 +173,14 @@ export default function PowerOfAttorneyPage() {
   // Fetch real POAs from backend
   const [backendRecords, setBackendRecords] = useState<PowerOfAttorney[]>([]);
   const [clientsMap, setClientsMap] = useState<Record<string, string>>({});
+  const [lawyersMap, setLawyersMap] = useState<Record<string, string>>({});
 
   const loadBackendData = useCallback(async () => {
     try {
-      const [poaRes, clientRes] = await Promise.all([
+      const [poaRes, clientRes, userRes] = await Promise.all([
         fetch('/api/poa', { credentials: 'include' }),
         fetch('/api/clients', { credentials: 'include' }),
+        fetch('/api/users', { credentials: 'include' }),
       ]);
       if (clientRes.ok) {
         const clientData = await clientRes.json();
@@ -188,6 +190,17 @@ export default function PowerOfAttorneyPage() {
             map[c.id] = c.name;
           });
           setClientsMap(map);
+        }
+      }
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        const users = userData.users || userData;
+        if (Array.isArray(users)) {
+          const map: Record<string, string> = {};
+          users.forEach((u: any) => {
+            map[u.id] = u.display_name || u.displayName || u.username;
+          });
+          setLawyersMap(map);
         }
       }
       if (poaRes.ok) {
@@ -215,6 +228,13 @@ export default function PowerOfAttorneyPage() {
       clientName: b.clientId && clientsMap[b.clientId] ? clientsMap[b.clientId] : b.clientName || 'موكل المكتب',
       clientInitials: b.clientName ? b.clientName.slice(0, 2) : 'وك',
       poaType: b.poaType || 'وكالة قضايا ومرافعة',
+      assignedLawyer:
+        b.assignedLawyer ||
+        b.assigned_lawyer ||
+        b.assignedLawyerName ||
+        (b.assignedLawyerId && lawyersMap[b.assignedLawyerId]) ||
+        (b.assigned_lawyer_id && lawyersMap[b.assigned_lawyer_id]) ||
+        'المحامي المكلف بالمكتب',
       status: b.daysRemaining <= 0 ? 'expired' : b.daysRemaining <= 30 ? 'expiring' : 'active',
       statusText:
         b.daysRemaining <= 0
@@ -231,7 +251,7 @@ export default function PowerOfAttorneyPage() {
         { title: 'توكيل الغير ومحامي الباطن', isAuthorized: true },
       ],
     }));
-  }, [backendRecords, clientsMap]);
+  }, [backendRecords, clientsMap, lawyersMap]);
 
   // Derived KPI Counts directly from database
   const totalPoaCount = allPoas.length;
@@ -746,16 +766,7 @@ export default function PowerOfAttorneyPage() {
               </div>
             )}
 
-            {/* Box 2: إرشادات حماية المكتب */}
-            <div className="bg-[#fffbf6] border border-[#fedbbd] rounded-xl p-4 shadow-2xs space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-[#b44800]">
-                <Lightbulb className="w-4 h-4 text-[#fd8a42]" />
-                إرشادات حماية المكتب
-              </div>
-              <p className="text-[11px] text-[#783c07] leading-relaxed">
-                وفقاً لنظام المحاماة السعودي ولائحته التنفيذية، يجب التحقق من صلاحية "الصلح والتنازل" بشكل صريح قبل إبرام أي اتفاق تسوية قضائية باسم الموكل.
-              </p>
-            </div>
+
           </div>
 
           {/* ════════ RIGHT COLUMN: POAs Cards List (8 Cols in RTL) ════════ */}

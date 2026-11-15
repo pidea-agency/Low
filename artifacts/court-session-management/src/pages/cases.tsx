@@ -139,12 +139,23 @@ export default function CasesPage() {
 
   // Form State for Creating a Case
   const [formCaseNumber, setFormCaseNumber] = useState('');
+  const [formClientId, setFormClientId] = useState('');
   const [formClientName, setFormClientName] = useState('');
   const [formOpposingParty, setFormOpposingParty] = useState('');
   const [formCourt, setFormCourt] = useState('المحكمة التجارية بالرياض');
   const [formCircuit, setFormCircuit] = useState('الدائرة الرابعة');
   const [formCaseType, setFormCaseType] = useState('مطالبة مالية وتوريد');
   const [formClaimAmount, setFormClaimAmount] = useState('');
+
+  // Fetch Clients list for client picker
+  const { data: clientsList = [] } = useQuery<any[]>({
+    queryKey: ['/api/clients'],
+    queryFn: async () => {
+      const res = await fetch('/api/clients', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
 
   // 1. Fetch Cases from Backend
   const { data: backendCases = [], isLoading: isLoadingCases } = useQuery<any[]>({
@@ -273,6 +284,14 @@ export default function CasesPage() {
       toast({ title: 'يرجى إدخال رقم القضية', variant: 'destructive' });
       return;
     }
+    const finalClientId = formClientId.trim() || undefined;
+    const finalClientName = formClientName.trim() || undefined;
+
+    if (!finalClientId && !finalClientName) {
+      toast({ title: 'يرجى اختيار الموكل أو إدخال اسمه', variant: 'destructive' });
+      return;
+    }
+
     try {
       const res = await fetch('/api/cases', {
         method: 'POST',
@@ -284,7 +303,8 @@ export default function CasesPage() {
           court: formCourt.trim(),
           courtCircuit: formCircuit.trim(),
           opposingParty: formOpposingParty.trim(),
-          clientName: formClientName.trim(),
+          clientId: finalClientId,
+          clientName: finalClientName,
           status: 'open',
         }),
       });
@@ -1091,23 +1111,49 @@ export default function CasesPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="font-bold text-[#44526d]">اسم الموكل</label>
+                <label className="font-bold text-[#44526d]">الموكل (اختر من القائمة) *</label>
+                <select
+                  value={formClientId}
+                  onChange={(e) => {
+                    const cid = e.target.value;
+                    setFormClientId(cid);
+                    const selected = clientsList.find((c) => String(c.id) === cid);
+                    if (selected) {
+                      setFormClientName(selected.name);
+                    }
+                  }}
+                  className="w-full h-8 text-xs bg-white border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+                >
+                  <option value="">-- اختر موكلاً مسجلاً --</option>
+                  {clientsList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.phone ? `(${c.phone})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="font-bold text-[#44526d]">أو اسم موكل جديد</label>
                 <Input
                   value={formClientName}
-                  onChange={(e) => setFormClientName(e.target.value)}
+                  onChange={(e) => {
+                    setFormClientName(e.target.value);
+                    setFormClientId('');
+                  }}
                   placeholder="شركة الرؤية اللوجستية"
                   className="h-8 text-xs"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="font-bold text-[#44526d]">الخصم (المدعى عليه)</label>
-                <Input
-                  value={formOpposingParty}
-                  onChange={(e) => setFormOpposingParty(e.target.value)}
-                  placeholder="شركة أفق الإنشاءات"
-                  className="h-8 text-xs"
-                />
-              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-bold text-[#44526d]">الخصم (المدعى عليه)</label>
+              <Input
+                value={formOpposingParty}
+                onChange={(e) => setFormOpposingParty(e.target.value)}
+                placeholder="شركة أفق الإنشاءات"
+                className="h-8 text-xs"
+              />
             </div>
 
             <DialogFooter className="gap-2 sm:justify-start pt-2">

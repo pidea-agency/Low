@@ -180,6 +180,19 @@ export default function TasksPage() {
 
   // Filters & Tabs
   const [activeTab, setActiveTab] = useState<'all' | 'urgent' | 'drafting' | 'pending' | 'archive'>('all');
+
+  // Critical urgent task due within 24h (dynamic from real tasks)
+  const criticalTask = useMemo(() => {
+    return (
+      tasks.find((t) => {
+        if (t.status === 'مكتملة') return false;
+        const hours = getRemainingHours(t.dueDate);
+        return hours > 0 && hours <= 24;
+      }) ||
+      tasks.find((t) => t.priority === 'عاجلة' && t.status !== 'مكتملة' && getRemainingDays(t.dueDate) <= 1) ||
+      null
+    );
+  }, [tasks]);
   const [search, setSearch] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterLawyer, setFilterLawyer] = useState<string>('all');
@@ -461,37 +474,39 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* ── Urgent Judicial Alert Banner ── */}
-      <div className="bg-[#ffdbca]/40 rounded-xl p-4 sm:p-5 border border-[#fd8a42]/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-[#fd8a42] text-white flex items-center justify-center shrink-0 shadow-xs">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div className="flex flex-col text-right">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-[#9b4500]">تنبيه مهلة نظامية حرجة: أقل من 24 ساعة متبقية</span>
+      {/* ── Urgent Judicial Alert Banner (Dynamic: only renders if a real critical task exists within 24 hours) ── */}
+      {criticalTask && (
+        <div className="bg-[#ffdbca]/40 rounded-xl p-4 sm:p-5 border border-[#fd8a42]/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-[#fd8a42] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <AlertTriangle className="w-5 h-5" />
             </div>
-            <p className="text-xs text-[#0b1c30] font-medium mt-1">
-              موعد إيداع مذكرة الرد على تقرير الخبير الهندسي للقضية <span className="font-bold text-[#00236f]">#4821/2026 (تجارية)</span> - المكلف: <span className="font-bold">أ. أحمد خالد العتيبي</span> لدى المحكمة العامة بالرياض.
-            </p>
+            <div className="flex flex-col text-right">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-[#9b4500]">تنبيه مهلة نظامية حرجة: أقل من 24 ساعة متبقية</span>
+              </div>
+              <p className="text-xs text-[#0b1c30] font-medium mt-1">
+                {criticalTask.title} {criticalTask.caseNumber ? `للقضية #${criticalTask.caseNumber}` : ''} - المكلف: <span className="font-bold">{criticalTask.assignee || 'المحامي المكلف'}</span> {criticalTask.court ? `لدى ${criticalTask.court}` : ''}.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => window.open('https://najiz.sa', '_blank')}
+              className="px-4 h-9 rounded-lg bg-[#9b4500] hover:bg-[#763300] text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            >
+              إيداع فوري عبر ناجز
+            </button>
+            <button
+              onClick={() => setCalcModalOpen(true)}
+              className="px-3.5 h-9 rounded-lg bg-white hover:bg-[#eff4ff] text-[#9b4500] text-xs font-semibold border border-[#fd8a42]/40 transition-colors cursor-pointer"
+            >
+              طلب مهلة إجرائية
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => window.open('https://najiz.sa', '_blank')}
-            className="px-4 h-9 rounded-lg bg-[#9b4500] hover:bg-[#763300] text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
-          >
-            إيداع فوري عبر ناجز
-          </button>
-          <button
-            onClick={() => setCalcModalOpen(true)}
-            className="px-3.5 h-9 rounded-lg bg-white hover:bg-[#eff4ff] text-[#9b4500] text-xs font-semibold border border-[#fd8a42]/40 transition-colors cursor-pointer"
-          >
-            طلب مهلة إجرائية
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* ── 4 Top KPI Metric Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">

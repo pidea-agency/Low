@@ -827284,6 +827284,7 @@ __export(postgres_service_exports, {
   DatabaseQueryError: () => DatabaseQueryError,
   DatabaseUnavailableError: () => DatabaseUnavailableError,
   calcDaysFromHijri: () => calcDaysFromHijri,
+  checkHasClientTypeColumn: () => checkHasClientTypeColumn,
   createAttachment: () => createAttachment,
   createCase: () => createCase,
   createClient: () => createClient2,
@@ -827302,10 +827303,11 @@ __export(postgres_service_exports, {
   deleteTask: () => deleteTask,
   exportOfficeDataToGoogleSheets: () => exportOfficeDataToGoogleSheets,
   getAttachmentById: () => getAttachmentById,
+  getAttachmentsColumnNaming: () => getAttachmentsColumnNaming,
   getCaseById: () => getCaseById,
   getCaseDetail: () => getCaseDetail,
   getCaseStats: () => getCaseStats,
-  getClientById: () => getClientById,
+  getClientById: () => getClientById2,
   getJudgmentById: () => getJudgmentById,
   getPoaById: () => getPoaById,
   getSessionById: () => getSessionById,
@@ -827570,7 +827572,7 @@ async function listClients(officeId) {
   }
   return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
 }
-async function getClientById(id, officeId) {
+async function getClientById2(id, officeId) {
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -827612,6 +827614,22 @@ async function getClientById(id, officeId) {
   const found = list.find((c) => c.id === id);
   return found ? { ...found } : null;
 }
+async function checkHasClientTypeColumn(client) {
+  const now = Date.now();
+  if (hasClientTypeColumnCache !== null && now - lastClientTypeCheck < 6e4) {
+    return hasClientTypeColumnCache;
+  }
+  try {
+    const testRes = await client.from("clients").select("client_type").limit(1);
+    hasClientTypeColumnCache = !testRes.error;
+    lastClientTypeCheck = now;
+    return hasClientTypeColumnCache;
+  } catch {
+    hasClientTypeColumnCache = false;
+    lastClientTypeCheck = now;
+    return false;
+  }
+}
 async function createClient2(data, officeId) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const id = import_crypto2.default.randomUUID();
@@ -827619,18 +827637,30 @@ async function createClient2(data, officeId) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: inserted, error } = await client.from("clients").insert([
-        {
-          id,
-          office_id: officeId,
-          name: data.name,
-          phone: data.phone || "",
-          notes: data.notes || "",
-          client_type: clientType,
-          created_at: now,
-          updated_at: now
+      const hasClientType = await checkHasClientTypeColumn(client);
+      const payload = {
+        id,
+        office_id: officeId,
+        name: data.name,
+        phone: data.phone || "",
+        notes: data.notes || "",
+        created_at: now,
+        updated_at: now
+      };
+      if (hasClientType) {
+        payload.client_type = clientType;
+      }
+      let { data: inserted, error } = await client.from("clients").insert([payload]).select().single();
+      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
+        delete payload.client_type;
+        const retry = await client.from("clients").insert([payload]).select().single();
+        if (!retry.error && retry.data) {
+          inserted = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
         }
-      ]).select().single();
+      }
       if (!error && inserted) {
         return {
           id: inserted.id,
@@ -827682,7 +827712,21 @@ async function updateClient(id, data, officeId) {
       if (data.notes !== void 0) payload.notes = data.notes;
       if (data.client_type !== void 0) payload.client_type = data.client_type;
       if (data.clientType !== void 0) payload.client_type = data.clientType;
-      const { data: updated2, error } = await client.from("clients").update(payload).eq("id", id).eq("office_id", officeId).select().single();
+      const hasClientType = await checkHasClientTypeColumn(client);
+      if (!hasClientType) {
+        delete payload.client_type;
+      }
+      let { data: updated2, error } = await client.from("clients").update(payload).eq("id", id).eq("office_id", officeId).select().single();
+      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
+        delete payload.client_type;
+        const retry = await client.from("clients").update(payload).eq("id", id).eq("office_id", officeId).select().single();
+        if (!retry.error && retry.data) {
+          updated2 = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
       if (!error && updated2) {
         return {
           id: updated2.id,
@@ -829225,6 +829269,19 @@ async function hasRecentNotification(officeId, type, relatedRecordType, relatedR
     (n) => n.type === type && n.relatedRecordType === relatedRecordType && String(n.relatedRecordId) === String(relatedRecordId) && new Date(n.createdAt).getTime() >= cutoffTime
   );
 }
+async function getAttachmentsColumnNaming(client) {
+  if (attachmentsColumnNamingCache) return attachmentsColumnNamingCache;
+  try {
+    const { error } = await client.from("attachments").select("record_id").limit(1);
+    if (!error) {
+      attachmentsColumnNamingCache = "record";
+      return "record";
+    }
+  } catch {
+  }
+  attachmentsColumnNamingCache = "related_record";
+  return "related_record";
+}
 function formatAttachment(row) {
   return {
     id: row.id,
@@ -829234,8 +829291,8 @@ function formatAttachment(row) {
     filePath: row.filePath ?? row.file_path,
     fileSize: Number(row.fileSize ?? row.file_size ?? 0),
     mimeType: row.mimeType ?? row.mime_type,
-    relatedRecordType: row.relatedRecordType ?? row.related_record_type,
-    relatedRecordId: String(row.relatedRecordId ?? row.related_record_id),
+    relatedRecordType: row.relatedRecordType ?? row.related_record_type ?? row.record_type,
+    relatedRecordId: String(row.relatedRecordId ?? row.related_record_id ?? row.record_id),
     createdAt: row.createdAt ?? row.created_at ?? (/* @__PURE__ */ new Date()).toISOString(),
     uploaderName: row.uploaderName ?? row.uploader_name
   };
@@ -829259,20 +829316,47 @@ async function createAttachment(data) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: inserted, error } = await client.from("attachments").insert([
-        {
-          id: record.id,
-          office_id: record.officeId,
-          uploaded_by: record.uploadedBy,
-          file_name: record.fileName,
-          file_path: record.filePath,
-          file_size: record.fileSize,
-          mime_type: record.mimeType,
-          related_record_type: record.relatedRecordType,
-          related_record_id: record.relatedRecordId,
-          created_at: record.createdAt
+      const naming = await getAttachmentsColumnNaming(client);
+      const insertObj = {
+        id: record.id,
+        office_id: record.officeId,
+        uploaded_by: record.uploadedBy,
+        file_name: record.fileName,
+        file_path: record.filePath,
+        file_size: record.fileSize,
+        mime_type: record.mimeType,
+        created_at: record.createdAt
+      };
+      if (naming === "record") {
+        insertObj.record_type = record.relatedRecordType;
+        insertObj.record_id = record.relatedRecordId;
+      } else {
+        insertObj.related_record_type = record.relatedRecordType;
+        insertObj.related_record_id = record.relatedRecordId;
+      }
+      let { data: inserted, error } = await client.from("attachments").insert([insertObj]).select().single();
+      if (error && (error.code === "PGRST204" || error.message?.includes("related_record") || error.message?.includes("record_id") || error.message?.includes("record_type"))) {
+        const retryObj = { ...insertObj };
+        if ("related_record_id" in retryObj) {
+          delete retryObj.related_record_type;
+          delete retryObj.related_record_id;
+          retryObj.record_type = record.relatedRecordType;
+          retryObj.record_id = record.relatedRecordId;
+        } else {
+          delete retryObj.record_type;
+          delete retryObj.record_id;
+          retryObj.related_record_type = record.relatedRecordType;
+          retryObj.related_record_id = record.relatedRecordId;
         }
-      ]).select().single();
+        const retry = await client.from("attachments").insert([retryObj]).select().single();
+        if (!retry.error && retry.data) {
+          inserted = retry.data;
+          error = null;
+          attachmentsColumnNamingCache = "related_record_id" in retryObj ? "related_record" : "record";
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
       if (!error && inserted) {
         const formatted = formatAttachment({ ...inserted, uploaderName: data.uploaderName });
         if (isInMemoryFallbackAllowed()) {
@@ -829300,7 +829384,20 @@ async function listAttachments(officeId, relatedRecordType, relatedRecordId) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data, error } = await client.from("attachments").select("*").eq("office_id", officeId).eq("related_record_type", relatedRecordType).eq("related_record_id", String(relatedRecordId)).order("created_at", { ascending: false });
+      const naming = await getAttachmentsColumnNaming(client);
+      const typeCol = naming === "record" ? "record_type" : "related_record_type";
+      const idCol = naming === "record" ? "record_id" : "related_record_id";
+      let { data, error } = await client.from("attachments").select("*").eq("office_id", officeId).eq(typeCol, relatedRecordType).eq(idCol, String(relatedRecordId)).order("created_at", { ascending: false });
+      if (error && (error.code === "PGRST204" || error.message?.includes("related_record") || error.message?.includes("record_id") || error.message?.includes("record_type"))) {
+        const altTypeCol = typeCol === "record_type" ? "related_record_type" : "record_type";
+        const altIdCol = idCol === "record_id" ? "related_record_id" : "record_id";
+        const retry = await client.from("attachments").select("*").eq("office_id", officeId).eq(altTypeCol, relatedRecordType).eq(altIdCol, String(relatedRecordId)).order("created_at", { ascending: false });
+        if (!retry.error && retry.data) {
+          data = retry.data;
+          error = null;
+          attachmentsColumnNamingCache = altTypeCol === "record_type" ? "record" : "related_record";
+        }
+      }
       if (!error && data) {
         return data.map(formatAttachment);
       }
@@ -829868,7 +829965,7 @@ async function getCaseDetail(id, officeId) {
     listSessions(officeId),
     listJudgments(officeId),
     listAttachments(officeId, "case", id),
-    caseRecord.clientId ? getClientById(caseRecord.clientId, officeId) : Promise.resolve(null)
+    caseRecord.clientId ? getClientById2(caseRecord.clientId, officeId) : Promise.resolve(null)
   ]);
   const linkedSessions = allSessions.filter((s3) => {
     const cId = s3.caseId || s3.case_id;
@@ -829913,7 +830010,7 @@ async function getCaseStats(officeId, filterRecords) {
     postponed
   };
 }
-var import_moment_hijri2, import_crypto2, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, memoryBroadcasts, _nextId, DatabaseUnavailableError, DatabaseQueryError, _forceDisableMemoryStoreForTesting;
+var import_moment_hijri2, import_crypto2, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, memoryBroadcasts, _nextId, DatabaseUnavailableError, DatabaseQueryError, _forceDisableMemoryStoreForTesting, hasClientTypeColumnCache, lastClientTypeCheck, attachmentsColumnNamingCache;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -829961,6 +830058,9 @@ var init_postgres_service = __esm({
       }
     };
     _forceDisableMemoryStoreForTesting = false;
+    hasClientTypeColumnCache = null;
+    lastClientTypeCheck = 0;
+    attachmentsColumnNamingCache = null;
   }
 });
 
@@ -830620,6 +830720,7 @@ __export(supabase_service_exports, {
   checkHasPhoneColumn: () => checkHasPhoneColumn,
   checkHasPlanColumns: () => checkHasPlanColumns,
   checkHasPlatformSettingsTable: () => checkHasPlatformSettingsTable,
+  checkHasRoleTitleColumn: () => checkHasRoleTitleColumn,
   checkHasSubscriptionPlansTable: () => checkHasSubscriptionPlansTable,
   clearFallbackActivationToken: () => clearFallbackActivationToken,
   clearUserAuthCache: () => clearUserAuthCache,
@@ -831305,6 +831406,23 @@ async function checkHasActivationColumns(client) {
   } catch {
     hasActivationColumnsCache = false;
     lastActivationCheck = now;
+    return false;
+  }
+}
+async function checkHasRoleTitleColumn(client) {
+  const now = Date.now();
+  if (hasRoleTitleColumnCache !== null && now - lastRoleTitleCheck < 6e4) {
+    return hasRoleTitleColumnCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const testRes = await client.from(tableName).select("role_title").limit(1);
+    hasRoleTitleColumnCache = !testRes.error;
+    lastRoleTitleCheck = now;
+    return hasRoleTitleColumnCache;
+  } catch {
+    hasRoleTitleColumnCache = false;
+    lastRoleTitleCheck = now;
     return false;
   }
 }
@@ -833036,6 +833154,7 @@ async function createSupabaseUser(input) {
   const hasPhone = await checkHasPhoneColumn(client);
   const hasActivation = await checkHasActivationColumns(client);
   const hasPlan = await checkHasPlanColumns(client);
+  const hasRoleTitle = await checkHasRoleTitleColumn(client);
   const newUserData = {
     username,
     email: input.email?.trim() || null,
@@ -833070,12 +833189,12 @@ async function createSupabaseUser(input) {
     if (input.plan_id !== void 0) newUserData.plan_id = input.plan_id || null;
     if (input.ai_quota_limit_override !== void 0) newUserData.ai_quota_limit_override = input.ai_quota_limit_override;
   }
-  if (input.role_title !== void 0 || input.roleTitle !== void 0) {
+  if (hasRoleTitle && (input.role_title !== void 0 || input.roleTitle !== void 0)) {
     newUserData.role_title = input.role_title || input.roleTitle || null;
   }
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
   let { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
-  if (error && error.message?.includes("role_title")) {
+  if (error && (error.message?.includes("role_title") || error.code === "PGRST204")) {
     delete newUserData.role_title;
     const retry = await client.from(tableName).insert([newUserData]).select(selectCols).single();
     if (!retry.error && retry.data) {
@@ -833235,6 +833354,10 @@ async function updateSupabaseUser(id, input) {
   if (input.billing_cycle !== void 0) updates.billing_cycle = input.billing_cycle;
   if (input.ai_quota_limit !== void 0) updates.ai_quota_limit = input.ai_quota_limit;
   if (input.ai_usage_count !== void 0) updates.ai_usage_count = input.ai_usage_count;
+  const hasRoleTitle = await checkHasRoleTitleColumn(client);
+  if (hasRoleTitle && (input.role_title !== void 0 || input.roleTitle !== void 0)) {
+    updates.role_title = input.role_title || input.roleTitle || null;
+  }
   if (input.google_service_account_json !== void 0) {
     if (!input.google_service_account_json) {
       updates.google_service_account_json = null;
@@ -833261,7 +833384,7 @@ async function updateSupabaseUser(id, input) {
   invalidateUserGoogleCache(id);
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
   let { data, error } = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
-  if (error && error.message?.includes("role_title")) {
+  if (error && (error.message?.includes("role_title") || error.code === "PGRST204")) {
     delete updates.role_title;
     const retry = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
     if (!retry.error && retry.data) {
@@ -833331,7 +833454,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_crypto3, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError2, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, fallbackActivationTokens, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_crypto3, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError2, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, fallbackActivationTokens, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasRoleTitleColumnCache, lastRoleTitleCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -833442,6 +833565,8 @@ var init_supabase_service = __esm({
     lastActivationCheck = 0;
     hasPlanColumnsCache = null;
     lastPlanCheck = 0;
+    hasRoleTitleColumnCache = null;
+    lastRoleTitleCheck = 0;
     hasSubscriptionPlansTableCache = null;
     lastSubscriptionPlansTableCheck = 0;
     hasAuditLogTableCache = null;
@@ -852528,7 +852653,7 @@ async function verifyRecordAccess(officeId, relatedRecordType, relatedRecordId, 
   const isAdmin = authUser.role === "admin" || authUser.role === "super_admin";
   switch (relatedRecordType) {
     case "client": {
-      const client = await getClientById(relatedRecordId, officeId);
+      const client = await getClientById2(relatedRecordId, officeId);
       if (!client) {
         return { allowed: false, status: 404, error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." };
       }
@@ -853088,12 +853213,54 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
       res.status(404).json({ error: "\u0627\u0644\u062C\u0644\u0633\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
-    const { listSupabaseUsers: listSupabaseUsers2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
-    const users = await listSupabaseUsers2();
+    const { listSupabaseUsers: listSupabaseUsers2, getPlatformSettings: getPlatformSettings2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    const users = await listSupabaseUsers2().catch(() => []);
     const officeUser = users.find((u) => u.id === officeId || u.username === officeId || u.id === req.authUser?.userId);
-    const recipientPhone = req.body?.recipientPhone?.trim() || officeUser?.phone?.trim();
-    if (!recipientPhone) {
-      res.status(400).json({ error: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0642\u0645 \u0648\u0627\u062A\u0633\u0627\u0628 \u0645\u0633\u062C\u0644 \u0644\u0644\u0645\u0643\u062A\u0628 \u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0625\u0644\u064A\u0647." });
+    let clientPhone = null;
+    if (session.clientId) {
+      try {
+        const client = await getClientById(session.clientId, officeId);
+        if (client?.phone?.trim()) {
+          clientPhone = client.phone.trim();
+        }
+      } catch {
+      }
+    }
+    let lawyerPhone = null;
+    if (session.assignedLawyerId) {
+      const lawyer = users.find((u) => u.id === session.assignedLawyerId);
+      if (lawyer?.phone?.trim()) {
+        lawyerPhone = lawyer.phone.trim();
+      }
+    }
+    if (!lawyerPhone && officeUser?.phone?.trim()) {
+      lawyerPhone = officeUser.phone.trim();
+    }
+    const directPhone = req.body?.recipientPhone?.trim();
+    if (directPhone) {
+      if (!clientPhone) clientPhone = directPhone;
+      else if (!lawyerPhone) lawyerPhone = directPhone;
+    }
+    if (!clientPhone && !lawyerPhone) {
+      try {
+        const settings = await getPlatformSettings2();
+        if (settings?.whatsapp_default_phone?.trim()) {
+          lawyerPhone = settings.whatsapp_default_phone.trim();
+        }
+      } catch {
+      }
+    }
+    const recipients = [];
+    if (clientPhone) {
+      recipients.push({ phone: clientPhone, label: "\u0627\u0644\u0645\u0648\u0643\u0644" });
+    }
+    if (lawyerPhone && lawyerPhone !== clientPhone) {
+      recipients.push({ phone: lawyerPhone, label: "\u0627\u0644\u0645\u062D\u0627\u0645\u064A \u0627\u0644\u0645\u0643\u0644\u0641" });
+    }
+    if (recipients.length === 0) {
+      res.status(400).json({
+        error: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0642\u0645 \u0648\u0627\u062A\u0633\u0627\u0628 \u0645\u0633\u062C\u0644 \u0644\u0644\u0645\u0643\u062A\u0628 \u0623\u0648 \u0644\u0644\u0645\u0648\u0643\u0644 \u0623\u0648 \u0644\u0644\u0645\u062D\u0627\u0645\u064A \u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0625\u0644\u064A\u0647."
+      });
       return;
     }
     const hearingAt = computeHearingDateTime(session.sessionDateHijri, session.sessionTime);
@@ -853120,22 +853287,27 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
       remainingText = `\u0645\u062A\u0628\u0642\u064A ${daysStr}`;
     }
     const channel = new WhatsappReminderChannel();
-    await channel.send({
-      officeId,
-      recipientPhone,
-      sessionId: session.id,
-      caseNumber: session.caseNumber,
-      sessionDateHijri: session.sessionDateHijri,
-      sessionTime: session.sessionTime,
-      kind: "instant",
-      remainingText,
-      court: session.court,
-      courtCircuit: session.courtCircuit,
-      plaintiff: session.plaintiff,
-      defendant: session.defendant,
-      caseSubject: session.caseSubject
-    });
-    res.json({ message: "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D!" });
+    const sentLabels = [];
+    for (const recipient of recipients) {
+      await channel.send({
+        officeId,
+        recipientPhone: recipient.phone,
+        sessionId: session.id,
+        caseNumber: session.caseNumber,
+        sessionDateHijri: session.sessionDateHijri,
+        sessionTime: session.sessionTime,
+        kind: "instant",
+        remainingText,
+        court: session.court,
+        courtCircuit: session.courtCircuit,
+        plaintiff: session.plaintiff,
+        defendant: session.defendant,
+        caseSubject: session.caseSubject
+      });
+      sentLabels.push(recipient.label);
+    }
+    const summaryText = sentLabels.length > 1 ? `\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 (${sentLabels.join(" \u0648 ")})` : `\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u062C\u0644\u0633\u0629 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 ${sentLabels[0]}`;
+    res.json({ message: summaryText, recipients: sentLabels });
   } catch (err) {
     logger.error({ err, id }, "Failed to send instant WhatsApp reminder");
     const errMsg = err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.";
@@ -854780,7 +854952,7 @@ router9.post("/poa", async (req, res) => {
     return;
   }
   try {
-    const clientRecord = await getClientById(clientId, officeId);
+    const clientRecord = await getClientById2(clientId, officeId);
     if (!clientRecord) {
       res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
       return;
@@ -854873,7 +855045,7 @@ router9.put("/poa/:rowId", async (req, res) => {
       res.status(400).json({ error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
       return;
     }
-    const clientRecord = await getClientById(targetClientId, officeId);
+    const clientRecord = await getClientById2(targetClientId, officeId);
     if (!clientRecord) {
       res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
       return;
@@ -855814,6 +855986,25 @@ router12.delete("/users/:id", async (req, res) => {
       return;
     }
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0639\u0636\u0648 \u0627\u0644\u0645\u0643\u062A\u0628." });
+  }
+});
+router12.get("/users/activity-log", async (req, res) => {
+  try {
+    const adminId = req.authUser.userId;
+    const officeId = req.authUser.officeId || adminId;
+    const { listAuditLogs: listAuditLogs2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    const auditRes = await listAuditLogs2({ office_id: officeId, limit: 30 }).catch(() => ({ logs: [] }));
+    const logs = (auditRes.logs || []).map((l) => ({
+      id: l.id,
+      actorName: l.actor_display_name || l.actor_username || "\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0645\u0643\u062A\u0628",
+      action: l.action,
+      details: l.details ? typeof l.details === "object" ? l.details.description || l.details.message || JSON.stringify(l.details) : String(l.details) : l.action,
+      createdAt: l.created_at
+    }));
+    res.json({ logs });
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch office activity log");
+    res.status(500).json({ error: "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0633\u062C\u0644 \u0627\u0644\u0646\u0634\u0627\u0637.", logs: [] });
   }
 });
 var users_default = router12;
@@ -856829,7 +857020,7 @@ router15.get("/clients/:id", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
   try {
-    const client = await getClientById(id, officeId);
+    const client = await getClientById2(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -856913,7 +857104,7 @@ router15.get("/clients/:id/timeline", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
   try {
-    const client = await getClientById(id, officeId);
+    const client = await getClientById2(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -856955,7 +857146,7 @@ router15.get("/clients/:id/notes", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
   try {
-    const client = await getClientById(id, officeId);
+    const client = await getClientById2(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -857001,7 +857192,7 @@ router15.post("/clients/:id/notes", async (req, res) => {
   }
   const bodyText = req.body?.body ? String(req.body.body).trim() : "";
   try {
-    const client = await getClientById(id, officeId);
+    const client = await getClientById2(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -859146,7 +859337,7 @@ router20.post("/cases", async (req, res) => {
     res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
-  const client = await getClientById(String(clientId).trim(), officeId);
+  const client = await getClientById2(String(clientId).trim(), officeId);
   if (!client) {
     res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
     return;
@@ -859276,7 +859467,7 @@ router20.patch("/cases/:id", async (req, res) => {
     }
     const clientId = body.clientId ?? body.client_id;
     if (clientId !== void 0) {
-      const client = await getClientById(clientId, officeId);
+      const client = await getClientById2(clientId, officeId);
       if (!client) {
         res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
         return;

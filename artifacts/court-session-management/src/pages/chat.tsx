@@ -292,20 +292,23 @@ export default function ChatPage() {
 
   // Recent Analyzed Notices Table Data derived from real sessions
   const recentLogs = useMemo(() => {
-    return sessionsList.map((s) => ({
-      id: s.id,
-      date: s.sessionDateHijri || (s.hearingAt ? new Date(s.hearingAt).toLocaleDateString('ar-SA') : 'مؤخراً'),
-      lawyer: (s as any).assignedLawyer || user?.name || 'محامي المكتب',
-      caseNumber: s.caseNumber || `قضية #${s.id}`,
-      court: s.court || 'المحكمة المختصة',
-      circuit: s.courtCircuit || 'الدائرة القضائية',
-      subject: s.notes || 'إشعار جلسة قضائية وتكليف بالحضور',
-      parties: `الموكل: ${s.plaintiff || '-'} ضد: ${s.defendant || '-'}`,
-      deadline: s.sessionDateHijri || (s.hearingAt ? new Date(s.hearingAt).toLocaleDateString('ar-SA') : '-'),
-      time: s.sessionTime || (s.hearingAt ? new Date(s.hearingAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '10:00 ص'),
-      statusText: s.status === 'Finished' ? 'مؤرشف بالكامل' : s.status === 'Today' ? 'مضاف للجدول وللموكل' : 'تم تصدير المهام',
-      statusType: s.status === 'Finished' ? 'slate' : s.status === 'Today' ? 'success' : 'warning',
-    }));
+    if (!Array.isArray(sessionsList)) return [];
+    return sessionsList
+      .filter((s): s is NonNullable<typeof s> => Boolean(s))
+      .map((s) => ({
+        id: s.id,
+        date: s.sessionDateHijri || (s.hearingAt ? new Date(s.hearingAt).toLocaleDateString('ar-SA') : 'مؤخراً'),
+        lawyer: (s as any)?.assignedLawyer || user?.name || 'محامي المكتب',
+        caseNumber: s.caseNumber || (s.id ? `قضية #${s.id}` : 'بدون رقم'),
+        court: s.court || 'المحكمة المختصة',
+        circuit: s.courtCircuit || 'الدائرة القضائية',
+        subject: s.notes || 'إشعار جلسة قضائية وتكليف بالحضور',
+        parties: `الموكل: ${s.plaintiff || '-'} ضد: ${s.defendant || '-'}`,
+        deadline: s.sessionDateHijri || (s.hearingAt ? new Date(s.hearingAt).toLocaleDateString('ar-SA') : '-'),
+        time: s.sessionTime || (s.hearingAt ? new Date(s.hearingAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '10:00 ص'),
+        statusText: s.status === 'Finished' ? 'مؤرشف بالكامل' : s.status === 'Today' ? 'مضاف للجدول وللموكل' : 'تم تصدير المهام',
+        statusType: s.status === 'Finished' ? 'slate' : s.status === 'Today' ? 'success' : 'warning',
+      }));
   }, [sessionsList, user?.name]);
 
   return (
@@ -1044,104 +1047,106 @@ export default function ChatPage() {
       </div>
 
       {/* ── Dialog: Edit Extracted Fields ── */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-xl text-right" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-[#141e30]">
-              تعديل ومراجعة الحقول المستخرجة
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#65738c]">
-              يمكنك تصحيح أو استكمال أي بيانات مستنبطة قبل تأكيد حفظها في سجلات المكتب.
-            </DialogDescription>
-          </DialogHeader>
+      {extractedData && (
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-xl text-right" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-[#141e30]">
+                تعديل ومراجعة الحقول المستخرجة
+              </DialogTitle>
+              <DialogDescription className="text-xs text-[#65738c]">
+                يمكنك تصحيح أو استكمال أي بيانات مستنبطة قبل تأكيد حفظها في سجلات المكتب.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 text-xs">
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">رقم القضية *</Label>
-              <Input
-                value={extractedData.caseNumber}
-                onChange={(e) => setExtractedData({ ...extractedData, caseNumber: e.target.value })}
-                className="h-8 text-xs font-mono"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 text-xs">
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">رقم القضية *</Label>
+                <Input
+                  value={extractedData?.caseNumber || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, caseNumber: e.target.value })}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">المحكمة *</Label>
+                <Input
+                  value={extractedData?.court || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, court: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">الدائرة القضائية</Label>
+                <Input
+                  value={extractedData?.courtCircuit || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, courtCircuit: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">موضوع الدعوى والتصنيف</Label>
+                <Input
+                  value={extractedData?.caseType || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, caseType: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">المدعي (الموكل)</Label>
+                <Input
+                  value={extractedData?.plaintiff || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, plaintiff: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">المدعى عليه</Label>
+                <Input
+                  value={extractedData?.defendant || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, defendant: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">تاريخ الجلسة الهجري *</Label>
+                <Input
+                  value={extractedData?.sessionDateHijri || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, sessionDateHijri: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-[#44526d]">وقت الجلسة</Label>
+                <Input
+                  value={extractedData?.sessionTime || ''}
+                  onChange={(e) => setExtractedData({ ...extractedData, sessionTime: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">المحكمة *</Label>
-              <Input
-                value={extractedData.court}
-                onChange={(e) => setExtractedData({ ...extractedData, court: e.target.value })}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">الدائرة القضائية</Label>
-              <Input
-                value={extractedData.courtCircuit}
-                onChange={(e) => setExtractedData({ ...extractedData, courtCircuit: e.target.value })}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">موضوع الدعوى والتصنيف</Label>
-              <Input
-                value={extractedData.caseType}
-                onChange={(e) => setExtractedData({ ...extractedData, caseType: e.target.value })}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">المدعي (الموكل)</Label>
-              <Input
-                value={extractedData.plaintiff}
-                onChange={(e) => setExtractedData({ ...extractedData, plaintiff: e.target.value })}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">المدعى عليه</Label>
-              <Input
-                value={extractedData.defendant}
-                onChange={(e) => setExtractedData({ ...extractedData, defendant: e.target.value })}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">تاريخ الجلسة الهجري *</Label>
-              <Input
-                value={extractedData.sessionDateHijri}
-                onChange={(e) => setExtractedData({ ...extractedData, sessionDateHijri: e.target.value })}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold text-[#44526d]">وقت الجلسة</Label>
-              <Input
-                value={extractedData.sessionTime}
-                onChange={(e) => setExtractedData({ ...extractedData, sessionTime: e.target.value })}
-                className="h-8 text-xs"
-              />
-            </div>
-          </div>
 
-          <DialogFooter className="gap-2 sm:justify-start pt-2">
-            <Button
-              onClick={() => {
-                setIsEditModalOpen(false);
-                toast({ title: 'تم تحديث البيانات المستخلصة بنجاح' });
-              }}
-              className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs"
-            >
-              حفظ التعديلات
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditModalOpen(false)}
-              className="text-xs"
-            >
-              إلغاء
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2 sm:justify-start pt-2">
+              <Button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  toast({ title: 'تم تحديث البيانات المستخلصة بنجاح' });
+                }}
+                className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs"
+              >
+                حفظ التعديلات
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-xs"
+              >
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* ── Dialog: Preview Selected Log Item ── */}
       {selectedLogItem && (
@@ -1162,32 +1167,32 @@ export default function ChatPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-[#64748f]">رقم القضية:</span>
                   <span className="font-mono font-bold text-sm text-[#00236f]">
-                    {selectedLogItem.caseNumber}
+                    {selectedLogItem?.caseNumber || '—'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#64748f]">المحكمة والدائرة:</span>
                   <span className="font-semibold text-[#141e30]">
-                    {selectedLogItem.court} - {selectedLogItem.circuit}
+                    {selectedLogItem?.court || '—'} - {selectedLogItem?.circuit || '—'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#64748f]">الموضوع:</span>
-                  <span className="font-semibold text-[#141e30]">{selectedLogItem.subject}</span>
+                  <span className="font-semibold text-[#141e30]">{selectedLogItem?.subject || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#64748f]">الأطراف:</span>
-                  <span className="text-[#141e30]">{selectedLogItem.parties}</span>
+                  <span className="text-[#141e30]">{selectedLogItem?.parties || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#64748f]">الموعد:</span>
                   <span className="font-bold text-[#141e30]">
-                    {selectedLogItem.deadline} ({selectedLogItem.time})
+                    {selectedLogItem?.deadline || '—'} ({selectedLogItem?.time || '—'})
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#64748f]">المحامي المسؤول:</span>
-                  <span className="text-[#141e30]">{selectedLogItem.lawyer}</span>
+                  <span className="text-[#141e30]">{selectedLogItem?.lawyer || '—'}</span>
                 </div>
               </div>
             </div>

@@ -297,4 +297,34 @@ router.delete("/users/:id", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/users/activity-log
+ * Returns real office audit logs and member activity events.
+ */
+router.get("/users/activity-log", async (req, res) => {
+  try {
+    const adminId = req.authUser!.userId!;
+    const officeId = req.authUser!.officeId || adminId;
+    const { listAuditLogs } = await import("../services/supabase.service");
+    const auditRes = await listAuditLogs({ office_id: officeId, limit: 30 }).catch(() => ({ logs: [] }));
+
+    const logs = (auditRes.logs || []).map((l: any) => ({
+      id: l.id,
+      actorName: l.actor_display_name || l.actor_username || "مستخدم المكتب",
+      action: l.action,
+      details: l.details
+        ? typeof l.details === "object"
+          ? (l.details.description || l.details.message || JSON.stringify(l.details))
+          : String(l.details)
+        : l.action,
+      createdAt: l.created_at,
+    }));
+
+    res.json({ logs });
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch office activity log");
+    res.status(500).json({ error: "فشل جلب سجل النشاط.", logs: [] });
+  }
+});
+
 export default router;

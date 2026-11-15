@@ -1062,6 +1062,27 @@ export async function checkHasActivationColumns(client: any): Promise<boolean> {
 let hasPlanColumnsCache: boolean | null = null;
 let lastPlanCheck = 0;
 
+let hasRoleTitleColumnCache: boolean | null = null;
+let lastRoleTitleCheck = 0;
+
+export async function checkHasRoleTitleColumn(client: any): Promise<boolean> {
+  const now = Date.now();
+  if (hasRoleTitleColumnCache !== null && now - lastRoleTitleCheck < 60_000) {
+    return hasRoleTitleColumnCache;
+  }
+  try {
+    const tableName = env.supabaseTableName;
+    const testRes = await client.from(tableName).select("role_title").limit(1);
+    hasRoleTitleColumnCache = !testRes.error;
+    lastRoleTitleCheck = now;
+    return hasRoleTitleColumnCache;
+  } catch {
+    hasRoleTitleColumnCache = false;
+    lastRoleTitleCheck = now;
+    return false;
+  }
+}
+
 export async function checkHasPlanColumns(client: any): Promise<boolean> {
   const now = Date.now();
   if (hasPlanColumnsCache !== null && now - lastPlanCheck < 60_000) {
@@ -3551,6 +3572,7 @@ export async function createSupabaseUser(input: {
   const hasPhone = await checkHasPhoneColumn(client);
   const hasActivation = await checkHasActivationColumns(client);
   const hasPlan = await checkHasPlanColumns(client);
+  const hasRoleTitle = await checkHasRoleTitleColumn(client);
   const newUserData: Record<string, any> = {
     username,
     email: input.email?.trim() || null,
@@ -3585,7 +3607,7 @@ export async function createSupabaseUser(input: {
     if (input.plan_id !== undefined) newUserData.plan_id = input.plan_id || null;
     if (input.ai_quota_limit_override !== undefined) newUserData.ai_quota_limit_override = input.ai_quota_limit_override;
   }
-  if (input.role_title !== undefined || (input as any).roleTitle !== undefined) {
+  if (hasRoleTitle && (input.role_title !== undefined || (input as any).roleTitle !== undefined)) {
     newUserData.role_title = input.role_title || (input as any).roleTitle || null;
   }
 
@@ -3597,7 +3619,7 @@ export async function createSupabaseUser(input: {
     .select(selectCols)
     .single();
 
-  if (error && error.message?.includes("role_title")) {
+  if (error && (error.message?.includes("role_title") || (error as any).code === "PGRST204")) {
     delete newUserData.role_title;
     const retry = await client
       .from(tableName)
@@ -3819,6 +3841,10 @@ export async function updateSupabaseUser(
   if (input.billing_cycle !== undefined) updates.billing_cycle = input.billing_cycle;
   if (input.ai_quota_limit !== undefined) updates.ai_quota_limit = input.ai_quota_limit;
   if (input.ai_usage_count !== undefined) updates.ai_usage_count = input.ai_usage_count;
+  const hasRoleTitle = await checkHasRoleTitleColumn(client);
+  if (hasRoleTitle && (input.role_title !== undefined || (input as any).roleTitle !== undefined)) {
+    updates.role_title = input.role_title || (input as any).roleTitle || null;
+  }
 
   if (input.google_service_account_json !== undefined) {
     if (!input.google_service_account_json) {
@@ -3858,7 +3884,7 @@ export async function updateSupabaseUser(
     .select(selectCols)
     .single();
 
-  if (error && error.message?.includes("role_title")) {
+  if (error && (error.message?.includes("role_title") || (error as any).code === "PGRST204")) {
     delete updates.role_title;
     const retry = await client
       .from(tableName)

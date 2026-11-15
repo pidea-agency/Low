@@ -664,19 +664,7 @@ export default function ClientsPage() {
                   </div>
                 </div>
 
-                {/* AI Advisor Summary */}
-                <div className="bg-[#fffbf6] border border-[#fedbbd] rounded-xl p-3 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-xs font-bold text-[#b44800]">
-                      <Sparkles className="w-3.5 h-3.5 text-[#fd8a42]" />
-                      ملخص المستشار الذكي (AI)
-                    </div>
-                    <span className="text-[10px] text-[#8c4912]">تحديث: اليوم</span>
-                  </div>
-                  <p className="text-[11px] text-[#783c07] leading-relaxed">
-                    {selectedClient.aiSummary}
-                  </p>
-                </div>
+
 
                 {/* Approved POA Clauses */}
                 <div className="space-y-2 pt-1 border-t border-[#edf3fc]">

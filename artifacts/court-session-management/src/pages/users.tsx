@@ -101,6 +101,8 @@ export default function OfficeMembersPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [editingMember, setEditingMember] = useState<OfficeMemberItem | null>(null);
   const [toggleStatusTarget, setToggleStatusTarget] = useState<OfficeMemberItem | null>(null);
 
@@ -139,9 +141,30 @@ export default function OfficeMembersPage() {
     }
   }, []);
 
+  const fetchActivityLogs = useCallback(async () => {
+    setIsLoadingLogs(true);
+    try {
+      const res = await fetch('/api/users/activity-log', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setActivityLogs(data.logs || []);
+      }
+    } catch {
+      setActivityLogs([]);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
+
+  useEffect(() => {
+    if (isActivityLogOpen) {
+      fetchActivityLogs();
+    }
+  }, [isActivityLogOpen, fetchActivityLogs]);
 
   // Map real backend members
   const allMembers: OfficeMemberItem[] = useMemo(() => {
@@ -729,6 +752,15 @@ export default function OfficeMembersPage() {
                                 <Send className="w-3.5 h-3.5" />
                                 <span>إعادة</span>
                               </button>
+                            ) : member.status === 'suspended' ? (
+                              <button
+                                onClick={() => setToggleStatusTarget(member)}
+                                className="text-emerald-700 hover:bg-emerald-50 p-1.5 rounded font-bold flex items-center gap-1 cursor-pointer"
+                                title="تنشيط الحساب"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>تنشيط</span>
+                              </button>
                             ) : (
                               <button
                                 onClick={() => setToggleStatusTarget(member)}
@@ -1076,30 +1108,26 @@ export default function OfficeMembersPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2 py-2 text-xs">
-            <div className="p-2.5 bg-[#fafcff] rounded-lg border border-[#e2ecfa] flex items-center justify-between">
-              <div>
-                <strong className="text-[#141e30]">أ. محمد الجزار</strong>
-                <p className="text-[11px] text-[#657591]">تم إيداع مذكرة جوابية في القضية 4821/2026</p>
+          <div className="space-y-2 py-2 text-xs max-h-[350px] overflow-y-auto">
+            {isLoadingLogs ? (
+              <div className="py-8 text-center text-xs text-[#657591]">جاري تحميل سجل النشاط...</div>
+            ) : activityLogs.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#657591] bg-[#fafcff] rounded-lg border border-[#e2ecfa]">
+                لا توجد أنشطة مسجلة مؤخراً في المكتب.
               </div>
-              <span className="text-[10px] text-[#718099] font-mono">اليوم • 10:15 ص</span>
-            </div>
-
-            <div className="p-2.5 bg-[#fafcff] rounded-lg border border-[#e2ecfa] flex items-center justify-between">
-              <div>
-                <strong className="text-[#141e30]">أ. أحمد العتيبي</strong>
-                <p className="text-[11px] text-[#657591]">تسجيل الدخول والتحقق الثنائي عبر نفاذ</p>
-              </div>
-              <span className="text-[10px] text-[#718099] font-mono">اليوم • 08:30 ص</span>
-            </div>
-
-            <div className="p-2.5 bg-[#fafcff] rounded-lg border border-[#e2ecfa] flex items-center justify-between">
-              <div>
-                <strong className="text-[#141e30]">أ. سارة الهاشمي</strong>
-                <p className="text-[11px] text-[#657591]">حضور جلسة مرئية عن بعد عبر ناجز</p>
-              </div>
-              <span className="text-[10px] text-[#718099] font-mono">أمس • 11:45 ص</span>
-            </div>
+            ) : (
+              activityLogs.map((log) => (
+                <div key={log.id} className="p-2.5 bg-[#fafcff] rounded-lg border border-[#e2ecfa] flex items-center justify-between">
+                  <div>
+                    <strong className="text-[#141e30]">{log.actorName}</strong>
+                    <p className="text-[11px] text-[#657591]">{log.details}</p>
+                  </div>
+                  <span className="text-[10px] text-[#718099] font-mono">
+                    {new Date(log.createdAt).toLocaleDateString('ar-SA')} • {new Date(log.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:justify-start">
@@ -1115,18 +1143,24 @@ export default function OfficeMembersPage() {
         <AlertDialogContent className="text-right" dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-sm font-bold text-[#141e30]">
-              تأكيد إيقاف حساب العضو مؤقتاً
+              {toggleStatusTarget?.status === 'suspended' ? 'تأكيد تنشيط حساب العضو' : 'تأكيد إيقاف حساب العضو مؤقتاً'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-[#65738c]">
-              هل أنت متأكد من رغبتك في إيقاف حساب ({toggleStatusTarget?.display_name || toggleStatusTarget?.username})؟ لن يتمكن من تسجيل الدخول للنظام لحين إعادة تفعيله.
+              {toggleStatusTarget?.status === 'suspended'
+                ? `هل أنت متأكد من رغبتك في إعادة تنشيط حساب (${toggleStatusTarget?.display_name || toggleStatusTarget?.username})؟ سيتمكن من تسجيل الدخول للنظام فوراً.`
+                : `هل أنت متأكد من رغبتك في إيقاف حساب (${toggleStatusTarget?.display_name || toggleStatusTarget?.username})؟ لن يتمكن من تسجيل الدخول للنظام لحين إعادة تفعيله.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:justify-start">
             <AlertDialogAction
               onClick={handleToggleStatus}
-              className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+              className={toggleStatusTarget?.status === 'suspended'
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                : "bg-amber-600 hover:bg-amber-700 text-white text-xs"
+              }
             >
-              تأكيد الإيقاف
+              {toggleStatusTarget?.status === 'suspended' ? 'تأكيد التنشيط' : 'تأكيد الإيقاف'}
             </AlertDialogAction>
             <AlertDialogCancel className="text-xs">إلغاء</AlertDialogCancel>
           </AlertDialogFooter>
