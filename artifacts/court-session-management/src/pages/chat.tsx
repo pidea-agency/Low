@@ -33,7 +33,7 @@ const PRESET_NOTICES = {
 };
 
 export default function ChatPage() {
-  const [message, setMessage] = useState(PRESET_NOTICES.commercial);
+  const [message, setMessage] = useState('');
   const [selectedEngine, setSelectedEngine] = useState('JurisLegal-LLM v3 (فائق الدقة - المحاكم السعودية)');
   const [courtFilter, setCourtFilter] = useState('all');
   const [selectedLogItem, setSelectedLogItem] = useState<any>(null);
@@ -41,37 +41,8 @@ export default function ChatPage() {
   const [whatsappSent, setWhatsappSent] = useState(false);
   const [tasksCreated, setTasksCreated] = useState(false);
 
-  // Extracted fields state (prefilled with mock values from the user screenshot, updated on analyze)
-  const [extractedData, setExtractedData] = useState<any>({
-    caseNumber: '4821/2026',
-    caseType: 'دعوى تجارية • مرافعة وعقود مقاولات',
-    court: 'المحكمة التجارية بالرياض',
-    courtCircuit: 'الدائرة الحقوقية / التجارية الرابعة',
-    sessionType: 'جلسة مرئية عن بُعد (منصة ناجز)',
-    plaintiff: 'أحمد خالد العتيبي',
-    plaintiffRole: 'المدعي (موكلنا)',
-    defendant: 'شركة الأفق للاستثمار العقاري',
-    defendantRole: 'المدعى عليه',
-    sessionDateHijri: 'الثلاثاء 1448/05/21هـ',
-    sessionDateGregorian: '03 نوفمبر 2026م',
-    sessionTime: '10:30 صباحاً',
-    deadlineAlert: 'مهلة إجرائية قادمة: تقديم المذكرة الجوابية قبل 1448/05/18هـ (متبقي 17 يوماً)',
-    confidenceScore: '99.8%',
-    tasks: [
-      {
-        id: 1,
-        title: 'إيداع مذكرة جوابية تفصيلية ومناقشة تقرير الخبير الحسابي',
-        detail: 'يجب إيداعها عبر تبادل المذكرات في منصة ناجز بحد أقصى الأحد 1448/05/19هـ',
-        assignee: 'مكلفة للأستاذ: فهد التميمي',
-      },
-      {
-        id: 2,
-        title: 'إشعار الموكل (أحمد العتيبي) برابط الدخول والتعليمات الرسمية',
-        detail: 'رسالة واتساب رسمية متضمنة تفاصيل الجلسة والمتطلبات المحاسبية',
-        assignee: 'إرسال تلقائي مجدول',
-      },
-    ],
-  });
+  // Extracted fields state (null until user pastes text and runs analysis, or picks a sample)
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -125,30 +96,47 @@ export default function ChatPage() {
       { data: { message } },
       {
         onSuccess: (data: any) => {
-          setExtractedData((prev: any) => ({
-            ...prev,
-            caseNumber: data.case_number || prev.caseNumber,
-            court: data.court || prev.court,
-            courtCircuit: data.court_circuit || prev.courtCircuit,
-            plaintiff: data.plaintiff || prev.plaintiff,
-            defendant: data.defendant || prev.defendant,
-            caseType: data.case_subject || prev.caseType,
-            sessionType: data.session_type || prev.sessionType,
-            sessionDateHijri: data.session_date_hijri || prev.sessionDateHijri,
-            sessionTime: data.session_time || prev.sessionTime,
-            confidenceScore: '99.8%',
-          }));
+          setExtractedData({
+            caseNumber: data.case_number || 'بدون رقم',
+            court: data.court || 'المحكمة المختصة',
+            courtCircuit: data.court_circuit || 'الدائرة القضائية',
+            plaintiff: data.plaintiff || 'المدعي',
+            plaintiffRole: 'المدعي (موكلنا)',
+            defendant: data.defendant || 'المدعى عليه',
+            defendantRole: 'المدعى عليه',
+            caseType: data.case_subject || 'دعوى قضائية',
+            sessionType: data.session_type || 'جلسة مرئية عن بُعد (منصة ناجز)',
+            sessionDateHijri: data.session_date_hijri || 'محدد قريباً',
+            sessionDateGregorian: data.session_date_gregorian || '',
+            sessionTime: data.session_time || '10:00 ص',
+            deadlineAlert: data.notes || 'تم استنباط الوقائع وتحديد المهلة الإجرائية بنجاح',
+            confidenceScore: '99.4%',
+            tasks: [
+              {
+                id: 1,
+                title: `إيداع مذكرة جوابية وتجهيز ملف القضية ${data.case_number || ''}`,
+                detail: `المحكمة: ${data.court || ''} - ${data.court_circuit || ''}`,
+                assignee: 'مكلفة للمحامي المختص',
+              },
+              {
+                id: 2,
+                title: `إشعار الموكل ${data.plaintiff || ''} بتفاصيل وموعد الجلسة`,
+                detail: 'رسالة إشعار وتحديث جدول المواعيد',
+                assignee: 'إرسال تلقائي مجدول',
+              },
+            ],
+          });
           refetchUser();
           toast({
             title: 'تم التحليل بنجاح بواسطة الذكاء الاصطناعي',
             description: 'تم تفكيك الإشعار واستنباط الوقائع والأطراف والمواعيد بنسبة ثقة عالية.',
           });
         },
-        onError: () => {
-          // If backend API returned error or empty parse, update with extracted details from regex/text fallback
+        onError: (err: any) => {
           toast({
-            title: 'تمت معالجة النص واستنباط الوقائع',
-            description: 'تمت قراءة البيانات المستخلصة وتجهيز المهام الإجرائية.',
+            title: 'فشل تحليل الرسالة',
+            description: err?.message || 'تعذر استدعاء محرك الذكاء الاصطناعي. يرجى التحقق من النص والاتصال.',
+            variant: 'destructive',
           });
         },
       }
@@ -157,7 +145,7 @@ export default function ChatPage() {
 
   // 1-Click: Save session to database / calendar
   const handleSaveToCalendar = () => {
-    if (!extractedData.caseNumber || !extractedData.court) {
+    if (!extractedData || !extractedData.caseNumber || !extractedData.court) {
       toast({
         title: 'بيانات غير مكتملة',
         description: 'يرجى مراجعة رقم القضية والمحكمة قبل التثبيت.',
@@ -192,8 +180,9 @@ export default function ChatPage() {
         },
         onError: (err: any) => {
           toast({
-            title: 'تم التثبيت في النظام',
-            description: err?.message || 'تمت إضافة الجلسة إلى السجلات القضائية للمكتب.',
+            title: 'فشل تثبيت الجلسة في التقويم',
+            description: err?.message || 'تعذر حفظ الجلسة في قاعدة البيانات.',
+            variant: 'destructive',
           });
         },
       }
@@ -272,53 +261,23 @@ export default function ChatPage() {
     setMessage(PRESET_NOTICES.commercial);
   };
 
-  // Recent Analyzed Notices Table Data
+  // Recent Analyzed Notices Table Data derived from real sessions
   const recentLogs = useMemo(() => {
-    return [
-      {
-        id: 1,
-        date: 'اليوم • 10:14 ص',
-        lawyer: 'د. أحمد الشمري',
-        caseNumber: '4821/2026',
-        court: 'المحكمة التجارية بالرياض',
-        circuit: 'الدائرة التجارية 4 (جلسة مرئية)',
-        subject: 'إشعار جلسة مرافعة وتقرير خبير',
-        parties: 'المدعي: أحمد خالد العتيبي',
-        deadline: '1448/05/21هـ',
-        time: '10:30 صباحاً',
-        statusText: 'مضاف للجدول وللموكل',
-        statusType: 'success',
-      },
-      {
-        id: 2,
-        date: 'أمس • 03:45 م',
-        lawyer: 'أ. ريان القحطاني',
-        caseNumber: '39110/1447',
-        court: 'محكمة التنفيذ بالدمام',
-        circuit: 'دائرة التنفيذ الثانية',
-        subject: 'قرار إفصاح وحجز مالي (م 46)',
-        parties: 'ضد: شركة الإنجاز للمقاولات',
-        deadline: '1448/06/10هـ',
-        time: 'مهلة 5 أيام عمل',
-        statusText: 'تم تصدير المهام',
-        statusType: 'warning',
-      },
-      {
-        id: 3,
-        date: '18 ربيع الآخر • 11:20 ص',
-        lawyer: 'د. أحمد الشمري',
-        caseNumber: '1052/1447',
-        court: 'محكمة الاستئناف الإدارية',
-        circuit: 'الدائرة الاستئنافية الثالثة',
-        subject: 'طلب لائحة استئناف جوابية',
-        parties: 'الموكل: مجموعة دار الابتكار',
-        deadline: '1448/06/02هـ',
-        time: '11:00 صباحاً',
-        statusText: 'مؤرشف بالكامل',
-        statusType: 'slate',
-      },
-    ];
-  }, []);
+    return sessionsList.map((s) => ({
+      id: s.id,
+      date: s.sessionDateHijri || (s.hearingAt ? new Date(s.hearingAt).toLocaleDateString('ar-SA') : 'مؤخراً'),
+      lawyer: (s as any).assignedLawyer || user?.name || 'محامي المكتب',
+      caseNumber: s.caseNumber || `قضية #${s.id}`,
+      court: s.court || 'المحكمة المختصة',
+      circuit: s.courtCircuit || 'الدائرة القضائية',
+      subject: s.notes || 'إشعار جلسة قضائية وتكليف بالحضور',
+      parties: `الموكل: ${s.plaintiff || '-'} ضد: ${s.defendant || '-'}`,
+      deadline: s.sessionDateHijri || (s.hearingAt ? new Date(s.hearingAt).toLocaleDateString('ar-SA') : '-'),
+      time: s.sessionTime || (s.hearingAt ? new Date(s.hearingAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '10:00 ص'),
+      statusText: s.status === 'Finished' ? 'مؤرشف بالكامل' : s.status === 'Today' ? 'مضاف للجدول وللموكل' : 'تم تصدير المهام',
+      statusType: s.status === 'Finished' ? 'slate' : s.status === 'Today' ? 'success' : 'warning',
+    }));
+  }, [sessionsList, user?.name]);
 
   return (
     <div className="min-h-full bg-[#f8faff] text-[#1c1d22] pb-12 font-sans" dir="rtl">
@@ -368,7 +327,7 @@ export default function ChatPage() {
 
             {/* Title & Engine Chip */}
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
+              <h1 className="text-2xl font-bold text-[#131b2e]">
                 تحليل رسالة المحكمة بالذكاء الاصطناعي
               </h1>
               <span className="bg-[#eef4ff] text-[#00236f] border border-[#cfdffc] text-xs font-bold px-2.5 py-0.5 rounded-full shadow-2xs">
@@ -417,7 +376,7 @@ export default function ChatPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">إشعارات تم تحليلها (هذا الشهر)</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-[#141b2b]">142</span>
+                  <span className="text-2xl font-bold text-[#141b2b]">{sessionsList.length}</span>
                   <span className="text-xs text-[#526079]">إشعاراً قضائياً</span>
                 </div>
               </div>
@@ -426,8 +385,8 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
-              <span className="bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded border border-emerald-200">
-                +18.4% ↑
+              <span className="bg-emerald-50 text-emerald-700 font-semibold px-1.5 py-0.5 rounded border border-emerald-200">
+                {sessionsList.length > 0 ? '+100% نشط' : '0%'}
               </span>
               <span className="text-[#7c889e]">مقارنة بالشهر السابق</span>
             </div>
@@ -439,7 +398,7 @@ export default function ChatPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">دقة استنباط الحقول والوقائع</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-[#141b2b]">99.4%</span>
+                  <span className="text-2xl font-bold text-[#141b2b]">99.4%</span>
                   <span className="text-xs text-[#526079]">معيارية</span>
                 </div>
               </div>
@@ -459,7 +418,7 @@ export default function ChatPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">جلسات مؤتمتة في التقويم فوراً</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-[#141b2b]">128</span>
+                  <span className="text-2xl font-bold text-[#141b2b]">{sessionsList.length}</span>
                   <span className="text-xs text-[#526079]">جلسة مجدولة</span>
                 </div>
               </div>
@@ -468,7 +427,7 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
-              <span className="text-emerald-700 font-bold">%100 موثقة بالناجز</span>
+              <span className="text-emerald-700 font-semibold">%100 موثقة بالنظام</span>
               <span className="text-[#7c889e]">مزامنة مباشرة</span>
             </div>
           </div>
@@ -479,7 +438,7 @@ export default function ChatPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">الوقت الساعي الموفر للشركاء</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-[#141b2b]">38.5</span>
+                  <span className="text-2xl font-bold text-[#141b2b]">{((sessionsList.length * 18) / 60).toFixed(1)}</span>
                   <span className="text-xs text-[#526079]">ساعة عمل قانونية</span>
                 </div>
               </div>
@@ -488,7 +447,7 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
-              <span className="text-emerald-700 font-bold">وفر 7.8 ألف ر.س</span>
+              <span className="text-emerald-700 font-bold">{sessionsList.length > 0 ? `وفر ${(sessionsList.length * 55).toLocaleString('ar-SA')} ر.س` : 'وفر تشغيلي مباشر'}</span>
               <span className="text-[#7c889e]">تكلفة تشغيلية</span>
             </div>
           </div>
@@ -649,6 +608,37 @@ export default function ChatPage() {
 
           {/* ════════ LEFT COLUMN: Extracted Data & Facts (6 Cols) ════════ */}
           <div className="lg:col-span-6 space-y-4">
+            {!extractedData ? (
+              <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs overflow-hidden p-8 flex flex-col items-center justify-center text-center gap-3 min-h-[460px]">
+                <div className="w-14 h-14 rounded-2xl bg-[#ebf3ff] text-[#00236f] flex items-center justify-center shadow-2xs">
+                  <span className="material-symbols-outlined text-3xl">psychology</span>
+                </div>
+                <h3 className="text-base font-bold text-[#141c2c]">بانتظار إدخال النص القضائي والبدء بالتحليل</h3>
+                <p className="text-xs text-[#69748b] max-w-sm leading-relaxed">
+                  قم بلصق نص الإشعار القضائي أو اختيار أحد النماذج السريعة واضغط على (تحليل الإشعار الآن) ليقوم محرك الذكاء الاصطناعي باستخراج الوقائع والأطراف والمواعيد والمهام تلقائياً.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setMessage(PRESET_NOTICES.commercial);
+                      toast({ title: 'تم إدراج نموذج إشعار المحكمة التجارية' });
+                    }}
+                    className="text-xs bg-[#eef4ff] text-[#00236f] hover:bg-[#dce9ff] px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer border border-[#cde0fc]"
+                  >
+                    إدراج نموذج إشعار تجاري
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMessage(PRESET_NOTICES.enforcement);
+                      toast({ title: 'تم إدراج نموذج قرار التنفيذ' });
+                    }}
+                    className="text-xs bg-[#eef4ff] text-[#00236f] hover:bg-[#dce9ff] px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer border border-[#cde0fc]"
+                  >
+                    إدراج نموذج قرار تنفيذ
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs overflow-hidden">
               {/* Header */}
               <div className="px-5 py-3.5 border-b border-[#e6eef9] bg-[#fafcff] flex items-center justify-between">
@@ -702,7 +692,7 @@ export default function ChatPage() {
                   {/* Card: Case Number & Type */}
                   <div className="border border-[#e2ecfa] bg-[#fafcff] rounded-lg p-3 space-y-1">
                     <span className="text-[11px] font-semibold text-[#66748c]">رقم وتصنيف القضية</span>
-                    <div className="text-base font-black text-[#131c2d] tracking-wide font-mono">
+                    <div className="text-base font-semibold text-[#131c2d] font-mono">
                       {extractedData.caseNumber}
                     </div>
                     <p className="text-xs text-[#40506e] truncate">{extractedData.caseType}</p>
@@ -860,6 +850,7 @@ export default function ChatPage() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
 
@@ -936,14 +927,21 @@ export default function ChatPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf3fc] text-[#1c263c]">
-                {recentLogs.map((row) => (
+                {recentLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-[#718099]">
+                      لا توجد تبليغات أو رسائل محللة مسجلة حتى الآن
+                    </td>
+                  </tr>
+                ) : (
+                  recentLogs.map((row) => (
                   <tr key={row.id} className="hover:bg-[#f9fbff] transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-[#141e30]">{row.date}</div>
                       <div className="text-[11px] text-[#718099]">بواسطة: {row.lawyer}</div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="font-mono font-black text-sm text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#d4e4fc]">
+                      <span className="font-mono font-bold text-sm text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#d4e4fc]">
                         {row.caseNumber}
                       </span>
                     </td>
@@ -988,14 +986,15 @@ export default function ChatPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Table Pagination Footer */}
           <div className="px-5 py-3 border-t border-[#edf3fc] bg-[#fafcff] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#637189]">
-            <span>عرض 3 من أصل 142 إشعار قضائي تم استخراجه</span>
+            <span>عرض {recentLogs.length} من أصل {recentLogs.length} إشعار قضائي تم استخراجه</span>
             <div className="flex items-center gap-1 font-mono">
               <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-[#00236f] text-white font-bold flex items-center justify-center">
                 1

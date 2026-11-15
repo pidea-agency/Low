@@ -418,7 +418,7 @@ export default function LoginPage() {
             <LaurelScalesEmblem className="w-24 h-24 sm:w-28 sm:h-28 mb-4 drop-shadow-md" />
 
             {/* Main Title */}
-            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-wide">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
               نظام إدارة
               <br />
               جلسات المحكمة
@@ -450,10 +450,10 @@ export default function LoginPage() {
 
           {/* Heading */}
           <div className="mb-6 sm:mb-8 text-right">
-            <h1 className="text-2xl sm:text-3xl font-black text-[#10233F] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#10233F]">
               تسجيل الدخول إلى النظام
             </h1>
-            <p className="text-xs sm:text-sm text-[#64748B] font-medium mt-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#64748B] font-normal mt-2 leading-relaxed">
               يرجى إدخال بيانات حسابك للوصول إلى نظام إدارة جلسات المحكمة
             </p>
           </div>

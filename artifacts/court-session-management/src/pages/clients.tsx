@@ -93,125 +93,6 @@ export interface ClientItem {
   createdAt?: string;
 }
 
-// Preset realistic Saudi Clients matching the mockup
-const MOCK_CLIENTS: ClientItem[] = [
-  {
-    id: 'CL-9022',
-    name: 'محمود عز الدين',
-    phone: '05887453224',
-    type: 'individual',
-    typeLabel: 'فرد / مستثمر',
-    isVerified: true,
-    assignedLawyer: 'أ. أحمد العتيبي',
-    poaNumber: 'QA-20261102',
-    poaStatus: 'سارية',
-    poaExpiryHijri: '1448/10/10 هـ',
-    remainingDays: 420,
-    openCasesCount: 2,
-    openCasesText: '2 قضايا نشطة',
-    statusNote: 'تم إيداع مذكرة دفاع بالأمس',
-    location: 'الرياض',
-    totalFees: '45,000 ر.س',
-    paidFees: '30,000 ر.س',
-    remainingFees: '15,000 ر.س',
-    aiSummary:
-      'الموكل لديه جلسة دفاع مقبلة في الدائرة التجارية بالرياض خلال 4 أيام. كافة الصلاحيات القضائية (المرافعة، الصلح، الإقرار) مفوضة ومفعلة.',
-    poaClauses: [
-      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'الصلح والتنازل والإبراء', status: 'special_permission', statusText: 'بإذن خاص ⚠' },
-      { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
-    ],
-  },
-  {
-    id: 'CL-8814',
-    name: 'محمد عبد القادر',
-    phone: '05874123',
-    type: 'individual',
-    typeLabel: 'فرد',
-    isVerified: true,
-    assignedLawyer: 'أ. سلمان الدوسري',
-    poaNumber: '4528714',
-    poaStatus: 'سارية',
-    poaExpiryHijri: '1447/01/15 هـ',
-    remainingDays: 310,
-    openCasesCount: 1,
-    openCasesText: '4821/2026 (تجارية)',
-    statusNote: 'وكالة عامة ومنازعات عقارية',
-    location: 'جدة',
-    totalFees: '35,000 ر.س',
-    paidFees: '20,000 ر.س',
-    remainingFees: '15,000 ر.س',
-    aiSummary:
-      'دعوى تجارية نشطة، الوكالة سارية لـ 310 أيام ومكتملة الصلاحيات العقارية والترافع أمام المحاكم العامة والتجارية.',
-    poaClauses: [
-      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'قسمة التركات وإفراغ العقارات', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
-    ],
-  },
-  {
-    id: 'CL-7190',
-    name: 'شركة الأفق للاستثمار والتطوير العقاري',
-    phone: '0112345678',
-    type: 'company',
-    typeLabel: 'سجل تجاري',
-    isVerified: true,
-    commercialRegistration: 'س.ت: 1010892341',
-    representative: 'الممثل القانوني: أ. أحمد خالد العتيبي',
-    assignedLawyer: 'أ. أحمد خالد العتيبي',
-    poaNumber: '7819203',
-    poaStatus: 'تطلب تجديد الوكالة',
-    poaExpiryHijri: '1446/09/28 هـ',
-    isExpiringPoa: true,
-    expiringDays: 18,
-    openCasesCount: 3,
-    openCasesText: '3 قضايا تجارية نشطة',
-    statusNote: 'تنبيه انتهاء الوكالة خلال 18 يوماً',
-    location: 'الرياض',
-    totalFees: '120,000 ر.س',
-    paidFees: '80,000 ر.س',
-    remainingFees: '40,000 ر.س',
-    aiSummary:
-      'شركة مساهمة مقفلة لديها 3 قضايا تجارية متداولة. تنتهي الوكالة خلال 18 يوماً ويلزم إشعار الموكل بالتجديد عبر منصة ناجز تفادياً لتعليق الجلسات.',
-    poaClauses: [
-      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'تأسيس وتعديل عقود الشركات', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'الصلح والتنازل والإبراء', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'استلام المبالغ المالية والشيكات', status: 'authorized', statusText: 'مفوض ✓' },
-    ],
-  },
-  {
-    id: 'CL-6512',
-    name: 'م. فهد بن عبد العزيز الراجحي',
-    phone: '0554129988',
-    type: 'individual',
-    typeLabel: 'أعمال ومقاولات',
-    isVerified: true,
-    assignedLawyer: 'أ. فهد الشمري',
-    poaNumber: '6619024',
-    poaStatus: 'سارية',
-    poaExpiryHijri: '1448/05/20 هـ',
-    remainingDays: 720,
-    openCasesCount: 1,
-    openCasesText: '1 عمالية (3209/2026)',
-    statusNote: 'وكالة شركات وتأسيس ومنازعات عمالية',
-    location: 'الدمام',
-    totalFees: '50,000 ر.س',
-    paidFees: '50,000 ر.س',
-    remainingFees: '0 ر.س',
-    aiSummary:
-      'تم سداد كامل الأتعاب المتفق عليها. القضية منظورة أمام المحكمة العمالية وتتطلب تقديم كشف الرواتب ومخالصات نهاية الخدمة.',
-    poaClauses: [
-      { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'الصلح والتنازل والإبراء', status: 'authorized', statusText: 'مفوض ✓' },
-      { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
-    ],
-  },
-];
-
 export default function ClientsPage() {
   const [, setLocation] = useLocation();
   const { data: currentUser } = useGetCurrentUser();
@@ -227,7 +108,7 @@ export default function ClientsPage() {
   const [sortBy, setSortBy] = useState('newest');
 
   // Selected Client for Left Details Panel
-  const [selectedClientId, setSelectedClientId] = useState<string>('CL-9022');
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
 
   // Backend clients
   const [backendClients, setBackendClients] = useState<any[]>([]);
@@ -267,43 +148,52 @@ export default function ClientsPage() {
     loadBackendClients();
   }, [loadBackendClients]);
 
-  // Merge backend clients with mock curated clients
+  // Map real backend clients
   const allClients: ClientItem[] = useMemo(() => {
     if (!backendClients || backendClients.length === 0) {
-      return MOCK_CLIENTS;
+      return [];
     }
-    const mapped: ClientItem[] = backendClients.map((b, idx) => ({
-      id: String(b.id || `CL-${1000 + idx}`),
+    return backendClients.map((b) => ({
+      id: String(b.id),
       name: b.name || 'عميل مسجل',
-      phone: b.phone || '0500000000',
+      phone: b.phone || '',
       type: (b.notes?.includes('شركة') || b.name?.includes('شركة')) ? 'company' : 'individual',
       typeLabel: (b.notes?.includes('شركة') || b.name?.includes('شركة')) ? 'سجل تجاري' : 'فرد / موكل',
       isVerified: true,
-      assignedLawyer: 'أ. أحمد العتيبي',
-      poaNumber: `QA-2026${100 + idx}`,
-      poaStatus: 'سارية',
-      poaExpiryHijri: '1448/01/15 هـ',
-      remainingDays: 360,
-      openCasesCount: 1,
-      openCasesText: '1 قضية متداولة',
-      statusNote: b.notes || 'ملف نشط',
-      location: 'الرياض',
-      totalFees: '30,000 ر.س',
-      paidFees: '20,000 ر.س',
-      remainingFees: '10,000 ر.س',
-      aiSummary: 'الملف مكتمل الصلاحيات ومربوط بالسجلات القضائية في النظام.',
+      assignedLawyer: b.assigned_lawyer_name || b.assigned_lawyer || 'غير محدد',
+      poaNumber: b.poa_number || (b.poa_count ? `${b.poa_count} وكالات` : ''),
+      poaStatus: b.poa_status || (b.poa_number ? 'سارية' : 'بدون وكالة'),
+      poaExpiryHijri: b.poa_expiry || '—',
+      remainingDays: b.remaining_days ?? 0,
+      openCasesCount: b.open_cases_count || (b.cases_count || 0),
+      openCasesText: (b.open_cases_count || b.cases_count) ? `${b.open_cases_count || b.cases_count} قضايا نشطة` : 'لا توجد قضايا نشطة',
+      statusNote: b.notes || 'ملف نشط ومحدث',
+      location: b.location || '—',
+      totalFees: b.total_fees || '—',
+      paidFees: b.paid_fees || '—',
+      remainingFees: b.remaining_fees || '—',
+      aiSummary: b.ai_summary || 'تم تسجيل الموكل وربط ملفه ببيانات النظام ومتابعة قضاياه والوكالات المعتمدة.',
       poaClauses: [
         { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
         { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
         { title: 'الصلح والتنازل والإبراء', status: 'special_permission', statusText: 'بإذن خاص ⚠' },
         { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
       ],
+      isExpiringPoa: Boolean(b.is_expiring_poa),
+      expiringDays: b.remaining_days || 0,
+      createdAt: b.created_at,
     }));
-
-    const existingNames = new Set(mapped.map((m) => m.name));
-    const uniqueMocks = MOCK_CLIENTS.filter((m) => !existingNames.has(m.name));
-    return [...mapped, ...uniqueMocks];
   }, [backendClients]);
+
+  // Derived Dynamic KPI Counts
+  const totalClientsCount = allClients.length;
+  const companiesCount = allClients.filter((c) => c.type === 'company').length;
+  const individualsCount = allClients.filter((c) => c.type === 'individual').length;
+  const activeCasesClientsCount = allClients.filter((c) => (c.openCasesCount || 0) > 0).length;
+  const activeCasesPercentage = totalClientsCount > 0 ? Math.round((activeCasesClientsCount / totalClientsCount) * 100) : 0;
+  const validPoaCount = allClients.filter((c) => c.poaStatus === 'سارية' && !c.isExpiringPoa).length;
+  const pendingActionCount = allClients.filter((c) => c.isExpiringPoa || !c.poaNumber).length;
+  const totalCasesSum = allClients.reduce((acc, c) => acc + (c.openCasesCount || 0), 0);
 
   // Filtered clients list
   const filteredClients = useMemo(() => {
@@ -337,7 +227,8 @@ export default function ClientsPage() {
 
   // Selected Client Object
   const selectedClient = useMemo(() => {
-    return allClients.find((c) => c.id === selectedClientId) || allClients[0] || MOCK_CLIENTS[0];
+    if (allClients.length === 0) return null;
+    return allClients.find((c) => c.id === selectedClientId) || allClients[0] || null;
   }, [allClients, selectedClientId]);
 
   // Handle Save Client
@@ -366,12 +257,19 @@ export default function ClientsPage() {
         loadBackendClients();
         setCreateOpen(false);
       } else {
-        toast({ title: 'تم تسجيل الموكل في النظام', description: `تم فتح ملف ${formName}.` });
-        setCreateOpen(false);
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل إضافة العميل',
+          description: err.error || 'تعذر حفظ بيانات العميل في قاعدة البيانات.',
+          variant: 'destructive',
+        });
       }
     } catch {
-      toast({ title: 'تم تسجيل العميل', description: `تم حفظ ${formName}.` });
-      setCreateOpen(false);
+      toast({
+        title: 'خطأ في الاتصال بالخادم',
+        description: 'تعذر حفظ بيانات العميل. يرجى التحقق من الشبكة.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -381,14 +279,27 @@ export default function ClientsPage() {
   const handleDeleteClient = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/clients/${deleteTarget.id}`, {
+      const res = await fetch(`/api/clients/${deleteTarget.id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
-      toast({ title: 'تم حذف العميل بنجاح' });
-      loadBackendClients();
+      if (res.ok) {
+        toast({ title: 'تم حذف العميل بنجاح' });
+        loadBackendClients();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل حذف العميل',
+          description: err.error || 'تعذر حذف العميل من قاعدة البيانات.',
+          variant: 'destructive',
+        });
+      }
     } catch {
-      toast({ title: 'تم حذف العميل من القائمة' });
+      toast({
+        title: 'خطأ في الاتصال',
+        description: 'تعذر تنفيذ عملية الحذف.',
+        variant: 'destructive',
+      });
     } finally {
       setDeleteTarget(null);
     }
@@ -411,7 +322,7 @@ export default function ClientsPage() {
 
             <div className="flex items-center gap-2.5">
               <span className="w-1.5 h-6 rounded-full bg-[#fd8a42]" />
-              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
+              <h1 className="text-2xl font-bold text-[#131b2e]">
                 العملاء والموكلين
               </h1>
               <div className="w-7 h-7 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
@@ -489,7 +400,7 @@ export default function ClientsPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">إجمالي العملاء والموكلين</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">46</span>
+                  <span className="text-3xl font-bold text-[#131c2d] font-mono">{totalClientsCount}</span>
                   <span className="text-xs text-[#526079]">عميل مسجل</span>
                 </div>
               </div>
@@ -498,8 +409,8 @@ export default function ClientsPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px] text-[#697893]">
-              <span>32 أفراد • 14 شركات</span>
-              <span className="text-emerald-700 font-bold">نشط</span>
+              <span>{individualsCount} أفراد • {companiesCount} شركات</span>
+              <span className="text-emerald-700 font-semibold">نشط</span>
             </div>
           </div>
 
@@ -509,9 +420,9 @@ export default function ClientsPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">عملاء بقضايا نشطة</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">18</span>
-                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
-                    65% نشط
+                  <span className="text-3xl font-bold text-[#131c2d] font-mono">{activeCasesClientsCount}</span>
+                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-1.5 py-0.2 rounded border border-emerald-200">
+                    {activeCasesPercentage}% نشط
                   </span>
                 </div>
               </div>
@@ -520,8 +431,8 @@ export default function ClientsPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px] text-[#697893]">
-              <span>مرتبطون بـ 24 قضية متداولة</span>
-              <span className="text-[#00236f] font-bold">متابعة حية</span>
+              <span>مرتبطون بـ {totalCasesSum} قضية متداولة</span>
+              <span className="text-[#00236f] font-semibold">متابعة حية</span>
             </div>
           </div>
 
@@ -531,7 +442,7 @@ export default function ClientsPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">وكالات سارية مربوطة</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">38</span>
+                  <span className="text-3xl font-bold text-[#131c2d] font-mono">{validPoaCount}</span>
                   <span className="text-xs text-[#526079]">وكالة معتمدة</span>
                 </div>
               </div>
@@ -541,7 +452,7 @@ export default function ClientsPage() {
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] flex items-center justify-between text-[11px] text-[#697893]">
               <span>تم التحقق عبر بوابة ناجز</span>
-              <span className="text-emerald-700 font-bold">100%</span>
+              <span className="text-emerald-700 font-semibold">100%</span>
             </div>
           </div>
 
@@ -551,8 +462,8 @@ export default function ClientsPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">تتطلب متابعة وتحديث</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-[#b44800] tracking-tight font-mono">4</span>
-                  <span className="bg-[#fff0e6] text-[#b44800] text-[10px] font-bold px-1.5 py-0.2 rounded border border-[#ffd5ba]">
+                  <span className="text-3xl font-bold text-[#b44800] font-mono">{pendingActionCount}</span>
+                  <span className="bg-[#fff0e6] text-[#b44800] text-[10px] font-semibold px-1.5 py-0.2 rounded border border-[#ffd5ba]">
                     إجراء مطلوب
                   </span>
                 </div>
@@ -580,7 +491,7 @@ export default function ClientsPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              كافة العملاء (46)
+              كافة العملاء ({totalClientsCount})
             </button>
 
             <button
@@ -591,7 +502,7 @@ export default function ClientsPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              شركات ومؤسسات (14)
+              شركات ومؤسسات ({companiesCount})
             </button>
 
             <button
@@ -602,7 +513,7 @@ export default function ClientsPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              أفراد ومستثمرين (32)
+              أفراد ومستثمرين ({individualsCount})
             </button>
 
             <button
@@ -615,7 +526,7 @@ export default function ClientsPage() {
             >
               <span>قضايا نشطة</span>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                18
+                {activeCasesClientsCount}
               </span>
             </button>
 
@@ -629,7 +540,7 @@ export default function ClientsPage() {
             >
               <span>بانتظار مستندات</span>
               <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                4
+                {pendingActionCount}
               </span>
             </button>
           </div>
@@ -706,344 +617,363 @@ export default function ClientsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* ════════ LEFT COLUMN: Selected Client Quick Profile (4 Cols in RTL) ════════ */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-4 space-y-3.5">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-[#edf3fc]">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#141e30]">
-                  <span className="w-2 h-2 rounded-full bg-[#00236f]" />
-                  معاينة ملف الموكل المحدد
-                </div>
-                <span className="font-mono text-[10px] text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc] font-bold">
-                  ID: {selectedClient.id}
-                </span>
+            {!selectedClient ? (
+              <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-8 text-center">
+                <Users className="w-10 h-10 text-[#9bb3d8] mx-auto mb-2" />
+                <h3 className="text-sm font-bold text-[#141e30] mb-1">لا يوجد موكل محدد</h3>
+                <p className="text-xs text-[#637189]">اختر موكلاً من القائمة أو أضف موكلاً جديداً لعرض تفاصيل ملفه.</p>
               </div>
-
-              {/* Client Badge Card */}
-              <div className="bg-[#fffdf8] border border-[#faecd8] rounded-xl p-3 flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <h3 className="text-sm font-black text-[#141e30]">{selectedClient.name}</h3>
-                  <div className="text-xs text-[#556480] flex items-center gap-1 font-mono">
-                    <span>{selectedClient.phone}</span>
-                    <span>•</span>
-                    <span>{selectedClient.location || 'الرياض'}</span>
+            ) : (
+              <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-4 space-y-3.5">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-[#edf3fc]">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#141e30]">
+                    <span className="w-2 h-2 rounded-full bg-[#00236f]" />
+                    معاينة ملف الموكل المحدد
                   </div>
-                  <div className="pt-1">
-                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.2 rounded border border-emerald-200">
-                      مطابقة ناجز 100%
-                    </span>
-                  </div>
+                  <span className="font-mono text-[10px] text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc] font-bold">
+                    ID: {selectedClient.id}
+                  </span>
                 </div>
 
-                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-900 font-bold text-base flex items-center justify-center shrink-0">
-                  {selectedClient.type === 'company' ? (
-                    <Building2 className="w-6 h-6 text-amber-800" />
-                  ) : (
-                    selectedClient.name.slice(0, 1)
-                  )}
-                </div>
-              </div>
-
-              {/* AI Advisor Summary */}
-              <div className="bg-[#fffbf6] border border-[#fedbbd] rounded-xl p-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-xs font-bold text-[#b44800]">
-                    <Sparkles className="w-3.5 h-3.5 text-[#fd8a42]" />
-                    ملخص المستشار الذكي (AI)
-                  </div>
-                  <span className="text-[10px] text-[#8c4912]">تحديث: اليوم</span>
-                </div>
-                <p className="text-[11px] text-[#783c07] leading-relaxed">
-                  {selectedClient.aiSummary}
-                </p>
-              </div>
-
-              {/* Approved POA Clauses */}
-              <div className="space-y-2 pt-1 border-t border-[#edf3fc]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#152033]">صلاحيات الوكالة المعتمدة</span>
-                  <span className="text-[10px] text-[#00236f] font-bold">فحص ناجز الفوري</span>
-                </div>
-
-                <div className="space-y-1.5">
-                  {selectedClient.poaClauses?.map((clause, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 rounded-lg bg-[#fafcff] border border-[#e5eefa] text-xs"
-                    >
-                      <span className="text-[#141f33] font-medium text-[11px] truncate max-w-[170px]">
-                        {clause.title}
-                      </span>
-                      {clause.status === 'authorized' && (
-                        <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
-                          {clause.statusText}
-                        </span>
-                      )}
-                      {clause.status === 'special_permission' && (
-                        <span className="bg-amber-50 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-amber-200">
-                          {clause.statusText}
-                        </span>
-                      )}
-                      {clause.status === 'unauthorized' && (
-                        <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-rose-200">
-                          {clause.statusText}
-                        </span>
-                      )}
+                {/* Client Badge Card */}
+                <div className="bg-[#fffdf8] border border-[#faecd8] rounded-xl p-3 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <h3 className="text-sm font-semibold text-[#141e30]">{selectedClient.name}</h3>
+                    <div className="text-xs text-[#556480] flex items-center gap-1 font-mono">
+                      <span>{selectedClient.phone || '—'}</span>
+                      <span>•</span>
+                      <span>{selectedClient.location || 'الرياض'}</span>
                     </div>
-                  ))}
+                    <div className="pt-1">
+                      <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.2 rounded border border-emerald-200">
+                        مطابقة ناجز 100%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-900 font-bold text-base flex items-center justify-center shrink-0">
+                    {selectedClient.type === 'company' ? (
+                      <Building2 className="w-6 h-6 text-amber-800" />
+                    ) : (
+                      selectedClient.name.slice(0, 1)
+                    )}
+                  </div>
+                </div>
+
+                {/* AI Advisor Summary */}
+                <div className="bg-[#fffbf6] border border-[#fedbbd] rounded-xl p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-xs font-bold text-[#b44800]">
+                      <Sparkles className="w-3.5 h-3.5 text-[#fd8a42]" />
+                      ملخص المستشار الذكي (AI)
+                    </div>
+                    <span className="text-[10px] text-[#8c4912]">تحديث: اليوم</span>
+                  </div>
+                  <p className="text-[11px] text-[#783c07] leading-relaxed">
+                    {selectedClient.aiSummary}
+                  </p>
+                </div>
+
+                {/* Approved POA Clauses */}
+                <div className="space-y-2 pt-1 border-t border-[#edf3fc]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#152033]">صلاحيات الوكالة المعتمدة</span>
+                    <span className="text-[10px] text-[#00236f] font-bold">فحص ناجز الفوري</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {selectedClient.poaClauses?.map((clause, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 rounded-lg bg-[#fafcff] border border-[#e5eefa] text-xs"
+                      >
+                        <span className="text-[#141f33] font-medium text-[11px] truncate max-w-[170px]">
+                          {clause.title}
+                        </span>
+                        {clause.status === 'authorized' && (
+                          <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                            {clause.statusText}
+                          </span>
+                        )}
+                        {clause.status === 'special_permission' && (
+                          <span className="bg-amber-50 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-amber-200">
+                            {clause.statusText}
+                          </span>
+                        )}
+                        {clause.status === 'unauthorized' && (
+                          <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-rose-200">
+                            {clause.statusText}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fees & Billing Box */}
+                <div className="bg-[#f9fbff] border border-[#dce7f6] rounded-xl p-3 text-xs space-y-1.5">
+                  <span className="font-bold text-[#141e30] block">حالة الأتعاب والفواتير</span>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-[#657591]">إجمالي الأتعاب المتفق عليها:</span>
+                    <strong className="font-mono text-[#141e30]">{selectedClient.totalFees || '—'}</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-[#657591]">المدفوع:</span>
+                    <strong className="font-mono text-emerald-700">{selectedClient.paidFees || '—'}</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#edf3fc]">
+                    <span className="text-[#657591]">المتبقي (دفعة الحكم):</span>
+                    <strong className="font-mono text-amber-800 font-bold">{selectedClient.remainingFees || '—'}</strong>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2 pt-1">
+                  <Button
+                    onClick={() => {
+                      setLocation('/cases?create=true');
+                    }}
+                    className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-9 gap-1.5 rounded-lg cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    + إضافة قضية أو وكالة جديدة للموكل
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      toast({
+                        title: 'تنزيل تقرير الموكل',
+                        description: `تم توليد ملف التقرير الفني المعتمد للموكل ${selectedClient.name}.`,
+                      });
+                    }}
+                    className="w-full text-xs text-[#42526e] border-[#d2e0f4] hover:bg-[#edf3ff] h-8 gap-1.5 rounded-lg cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    تحميل تقرير سجل العميل (PDF)
+                  </Button>
                 </div>
               </div>
-
-              {/* Fees & Billing Box */}
-              <div className="bg-[#f9fbff] border border-[#dce7f6] rounded-xl p-3 text-xs space-y-1.5">
-                <span className="font-bold text-[#141e30] block">حالة الأتعاب والفواتير</span>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[#657591]">إجمالي الأتعاب المتفق عليها:</span>
-                  <strong className="font-mono text-[#141e30]">{selectedClient.totalFees || '45,000 ر.س'}</strong>
-                </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[#657591]">المدفوع:</span>
-                  <strong className="font-mono text-emerald-700">{selectedClient.paidFees || '30,000 ر.س'}</strong>
-                </div>
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#edf3fc]">
-                  <span className="text-[#657591]">المتبقي (دفعة الحكم):</span>
-                  <strong className="font-mono text-amber-800 font-black">{selectedClient.remainingFees || '15,000 ر.س'}</strong>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-2 pt-1">
-                <Button
-                  onClick={() => {
-                    setLocation('/cases?create=true');
-                  }}
-                  className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-9 gap-1.5 rounded-lg cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  + إضافة قضية أو وكالة جديدة للموكل
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    toast({
-                      title: 'تنزيل تقرير الموكل',
-                      description: `تم توليد ملف التقرير الفني المعتمد للموكل ${selectedClient.name}.`,
-                    });
-                  }}
-                  className="w-full text-xs text-[#42526e] border-[#d2e0f4] hover:bg-[#edf3ff] h-8 gap-1.5 rounded-lg cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  تحميل تقرير سجل العميل (PDF)
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* ════════ RIGHT COLUMN: Clients Cards Ledger (8 Cols in RTL) ════════ */}
           <div className="lg:col-span-8 space-y-3.5">
-            {filteredClients.map((client) => {
-              const isSelected = selectedClientId === client.id;
-              const isExpiringCard = client.isExpiringPoa;
-
-              return (
-                <div
-                  key={client.id}
-                  onClick={() => setSelectedClientId(client.id)}
-                  className={`bg-white rounded-xl border p-4 transition-all cursor-pointer shadow-2xs relative ${
-                    isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
-                  } ${isSelected ? 'ring-2 ring-[#00236f]/30 bg-[#fafcff]' : 'hover:border-[#b8d1fc]'}`}
+            {filteredClients.length === 0 ? (
+              <div className="bg-white rounded-xl border border-[#dbe6f8] p-12 text-center shadow-2xs">
+                <Users className="w-12 h-12 text-[#9bb3d8] mx-auto mb-3" />
+                <h3 className="text-base font-bold text-[#141e30] mb-1">لا يوجد موكلون مسجلون</h3>
+                <p className="text-xs text-[#637189] max-w-sm mx-auto mb-5">
+                  لم يتم العثور على أي عملاء مطابقين لخيارات البحث والتصفية، أو لم يتم تسجيل موكلين بعد في قاعدة البيانات.
+                </p>
+                <Button
+                  onClick={() => {
+                    setFormName('');
+                    setFormPhone('');
+                    setFormNotes('');
+                    setCreateOpen(true);
+                  }}
+                  className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg"
                 >
-                  {/* Card Top Row */}
-                  <div className="flex items-start justify-between gap-3">
-                    {/* Client Info */}
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                          client.type === 'company'
-                            ? 'bg-[#eaf1ff] text-[#00236f]'
-                            : 'bg-amber-100 text-amber-900'
-                        }`}
-                      >
-                        {client.type === 'company' ? (
-                          <Building2 className="w-5 h-5 text-[#00236f]" />
-                        ) : (
-                          client.name.slice(0, 2)
-                        )}
+                  <Plus className="w-4 h-4 ml-1.5" />
+                  تسجيل موكل جديد
+                </Button>
+              </div>
+            ) : (
+              filteredClients.map((client) => {
+                const isSelected = selectedClientId === client.id;
+                const isExpiringCard = client.isExpiringPoa;
+
+                return (
+                  <div
+                    key={client.id}
+                    onClick={() => setSelectedClientId(client.id)}
+                    className={`bg-white rounded-xl border p-4 transition-all cursor-pointer shadow-2xs relative ${
+                      isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
+                    } ${isSelected ? 'ring-2 ring-[#00236f]/30 bg-[#fafcff]' : 'hover:border-[#b8d1fc]'}`}
+                  >
+                    {/* Card Top Row */}
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Client Info */}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                            client.type === 'company'
+                              ? 'bg-[#eaf1ff] text-[#00236f]'
+                              : 'bg-amber-100 text-amber-900'
+                          }`}
+                        >
+                          {client.type === 'company' ? (
+                            <Building2 className="w-5 h-5 text-[#00236f]" />
+                          ) : (
+                            client.name.slice(0, 2)
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-bold text-[#141e30]">{client.name}</h3>
+                            {client.typeLabel && (
+                              <span className="bg-[#f2f6fc] text-[#4d5c76] text-[10px] font-medium px-2 py-0.2 rounded border border-[#dce6f4]">
+                                {client.typeLabel}
+                              </span>
+                            )}
+                            {client.isVerified && (
+                              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                موكل موثق
+                              </span>
+                            )}
+                            {isExpiringCard && (
+                              <span className="bg-[#fff0e6] text-[#b44800] text-[10px] font-bold px-1.5 py-0.2 rounded border border-[#ffd5ba]">
+                                تطلب تجديد الوكالة
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 text-xs text-[#596883] mt-1 font-mono">
+                            {client.phone && <span>{client.phone}</span>}
+                            {client.commercialRegistration && (
+                              <span className="font-semibold text-[#141e30]">{client.commercialRegistration}</span>
+                            )}
+                            <span className="text-[#a5b4cb]">•</span>
+                            <span className="font-sans">المحامي المكلف: {client.assignedLawyer}</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-sm font-bold text-[#141e30]">{client.name}</h3>
-                          {client.typeLabel && (
-                            <span className="bg-[#f2f6fc] text-[#4d5c76] text-[10px] font-medium px-2 py-0.2 rounded border border-[#dce6f4]">
-                              {client.typeLabel}
-                            </span>
-                          )}
-                          {client.isVerified && (
-                            <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              موكل موثق
-                            </span>
-                          )}
-                          {isExpiringCard && (
-                            <span className="bg-[#fff0e6] text-[#b44800] text-[10px] font-bold px-1.5 py-0.2 rounded border border-[#ffd5ba]">
-                              تطلب تجديد الوكالة
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 text-xs text-[#596883] mt-1 font-mono">
-                          {client.phone && <span>{client.phone}</span>}
-                          {client.commercialRegistration && (
-                            <span className="font-semibold text-[#141e30]">{client.commercialRegistration}</span>
-                          )}
-                          <span className="text-[#a5b4cb]">•</span>
-                          <span className="font-sans">المحامي المكلف: {client.assignedLawyer}</span>
-                        </div>
+                      {/* Actions on Left */}
+                      <div className="flex items-center gap-1.5 text-[#657591]">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(client);
+                          }}
+                          className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingClient(client);
+                            setFormName(client.name);
+                            setFormPhone(client.phone || '');
+                            setFormNotes(client.statusNote || '');
+                            setCreateOpen(true);
+                          }}
+                          className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
+                          title="تعديل"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const msg = encodeURIComponent(
+                              `السلام عليكم ورحمة الله، الأستاذ ${client.name} المحترم.\nنحيطكم علماً بآخر مستجدات ملفكم لدى مكتب المحاماة الرئيسي.\n- خالص التحيات.`
+                            );
+                            window.open(`https://wa.me/?text=${msg}`, '_blank');
+                          }}
+                          className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
+                          title="واتساب"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
-                    {/* Actions on Left */}
-                    <div className="flex items-center gap-1.5 text-[#657591]">
+                    {/* Expiring Alert Banner inside Company Card */}
+                    {isExpiringCard && (
+                      <div className="mt-3 bg-[#fff4ed] border border-[#ffd5ba] rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-[#556480] flex-1">
+                          <div>
+                            <span className="text-[#843600] text-[10px] block">مهلة التجديد</span>
+                            <strong className="text-[#b44800] text-xs">تنتهي خلال {client.expiringDays || 18} يوماً</strong>
+                          </div>
+                          <div>
+                            <span className="text-[#843600] text-[10px] block">الوكالة التجارية</span>
+                            <strong className="text-[#141e30] font-mono text-xs">{client.poaNumber}</strong>
+                          </div>
+                          <div>
+                            <span className="text-[#843600] text-[10px] block">القضايا المتأثرة</span>
+                            <strong className="text-[#141e30] text-xs">{client.openCasesText}</strong>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const msg = encodeURIComponent(
+                              `السلام عليكم ورحمة الله، السادة ${client.name} المحترمون.\nنود إحاطتكم بضرورة تجديد الوكالة التجارية رقم (${client.poaNumber}) لمتابعة القضايا التجارية النشطة.\n- مكتب المحاماة الرئيسي.`
+                            );
+                            window.open(`https://wa.me/?text=${msg}`, '_blank');
+                          }}
+                          className="bg-[#b44800] hover:bg-[#8f3900] text-white text-[11px] font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          إشعار الموكل (واتساب للتجديد)
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Middle Details Grid for Normal Cards */}
+                    {!isExpiringCard && (
+                      <div className="mt-3 pt-2.5 border-t border-[#edf3fc] grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-[#556480]">
+                        <div>
+                          <span className="text-[#7a8aa3] text-[11px] block">الوكالة الشرعية</span>
+                          <strong className="text-[#152033] font-mono">
+                            {client.poaStatus} {client.poaNumber ? `(${client.poaNumber})` : ''}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="text-[#7a8aa3] text-[11px] block">تاريخ الانتهاء</span>
+                          <strong className="text-[#152033] font-mono">{client.poaExpiryHijri}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[#7a8aa3] text-[11px] block">القضايا المفتوحة</span>
+                          <strong className="text-[#00236f] font-bold">{client.openCasesText}</strong>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bottom Note & Link */}
+                    <div className="mt-2.5 pt-2 border-t border-[#f4f7fc] flex items-center justify-between text-xs">
+                      <div className="text-[11px] text-[#556480] flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>{client.statusNote}</span>
+                      </div>
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeleteTarget(client);
+                          setLocation(`/clients/${client.id}`);
                         }}
-                        className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                        title="حذف"
+                        className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 cursor-pointer"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingClient(client);
-                          setFormName(client.name);
-                          setFormPhone(client.phone || '');
-                          setFormNotes(client.statusNote || '');
-                          setCreateOpen(true);
-                        }}
-                        className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
-                        title="تعديل"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const msg = encodeURIComponent(
-                            `السلام عليكم ورحمة الله، الأستاذ ${client.name} المحترم.\nنحيطكم علماً بآخر مستجدات ملفكم لدى مكتب المحاماة الرئيسي.\n- خالص التحيات.`
-                          );
-                          window.open(`https://wa.me/?text=${msg}`, '_blank');
-                        }}
-                        className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
-                        title="واتساب"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>عرض الملف الكامل</span>
+                        <ChevronLeft className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
-
-                  {/* Expiring Alert Banner inside Company Card (Card 3 in mockup) */}
-                  {isExpiringCard && (
-                    <div className="mt-3 bg-[#fff4ed] border border-[#ffd5ba] rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-[#556480] flex-1">
-                        <div>
-                          <span className="text-[#843600] text-[10px] block">مهلة التجديد</span>
-                          <strong className="text-[#b44800] text-xs">تنتهي خلال 18 يوماً</strong>
-                        </div>
-                        <div>
-                          <span className="text-[#843600] text-[10px] block">الوكالة التجارية</span>
-                          <strong className="text-[#141e30] font-mono text-xs">{client.poaNumber}</strong>
-                        </div>
-                        <div>
-                          <span className="text-[#843600] text-[10px] block">القضايا المتأثرة</span>
-                          <strong className="text-[#141e30] text-xs">{client.openCasesText}</strong>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const msg = encodeURIComponent(
-                            `السلام عليكم ورحمة الله، السادة ${client.name} المحترمون.\nنود إحاطتكم بضرورة تجديد الوكالة التجارية رقم (${client.poaNumber}) التي تنتهي خلال 18 يوماً لمتابعة القضايا التجارية النشطة.\n- مكتب المحاماة الرئيسي.`
-                          );
-                          window.open(`https://wa.me/?text=${msg}`, '_blank');
-                        }}
-                        className="bg-[#b44800] hover:bg-[#8f3900] text-white text-[11px] font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        إشعار الموكل (واتساب للتجديد)
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Middle Details Grid for Normal Cards */}
-                  {!isExpiringCard && (
-                    <div className="mt-3 pt-2.5 border-t border-[#edf3fc] grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-[#556480]">
-                      <div>
-                        <span className="text-[#7a8aa3] text-[11px] block">الوكالة الشرعية</span>
-                        <strong className="text-[#152033] font-mono">
-                          {client.poaStatus} ({client.poaNumber})
-                        </strong>
-                      </div>
-                      <div>
-                        <span className="text-[#7a8aa3] text-[11px] block">تاريخ الانتهاء</span>
-                        <strong className="text-[#152033] font-mono">{client.poaExpiryHijri}</strong>
-                      </div>
-                      <div>
-                        <span className="text-[#7a8aa3] text-[11px] block">القضايا المفتوحة</span>
-                        <strong className="text-[#00236f] font-bold">{client.openCasesText}</strong>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bottom Note & Link */}
-                  <div className="mt-2.5 pt-2 border-t border-[#f4f7fc] flex items-center justify-between text-xs">
-                    <div className="text-[11px] text-[#556480] flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span>{client.statusNote}</span>
-                    </div>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLocation(`/clients/${client.id}`);
-                      }}
-                      className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>عرض الملف الكامل</span>
-                      <ChevronLeft className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
 
             {/* Pagination Controls */}
             <div className="px-4 py-3 bg-white border border-[#dbe6f8] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#637189] shadow-2xs">
               <div className="flex items-center gap-3">
-                <span>عرض 1 إلى 4 من أصل 46 عميل مسجل</span>
+                <span>
+                  عرض {filteredClients.length === 0 ? 0 : 1} إلى {filteredClients.length} من أصل {totalClientsCount} عميل مسجل
+                </span>
                 <span className="text-[#c7d5ea]">|</span>
-                <span>لكل صفحة: 10</span>
+                <span>لكل صفحة: {Math.max(10, filteredClients.length)}</span>
               </div>
               <div className="flex items-center gap-1 font-mono">
                 <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-[#00236f] text-white font-bold flex items-center justify-center">
                   1
-                </button>
-                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
-                  2
-                </button>
-                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
-                  3
-                </button>
-                <span className="px-1 text-[#8b99b0]">...</span>
-                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
-                  5
-                </button>
-                <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
-                  &gt;
                 </button>
               </div>
             </div>

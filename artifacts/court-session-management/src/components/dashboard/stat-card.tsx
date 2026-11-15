@@ -36,7 +36,7 @@ export function StatCard({
     <div className="fade-in-up rounded-2xl border border-[#D6E0EC] bg-white p-5 transition-all duration-200 hover:shadow-md hover:border-[#C99732]/60 hover:-translate-y-0.5 cursor-pointer h-full flex items-center justify-between shadow-xs">
       {/* Right side in RTL: Numbers and Label */}
       <div className="min-w-0">
-        <p className="text-xs text-[#64748B] font-bold truncate mb-1">{label}</p>
+        <p className="text-xs text-[#64748B] font-medium truncate mb-1">{label}</p>
         {isLoading ? (
           <Skeleton className="h-9 w-16 mb-1" />
         ) : isUnavailable ? (
@@ -44,7 +44,7 @@ export function StatCard({
             {unavailableText}
           </div>
         ) : (
-          <div className="text-2xl sm:text-3xl font-black font-mono tabular-nums tracking-tight text-[#10233F]" data-testid={dataTestId}>
+          <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-[#10233F]" data-testid={dataTestId}>
             {value ?? 0}
           </div>
         )}

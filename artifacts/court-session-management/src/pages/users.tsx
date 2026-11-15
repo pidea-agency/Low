@@ -82,106 +82,6 @@ export interface OfficeMemberItem {
 
 export type OfficeMember = OfficeMemberItem;
 
-// Preset realistic Saudi Office Members matching the mockup
-const MOCK_MEMBERS: OfficeMemberItem[] = [
-  {
-    id: 'mem-1',
-    username: 'a.alotaibi',
-    display_name: 'أحمد محمد العتيبي',
-    roleTitle: 'محامٍ متدرب • ترخيص جديد',
-    avatarInitials: 'أم',
-    avatarBg: 'bg-[#ffeedb] text-[#b44800]',
-    email: 'ahmed.alotaibi@court.gov.sa',
-    phone: '972599409123',
-    status: 'pending',
-    statusLabel: 'بانتظار التفعيل',
-    casesCount: 0,
-    poaCount: 0,
-    started: false,
-    role: 'lawyer',
-  },
-  {
-    id: 'mem-2',
-    username: 'm.jazzar',
-    display_name: 'محمد الجزار',
-    roleTitle: 'محامٍ ممارس أول • قضايا الشركات',
-    avatarInitials: 'مج',
-    avatarBg: 'bg-[#00236f] text-white',
-    email: 'ahmed.alotaibi@court.gov.sa',
-    phone: '970567465929',
-    status: 'active',
-    statusLabel: 'نشط',
-    casesCount: 7,
-    poaCount: 4,
-    started: true,
-    role: 'lawyer',
-  },
-  {
-    id: 'mem-3',
-    username: 'a.aloibi',
-    display_name: 'أحمد محمد العتيبي',
-    roleTitle: 'مستشار قانوني • النزاعات العمالية',
-    avatarInitials: 'أم',
-    avatarBg: 'bg-[#ebf3ff] text-[#00236f]',
-    email: 'ahmed.alotaibi@court.gov.sa',
-    phone: '972599409123',
-    status: 'active',
-    statusLabel: 'نشط',
-    casesCount: 5,
-    poaCount: 3,
-    started: true,
-    role: 'consultant',
-  },
-  {
-    id: 'mem-4',
-    username: 'lawyer_mahmoud',
-    display_name: 'محمود',
-    roleTitle: 'محامٍ مترافع • المحكمة التجارية',
-    avatarInitials: 'مح',
-    avatarBg: 'bg-[#ebf3ff] text-[#00236f]',
-    email: 'mahm@gmail.com',
-    phone: '0599774123',
-    status: 'active',
-    statusLabel: 'نشط',
-    casesCount: 6,
-    poaCount: 2,
-    started: true,
-    role: 'lawyer',
-  },
-  {
-    id: 'mem-5',
-    username: 'lawyer_3',
-    display_name: 'بدون اسم',
-    roleTitle: 'مساعد إداري وقانوني',
-    avatarInitials: 'إد',
-    avatarBg: 'bg-[#f4f7fc] text-[#4d5c76]',
-    email: 'lawyer3@office.com',
-    phone: '-',
-    status: 'active',
-    statusLabel: 'نشط',
-    casesCount: 2,
-    poaCount: 1,
-    started: true,
-    role: 'assistant',
-  },
-  {
-    id: 'mem-6',
-    username: 'lawyer_1',
-    display_name: 'lawyer_1',
-    roleTitle: 'محامٍ مشارك • المحكمة العامة',
-    avatarInitials: 'L1',
-    avatarBg: 'bg-[#00236f] text-white',
-    email: 'lawyer1@office.com',
-    phone: '972599409123',
-    status: 'active',
-    statusLabel: 'نشط',
-    casesCount: 4,
-    poaCount: 2,
-    started: true,
-    role: 'lawyer',
-  },
-];
-
 export default function OfficeMembersPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
@@ -234,32 +134,40 @@ export default function OfficeMembersPage() {
     fetchMembers();
   }, [fetchMembers]);
 
-  // Merge backend members with mock members
+  // Map real backend members
   const allMembers: OfficeMemberItem[] = useMemo(() => {
     if (!backendMembers || backendMembers.length === 0) {
-      return MOCK_MEMBERS;
+      return [];
     }
-    const mapped: OfficeMemberItem[] = backendMembers.map((b, idx) => ({
+    return backendMembers.map((b, idx) => ({
       id: String(b.id || `mem-${idx}`),
-      username: b.username || `lawyer_${idx + 1}`,
-      display_name: b.display_name || b.username || 'عضو مكتب',
-      roleTitle: b.role === 'admin' ? 'مدير المكتب والشركاء' : 'محامٍ ممارس',
-      avatarInitials: (b.display_name || b.username || 'أم').slice(0, 2),
+      username: b.username || 'عضو',
+      display_name: b.display_name || b.username || 'عضو المكتب',
+      roleTitle: b.role_title || (b.role === 'admin' ? 'مدير المكتب والشركاء' : b.role === 'consultant' ? 'مستشار قانوني' : 'محامٍ ممارس'),
+      avatarInitials: (b.display_name || b.username || 'مح').slice(0, 2),
       avatarBg: idx % 2 === 0 ? 'bg-[#00236f] text-white' : 'bg-[#ebf3ff] text-[#00236f]',
-      email: b.email || `user${idx + 1}@office.com`,
-      phone: b.phone || '972599409123',
+      email: b.email || '—',
+      phone: b.phone || '—',
       status: b.status === 'suspended' ? 'suspended' : b.is_active === false ? 'pending' : 'active',
       statusLabel: b.status === 'suspended' ? 'موقوف' : b.is_active === false ? 'بانتظار التفعيل' : 'نشط',
-      casesCount: 4,
-      poaCount: 2,
-      started: true,
-      role: b.role === 'admin' ? 'lawyer' : 'lawyer',
+      casesCount: b.assigned_cases_count || b.cases_count || 0,
+      poaCount: b.poa_count || 0,
+      started: b.is_active !== false,
+      role: b.role === 'consultant' ? 'consultant' : b.role === 'assistant' ? 'assistant' : 'lawyer',
+      created_at: b.created_at,
     }));
-
-    const existingUsernames = new Set(mapped.map((m) => m.username));
-    const uniqueMocks = MOCK_MEMBERS.filter((m) => !existingUsernames.has(m.username));
-    return [...mapped, ...uniqueMocks];
   }, [backendMembers]);
+
+  // Dynamic KPI Metrics
+  const totalMembersCount = allMembers.length;
+  const activeMembersCount = allMembers.filter((m) => m.status === 'active').length;
+  const pendingMembersCount = allMembers.filter((m) => m.status === 'pending').length;
+  const lawyersCount = allMembers.filter((m) => m.role === 'lawyer').length;
+  const consultantsCount = allMembers.filter((m) => m.role === 'consultant').length;
+  const staffCount = allMembers.filter((m) => m.role === 'assistant').length;
+  const totalCasesDistributed = allMembers.reduce((acc, m) => acc + (m.casesCount || 0), 0);
+  const avgCasesPerMember = totalMembersCount > 0 ? (totalCasesDistributed / totalMembersCount).toFixed(1) : '0';
+  const activePct = totalMembersCount > 0 ? Math.round((activeMembersCount / totalMembersCount) * 100) : 0;
 
   // Filtered members list
   const filteredMembers = useMemo(() => {
@@ -301,20 +209,33 @@ export default function OfficeMembersPage() {
   const handleToggleStatus = async () => {
     if (!toggleStatusTarget) return;
     try {
-      await fetch(`/api/users/${toggleStatusTarget.id}/toggle-status`, {
+      const res = await fetch(`/api/users/${toggleStatusTarget.id}/toggle-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: toggleStatusTarget.status === 'active' ? 'suspended' : 'active',
         }),
       });
-      toast({
-        title: 'تم تحديث حالة الحساب بنجاح',
-        description: `تم تعديل حالة حساب (${toggleStatusTarget.display_name || toggleStatusTarget.username}).`,
-      });
-      fetchMembers();
+      if (res.ok) {
+        toast({
+          title: 'تم تحديث حالة الحساب بنجاح',
+          description: `تم تعديل حالة حساب (${toggleStatusTarget.display_name || toggleStatusTarget.username}).`,
+        });
+        fetchMembers();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل تعديل حالة الحساب',
+          description: err.error || 'تعذر تحديث حالة الحساب.',
+          variant: 'destructive',
+        });
+      }
     } catch {
-      toast({ title: 'تم تعديل حالة الحساب' });
+      toast({
+        title: 'خطأ في الاتصال',
+        description: 'تعذر تعديل حالة الحساب.',
+        variant: 'destructive',
+      });
     } finally {
       setToggleStatusTarget(null);
     }
@@ -327,12 +248,16 @@ export default function OfficeMembersPage() {
       toast({ title: 'يرجى إدخال اسم المستخدم', variant: 'destructive' });
       return;
     }
+    if (!formEmail.trim()) {
+      toast({ title: 'البريد الإلكتروني مطلوب لإرسال رابط تفعيل الحساب', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const payload = {
         username: formUsername.trim(),
         display_name: formDisplayName.trim() || undefined,
-        email: formEmail.trim() || undefined,
+        email: formEmail.trim(),
         phone: formPhone.trim() || undefined,
         role: formRole === 'lawyer' ? 'lawyer' : 'staff',
       };
@@ -352,18 +277,19 @@ export default function OfficeMembersPage() {
         fetchMembers();
         setIsAddOpen(false);
       } else {
+        const err = await res.json().catch(() => ({}));
         toast({
-          title: 'تم تسجيل العضو في النظام',
-          description: `تم إنشاء حساب ${formDisplayName || formUsername}.`,
+          title: 'فشل إضافة العضو',
+          description: err.error || 'تعذر تسجيل العضو في قاعدة البيانات.',
+          variant: 'destructive',
         });
-        setIsAddOpen(false);
       }
     } catch {
       toast({
-        title: 'تم تسجيل العضو',
-        description: `تم إنشاء الحساب بنجاح.`,
+        title: 'خطأ في الاتصال بالخادم',
+        description: 'تعذر إنشاء حساب العضو. يرجى التحقق من الشبكة.',
+        variant: 'destructive',
       });
-      setIsAddOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -410,7 +336,7 @@ export default function OfficeMembersPage() {
               <div className="w-8 h-8 rounded-xl bg-[#fff2e8] text-[#b44800] flex items-center justify-center">
                 <Users className="w-4 h-4" />
               </div>
-              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
+              <h1 className="text-2xl font-bold text-[#131b2e]">
                 أعضاء ومحامو المكتب
               </h1>
             </div>
@@ -481,7 +407,7 @@ export default function OfficeMembersPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">إجمالي الأعضاء</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">6</span>
+                  <span className="text-3xl font-bold text-[#131c2d] font-mono">{totalMembersCount}</span>
                   <span className="text-xs text-[#526079]">أعضاء معتمدين</span>
                 </div>
               </div>
@@ -490,7 +416,7 @@ export default function OfficeMembersPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-[#697893]">
-              4 محامين • 1 مستشار • 1 إداري
+              {lawyersCount} محامين • {consultantsCount} مستشار • {staffCount} إداري
             </div>
           </div>
 
@@ -500,9 +426,9 @@ export default function OfficeMembersPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">الحسابات النشطة</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">5</span>
-                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
-                    83.3% نشاط
+                  <span className="text-3xl font-bold text-[#131c2d] font-mono">{activeMembersCount}</span>
+                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-1.5 py-0.2 rounded border border-emerald-200">
+                    {activePct}% نشاط
                   </span>
                 </div>
               </div>
@@ -511,7 +437,7 @@ export default function OfficeMembersPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-[#697893]">
-              يترافعون في 18 جلسة جارية
+              {activeMembersCount > 0 ? `يترافعون في ${totalCasesDistributed} قضية وملف` : 'لا توجد جلسات جارية'}
             </div>
           </div>
 
@@ -521,7 +447,7 @@ export default function OfficeMembersPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">بانتظار التفعيل</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black text-[#b44800] tracking-tight font-mono">1</span>
+                  <span className="text-3xl font-bold text-[#b44800] font-mono">{pendingMembersCount}</span>
                   <span className="text-xs text-[#526079]">دعوة سارية</span>
                 </div>
               </div>
@@ -530,7 +456,7 @@ export default function OfficeMembersPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-amber-800 font-medium truncate">
-              أحمد محمد العتيبي (أُرسلت اليوم)
+              {pendingMembersCount > 0 ? `${pendingMembersCount} حساب بانتظار تفعيل الدعوة` : 'كافة الدعوات مكتملة ومفعلة'}
             </div>
           </div>
 
@@ -540,9 +466,9 @@ export default function OfficeMembersPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">القضايا الموزعة</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-[#00236f] tracking-tight font-mono">24</span>
-                  <span className="bg-[#edf3ff] text-[#00236f] text-[10px] font-bold px-1.5 py-0.2 rounded border border-[#cfdffc]">
-                    %100 تعيين
+                  <span className="text-3xl font-bold text-[#00236f] font-mono">{totalCasesDistributed}</span>
+                  <span className="bg-[#edf3ff] text-[#00236f] text-[10px] font-semibold px-1.5 py-0.2 rounded border border-[#cfdffc]">
+                    تعيين حي
                   </span>
                 </div>
               </div>
@@ -551,7 +477,7 @@ export default function OfficeMembersPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-[#697893]">
-              معدل 4 قضايا لكل محامٍ
+              معدل {avgCasesPerMember} قضية لكل محامٍ
             </div>
           </div>
         </div>
@@ -572,7 +498,7 @@ export default function OfficeMembersPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              الكل (6)
+              الكل ({totalMembersCount})
             </button>
 
             <button
@@ -583,7 +509,7 @@ export default function OfficeMembersPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              محامون ممارسون (4)
+              محامون ممارسون ({lawyersCount})
             </button>
 
             <button
@@ -594,7 +520,7 @@ export default function OfficeMembersPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              مستشارون (1)
+              مستشارون ({consultantsCount})
             </button>
 
             <button
@@ -605,7 +531,7 @@ export default function OfficeMembersPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              بانتظار التفعيل (1)
+              بانتظار التفعيل ({pendingMembersCount})
             </button>
           </div>
 
@@ -637,132 +563,142 @@ export default function OfficeMembersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf3fc] text-[#1c263c]">
-                {filteredMembers.map((member) => {
-                  const isPending = member.status === 'pending';
+                {filteredMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-[#697994]">
+                      <Users className="w-10 h-10 text-[#a0acc0] mx-auto mb-2" />
+                      <p className="font-bold text-sm text-[#141e30] mb-1">لا يوجد أعضاء مسجلين</p>
+                      <p className="text-xs text-[#718099]">لم يتم العثور على أعضاء مطابقين للبحث أو التصفية.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMembers.map((member) => {
+                    const isPending = member.status === 'pending';
 
-                  return (
-                    <tr key={member.id} className="hover:bg-[#f9fbff] transition-colors">
-                      {/* 1. Name & Role */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                              member.avatarBg || 'bg-[#00236f] text-white'
-                            }`}
-                          >
-                            {member.avatarInitials || member.display_name?.slice(0, 2) || 'أم'}
-                          </div>
-                          <div>
-                            <div className="font-bold text-[#141e30]">{member.display_name}</div>
-                            <div className="text-[11px] text-[#697994]">{member.roleTitle}</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* 2. Username */}
-                      <td className="py-3.5 px-4">
-                        <span className="font-mono text-xs font-semibold text-[#3e4f6e]">
-                          {member.username}
-                        </span>
-                      </td>
-
-                      {/* 3. Phone */}
-                      <td className="py-3.5 px-4">
-                        <span className="font-mono text-xs text-[#3e4f6e]">{member.phone || '-'}</span>
-                      </td>
-
-                      {/* 4. Email */}
-                      <td className="py-3.5 px-4">
-                        {member.email ? (
-                          <div className="flex items-center gap-1.5 font-mono text-xs text-[#3e4f6e]">
-                            <button
-                              onClick={() => handleCopyEmail(member.email!)}
-                              className="text-[#718099] hover:text-[#00236f] cursor-pointer"
-                              title="نسخ البريد"
+                    return (
+                      <tr key={member.id} className="hover:bg-[#f9fbff] transition-colors">
+                        {/* 1. Name & Role */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                                member.avatarBg || 'bg-[#00236f] text-white'
+                              }`}
                             >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="truncate max-w-[190px]">{member.email}</span>
+                              {member.avatarInitials || member.display_name?.slice(0, 2) || 'أم'}
+                            </div>
+                            <div>
+                              <div className="font-bold text-[#141e30]">{member.display_name}</div>
+                              <div className="text-[11px] text-[#697994]">{member.roleTitle}</div>
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-[#a0acc0]">-</span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* 5. Status Badge */}
-                      <td className="py-3.5 px-4 text-center">
-                        {isPending ? (
-                          <span className="bg-[#fff4ed] text-[#b44800] border border-[#ffd5ba] text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-[#fd8a42]" />
-                            {member.statusLabel}
+                        {/* 2. Username */}
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono text-xs font-semibold text-[#3e4f6e]">
+                            {member.username}
                           </span>
-                        ) : (
-                          <span className="bg-[#f0fdf4] text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                            <Check className="w-3 h-3 text-emerald-600" />
-                            {member.statusLabel}
-                          </span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* 6. Cases & POAs */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5 text-xs font-mono">
-                          {isPending ? (
-                            <>
-                              <span className="text-[#8e9bb0]">0 قضايا</span>
-                              <span className="text-[#c5d2e3]">•</span>
-                              <span className="text-[#b44800] font-bold">لم يبدأ بعد</span>
-                            </>
+                        {/* 3. Phone */}
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono text-xs text-[#3e4f6e]">{member.phone || '-'}</span>
+                        </td>
+
+                        {/* 4. Email */}
+                        <td className="py-3.5 px-4">
+                          {member.email && member.email !== '—' ? (
+                            <div className="flex items-center gap-1.5 font-mono text-xs text-[#3e4f6e]">
+                              <button
+                                onClick={() => handleCopyEmail(member.email!)}
+                                className="text-[#718099] hover:text-[#00236f] cursor-pointer"
+                                title="نسخ البريد"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="truncate max-w-[190px]">{member.email}</span>
+                            </div>
                           ) : (
-                            <>
-                              <span className="font-bold text-[#141e30]">{member.casesCount} قضايا</span>
-                              <span className="text-[#c5d2e3]">•</span>
-                              <span className="text-[#657591]">{member.poaCount} وكالات</span>
-                            </>
+                            <span className="text-[#a0acc0]">-</span>
                           )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* 7. Action buttons */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1 text-xs">
+                        {/* 5. Status Badge */}
+                        <td className="py-3.5 px-4 text-center">
                           {isPending ? (
-                            <button
-                              onClick={() => handleResend(member)}
-                              className="text-[#b44800] hover:bg-[#fff0e6] p-1.5 rounded font-bold flex items-center gap-1 cursor-pointer"
-                              title="إعادة إرسال الدعوة"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              <span>إعادة</span>
-                            </button>
+                            <span className="bg-[#fff4ed] text-[#b44800] border border-[#ffd5ba] text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-[#fd8a42]" />
+                              {member.statusLabel}
+                            </span>
                           ) : (
-                            <button
-                              onClick={() => setToggleStatusTarget(member)}
-                              className="text-[#b44800] hover:bg-amber-50 p-1.5 rounded font-bold flex items-center gap-1 cursor-pointer"
-                              title="إيقاف الحساب مؤقتاً"
-                            >
-                              <Ban className="w-3.5 h-3.5" />
-                              <span>إيقاف</span>
-                            </button>
+                            <span className="bg-[#f0fdf4] text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              {member.statusLabel}
+                            </span>
                           )}
+                        </td>
 
-                          <button
-                            onClick={() => {
-                              setEditingMember(member);
-                              setFormDisplayName(member.display_name || '');
-                              setFormPhone(member.phone || '');
-                              setFormEmail(member.email || '');
-                            }}
-                            className="text-[#718099] hover:text-[#00236f] hover:bg-[#edf3ff] p-1.5 rounded cursor-pointer"
-                            title="تعديل"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        {/* 6. Cases & POAs */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-xs font-mono">
+                            {isPending ? (
+                              <>
+                                <span className="text-[#8e9bb0]">0 قضايا</span>
+                                <span className="text-[#c5d2e3]">•</span>
+                                <span className="text-[#b44800] font-bold">لم يبدأ بعد</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-bold text-[#141e30]">{member.casesCount} قضايا</span>
+                                <span className="text-[#c5d2e3]">•</span>
+                                <span className="text-[#657591]">{member.poaCount} وكالات</span>
+                              </>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 7. Action buttons */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1 text-xs">
+                            {isPending ? (
+                              <button
+                                onClick={() => handleResend(member)}
+                                className="text-[#b44800] hover:bg-[#fff0e6] p-1.5 rounded font-bold flex items-center gap-1 cursor-pointer"
+                                title="إعادة إرسال الدعوة"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                <span>إعادة</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setToggleStatusTarget(member)}
+                                className="text-[#b44800] hover:bg-amber-50 p-1.5 rounded font-bold flex items-center gap-1 cursor-pointer"
+                                title="إيقاف الحساب مؤقتاً"
+                              >
+                                <Ban className="w-3.5 h-3.5" />
+                                <span>إيقاف</span>
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => {
+                                setEditingMember(member);
+                                setFormDisplayName(member.display_name || '');
+                                setFormPhone(member.phone || '');
+                                setFormEmail(member.email || '');
+                              }}
+                              className="text-[#718099] hover:text-[#00236f] hover:bg-[#edf3ff] p-1.5 rounded cursor-pointer"
+                              title="تعديل"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -770,16 +706,15 @@ export default function OfficeMembersPage() {
           {/* Table Pagination Footer */}
           <div className="px-5 py-3 border-t border-[#edf3fc] bg-[#fafcff] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#637189]">
             <div className="flex items-center gap-3">
-              <span>عرض 1 إلى 6 من أصل 6 سجل</span>
+              <span>
+                عرض {filteredMembers.length === 0 ? 0 : 1} إلى {filteredMembers.length} من أصل {totalMembersCount} سجل
+              </span>
               <span className="text-[#c7d5ea]">|</span>
-              <span>لكل صفحة: 10</span>
+              <span>لكل صفحة: {Math.max(10, filteredMembers.length)}</span>
             </div>
             <div className="flex items-center gap-1 font-mono">
               <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-[#00236f] text-white font-bold flex items-center justify-center">
                 1
-              </button>
-              <button className="w-7 h-7 rounded border border-[#d2e0f4] bg-white text-[#42526e] hover:bg-[#edf3ff] flex items-center justify-center cursor-pointer">
-                &gt;
               </button>
             </div>
           </div>
@@ -796,21 +731,33 @@ export default function OfficeMembersPage() {
                 </div>
                 <h3 className="text-xs font-bold text-[#141e30]">استهلاك حصص الذكاء الاصطناعي</h3>
               </div>
-              <span className="font-mono text-xs font-black text-[#141e30]">
-                1,840 / 3,000 <span className="text-[10px] text-[#718099] font-sans">استعلام</span>
+              <span className="font-mono text-xs font-bold text-[#141e30]">
+                {currentUser?.ai_usage_count || 0} / {currentUser?.ai_quota_limit || 50} <span className="text-[10px] text-[#718099] font-sans">استعلام</span>
               </span>
             </div>
 
             <p className="text-[11px] text-[#556480] leading-relaxed">
-              يتم توزيع الحصص الشهرية بالتساوي على المحامين الستة لدراسة لوائح الدعاوى وتحليل المستندات.
+              يتم توزيع الحصص الشهرية بالتساوي على المحامين لدراسة لوائح الدعاوى وتحليل المستندات.
             </p>
 
             <div className="space-y-1">
               <div className="w-full bg-[#edf3ff] h-2 rounded-full overflow-hidden">
-                <div className="bg-[#00236f] h-full rounded-full w-[61%]" />
+                <div
+                  className="bg-[#00236f] h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round(
+                        ((currentUser?.ai_usage_count || 0) / (currentUser?.ai_quota_limit || 50)) * 100
+                      )
+                    )}%`,
+                  }}
+                />
               </div>
               <div className="flex items-center justify-between text-[11px] pt-1">
-                <span className="text-[#657591]">متبقي 1,160 استعلام حتى نهاية الشهر</span>
+                <span className="text-[#657591]">
+                  متبقي {Math.max(0, (currentUser?.ai_quota_limit || 50) - (currentUser?.ai_usage_count || 0))} استعلام حتى نهاية الشهر
+                </span>
                 <button
                   onClick={() => toast({ title: 'طلب زيادة الحصة الشهرية للمكتب' })}
                   className="text-[#00236f] font-bold hover:underline cursor-pointer"
@@ -864,7 +811,7 @@ export default function OfficeMembersPage() {
                 <Zap className="w-3.5 h-3.5 text-[#fd8a42]" />
                 <span>دعوة سريعة</span>
               </div>
-              <h3 className="text-sm font-black text-white">هل انضم محامٍ جديد لمكتبك؟</h3>
+              <h3 className="text-sm font-semibold text-white">هل انضم محامٍ جديد لمكتبك؟</h3>
               <p className="text-[11px] text-white/80 leading-relaxed">
                 أرسل رابط تفعيل فوري مع تحديد الصلاحيات بضغطة زر دون الحاجة لإعداد يدوي معقد.
               </p>

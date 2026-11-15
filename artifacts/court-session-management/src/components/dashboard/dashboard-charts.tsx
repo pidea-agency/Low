@@ -206,7 +206,7 @@ export function SessionsStatusDonutChart({
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-black font-mono tabular-nums text-foreground">{totalCount}</span>
+              <span className="text-2xl font-bold font-mono tabular-nums text-foreground">{totalCount}</span>
               <span className="text-[10px] text-muted-foreground font-semibold">جلسة</span>
             </div>
           </>

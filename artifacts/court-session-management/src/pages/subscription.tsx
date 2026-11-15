@@ -209,7 +209,7 @@ export default function SubscriptionPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                 الاشتراك وحصص الاستهلاك
               </h1>
               <Badge variant="outline" className="text-xs font-bold">
@@ -260,7 +260,7 @@ export default function SubscriptionPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-base font-black text-foreground">
+                <span className="text-base font-semibold text-foreground">
                   {office.plan_tier === 'pro' ? 'باقة برو الاحترافية (Pro)' : 'باقة بلس المتقدمة (Plus)'}
                 </span>
                 <Badge className="bg-[#C9A449]/15 text-[#8F7026] dark:text-[#E2C372] border-[#C9A449]/30 text-[11px] font-bold">
@@ -310,7 +310,7 @@ export default function SubscriptionPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-foreground">
+                <span className="text-2xl font-bold font-mono text-foreground">
                   {office.ai_usage_count}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -343,7 +343,7 @@ export default function SubscriptionPage() {
             <CardContent className="space-y-3">
               <div className="flex items-baseline justify-between">
                 <div>
-                  <span className="text-2xl font-black text-foreground">
+                  <span className="text-2xl font-bold font-mono text-foreground">
                     {office.allocated_quota}
                   </span>
                   <span className="text-xs text-muted-foreground mr-1.5">مخصص</span>
@@ -376,7 +376,7 @@ export default function SubscriptionPage() {
       <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
         <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base font-black text-foreground">
+            <CardTitle className="text-base font-semibold text-foreground">
               سقوف وحصص استهلاك المحامين
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">

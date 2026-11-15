@@ -171,11 +171,11 @@ export function Sidebar({
         onClick={() => onNavigate?.()}
         data-testid={`nav-${collapsed ? 'collapsed-' : ''}${item.id}`}
         className={`
-          flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition-all duration-150
+          flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-all duration-150
           ${
             active
-              ? 'bg-[#00236f] text-white shadow-xs'
-              : 'text-[#444651] hover:bg-[#dce9ff]/60 hover:text-[#0b1c30]'
+              ? 'bg-[#00236f] text-white shadow-xs font-semibold'
+              : 'text-[#444651] hover:bg-[#dce9ff]/60 hover:text-[#0b1c30] font-medium'
           }
           ${collapsed ? 'w-10 h-10 min-h-0 justify-center p-0 mx-auto' : 'w-full'}
         `}
@@ -279,7 +279,7 @@ export function Sidebar({
             <div className="px-3 py-1 space-y-3">
               {/* Section 1: Main Section */}
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#757682] px-2 mb-1 block">
+                <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
                   القسم الرئيسي
                 </span>
                 <nav className="space-y-1">
@@ -293,7 +293,7 @@ export function Sidebar({
 
               {/* Section 2: Office Records */}
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#757682] px-2 mb-1 block">
+                <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
                   سجلات المكتب
                 </span>
                 <nav className="space-y-1">
@@ -307,7 +307,7 @@ export function Sidebar({
 
               {/* Section 3: Office Management */}
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#757682] px-2 mb-1 block">
+                <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
                   إدارة المكتب
                 </span>
                 <nav className="space-y-1">

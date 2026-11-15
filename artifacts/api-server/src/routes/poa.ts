@@ -90,8 +90,23 @@ router.post("/poa", async (req, res) => {
     return;
   }
 
-  const clientId = body.clientId || body.client_id || null;
+  let clientId = body.clientId || body.client_id || null;
   const caseId = body.caseId || body.case_id || null;
+  const clientName = (body.clientName || body.client_name || "").trim();
+
+  if (!clientId && clientName) {
+    try {
+      const clients = await postgresService.listClients(officeId);
+      let matchedClient = clients.find((c) => c.name.trim().toLowerCase() === clientName.toLowerCase());
+      if (!matchedClient) {
+        matchedClient = await postgresService.createClient({ name: clientName }, officeId);
+      }
+      clientId = matchedClient.id;
+    } catch (clientErr) {
+      logger.warn({ clientErr, clientName }, "Could not auto-create or find client for POA");
+    }
+  }
+
   if (!clientId) {
     res.status(400).json({ error: "يجب تحديد العميل المرتبط بالوكالة." });
     return;

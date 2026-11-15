@@ -65,7 +65,7 @@ export function AddMemberDialog({ isOpen, onClose, onSubmit }: AddMemberDialogPr
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" dir="rtl">
       <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95">
         <div className="p-6 border-b border-border">
-          <h2 className="text-lg font-black text-foreground">
+          <h2 className="text-lg font-semibold text-foreground">
             {createdInfo ? 'تم إنشاء الحساب وإرسال رابط التفعيل' : 'إضافة محامٍ / عضو جديد للمكتب'}
           </h2>
           <p className="text-xs text-muted-foreground mt-1">

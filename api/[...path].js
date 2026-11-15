@@ -854307,8 +854307,21 @@ router9.post("/poa", async (req, res) => {
     res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
-  const clientId = body.clientId || body.client_id || null;
+  let clientId = body.clientId || body.client_id || null;
   const caseId = body.caseId || body.case_id || null;
+  const clientName = (body.clientName || body.client_name || "").trim();
+  if (!clientId && clientName) {
+    try {
+      const clients = await listClients(officeId);
+      let matchedClient = clients.find((c) => c.name.trim().toLowerCase() === clientName.toLowerCase());
+      if (!matchedClient) {
+        matchedClient = await createClient2({ name: clientName }, officeId);
+      }
+      clientId = matchedClient.id;
+    } catch (clientErr) {
+      logger.warn({ clientErr, clientName }, "Could not auto-create or find client for POA");
+    }
+  }
   if (!clientId) {
     res.status(400).json({ error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
     return;
@@ -858236,8 +858249,21 @@ router20.get("/cases", async (req, res) => {
 router20.post("/cases", async (req, res) => {
   const officeId = getOfficeId10(req);
   const body = req.body || {};
-  const clientId = body.clientId || body.client_id;
+  let clientId = body.clientId || body.client_id;
   const caseNumber = body.caseNumber || body.case_number;
+  const clientName = (body.clientName || body.client_name || "").trim();
+  if (!clientId && clientName) {
+    try {
+      const clients = await listClients(officeId);
+      let matchedClient = clients.find((c) => c.name.trim().toLowerCase() === clientName.toLowerCase());
+      if (!matchedClient) {
+        matchedClient = await createClient2({ name: clientName }, officeId);
+      }
+      clientId = matchedClient.id;
+    } catch (clientErr) {
+      logger.warn({ clientErr, clientName }, "Could not auto-create or find client for case");
+    }
+  }
   if (!clientId || !String(clientId).trim()) {
     res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628 \u0644\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0642\u0636\u064A\u0629." });
     return;

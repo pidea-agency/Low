@@ -3,6 +3,7 @@ import {
   useListSessions,
   useDeleteSession,
   useUpdateSession,
+  useCreateSession,
   useGetCurrentUser,
   getListSessionsQueryKey,
   getGetDashboardStatsQueryKey,
@@ -111,105 +112,6 @@ type SessionItem = {
   [key: string]: unknown;
 };
 
-// ─── Reference Sample Sessions matching the design ────────────────────────────
-const REFERENCE_SESSIONS: SessionItem[] = [
-  {
-    id: 4821,
-    caseNumber: '4821/2026',
-    caseType: 'تجارية',
-    registrationNumber: '14460921',
-    court: 'محكمة بداية عمان / التجارية',
-    courtCircuit: 'الدائرة الحقوقية الثالثة',
-    isRemote: true,
-    plaintiff: 'أحمد خالد العتيبي',
-    defendant: 'شركة الأفق للاستثمار العقاري',
-    sessionDateHijri: '1448/05/12 هـ',
-    sessionDay: 'الأحد',
-    sessionTime: '10:30 ص',
-    hearingAt: '2026-05-12T07:30:00Z',
-    status: 'Finished',
-    reportStatus: 'تدوين التقرير',
-    assignedLawyer: 'أ. أحمد خالد العتيبي',
-    notes: 'جلسة مرافعة وتقديم مستندات',
-  },
-  {
-    id: 5910,
-    caseNumber: '5910/2026',
-    caseType: 'استئناف',
-    registrationNumber: '14470281',
-    court: 'محكمة الاستئناف بالرياض',
-    courtCircuit: 'الدائرة الاستئنافية التجارية الأولى - قاعة (1-B) مبنى 3',
-    isRemote: false,
-    plaintiff: 'مجموعة الميمن للتوريدات',
-    defendant: 'شركة الإعمار الوطنية',
-    sessionDateHijri: '1447/07/28 هـ',
-    sessionDay: 'اليوم',
-    sessionTime: '10:30 ص',
-    hearingAt: new Date().toISOString(),
-    status: 'Today',
-    reportStatus: 'بانتظار الانعقاد',
-    assignedLawyer: 'أ. سارة الهاشمي',
-    notes: 'مرافعة ختامية ونطق بالحكم',
-  },
-  {
-    id: 3104,
-    caseNumber: '3104/2026',
-    caseType: 'عمالية',
-    registrationNumber: '14470114',
-    court: 'المحكمة العمالية بالدمام',
-    courtCircuit: 'الدائرة العمالية الثانية',
-    isRemote: true,
-    plaintiff: 'د. خالد بن سلطان التميمي',
-    defendant: 'شركة المستشفى الدولي الطبي',
-    sessionDateHijri: '1447/07/29 هـ',
-    sessionDay: 'غداً',
-    sessionTime: '09:15 ص',
-    hearingAt: new Date(Date.now() + 86400000).toISOString(),
-    status: 'Upcoming',
-    reportStatus: 'معاينة المذكرة',
-    assignedLawyer: 'أ. محمود عز الدين',
-    notes: 'جلسة رد على الدفع والفسخ',
-  },
-  {
-    id: 1289,
-    caseNumber: '1289/2026',
-    caseType: 'عامة',
-    registrationNumber: '14467022',
-    court: 'المحكمة العامة بالرياض',
-    courtCircuit: 'دائرة الشركات والأموال الثالثة - قاعة 12',
-    isRemote: false,
-    plaintiff: 'ورثة الشيخ ناصر بن فهد العبدلي',
-    defendant: 'المصفي القضائي المعتمد',
-    sessionDateHijri: '1447/07/20 هـ',
-    sessionDay: 'الأربعاء',
-    sessionTime: '11:00 ص',
-    hearingAt: '2026-02-04T08:00:00Z',
-    status: 'Finished',
-    reportStatus: 'عرض الضبط القضائي',
-    assignedLawyer: 'أ. أحمد العتيبي',
-    notes: 'قسمة تركة وتصفية عقارية',
-  },
-  {
-    id: 7732,
-    caseNumber: '7732/2026',
-    caseType: 'ديوان المظالم',
-    registrationNumber: '14470584',
-    court: 'محكمة الاستئناف الإدارية',
-    courtCircuit: 'الدائرة الإدارية السادسة',
-    isRemote: true,
-    plaintiff: 'شركة الرواد للمقاولات العامة',
-    defendant: 'وزارة الشؤون البلدية والقروية والإسكان',
-    sessionDateHijri: '1447/08/15 هـ',
-    sessionDay: 'الخميس',
-    sessionTime: '12:00 م',
-    hearingAt: '2026-03-01T09:00:00Z',
-    status: 'Cancelled',
-    reportStatus: 'مطلوب مذكرة رد قبل 08/01',
-    assignedLawyer: 'أ. محمد الجزار',
-    notes: 'طعن بالقرار الإداري الصادر - مؤجلة لتبادل المذكرات',
-  },
-];
-
 export default function SessionsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -256,6 +158,24 @@ export default function SessionsPage() {
     },
   });
 
+  const createSessionMutation = useCreateSession({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: 'تمت إضافة الجلسة بنجاح', description: 'تم إدراج الجلسة في التقويم القضائي للمكتب' });
+        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+        setIsAddSessionOpen(false);
+      },
+      onError: (err: any) => {
+        toast({
+          title: 'فشل إضافة الجلسة',
+          description: err?.message || 'تعذر حفظ الجلسة في قاعدة البيانات.',
+          variant: 'destructive',
+        });
+      },
+    },
+  });
+
   // Dialogs
   const [deleteTarget, setDeleteTarget] = useState<SessionItem | null>(null);
   const [editTarget, setEditTarget] = useState<SessionItem | null>(null);
@@ -265,52 +185,71 @@ export default function SessionsPage() {
   // New session form state
   const [newSessionForm, setNewSessionForm] = useState({
     caseNumber: '',
-    court: 'محكمة بداية عمان / التجارية',
+    court: 'المحكمة التجارية بالرياض',
     courtCircuit: 'الدائرة الحقوقية الثالثة',
     plaintiff: '',
     defendant: '',
     hearingAt: new Date().toISOString().split('T')[0],
     sessionTime: '10:30',
     caseType: 'تجارية',
-    assignedLawyer: 'أ. أحمد خالد العتيبي',
+    assignedLawyer: '',
     isRemote: true,
   });
 
-  // Merged sessions list
+  // Real sessions list
   const allSessionsList = useMemo(() => {
     if (sessionsData && sessionsData.length > 0) {
-      return sessionsData.map((s, idx) => ({
+      return sessionsData.map((s) => ({
         id: s.id,
-        caseNumber: s.caseNumber || `482${idx}/2026`,
-        caseType: (s as any).caseType || (idx % 2 === 0 ? 'تجارية' : 'استئناف'),
-        registrationNumber: (s as any).registrationNumber || `144${6000 + idx}`,
-        court: s.court || 'محكمة بداية عمان / التجارية',
-        courtCircuit: s.courtCircuit || 'الدائرة الحقوقية الثالثة',
+        caseNumber: s.caseNumber || 'بدون رقم',
+        caseType: (s as any).caseType || 'دعوى قضائية',
+        registrationNumber: (s as any).registrationNumber || '—',
+        court: s.court || 'المحكمة المختصة',
+        courtCircuit: s.courtCircuit || 'الدائرة القضائية',
         isRemote: (s as any).isRemote ?? true,
-        plaintiff: s.plaintiff || 'أحمد خالد العتيبي',
-        defendant: s.defendant || 'شركة الأفق للاستثمار العقاري',
-        sessionDateHijri: s.sessionDateHijri || '1448/05/12 هـ',
-        sessionDay: s.sessionDay || 'الأحد',
-        sessionTime: s.sessionTime || '10:30 ص',
+        plaintiff: s.plaintiff || '—',
+        defendant: s.defendant || '—',
+        sessionDateHijri: s.sessionDateHijri || (s.hearingAt ? new Date(s.hearingAt).toLocaleDateString('ar-SA') : 'محدد قريباً'),
+        sessionDay: s.sessionDay || 'اليوم',
+        sessionTime: s.sessionTime || (s.hearingAt ? new Date(s.hearingAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '10:00 ص'),
         hearingAt: s.hearingAt,
         status: s.status,
         reportStatus: !s.notes ? 'تدوين التقرير' : s.status === 'Finished' ? 'عرض الضبط القضائي' : 'بانتظار الانعقاد',
-        assignedLawyer: (s as any).assignedLawyer || 'أ. أحمد خالد العتيبي',
-        notes: s.notes || 'جلسة مرافعة وتقديم مستندات',
+        assignedLawyer: (s as any).assignedLawyer || 'غير محدد',
+        notes: s.notes || 'جلسة قضائية مسجلة في النظام',
       }));
     }
-    return REFERENCE_SESSIONS;
+    return [];
   }, [sessionsData]);
 
   // Counts
   const counts = useMemo(() => {
     const total = allSessionsList.length;
-    const today = allSessionsList.filter((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Today').length || 2;
-    const upcoming = allSessionsList.filter((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Upcoming').length || 14;
-    const needsReport = allSessionsList.filter((s) => s.reportStatus === 'تدوين التقرير' || (!s.notes && s.status === 'Finished')).length || 3;
-    const finished = allSessionsList.filter((s) => s.status === 'Finished').length || 29;
-    const cancelled = allSessionsList.filter((s) => s.status === 'Cancelled').length || 2;
+    const today = allSessionsList.filter((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Today').length;
+    const upcoming = allSessionsList.filter((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Upcoming').length;
+    const needsReport = allSessionsList.filter((s) => s.reportStatus === 'تدوين التقرير' || (!s.notes && s.status === 'Finished')).length;
+    const finished = allSessionsList.filter((s) => s.status === 'Finished').length;
+    const cancelled = allSessionsList.filter((s) => s.status === 'Cancelled').length;
     return { total, today, upcoming, needsReport, finished, cancelled };
+  }, [allSessionsList]);
+
+  // Lawyer performance stats derived from real sessions
+  const lawyerPerformance = useMemo(() => {
+    const map = new Map<string, { total: number; needsReport: number; finished: number }>();
+    allSessionsList.forEach((s) => {
+      const lawyer = s.assignedLawyer || 'محامي المكتب';
+      const cur = map.get(lawyer) || { total: 0, needsReport: 0, finished: 0 };
+      cur.total++;
+      if (s.reportStatus === 'تدوين التقرير' || (!s.notes && s.status === 'Finished')) cur.needsReport++;
+      if (s.status === 'Finished') cur.finished++;
+      map.set(lawyer, cur);
+    });
+    return Array.from(map.entries()).map(([name, data]) => ({
+      name,
+      total: data.total,
+      needsReport: data.needsReport,
+      pct: data.total > 0 ? (((data.total - data.needsReport) / data.total) * 100).toFixed(1) : '100',
+    }));
   }, [allSessionsList]);
 
   // Filtered Sessions
@@ -370,8 +309,23 @@ export default function SessionsPage() {
   };
 
   const handleCreateSession = () => {
-    toast({ title: 'تمت إضافة الجلسة بنجاح', description: 'تم إدراج الجلسة في التقويم القضائي للمكتب' });
-    setIsAddSessionOpen(false);
+    if (!newSessionForm.caseNumber.trim() || !newSessionForm.court.trim()) {
+      toast({ title: 'يرجى إدخال رقم القضية والمحكمة', variant: 'destructive' });
+      return;
+    }
+    createSessionMutation.mutate({
+      data: {
+        caseNumber: newSessionForm.caseNumber.trim(),
+        court: newSessionForm.court.trim(),
+        courtCircuit: newSessionForm.courtCircuit.trim(),
+        plaintiff: newSessionForm.plaintiff.trim(),
+        defendant: newSessionForm.defendant.trim(),
+        caseSubject: newSessionForm.caseType,
+        sessionTime: newSessionForm.sessionTime,
+        sessionDateHijri: newSessionForm.hearingAt,
+        notes: 'جلسة مجدولة جديدة',
+      },
+    });
   };
 
   return (
@@ -389,7 +343,7 @@ export default function SessionsPage() {
           </div>
 
           <div className="flex items-center gap-2.5 mt-1">
-            <h1 className="text-2xl font-bold text-[#00236f] tracking-tight">
+            <h1 className="text-2xl font-bold text-[#00236f]">
               الجلسات والمواعيد القضائية
             </h1>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00236f]">
@@ -469,8 +423,8 @@ export default function SessionsPage() {
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg text-xs">
-            <span className="text-[#444651]">أقرب جلسة 10:30 ص</span>
-            <span className="font-semibold text-[#00236f]">جاهزية 100%</span>
+            <span className="text-[#444651]">{counts.today > 0 ? 'جلسات نشطة اليوم' : 'لا توجد جلسات اليوم'}</span>
+            <span className="font-semibold text-[#00236f]">{counts.today > 0 ? 'متابعة مباشرة' : 'جاهزية كاملة'}</span>
           </div>
         </div>
 
@@ -489,7 +443,7 @@ export default function SessionsPage() {
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg text-xs">
-            <span className="text-[#444651]">9 تجارية • 5 عامة واستئناف</span>
+            <span className="text-[#444651]">{counts.upcoming} جلسة مجدولة قادمة</span>
             <span className="font-semibold text-[#00236f]">موزعة بالكامل</span>
           </div>
         </div>
@@ -520,8 +474,8 @@ export default function SessionsPage() {
             <div className="flex flex-col text-right">
               <span className="text-xs font-medium text-[#757682]">إجمالي الجلسات المسجلة شهرياً</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#0b1c30]">48</span>
-                <span className="text-xs text-[#757682]">جلسة مكتملة</span>
+                <span className="text-2xl font-bold text-[#0b1c30]">{counts.total}</span>
+                <span className="text-xs text-[#757682]">جلسة مسجلة</span>
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
@@ -530,45 +484,50 @@ export default function SessionsPage() {
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg text-xs">
             <span className="text-[#444651]">نسبة الحضور والترافع</span>
-            <span className="font-bold text-[#00236f]">98.4%</span>
+            <span className="font-bold text-[#00236f]">{counts.total > 0 ? ((counts.finished / counts.total) * 100).toFixed(1) : '100'}%</span>
           </div>
         </div>
       </div>
 
       {/* ── Urgent Judicial Hearing Alert Banner ── */}
-      <div className="bg-[#ffdbca]/40 rounded-xl p-4 sm:p-5 border border-[#fd8a42]/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-[#fd8a42] text-white flex items-center justify-center shrink-0 shadow-xs">
-            <span className="material-symbols-outlined text-xl">notifications_active</span>
-          </div>
-          <div className="flex flex-col text-right">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#9b4500] text-white">تنبيه انعقاد وشيك:</span>
-              <span className="text-xs font-bold text-[#0b1c30]">المحكمة التجارية بالرياض (الدائرة 4)</span>
-              <span className="text-xs font-bold text-[#00236f]">القضية #4821/2026</span>
+      {counts.today > 0 && allSessionsList.find((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Today') && (() => {
+        const urgentSession = allSessionsList.find((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Today')!;
+        return (
+          <div className="bg-[#ffdbca]/40 rounded-xl p-4 sm:p-5 border border-[#fd8a42]/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-[#fd8a42] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <span className="material-symbols-outlined text-xl">notifications_active</span>
+              </div>
+              <div className="flex flex-col text-right">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#9b4500] text-white">تنبيه انعقاد وشيك:</span>
+                  <span className="text-xs font-bold text-[#0b1c30]">{urgentSession.court} ({urgentSession.courtCircuit})</span>
+                  <span className="text-xs font-bold text-[#00236f]">القضية #{urgentSession.caseNumber}</span>
+                </div>
+                <p className="text-xs text-[#444651] font-medium mt-1">
+                  جلسة مرافعة مجدولة اليوم الساعة {urgentSession.sessionTime} - المحامي المكلف: <span className="font-bold text-[#0b1c30]">{urgentSession.assignedLawyer}</span> • الموكل: {urgentSession.plaintiff}.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-[#444651] font-medium mt-1">
-              جلسة مرافعة تجارية عن بعد تبدأ بعد ساعة اليوم الساعة 09:30 صباحاً - المحامي المكلف: <span className="font-bold text-[#0b1c30]">أ. أحمد خالد العتيبي</span> • المذكرة الدفاعية معتمدة ومرفوعة عبر ناجز.
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => window.open('https://najiz.sa', '_blank')}
-            className="px-4 h-9 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-sm">laptop_mac</span>
-            <span>دخول الجلسة (ناجز)</span>
-          </button>
-          <Link href="/chat">
-            <button className="px-3.5 h-9 rounded-lg bg-white hover:bg-[#eff4ff] text-[#00236f] text-xs font-semibold border border-[#dce9ff] flex items-center gap-1.5 transition-colors cursor-pointer">
-              <span className="material-symbols-outlined text-sm">description</span>
-              <span>مذكرة الجلسة</span>
-            </button>
-          </Link>
-        </div>
-      </div>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                onClick={() => window.open('https://najiz.sa', '_blank')}
+                className="px-4 h-9 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">laptop_mac</span>
+                <span>دخول الجلسة (ناجز)</span>
+              </button>
+              <Link href="/chat">
+                <button className="px-3.5 h-9 rounded-lg bg-white hover:bg-[#eff4ff] text-[#00236f] text-xs font-semibold border border-[#dce9ff] flex items-center gap-1.5 transition-colors cursor-pointer">
+                  <span className="material-symbols-outlined text-sm">description</span>
+                  <span>مذكرة الجلسة</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Status Tabs Bar ── */}
       <div className="bg-white rounded-xl shadow-sm p-4 border border-[#e5eeff] space-y-4">
@@ -727,7 +686,25 @@ export default function SessionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#eff4ff]">
-              {paginatedSessions.map((s, idx) => {
+              {paginatedSessions.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-[#757682]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-4xl text-[#757682]">event_busy</span>
+                      <p className="text-sm font-semibold text-[#0b1c30]">لا توجد جلسات مسجلة تطابق البحث</p>
+                      <p className="text-xs text-[#757682]">يمكنك إضافة جلسة قضائية جديدة أو إعادة ضبط الفلاتر</p>
+                      <button
+                        onClick={() => setIsAddSessionOpen(true)}
+                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00236f] text-white text-xs font-semibold cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>إضافة جلسة جديدة</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedSessions.map((s, idx) => {
                 const eff = deriveEffectiveStatus(s.status, s.hearingAt);
 
                 return (
@@ -925,7 +902,7 @@ export default function SessionsPage() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>
@@ -1075,71 +1052,40 @@ export default function SessionsPage() {
             </div>
 
             <div className="space-y-4 pt-4 text-xs">
-              {/* Lawyer 1 */}
-              <div className="p-3.5 bg-[#eff4ff] rounded-xl flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-[#00236f] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                      أع
-                    </div>
-                    <div className="flex flex-col text-right">
-                      <span className="font-bold text-[#0b1c30]">أ. أحمد خالد العتيبي</span>
-                      <span className="text-[11px] text-[#757682]">18 جلسة ترافع • 1 يتطلب تقرير</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-[#00236f] text-sm">94.4%</span>
-                    <span className="text-[10px] text-[#757682]">معدل الإنجاز القضائي</span>
-                  </div>
+              {lawyerPerformance.length === 0 ? (
+                <div className="py-8 text-center text-[#757682]">
+                  لا توجد جلسات مسجلة للمحامين حالياً
                 </div>
-                <div className="w-full bg-white h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#00236f] h-full rounded-full" style={{ width: '94.4%' }}></div>
-                </div>
-              </div>
-
-              {/* Lawyer 2 */}
-              <div className="p-3.5 bg-[#eff4ff] rounded-xl flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-[#9b4500] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                      سه
+              ) : (
+                lawyerPerformance.map((lp, idx) => (
+                  <div key={lp.name} className="p-3.5 bg-[#eff4ff] rounded-xl flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shrink-0 ${
+                            idx === 0 ? 'bg-[#00236f]' : idx === 1 ? 'bg-[#9b4500]' : 'bg-[#475569]'
+                          }`}
+                        >
+                          {lp.name.slice(0, 2)}
+                        </div>
+                        <div className="flex flex-col text-right">
+                          <span className="font-bold text-[#0b1c30]">{lp.name}</span>
+                          <span className="text-[11px] text-[#757682]">
+                            {lp.total} جلسة ترافع • {lp.needsReport > 0 ? `${lp.needsReport} يتطلب تقرير` : 'مكتملة بالكامل'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="font-bold text-[#00236f] text-sm">{lp.pct}%</span>
+                        <span className="text-[10px] text-[#757682]">معدل الإنجاز القضائي</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col text-right">
-                      <span className="font-bold text-[#0b1c30]">أ. سارة الهاشمي</span>
-                      <span className="text-[11px] text-[#757682]">15 جلسة ترافع • مكتملة بالكامل</span>
+                    <div className="w-full bg-white h-2 rounded-full overflow-hidden">
+                      <div className="bg-[#00236f] h-full rounded-full" style={{ width: `${lp.pct}%` }}></div>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-emerald-700 text-sm">100%</span>
-                    <span className="text-[10px] text-[#757682]">معدل الإنجاز القضائي</span>
-                  </div>
-                </div>
-                <div className="w-full bg-white h-2 rounded-full overflow-hidden">
-                  <div className="bg-emerald-600 h-full rounded-full" style={{ width: '100%' }}></div>
-                </div>
-              </div>
-
-              {/* Lawyer 3 */}
-              <div className="p-3.5 bg-[#eff4ff] rounded-xl flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-[#475569] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                      عز
-                    </div>
-                    <div className="flex flex-col text-right">
-                      <span className="font-bold text-[#0b1c30]">أ. محمود عز الدين</span>
-                      <span className="text-[11px] text-[#757682]">15 جلسة ترافع • 2 يتطلب تقرير</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-[#9b4500] text-sm">86.6%</span>
-                    <span className="text-[10px] text-[#757682]">معدل الإنجاز القضائي</span>
-                  </div>
-                </div>
-                <div className="w-full bg-white h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#fd8a42] h-full rounded-full" style={{ width: '86.6%' }}></div>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </div>
         </div>

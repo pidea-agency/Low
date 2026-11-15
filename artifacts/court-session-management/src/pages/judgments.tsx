@@ -78,83 +78,6 @@ export interface JudgmentItem {
   pdfUrl?: string;
 }
 
-// Preset realistic Saudi Judgments matching the mockup
-const MOCK_JUDGMENTS: JudgmentItem[] = [
-  {
-    id: 1,
-    caseNumber: '4821/2026',
-    judgmentNumber: '123123',
-    court: 'محكمة بداية عمان / المحكمة التجارية بالرياض',
-    circuit: 'الدائرة الحقوقية الثالثة',
-    plaintiff: 'أحمد خالد العتيبي',
-    defendant: 'شركة الأفق للاستثمار',
-    assignedLawyer: 'أ. عبد القادر المنصوري',
-    judgmentDateHijri: '1446/05/18هـ',
-    judgmentType: 'final',
-    judgmentTypeLabel: 'حكم نهائي',
-    enforceabilityForm: 'الصيغة: تنفيذية قطعية',
-    enforceabilityStatus: 'مكتسب الصفة التنفيذية - جاهز للتنفيذ',
-    summary:
-      'إلزام المدعى عليها بدفع مبلغ 450,000 ريال لصالح الموكل مع تحميلها كامل أتعاب الخبرة والمحاماة.',
-    attachmentsCount: 4,
-  },
-  {
-    id: 2,
-    caseNumber: '3209/2026',
-    judgmentNumber: '994012',
-    court: 'المحكمة العامة بالرياض',
-    circuit: 'الدائرة الحقوقية السادسة',
-    plaintiff: 'مؤسسة البناء الحديث للمقاولات',
-    defendant: 'شركة التطوير الإنشائي',
-    assignedLawyer: 'أ. أحمد العتيبي',
-    judgmentDateHijri: '1446/05/29هـ',
-    judgmentType: 'urgent_appeal',
-    judgmentTypeLabel: 'حكم ابتدائي (مستأنف)',
-    enforceabilityForm: 'متبقي 12 يوماً على مهلة الاعتراض',
-    enforceabilityStatus: 'قيد الاستئناف - إعداد لائحة الاعتراض',
-    summary:
-      'رد دعوى المدعى عليها الفرعية وإلزامها بسداد مستخلص ختامي قدره 180,000 ريال.',
-    appealDeadlineDays: 12,
-    attachmentsCount: 2,
-  },
-  {
-    id: 3,
-    caseNumber: '1140/2026',
-    judgmentNumber: '554019',
-    court: 'محكمة التنفيذ بالدمام',
-    circuit: 'دائرة التنفيذ الثانية',
-    plaintiff: 'مجموعة المعمار الدولية',
-    defendant: 'شركة المقاولون العرب المتحدة',
-    assignedLawyer: 'أ. سلمان الدوسري',
-    judgmentDateHijri: '1446/04/10هـ',
-    judgmentType: 'enforcement',
-    judgmentTypeLabel: 'قرار تنفيذ (م 46)',
-    enforceabilityForm: 'الصيغة: قرار إفصاح وحجز تنفيذي',
-    enforceabilityStatus: 'مفعل لدى منصة إيفاء والتنفيذ الجبري',
-    summary:
-      'إلزام المنفذ ضده بدفع مبلغ 1,250,000 ريال أو تفعيل الإجراءات التنفيذية والحجز البنكي.',
-    attachmentsCount: 3,
-  },
-  {
-    id: 4,
-    caseNumber: '9120/2026',
-    judgmentNumber: '882310',
-    court: 'محكمة الاستئناف - جدة',
-    circuit: 'الدائرة التجارية 2',
-    plaintiff: 'أحمد خالد بن سلطان',
-    defendant: 'ورثة إبراهيم القاسم',
-    assignedLawyer: 'أ. سارة الهاشمي',
-    judgmentDateHijri: '1446/03/22هـ',
-    judgmentType: 'preliminary',
-    judgmentTypeLabel: 'حكم ابتدائي',
-    enforceabilityForm: 'الصيغة: غير قطعي - تم قيد الاستئناف',
-    enforceabilityStatus: 'قيد تدقيق اللائحة الاعتراضية',
-    summary:
-      'تثبيت ملكية الموكل في حصص الشراكة المقدرة بـ 1,800,000 ريال ورفض دعوى البطلان.',
-    attachmentsCount: 5,
-  },
-];
-
 export default function JudgmentsPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
@@ -208,36 +131,60 @@ export default function JudgmentsPage() {
     loadBackendData();
   }, [loadBackendData]);
 
-  // Merge backend records with mock records
+  // Map real backend judgments
   const allJudgments: JudgmentItem[] = useMemo(() => {
     if (!backendRecords || backendRecords.length === 0) {
-      return MOCK_JUDGMENTS;
+      return [];
     }
-    const mapped: JudgmentItem[] = backendRecords.map((b, idx) => ({
-      id: b.id || `judge-${idx}`,
-      caseNumber: b.caseNumber || `${new Date().getFullYear()}/${1000 + idx}`,
-      judgmentNumber: b.judgmentNumber || `${120000 + idx}`,
-      court: b.court || 'المحكمة التجارية بالرياض',
-      circuit: b.circuit || 'الدائرة الحقوقية الأولى',
-      plaintiff: b.plaintiff || 'الموكل الرئيسي',
-      defendant: b.defendant || 'المدعى عليه',
-      assignedLawyer: b.assignedLawyer || 'أ. عبد القادر المنصوري',
-      assignedLawyerId: b.assignedLawyerId || null,
-      judgmentDateHijri: b.judgmentDate || '1446/05/18هـ',
-      judgmentType: b.isFavorable === 'ابتدائي' ? 'preliminary' : 'final',
-      judgmentTypeLabel: b.isFavorable === 'ابتدائي' ? 'حكم ابتدائي' : 'حكم نهائي',
-      enforceabilityForm:
-        b.isFavorable === 'ابتدائي' ? 'متبقي مهلة الاعتراض' : 'الصيغة: تنفيذية قطعية',
-      enforceabilityStatus:
-        b.isFavorable === 'ابتدائي' ? 'قيد الاستئناف' : 'مكتسب الصفة التنفيذية - جاهز للتنفيذ',
-      summary: b.summary || 'منطوق الحكم الصادر في الدعوى المنظورة.',
-      attachmentsCount: 2,
-    }));
+    return backendRecords.map((b, idx) => {
+      const jType = b.judgmentType || (b.isFavorable === 'ابتدائي' ? 'preliminary' : b.isFavorable === 'تنفيذي' ? 'enforcement' : 'final');
+      let typeLabel = 'حكم نهائي';
+      let enforceabilityForm = 'الصيغة: تنفيذية قطعية';
+      let enforceabilityStatus = 'مكتسب الصفة التنفيذية - جاهز للتنفيذ';
 
-    const existingNums = new Set(mapped.map((m) => m.judgmentNumber));
-    const uniqueMocks = MOCK_JUDGMENTS.filter((m) => !existingNums.has(m.judgmentNumber));
-    return [...mapped, ...uniqueMocks];
+      if (jType === 'preliminary') {
+        typeLabel = 'حكم ابتدائي';
+        enforceabilityForm = 'متبقي مهلة الاعتراض';
+        enforceabilityStatus = 'قيد تدقيق اللائحة الاعتراضية';
+      } else if (jType === 'enforcement') {
+        typeLabel = 'قرار تنفيذ (م 46)';
+        enforceabilityForm = 'الصيغة: قرار إفصاح وحجز تنفيذي';
+        enforceabilityStatus = 'مفعل لدى منصة إيفاء والتنفيذ الجبري';
+      } else if (jType === 'urgent_appeal') {
+        typeLabel = 'حكم ابتدائي (مستأنف)';
+        enforceabilityForm = b.appealDeadlineDays ? `متبقي ${b.appealDeadlineDays} يوماً على مهلة الاعتراض` : 'متبقي مهلة الاعتراض';
+        enforceabilityStatus = 'قيد الاستئناف - إعداد لائحة الاعتراض';
+      }
+
+      return {
+        id: b.id || `judge-${idx}`,
+        caseNumber: b.caseNumber || b.case_number || '—',
+        judgmentNumber: b.judgmentNumber || b.judgment_number || '—',
+        court: b.court || 'المحكمة المختصة',
+        circuit: b.circuit || 'الدائرة القضائية',
+        plaintiff: b.plaintiff || '—',
+        defendant: b.defendant || '—',
+        assignedLawyer: b.assignedLawyer || b.assigned_lawyer_name || 'غير محدد',
+        assignedLawyerId: b.assignedLawyerId || null,
+        judgmentDateHijri: b.judgmentDate || b.judgment_date || '—',
+        judgmentType: jType,
+        judgmentTypeLabel: typeLabel,
+        enforceabilityForm,
+        enforceabilityStatus,
+        summary: b.summary || 'منطوق الحكم الصادر في الدعوى.',
+        attachmentsCount: b.attachmentsCount || 0,
+        appealDeadlineDays: b.appealDeadlineDays,
+      };
+    });
   }, [backendRecords]);
+
+  // Dynamic KPI Counts
+  const totalJudgmentsCount = allJudgments.length;
+  const finalJudgmentsCount = allJudgments.filter((j) => j.judgmentType === 'final').length;
+  const preliminaryJudgmentsCount = allJudgments.filter((j) => j.judgmentType === 'preliminary').length;
+  const enforcementJudgmentsCount = allJudgments.filter((j) => j.judgmentType === 'enforcement').length;
+  const urgentAppealCount = allJudgments.filter((j) => j.judgmentType === 'urgent_appeal' || (j.appealDeadlineDays !== undefined && j.appealDeadlineDays > 0)).length;
+  const winRate = totalJudgmentsCount > 0 ? Math.round((finalJudgmentsCount / totalJudgmentsCount) * 100) : 0;
 
   // Filtered Judgments
   const filteredJudgments = useMemo(() => {
@@ -268,17 +215,17 @@ export default function JudgmentsPage() {
   // Open Create Modal
   const handleOpenCreate = () => {
     setEditingRecord(null);
-    setCaseNumber(`4821/${new Date().getFullYear()}`);
-    setJudgmentNumber(`${Math.floor(100000 + Math.random() * 900000)}`);
-    setCourt('المحكمة التجارية بالرياض');
-    setCircuit('الدائرة الحقوقية الثالثة');
+    setCaseNumber('');
+    setJudgmentNumber('');
+    setCourt('');
+    setCircuit('');
     setPlaintiff('');
     setDefendant('');
-    setAssignedLawyer('أ. عبد القادر المنصوري');
+    setAssignedLawyer('');
     setAssignedLawyerId(null);
-    setJudgmentDateHijri('1446/05/18هـ');
+    setJudgmentDateHijri('');
     setJudgmentType('final');
-    setSummary('إلزام المدعى عليها بدفع المستحقات المالية محل الدعوى وأتعاب المحاماة.');
+    setSummary('');
     setIsOpen(true);
   };
 
@@ -312,9 +259,9 @@ export default function JudgmentsPage() {
         caseNumber: caseNumber.trim(),
         judgmentNumber: judgmentNumber.trim(),
         court: court.trim(),
-        plaintiff: plaintiff.trim() || 'الموكل الرئيسي',
-        defendant: defendant.trim() || 'المدعى عليه',
-        assignedLawyer: assignedLawyer.trim() || 'أ. عبد القادر المنصوري',
+        plaintiff: plaintiff.trim(),
+        defendant: defendant.trim(),
+        assignedLawyer: assignedLawyer.trim(),
         assignedLawyerId: assignedLawyerId || null,
         judgmentDate: judgmentDateHijri.trim(),
         summary: summary.trim(),
@@ -339,18 +286,19 @@ export default function JudgmentsPage() {
         loadBackendData();
         setIsOpen(false);
       } else {
+        const err = await res.json().catch(() => ({}));
         toast({
-          title: 'تم تسجيل صك الحكم في النظام',
-          description: `صك رقم ${judgmentNumber}.`,
+          title: 'فشل حفظ الحكم القضائي',
+          description: err.error || 'تعذر حفظ الحكم في قاعدة البيانات.',
+          variant: 'destructive',
         });
-        setIsOpen(false);
       }
     } catch {
       toast({
-        title: 'تم تسجيل صك الحكم',
-        description: `صك رقم ${judgmentNumber}.`,
+        title: 'خطأ في الاتصال بالخادم',
+        description: 'تعذر حفظ صك الحكم. يرجى التحقق من اتصال الشبكة.',
+        variant: 'destructive',
       });
-      setIsOpen(false);
     } finally {
       setIsSaving(false);
     }
@@ -360,14 +308,27 @@ export default function JudgmentsPage() {
   const handleDeleteJudgment = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/judgments/${deleteTarget.id}`, {
+      const res = await fetch(`/api/judgments/${deleteTarget.id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
-      toast({ title: 'تم حذف صك الحكم بنجاح' });
-      loadBackendData();
+      if (res.ok) {
+        toast({ title: 'تم حذف صك الحكم بنجاح' });
+        loadBackendData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل حذف الحكم',
+          description: err.error || 'تعذر حذف الحكم من قاعدة البيانات.',
+          variant: 'destructive',
+        });
+      }
     } catch {
-      toast({ title: 'تم حذف صك الحكم' });
+      toast({
+        title: 'خطأ في الاتصال',
+        description: 'تعذر تنفيذ عملية الحذف.',
+        variant: 'destructive',
+      });
     } finally {
       setDeleteTarget(null);
     }
@@ -390,7 +351,7 @@ export default function JudgmentsPage() {
 
             <div className="flex items-center gap-2.5">
               <span className="w-1.5 h-6 rounded-full bg-[#00236f]" />
-              <h1 className="text-2xl font-black text-[#131b2e] tracking-tight">
+              <h1 className="text-2xl font-bold text-[#131b2e]">
                 الأحكام القضائية
               </h1>
             </div>
@@ -459,7 +420,7 @@ export default function JudgmentsPage() {
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">إجمالي الأحكام</span>
-                <div className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">18</div>
+                <div className="text-3xl font-bold text-[#131c2d] font-mono">{totalJudgmentsCount}</div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-[#fef5ec] text-[#b35600] flex items-center justify-center">
                 <Gavel className="w-5 h-5" />
@@ -475,14 +436,14 @@ export default function JudgmentsPage() {
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">أحكام نهائية (مكتسبة القطعية)</span>
-                <div className="text-3xl font-black text-[#131c2d] tracking-tight font-mono">12</div>
+                <div className="text-3xl font-bold text-[#131c2d] font-mono">{finalJudgmentsCount}</div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
             </div>
-            <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-emerald-700 font-bold">
-              نسبة نجاح 91% لصالح الموكلين
+            <div className="mt-3 pt-2 border-t border-[#f1f5fd] text-[11px] text-emerald-700 font-semibold">
+              نسبة نجاح {winRate}% لصالح الموكلين
             </div>
           </div>
 
@@ -491,7 +452,7 @@ export default function JudgmentsPage() {
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">أحكام ابتدائية (قيد الاستئناف)</span>
-                <div className="text-3xl font-black text-[#00236f] tracking-tight font-mono">4</div>
+                <div className="text-3xl font-bold text-[#00236f] font-mono">{preliminaryJudgmentsCount}</div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-[#ebf3ff] text-[#00236f] flex items-center justify-center">
                 <FileText className="w-5 h-5" />
@@ -507,7 +468,7 @@ export default function JudgmentsPage() {
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[#647188]">قرارات تنفيذ صادرة</span>
-                <div className="text-3xl font-black text-purple-700 tracking-tight font-mono">2</div>
+                <div className="text-3xl font-bold text-purple-700 font-mono">{enforcementJudgmentsCount}</div>
               </div>
               <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
                 <Scale className="w-5 h-5" />
@@ -531,7 +492,7 @@ export default function JudgmentsPage() {
                   : 'bg-white text-[#55637d] hover:bg-[#edf3ff] border border-[#dce7f6]'
               }`}
             >
-              الكل 18
+              الكل {totalJudgmentsCount}
             </button>
 
             <button
@@ -544,7 +505,7 @@ export default function JudgmentsPage() {
             >
               <span>أحكام نهائية</span>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                12
+                {finalJudgmentsCount}
               </span>
             </button>
 
@@ -558,7 +519,7 @@ export default function JudgmentsPage() {
             >
               <span>أحكام ابتدائية</span>
               <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                4
+                {preliminaryJudgmentsCount}
               </span>
             </button>
 
@@ -572,7 +533,7 @@ export default function JudgmentsPage() {
             >
               <span>أوامر تنفيذ</span>
               <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                2
+                {enforcementJudgmentsCount}
               </span>
             </button>
 
@@ -587,7 +548,7 @@ export default function JudgmentsPage() {
               <span className="w-2 h-2 rounded-full bg-[#fd8a42]" />
               <span>تتطلب استئنافاً عاجلاً</span>
               <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                1
+                {urgentAppealCount}
               </span>
             </button>
           </div>
@@ -606,7 +567,23 @@ export default function JudgmentsPage() {
 
         {/* ── Judgments Cards List ── */}
         <div className="space-y-4 pt-1">
-          {filteredJudgments.map((item) => {
+          {filteredJudgments.length === 0 ? (
+            <div className="bg-white rounded-xl border border-[#dbe6f8] p-12 text-center shadow-2xs">
+              <Gavel className="w-12 h-12 text-[#9bb3d8] mx-auto mb-3" />
+              <h3 className="text-base font-bold text-[#141e30] mb-1">لا توجد أحكام قضائية مسجلة</h3>
+              <p className="text-xs text-[#637189] max-w-sm mx-auto mb-5">
+                لم يتم العثور على أي صكوك أحكام مطابقة للتصفية، أو لم يتم توثيق أحكام قضائية بعد.
+              </p>
+              <Button
+                onClick={handleOpenCreate}
+                className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg"
+              >
+                <Plus className="w-4 h-4 ml-1.5" />
+                إضافة صك حكم جديد
+              </Button>
+            </div>
+          ) : (
+            filteredJudgments.map((item) => {
             const isFinal = item.judgmentType === 'final';
             const isUrgent = item.judgmentType === 'urgent_appeal';
 
@@ -661,7 +638,7 @@ export default function JudgmentsPage() {
                   <div className="lg:col-span-3 bg-[#fafcff] border border-[#e2ecfa] rounded-xl p-4 text-center space-y-1">
                     <span className="text-[11px] text-[#697994] font-medium block">رقم الصك القضائي</span>
                     <div className="flex items-center justify-center gap-2">
-                      <div className="text-2xl font-black text-[#131c2d] tracking-wider font-mono">
+                      <div className="text-2xl font-bold text-[#131c2d] tracking-wider font-mono">
                         {item.judgmentNumber}
                       </div>
                       <Gavel className="w-5 h-5 text-amber-600" />
@@ -807,7 +784,8 @@ export default function JudgmentsPage() {
                 </div>
               </div>
             );
-          })}
+          })
+        )}
         </div>
       </div>
 

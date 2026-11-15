@@ -162,96 +162,12 @@ const emptyForm = (): Omit<Task, 'id' | 'createdAt'> => ({
   assignedLawyerId: null,
 });
 
-// ─── Default Sample Tasks matching the Mockup ─────────────────────────────────
-const REFERENCE_TASKS: Task[] = [
-  {
-    id: 8812,
-    taskCode: 'TSK-#8812',
-    title: 'إعداد وإيداع اللائحة الاعتراضية على الحكم الابتدائي',
-    procedureType: 'استئناف ميعادي',
-    caseNumber: '#4821/2026 (تجارية)',
-    court: 'المحكمة التجارية بالرياض - الدائرة 4',
-    parties: 'شركة الأفق للمقاولات ضد درع التطوير',
-    assignee: 'أ. أحمد العتيبي',
-    dueDate: '2026-02-15',
-    priority: 'عاجلة',
-    status: 'قيد التنفيذ',
-    statusText: 'قيد المراجعة والتدقيق',
-    notes: 'إيداع المذكرة قبل انتهاء المهلة النظامية للاستئناف',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 8815,
-    taskCode: 'TSK-#8815',
-    title: 'سداد أتعاب الخبرة المحاسبية وإشعار الدائرة القضائية',
-    procedureType: 'سداد مالي / خبرة',
-    caseNumber: '#9120/2026 (عمالية)',
-    court: 'المحكمة العمالية بمكة - الدائرة 2',
-    parties: 'مؤسسة البناء الحديث ضد 14 عاملاً',
-    assignee: 'أ. سارة الهاشمي',
-    dueDate: '2026-02-16',
-    priority: 'عاجلة',
-    status: 'معلقة',
-    statusText: 'بانتظار سداد الموكل',
-    notes: 'تأكيد إشعار السداد ورفعه على منصة ناجز',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 8819,
-    taskCode: 'TSK-#8819',
-    title: 'استخراج صك حصر الورثة وتوثيق وكالة الترافع إلكترونياً',
-    procedureType: 'إنهاءات وأحوال',
-    caseNumber: '#1140/2026 (أحوال)',
-    court: 'محكمة الأحوال الشخصية بجدة',
-    parties: 'تركة المرحوم عبد الرحمن السالم',
-    assignee: 'أ. محمد الجزار',
-    dueDate: '2026-02-18',
-    priority: 'عادية',
-    status: 'قيد التنفيذ',
-    statusText: 'جاهز للإيداع الموثق',
-    notes: 'مطابقة هويات الورثة وتحديث صك الحصر',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 8822,
-    taskCode: 'TSK-#8822',
-    title: 'حضور معاينة موقع العقار المتنازع عليه مع الخبير المساحي',
-    procedureType: 'معاينة قضائية ميدانية',
-    caseNumber: '#7652/2026 (عقارية)',
-    court: 'المحكمة العامة بالدمام - الدائرة 8',
-    parties: 'منازعة ملكية وتداخل حدود',
-    assignee: 'أ. أحمد العتيبي',
-    dueDate: '2026-02-19',
-    priority: 'عاجلة',
-    status: 'مؤجلة',
-    statusText: 'تنسيق الموعد الميداني',
-    notes: 'التنسيق مع مكتب الخبير الهندسي والمساحي',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 8828,
-    taskCode: 'TSK-#8828',
-    title: 'صياغة المذكرة الجوابية الختامية وطلب قفل باب المرافعة',
-    procedureType: 'مذكرة رد موضوعية',
-    caseNumber: '#3308/2026 (إدارية)',
-    court: 'ديوان المظالم - المحكمة الإدارية',
-    parties: 'دعوى تعويض وإلغاء قرار سلبي',
-    assignee: 'أ. سارة الهاشمي',
-    dueDate: '2026-02-22',
-    priority: 'عادية',
-    status: 'قيد التنفيذ',
-    statusText: 'قيد البحث الفقهي',
-    notes: 'مراجعة أسانيد ديوان المظالم والأحكام السابقة',
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export default function TasksPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
-  const [tasks, setTasks] = useState<Task[]>(REFERENCE_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sendingWhatsappId, setSendingWhatsappId] = useState<number | null>(null);
@@ -283,28 +199,23 @@ export default function TasksPage() {
       const res = await fetch(url, { credentials: 'include' });
       if (res.ok) {
         const data: Task[] = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          // Merge with mockup fields if missing
+        if (Array.isArray(data)) {
           const enriched = data.map((t, idx) => ({
             ...t,
-            taskCode: t.taskCode || `TSK-#${8810 + idx}`,
-            procedureType: t.procedureType || (idx % 2 === 0 ? 'استئناف ميعادي' : 'مذكرة رد موضوعية'),
-            caseNumber: t.caseNumber || `#${4820 + idx}/2026 (تجارية)`,
-            court: t.court || 'المحكمة التجارية بالرياض - الدائرة 4',
-            parties: t.parties || 'شركة الأفق ضد درع التطوير',
+            taskCode: t.taskCode || `TSK-#${t.id || 8810 + idx}`,
+            procedureType: t.procedureType || 'إجراء قضائي',
+            caseNumber: t.caseNumber || '—',
+            court: t.court || 'المحكمة المختصة',
+            parties: t.parties || '—',
             statusText: t.status === 'مكتملة' ? 'مكتملة ومودعة' : t.status === 'معلقة' ? 'بانتظار سداد الموكل' : 'قيد المراجعة والتدقيق',
           }));
           setTasks(enriched);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(enriched));
         } else {
-          setTasks(REFERENCE_TASKS);
+          setTasks([]);
         }
       }
     } catch {
-      try {
-        const local = localStorage.getItem(STORAGE_KEY);
-        if (local) setTasks(JSON.parse(local));
-      } catch {}
+      // ignore
     } finally {
       setIsLoading(false);
     }
@@ -313,6 +224,28 @@ export default function TasksPage() {
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
+  // Dynamic KPI Metrics
+  const totalTasksCount = tasks.length;
+  const draftingTasksCount = tasks.filter((t) => t.status === 'قيد التنفيذ').length;
+  const urgentTasksCount = tasks.filter((t) => t.priority === 'عاجلة' || getRemainingDays(t.dueDate) <= 2).length;
+  const completedTasksCount = tasks.filter((t) => t.status === 'مكتملة').length;
+  const pendingTasksCount = tasks.filter((t) => t.status === 'معلقة' || t.status === 'مؤجلة').length;
+  const completionRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+  const draftingRate = totalTasksCount > 0 ? Math.round((draftingTasksCount / totalTasksCount) * 100) : 0;
+
+  // Lawyer Workload
+  const lawyerWorkload = useMemo(() => {
+    const counts: Record<string, number> = {};
+    tasks.forEach((t) => {
+      const name = t.assignee || 'غير محدد';
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, count]) => {
+      const pct = Math.min(100, Math.round((count / 6) * 100));
+      return { name, count, pct };
+    });
+  }, [tasks]);
 
   // Export to Excel / CSV
   const handleExportExcel = () => {
@@ -392,24 +325,15 @@ export default function TasksPage() {
         setEditingTask(null);
         loadTasks();
       } else {
-        // Local state fallback
-        if (editingTask) {
-          setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? { ...t, ...data } : t)));
-        } else {
-          const newTask: Task = {
-            id: Date.now(),
-            taskCode: `TSK-#${Math.floor(8800 + Math.random() * 100)}`,
-            ...data,
-            createdAt: new Date().toISOString(),
-          };
-          setTasks((prev) => [newTask, ...prev]);
-        }
-        setFormOpen(false);
-        setEditingTask(null);
-        toast({ title: 'تم الحفظ محلياً' });
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل حفظ المهمة',
+          description: err.error || 'تعذر حفظ المهمة في قاعدة البيانات.',
+          variant: 'destructive',
+        });
       }
     } catch {
-      toast({ title: 'فشل الحفظ', variant: 'destructive' });
+      toast({ title: 'فشل الحفظ', description: 'تعذر الاتصال بالخادم. يرجى التحقق من الشبكة.', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -417,12 +341,25 @@ export default function TasksPage() {
 
   const handleDelete = async (task: Task) => {
     try {
-      await fetch(`/api/tasks/${task.id}`, { method: 'DELETE', credentials: 'include' });
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      toast({ title: 'تم حذف المهمة' });
+      const res = await fetch(`/api/tasks/${task.id}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        setTasks((prev) => prev.filter((t) => t.id !== task.id));
+        toast({ title: 'تم حذف المهمة بنجاح' });
+        loadTasks();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل حذف المهمة',
+          description: err.error || 'تعذر حذف المهمة من قاعدة البيانات.',
+          variant: 'destructive',
+        });
+      }
     } catch {
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      toast({ title: 'تم الحذف' });
+      toast({
+        title: 'خطأ في الاتصال',
+        description: 'تعذر حذف المهمة. يرجى التحقق من الشبكة.',
+        variant: 'destructive',
+      });
     } finally {
       setDeleteTarget(null);
     }
@@ -478,7 +415,7 @@ export default function TasksPage() {
             <span className="text-[#00236f] font-semibold">المهام الإجرائية والإشعارات</span>
           </div>
 
-          <h1 className="text-2xl font-bold text-[#00236f] tracking-tight mt-1">
+          <h1 className="text-2xl font-bold text-[#00236f] mt-1">
             إدارة المهام الإجرائية والتنبيهات القضائية
           </h1>
           <p className="text-xs text-[#757682] max-w-3xl leading-relaxed">
@@ -558,7 +495,7 @@ export default function TasksPage() {
             <div className="flex flex-col text-right">
               <span className="text-xs font-medium text-[#757682]">إجمالي المهام الإجرائية</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#0b1c30]">18</span>
+                <span className="text-2xl font-bold text-[#0b1c30]">{totalTasksCount}</span>
                 <span className="text-xs text-[#757682]">مهمة نشطة</span>
               </div>
             </div>
@@ -568,7 +505,7 @@ export default function TasksPage() {
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
             <span className="text-xs text-[#444651]">شاملة الجلسات واللوائح</span>
-            <span className="text-xs font-semibold text-[#00236f]">+5% هذا الأسبوع</span>
+            <span className="text-xs font-semibold text-[#00236f]">محدث آنياً</span>
           </div>
         </div>
 
@@ -578,7 +515,7 @@ export default function TasksPage() {
             <div className="flex flex-col text-right">
               <span className="text-xs font-medium text-[#757682]">قيد الصياغة والتنفيذ</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#0b1c30]">11</span>
+                <span className="text-2xl font-bold text-[#0b1c30]">{draftingTasksCount}</span>
                 <span className="text-xs text-[#757682]">إجراء مباشر</span>
               </div>
             </div>
@@ -588,11 +525,11 @@ export default function TasksPage() {
           </div>
           <div className="mt-4 pt-3 flex flex-col gap-1.5 bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
             <div className="flex items-center justify-between text-xs text-[#444651]">
-              <span>نسبة إنجاز</span>
-              <span className="font-bold text-[#00236f]">68%</span>
+              <span>نسبة الصياغة</span>
+              <span className="font-bold text-[#00236f]">{draftingRate}%</span>
             </div>
             <div className="w-full bg-[#dce9ff] h-1.5 rounded-full overflow-hidden">
-              <div className="bg-[#00236f] h-full rounded-full" style={{ width: '68%' }}></div>
+              <div className="bg-[#00236f] h-full rounded-full transition-all" style={{ width: `${draftingRate}%` }}></div>
             </div>
           </div>
         </div>
@@ -603,7 +540,7 @@ export default function TasksPage() {
             <div className="flex flex-col text-right">
               <span className="text-xs font-medium text-[#757682]">مهام قاربت مهلتها النظامية</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#ba1a1a]">3</span>
+                <span className="text-2xl font-bold text-[#ba1a1a]">{urgentTasksCount}</span>
                 <span className="text-xs text-[#757682]">مهام عاجلة</span>
               </div>
             </div>
@@ -612,7 +549,9 @@ export default function TasksPage() {
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
-            <span className="text-xs text-[#444651]">تحتاج إيداع عاجل: 2 استئناف + 1 رد خبير</span>
+            <span className="text-xs text-[#444651]">
+              {urgentTasksCount > 0 ? `${urgentTasksCount} إجراءات ذات أولوية قصوى` : 'لا توجد مهام متأخرة أو حرجة'}
+            </span>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#fd8a42] text-white">
               أقل من 48 ساعة
             </span>
@@ -625,7 +564,7 @@ export default function TasksPage() {
             <div className="flex flex-col text-right">
               <span className="text-xs font-medium text-[#757682]">مهام مودعة ومكتملة</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#00236f]">34</span>
+                <span className="text-2xl font-bold text-[#00236f]">{completedTasksCount}</span>
                 <span className="text-xs text-[#757682]">إجراء ناجز</span>
               </div>
             </div>
@@ -634,8 +573,8 @@ export default function TasksPage() {
             </div>
           </div>
           <div className="mt-4 pt-3 flex items-center justify-between bg-[#eff4ff] px-2.5 py-1.5 rounded-lg">
-            <span className="text-xs text-[#444651]">إجمالية شهر شعبان 1447</span>
-            <span className="text-xs font-semibold text-emerald-700">96.5% التزام</span>
+            <span className="text-xs text-[#444651]">السجلات المكتملة</span>
+            <span className="text-xs font-semibold text-emerald-700">{completionRate}% التزام</span>
           </div>
         </div>
       </div>
@@ -655,7 +594,7 @@ export default function TasksPage() {
                     : 'bg-[#eff4ff] text-[#444651] hover:bg-[#dce9ff]'
                 }`}
               >
-                كافة المهام (18)
+                كافة المهام ({totalTasksCount})
               </button>
               <button
                 onClick={() => { setActiveTab('urgent'); setCurrentPage(1); }}
@@ -665,7 +604,7 @@ export default function TasksPage() {
                     : 'bg-[#eff4ff] text-[#444651] hover:bg-[#dce9ff]'
                 }`}
               >
-                عاجلة وحرجة (3)
+                عاجلة وحرجة ({urgentTasksCount})
               </button>
               <button
                 onClick={() => { setActiveTab('drafting'); setCurrentPage(1); }}
@@ -675,7 +614,7 @@ export default function TasksPage() {
                     : 'bg-[#eff4ff] text-[#444651] hover:bg-[#dce9ff]'
                 }`}
               >
-                قيد الصياغة (11)
+                قيد الصياغة ({draftingTasksCount})
               </button>
               <button
                 onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
@@ -685,7 +624,7 @@ export default function TasksPage() {
                     : 'bg-[#eff4ff] text-[#444651] hover:bg-[#dce9ff]'
                 }`}
               >
-                بانتظار الاعتماد (4)
+                بانتظار الاعتماد ({pendingTasksCount})
               </button>
               <button
                 onClick={() => { setActiveTab('archive'); setCurrentPage(1); }}
@@ -695,7 +634,7 @@ export default function TasksPage() {
                     : 'bg-[#eff4ff] text-[#444651] hover:bg-[#dce9ff]'
                 }`}
               >
-                الأرشيف والمكتملة
+                الأرشيف والمكتملة ({completedTasksCount})
               </button>
             </div>
 
@@ -765,7 +704,16 @@ export default function TasksPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eff4ff]">
-                  {paginatedTasks.map((t, idx) => {
+                  {paginatedTasks.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-[#757682]">
+                        <span className="material-symbols-outlined text-4xl text-[#a0acc0] mb-2 block mx-auto">assignment_late</span>
+                        <p className="font-bold text-sm text-[#0b1c30] mb-1">لا توجد مهام إجرائية مسجلة</p>
+                        <p className="text-xs text-[#757682]">لم يتم العثور على مهام قضائية مطابقة للتصفية أو البحث.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedTasks.map((t, idx) => {
                     const daysRemaining = getRemainingDays(t.dueDate);
                     const isUrgent = t.priority === 'عاجلة' || daysRemaining <= 1;
 
@@ -892,7 +840,8 @@ export default function TasksPage() {
                         </td>
                       </tr>
                     );
-                  })}
+                  })
+                )}
                 </tbody>
               </table>
             </div>
@@ -968,62 +917,33 @@ export default function TasksPage() {
             </div>
 
             <div className="space-y-4 pt-3.5">
-              {/* Lawyer 1 */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#00236f] text-white flex items-center justify-center font-bold text-[10px]">
-                      أع
+              {lawyerWorkload.length === 0 ? (
+                <p className="text-xs text-[#757682] text-center py-4">لا توجد مهام موزعة حالياً على أعضاء الفريق.</p>
+              ) : (
+                lawyerWorkload.map((lw, idx) => {
+                  const initials = lw.name.slice(0, 2);
+                  const isHigh = lw.pct >= 80;
+                  return (
+                    <div key={idx} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-[#00236f] text-white flex items-center justify-center font-bold text-[10px]">
+                            {initials}
+                          </div>
+                          <span className="font-bold text-[#0b1c30]">{lw.name}</span>
+                        </div>
+                        <span className="font-semibold text-[#00236f]">{lw.count} مهام ({lw.pct}% طاقة)</span>
+                      </div>
+                      <div className="w-full bg-[#eff4ff] h-2 rounded-full overflow-hidden">
+                        <div className="bg-[#00236f] h-full rounded-full transition-all" style={{ width: `${lw.pct}%` }}></div>
+                      </div>
+                      <span className={`text-[10px] font-medium block text-right ${isHigh ? 'text-[#9b4500]' : 'text-emerald-700'}`}>
+                        {isHigh ? 'قريب من الحد الأعلى للتكليف' : 'مستوى استيعاب متوازن'}
+                      </span>
                     </div>
-                    <span className="font-bold text-[#0b1c30]">أ. أحمد العتيبي</span>
-                  </div>
-                  <span className="font-semibold text-[#00236f]">5 مهام (85% طاقة)</span>
-                </div>
-                <div className="w-full bg-[#eff4ff] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#00236f] h-full rounded-full" style={{ width: '85%' }}></div>
-                </div>
-                <span className="text-[10px] text-[#9b4500] font-medium block text-right">
-                  قريب من الحد الأعلى للتكليف
-                </span>
-              </div>
-
-              {/* Lawyer 2 */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#9b4500] text-white flex items-center justify-center font-bold text-[10px]">
-                      سه
-                    </div>
-                    <span className="font-bold text-[#0b1c30]">أ. سارة الهاشمي</span>
-                  </div>
-                  <span className="font-semibold text-[#00236f]">4 مهام (60% طاقة)</span>
-                </div>
-                <div className="w-full bg-[#eff4ff] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#00236f] h-full rounded-full" style={{ width: '60%' }}></div>
-                </div>
-                <span className="text-[10px] text-emerald-700 font-medium block text-right">
-                  مستوى استيعاب متوازن
-                </span>
-              </div>
-
-              {/* Lawyer 3 */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#475569] text-white flex items-center justify-center font-bold text-[10px]">
-                      مج
-                    </div>
-                    <span className="font-bold text-[#0b1c30]">أ. محمد الجزار</span>
-                  </div>
-                  <span className="font-semibold text-[#00236f]">2 مهمة (30% طاقة)</span>
-                </div>
-                <div className="w-full bg-[#eff4ff] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#00236f] h-full rounded-full" style={{ width: '30%' }}></div>
-                </div>
-                <span className="text-[10px] text-emerald-700 font-medium block text-right">
-                  متاح لتلقي تكليفات إضافية
-                </span>
-              </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

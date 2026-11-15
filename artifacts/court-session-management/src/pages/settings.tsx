@@ -580,7 +580,7 @@ export default function OfficeSettingsPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                 إعدادات المكتب وتصدير Google Sheet (اختياري)
               </h1>
               <Badge variant="outline" className="text-xs font-bold">

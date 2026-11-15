@@ -245,7 +245,7 @@ export default function SessionDetailPage() {
             <Scale className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold font-mono tracking-tight">
+            <h1 className="text-2xl font-bold font-mono">
               {session.caseNumber || 'تفاصيل الجلسة'}
             </h1>
             <p className="text-xs text-muted-foreground">

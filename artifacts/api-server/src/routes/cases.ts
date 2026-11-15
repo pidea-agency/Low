@@ -86,8 +86,22 @@ router.get("/cases", async (req, res) => {
 router.post("/cases", async (req, res) => {
   const officeId = getOfficeId(req);
   const body = req.body || {};
-  const clientId = body.clientId || body.client_id;
+  let clientId = body.clientId || body.client_id;
   const caseNumber = body.caseNumber || body.case_number;
+  const clientName = (body.clientName || body.client_name || "").trim();
+
+  if (!clientId && clientName) {
+    try {
+      const clients = await postgresService.listClients(officeId);
+      let matchedClient = clients.find((c) => c.name.trim().toLowerCase() === clientName.toLowerCase());
+      if (!matchedClient) {
+        matchedClient = await postgresService.createClient({ name: clientName }, officeId);
+      }
+      clientId = matchedClient.id;
+    } catch (clientErr) {
+      logger.warn({ clientErr, clientName }, "Could not auto-create or find client for case");
+    }
+  }
 
   if (!clientId || !String(clientId).trim()) {
     res.status(400).json({ error: "العميل مطلوب لإنشاء القضية." });

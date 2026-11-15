@@ -1555,7 +1555,7 @@ export default function SuperAdminPage() {
       {/* Brand Header */}
       <div className="p-4 sm:p-5 flex flex-col items-center text-center border-b border-white/10 relative z-10">
         <ScalesLogoGraphic className="w-12 h-12 mb-2" />
-        <h1 className="text-base font-black text-white leading-tight tracking-wide">
+        <h1 className="text-base font-bold text-white leading-tight">
           رَسَند
         </h1>
         <p className="text-[11px] font-semibold text-[#E8C477] mt-0.5">
@@ -1713,7 +1713,7 @@ export default function SuperAdminPage() {
                       <Gauge className="w-5 h-5" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black text-[#10233F] tracking-tight flex items-center gap-2">
+                      <h1 className="text-xl sm:text-2xl font-bold text-[#10233F] flex items-center gap-2">
                         <span>لوحة تحكم Super Admin</span>
                       </h1>
                       <p className="text-xs text-[#64748B] mt-0.5">
@@ -1729,7 +1729,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex items-center justify-between">
                     <div>
                       <span className="text-xs text-[#64748B] font-bold block mb-1">إجمالي المؤسسات</span>
-                      <span className="text-3xl font-black text-[#10233F] font-mono">
+                      <span className="text-3xl font-bold text-[#10233F] font-mono">
                         {overviewData?.totalOffices ?? admins.length ?? 24}
                       </span>
                       <div className="mt-2">
@@ -1747,7 +1747,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex items-center justify-between">
                     <div>
                       <span className="text-xs text-[#64748B] font-bold block mb-1">إجمالي المستخدمين</span>
-                      <span className="text-3xl font-black text-[#10233F] font-mono">
+                      <span className="text-3xl font-bold text-[#10233F] font-mono">
                         {usersList.length > 0 ? usersList.length : 186}
                       </span>
                       <div className="mt-2">
@@ -1765,7 +1765,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex items-center justify-between">
                     <div>
                       <span className="text-xs text-[#64748B] font-bold block mb-1">الاشتراكات النشطة</span>
-                      <span className="text-3xl font-black text-[#10233F] font-mono">
+                      <span className="text-3xl font-bold text-[#10233F] font-mono">
                         {overviewData?.activeSubscriptions ?? 18}
                       </span>
                       <div className="mt-2">
@@ -1783,7 +1783,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex items-center justify-between">
                     <div>
                       <span className="text-xs text-[#64748B] font-bold block mb-1">إجمالي الإيرادات</span>
-                      <span className="text-3xl font-black text-[#10233F] font-mono">
+                      <span className="text-3xl font-bold text-[#10233F] font-mono">
                         ${((overviewData?.revenue?.total ?? 7480)).toLocaleString()}
                       </span>
                       <div className="mt-2">
@@ -1804,7 +1804,7 @@ export default function SuperAdminPage() {
                   <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
                     <div className="flex items-center gap-2 mb-4">
                       <Zap className="w-4 h-4 text-[#C4933F]" />
-                      <h3 className="text-sm font-black text-[#10233F]">إحصائيات سريعة</h3>
+                      <h3 className="text-sm font-semibold text-[#10233F]">إحصائيات سريعة</h3>
                     </div>
 
                     <div className="space-y-3.5 my-auto">
@@ -1814,7 +1814,7 @@ export default function SuperAdminPage() {
                           <PlusCircle className="w-4 h-4 text-blue-600 shrink-0" />
                           <span className="font-semibold text-[#10233F]">المكاتب الجديدة هذا الشهر</span>
                         </div>
-                        <span className="font-black text-sm font-mono text-blue-700">3</span>
+                        <span className="font-bold text-sm font-mono text-blue-700">3</span>
                       </div>
 
                       {/* Item 2 */}
@@ -1823,7 +1823,7 @@ export default function SuperAdminPage() {
                           <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
                           <span className="font-semibold text-[#10233F]">الاشتراكات المنتهية قريباً</span>
                         </div>
-                        <span className="font-black text-sm font-mono text-amber-700">4</span>
+                        <span className="font-bold text-sm font-mono text-amber-700">4</span>
                       </div>
 
                       {/* Item 3 */}
@@ -1832,7 +1832,7 @@ export default function SuperAdminPage() {
                           <CreditCard className="w-4 h-4 text-rose-600 shrink-0" />
                           <span className="font-semibold text-[#10233F]">المدفوعات المعلقة</span>
                         </div>
-                        <span className="font-black text-sm font-mono text-rose-700">2</span>
+                        <span className="font-bold text-sm font-mono text-rose-700">2</span>
                       </div>
                     </div>
                   </div>
@@ -1840,7 +1840,7 @@ export default function SuperAdminPage() {
                   <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
                     <div className="flex items-center gap-2 mb-2">
                       <Layers className="w-4 h-4 text-[#C4933F]" />
-                      <h3 className="text-sm font-black text-[#10233F]">توزيع الاشتراكات</h3>
+                      <h3 className="text-sm font-semibold text-[#10233F]">توزيع الاشتراكات</h3>
                     </div>
 
                     <div className="flex items-center justify-between gap-2 my-auto">
@@ -1869,7 +1869,7 @@ export default function SuperAdminPage() {
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                          <span className="text-xl font-black text-[#10233F] leading-tight">24</span>
+                          <span className="text-xl font-bold text-[#10233F] leading-tight">24</span>
                           <span className="text-[10px] text-[#64748B] font-bold">مؤسسة</span>
                         </div>
                       </div>
@@ -1900,7 +1900,7 @@ export default function SuperAdminPage() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <BarChart3 className="w-4 h-4 text-[#C4933F]" />
-                        <h3 className="text-sm font-black text-[#10233F]">الإيرادات الشهرية</h3>
+                        <h3 className="text-sm font-semibold text-[#10233F]">الإيرادات الشهرية</h3>
                       </div>
                     </div>
 
@@ -1949,7 +1949,7 @@ export default function SuperAdminPage() {
                     <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-[#C4933F]" />
-                        <h3 className="text-sm font-black text-[#10233F]">آخر المؤسسات المضافة</h3>
+                        <h3 className="text-sm font-semibold text-[#10233F]">آخر المؤسسات المضافة</h3>
                       </div>
                     </div>
 
@@ -2004,7 +2004,7 @@ export default function SuperAdminPage() {
                     <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Layers className="w-4 h-4 text-[#C4933F]" />
-                        <h3 className="text-sm font-black text-[#10233F]">آخر الاشتراكات</h3>
+                        <h3 className="text-sm font-semibold text-[#10233F]">آخر الاشتراكات</h3>
                       </div>
                     </div>
 
@@ -2066,7 +2066,7 @@ export default function SuperAdminPage() {
                       <Building2 className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+                      <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                         إدارة المكاتب والاشتراكات
                       </h1>
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -2122,7 +2122,7 @@ export default function SuperAdminPage() {
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي المكاتب</p>
-                          <p className="text-2xl sm:text-3xl font-black text-[#10233F]">{admins.length}</p>
+                          <p className="text-2xl sm:text-3xl font-bold text-[#10233F]">{admins.length}</p>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
                           <Building2 className="w-6 h-6 text-blue-600" />
@@ -2132,7 +2132,7 @@ export default function SuperAdminPage() {
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">مكاتب نشطة</p>
-                          <p className="text-2xl sm:text-3xl font-black text-emerald-600">
+                          <p className="text-2xl sm:text-3xl font-bold text-emerald-600">
                             {admins.filter((a) => a.status !== 'suspended' && !getSubscriptionInfo(a).isExpired).length}
                           </p>
                         </div>
@@ -2144,7 +2144,7 @@ export default function SuperAdminPage() {
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">مكاتب تحت المراجعة</p>
-                          <p className="text-2xl sm:text-3xl font-black text-amber-600">
+                          <p className="text-2xl sm:text-3xl font-bold text-amber-600">
                             {admins.filter((a) => getSubscriptionInfo(a).isExpiringSoon).length}
                           </p>
                         </div>
@@ -2156,7 +2156,7 @@ export default function SuperAdminPage() {
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">مكاتب غير نشطة</p>
-                          <p className="text-2xl sm:text-3xl font-black text-rose-600">
+                          <p className="text-2xl sm:text-3xl font-bold text-rose-600">
                             {admins.filter((a) => a.status === 'suspended' || getSubscriptionInfo(a).isExpired).length}
                           </p>
                         </div>
@@ -2521,7 +2521,7 @@ export default function SuperAdminPage() {
                       <Users className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                      <h1 className="text-xl sm:text-2xl font-bold text-[#10233F]">
                         المستخدمون والكوادر
                       </h1>
                       <p className="text-xs text-[#64748B] mt-0.5">
@@ -2547,7 +2547,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
                     <div>
                       <p className="text-xs text-[#64748B] font-bold">إجمالي المستخدمين</p>
-                      <p className="text-2xl font-black text-[#10233F]">{usersList.length}</p>
+                      <p className="text-2xl font-bold text-[#10233F]">{usersList.length}</p>
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                       <Users className="w-5 h-5" />
@@ -2557,7 +2557,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
                     <div>
                       <p className="text-xs text-[#64748B] font-bold">مدراء المكاتب</p>
-                      <p className="text-2xl font-black text-[#0B2A4A]">
+                      <p className="text-2xl font-bold text-[#0B2A4A]">
                         {usersList.filter((u) => u.role === 'admin').length}
                       </p>
                     </div>
@@ -2569,7 +2569,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
                     <div>
                       <p className="text-xs text-[#64748B] font-bold">المحامون والأعضاء</p>
-                      <p className="text-2xl font-black text-[#C99732]">
+                      <p className="text-2xl font-bold text-[#C99732]">
                         {usersList.filter((u) => u.role === 'staff').length}
                       </p>
                     </div>
@@ -2581,7 +2581,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white border border-[#D6E0EC] p-4 rounded-xl flex items-center justify-between shadow-xs">
                     <div>
                       <p className="text-xs text-[#64748B] font-bold">الحسابات النشطة</p>
-                      <p className="text-2xl font-black text-emerald-600">
+                      <p className="text-2xl font-bold text-emerald-600">
                         {usersList.filter((u) => u.status === 'active').length}
                       </p>
                     </div>
@@ -2768,7 +2768,7 @@ export default function SuperAdminPage() {
                       <Crown className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                      <h1 className="text-xl sm:text-2xl font-bold text-[#10233F]">
                         إدارة الاشتراكات والباقات
                       </h1>
                       <p className="text-xs text-[#64748B] mt-0.5">
@@ -2796,7 +2796,7 @@ export default function SuperAdminPage() {
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي الاشتراكات</p>
-                          <p className="text-2xl sm:text-3xl font-black text-[#10233F]">{admins.length}</p>
+                          <p className="text-2xl sm:text-3xl font-bold text-[#10233F]">{admins.length}</p>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
                           <Users className="w-6 h-6 text-emerald-600" />
@@ -2806,7 +2806,7 @@ export default function SuperAdminPage() {
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">الاشتراكات النشطة</p>
-                          <p className="text-2xl sm:text-3xl font-black text-blue-600">
+                          <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                             {admins.filter((a) => a.status !== 'suspended' && !getSubscriptionInfo(a).isExpired).length}
                           </p>
                         </div>
@@ -2818,7 +2818,7 @@ export default function SuperAdminPage() {
                       <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">الاشتراكات المنتهية قريباً</p>
-                          <p className="text-2xl sm:text-3xl font-black text-amber-600">
+                          <p className="text-2xl sm:text-3xl font-bold text-amber-600">
                             {admins.filter((a) => getSubscriptionInfo(a).isExpiringSoon).length}
                           </p>
                         </div>
@@ -2831,7 +2831,7 @@ export default function SuperAdminPage() {
                         <div>
                           <p className="text-xs text-[#64748B] font-bold mb-1">إيرادات الاشتراكات</p>
                           <div className="flex items-baseline gap-2">
-                            <p className="text-2xl sm:text-3xl font-black text-purple-600">
+                            <p className="text-2xl sm:text-3xl font-bold text-purple-600">
                               {admins.reduce((acc, a) => acc + (a.plan?.price ? Number(a.plan.price) : 59), 0)} $
                             </p>
                             <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">↑ %32+</span>
@@ -2851,7 +2851,7 @@ export default function SuperAdminPage() {
                           <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center mb-4">
                             <Sparkles className="w-6 h-6 text-[#E8C477]" />
                           </div>
-                          <h4 className="text-base font-black text-white mb-2 leading-tight">
+                          <h4 className="text-base font-semibold text-white mb-2 leading-tight">
                             إدارة مرنة للاشتراكات
                           </h4>
                           <p className="text-xs text-[#D6E0EC]/80 leading-relaxed">
@@ -2891,7 +2891,7 @@ export default function SuperAdminPage() {
 
                             <div>
                               <div className="flex items-center justify-between gap-2 mb-2">
-                                <h4 className="text-base font-black text-[#10233F]">{p.name}</h4>
+                                <h4 className="text-base font-semibold text-[#10233F]">{p.name}</h4>
                                 <Badge variant="outline" className="font-mono text-[10px] bg-slate-50 border-[#D6E0EC]">
                                   {p.slug}
                                 </Badge>
@@ -2902,7 +2902,7 @@ export default function SuperAdminPage() {
                               </p>
 
                               <div className="mb-4 pb-3 border-b border-[#D6E0EC]">
-                                <span className="text-2xl font-black text-[#10233F]">{p.price || (p.slug === 'pro' ? '59' : '29')} $</span>
+                                <span className="text-2xl font-bold text-[#10233F]">{p.price || (p.slug === 'pro' ? '59' : '29')} $</span>
                                 <span className="text-xs text-[#64748B] mr-1">/ شهرياً</span>
                               </div>
 
@@ -3091,7 +3091,7 @@ export default function SuperAdminPage() {
                       <CreditCard className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                      <h1 className="text-xl sm:text-2xl font-bold text-[#10233F]">
                         المدفوعات والفواتير
                       </h1>
                       <p className="text-xs text-[#64748B] mt-0.5">
@@ -3139,7 +3139,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                     <div>
                       <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي المدفوعات المحصلة</p>
-                      <p className="text-2xl sm:text-3xl font-black text-emerald-600">
+                      <p className="text-2xl sm:text-3xl font-bold text-emerald-600">
                         {paymentsList.filter((p) => p.status === 'paid').reduce((s, p) => s + Number(p.amount), 0).toLocaleString()} ر.س
                       </p>
                       <p className="text-[11px] text-[#64748B] mt-1">
@@ -3154,7 +3154,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                     <div>
                       <p className="text-xs text-[#64748B] font-bold mb-1">دفعات قيد الانتظار</p>
-                      <p className="text-2xl sm:text-3xl font-black text-amber-600">
+                      <p className="text-2xl sm:text-3xl font-bold text-amber-600">
                         {paymentsList.filter((p) => p.status === 'pending').reduce((s, p) => s + Number(p.amount), 0).toLocaleString()} ر.س
                       </p>
                       <p className="text-[11px] text-[#64748B] mt-1">
@@ -3169,7 +3169,7 @@ export default function SuperAdminPage() {
                   <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl flex items-center justify-between shadow-xs">
                     <div>
                       <p className="text-xs text-[#64748B] font-bold mb-1">دفعات متأخرة</p>
-                      <p className="text-2xl sm:text-3xl font-black text-rose-600">
+                      <p className="text-2xl sm:text-3xl font-bold text-rose-600">
                         {paymentsList.filter((p) => p.status === 'overdue').reduce((s, p) => s + Number(p.amount), 0).toLocaleString()} ر.س
                       </p>
                       <p className="text-[11px] text-[#64748B] mt-1">
@@ -3286,7 +3286,7 @@ export default function SuperAdminPage() {
                                 <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
                                   <td className="p-3.5 font-mono text-[#64748B]">{idx + 1}</td>
                                   <td className="p-3.5 font-bold text-[#10233F]">{p.office_name || '—'}</td>
-                                  <td className="p-3.5 font-black text-sm text-[#0B2A4A]">
+                                  <td className="p-3.5 font-bold text-sm text-[#0B2A4A]">
                                     {Number(p.amount).toLocaleString()} {p.currency || 'ر.س'}
                                   </td>
                                   <td className="p-3.5 text-[#64748B]">{formatDateDisplay(p.payment_date)}</td>
@@ -3340,7 +3340,7 @@ export default function SuperAdminPage() {
                       <TrendingUp className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10233F]">
+                      <h1 className="text-xl sm:text-2xl font-bold text-[#10233F]">
                         التقارير العامة والتحليلات
                       </h1>
                       <p className="text-xs text-[#64748B] mt-0.5">
@@ -3365,7 +3365,7 @@ export default function SuperAdminPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
                     <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي الإيرادات المحققة</p>
-                    <p className="text-2xl sm:text-3xl font-black text-[#10233F]">
+                    <p className="text-2xl sm:text-3xl font-bold text-[#10233F]">
                       {(reportsData?.totalRevenue ?? 0).toLocaleString()} ر.س
                     </p>
                     <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-2">
@@ -3375,7 +3375,7 @@ export default function SuperAdminPage() {
 
                   <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
                     <p className="text-xs text-[#64748B] font-bold mb-1">الاشتراكات النشطة</p>
-                    <p className="text-2xl sm:text-3xl font-black text-emerald-600">
+                    <p className="text-2xl sm:text-3xl font-bold text-emerald-600">
                       {reportsData?.activeSubscriptions ?? 0}
                     </p>
                     <p className="text-[11px] text-[#64748B] mt-2">اشتراكات مفعّلة حالياً</p>
@@ -3383,7 +3383,7 @@ export default function SuperAdminPage() {
 
                   <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
                     <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي مستخدمي المنظومة</p>
-                    <p className="text-2xl sm:text-3xl font-black text-blue-600">
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                       {reportsData?.totalUsers ?? 0}
                     </p>
                     <p className="text-[11px] text-[#64748B] mt-2">محامين، مدراء، وموظفين</p>
@@ -3391,7 +3391,7 @@ export default function SuperAdminPage() {
 
                   <div className="bg-white border border-[#D6E0EC] p-5 rounded-2xl shadow-xs">
                     <p className="text-xs text-[#64748B] font-bold mb-1">إجمالي مكاتب المحاماة</p>
-                    <p className="text-2xl sm:text-3xl font-black text-[#0B2A4A]">
+                    <p className="text-2xl sm:text-3xl font-bold text-[#0B2A4A]">
                       {reportsData?.totalOffices ?? 0}
                     </p>
                     <p className="text-[11px] text-[#64748B] mt-2">مكتب ومؤسسة معتمدة</p>
@@ -3403,7 +3403,7 @@ export default function SuperAdminPage() {
                   <div className="lg:col-span-7 bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-sm font-black text-[#10233F]">منحنى نمو الإيرادات (6 أشهر)</h3>
+                        <h3 className="text-sm font-semibold text-[#10233F]">منحنى نمو الإيرادات (6 أشهر)</h3>
                         <p className="text-[11px] text-[#64748B]">إجمالي المبالغ المحصلة شهرياً بالريال السعودي</p>
                       </div>
                       <Badge variant="outline" className="text-[10px] font-bold border-[#D6E0EC]">
@@ -3442,7 +3442,7 @@ export default function SuperAdminPage() {
 
                   <div className="lg:col-span-5 bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs flex flex-col justify-between">
                     <div className="mb-2">
-                      <h3 className="text-sm font-black text-[#10233F]">توزيع الباقات والاشتراكات</h3>
+                      <h3 className="text-sm font-semibold text-[#10233F]">توزيع الباقات والاشتراكات</h3>
                       <p className="text-[11px] text-[#64748B]">نسبة المكاتب المشتركة بكل باقة</p>
                     </div>
 
@@ -3546,7 +3546,7 @@ export default function SuperAdminPage() {
                       <Clock className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+                      <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                         سجل أحداث المنصة (Audit Log)
                       </h1>
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -3719,7 +3719,7 @@ export default function SuperAdminPage() {
                       <SlidersHorizontal className="w-6 h-6" />
                     </div>
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+                      <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                         إعدادات المنصة العامة (Platform Settings)
                       </h1>
                       <p className="text-xs text-muted-foreground mt-0.5">

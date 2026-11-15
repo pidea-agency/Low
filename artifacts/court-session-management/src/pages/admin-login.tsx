@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
               <span>الإدارة العامة للمنصة</span>
             </div>
 
-            <h1 className="text-2xl font-black text-foreground tracking-tight">
+            <h1 className="text-2xl font-bold text-foreground">
               بوابة المشرف العام
             </h1>
             <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
