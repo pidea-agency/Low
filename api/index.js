@@ -56761,12 +56761,27 @@ function decryptSecret(cipherText) {
   const iv = Buffer.from(parts[2], "hex");
   const authTag = Buffer.from(parts[3], "hex");
   const encrypted = parts[4];
-  const key = getEncryptionKey();
-  const decipher = import_crypto.default.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  let decrypted = decipher.update(encrypted, "hex", "utf-8");
-  decrypted += decipher.final("utf-8");
-  return decrypted;
+  const secretsToTry = [];
+  if (process.env.SETTINGS_ENCRYPTION_KEY?.trim()) {
+    secretsToTry.push(process.env.SETTINGS_ENCRYPTION_KEY.trim());
+  }
+  if (process.env.SESSION_SECRET?.trim() && !secretsToTry.includes(process.env.SESSION_SECRET.trim())) {
+    secretsToTry.push(process.env.SESSION_SECRET.trim());
+  }
+  let lastError = null;
+  for (const secret of secretsToTry) {
+    try {
+      const key = import_crypto.default.createHash("sha256").update(secret).digest();
+      const decipher = import_crypto.default.createDecipheriv(ALGORITHM, key, iv);
+      decipher.setAuthTag(authTag);
+      let decrypted = decipher.update(encrypted, "hex", "utf-8");
+      decrypted += decipher.final("utf-8");
+      return decrypted;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error("Decryption failed");
 }
 function isEncrypted(text) {
   return typeof text === "string" && text.startsWith("enc:v1:");

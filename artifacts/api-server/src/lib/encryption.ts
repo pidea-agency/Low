@@ -49,14 +49,30 @@ export function decryptSecret(cipherText: string): string {
   const authTag = Buffer.from(parts[3], "hex");
   const encrypted = parts[4];
 
-  const key = getEncryptionKey();
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
+  // Try primary key first, and fall back to SESSION_SECRET if encrypted under previous key
+  const secretsToTry: string[] = [];
+  if (process.env.SETTINGS_ENCRYPTION_KEY?.trim()) {
+    secretsToTry.push(process.env.SETTINGS_ENCRYPTION_KEY.trim());
+  }
+  if (process.env.SESSION_SECRET?.trim() && !secretsToTry.includes(process.env.SESSION_SECRET.trim())) {
+    secretsToTry.push(process.env.SESSION_SECRET.trim());
+  }
 
-  let decrypted = decipher.update(encrypted, "hex", "utf-8");
-  decrypted += decipher.final("utf-8");
+  let lastError: any = null;
+  for (const secret of secretsToTry) {
+    try {
+      const key = crypto.createHash("sha256").update(secret).digest();
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+      decipher.setAuthTag(authTag);
+      let decrypted = decipher.update(encrypted, "hex", "utf-8");
+      decrypted += decipher.final("utf-8");
+      return decrypted;
+    } catch (err: any) {
+      lastError = err;
+    }
+  }
 
-  return decrypted;
+  throw lastError || new Error("Decryption failed");
 }
 
 /**

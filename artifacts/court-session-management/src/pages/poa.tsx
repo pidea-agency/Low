@@ -23,7 +23,6 @@ import {
   ExternalLink,
   Clock,
   Check,
-  X,
   MessageCircle,
   Eye,
   FileText,
@@ -148,9 +147,6 @@ export default function PowerOfAttorneyPage() {
   const [poaTypeFilter, setPoaTypeFilter] = useState('all');
   const [lawyerFilter, setLawyerFilter] = useState('all');
   const [bindingFilter, setBindingFilter] = useState('all');
-
-  // Selected POA for Left Clauses Checker Panel
-  const [selectedPoaId, setSelectedPoaId] = useState<string | null>(null);
 
   // Dialog states
   const [isOpen, setIsOpen] = useState(false);
@@ -284,12 +280,6 @@ export default function PowerOfAttorneyPage() {
       return true;
     });
   }, [allPoas, activeTab, searchQuery, lawyerFilter]);
-
-  // Selected POA Object for Clauses Checking Panel (null if no records)
-  const selectedPoa = useMemo(() => {
-    if (allPoas.length === 0) return null;
-    return allPoas.find((p) => p.id === selectedPoaId) || allPoas[0] || null;
-  }, [allPoas, selectedPoaId]);
 
   // Open Create Dialog
   const handleOpenCreate = () => {
@@ -676,129 +666,34 @@ export default function PowerOfAttorneyPage() {
           </div>
         </div>
 
-        {/* ── Main Two-Column Layout (Cards List on Right, Clauses Check on Left) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* ════════ LEFT COLUMN: Clauses Check & Protection (4 Cols in RTL) ════════ */}
-          <div className="lg:col-span-4 space-y-4">
-            {!selectedPoa ? (
-              <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-8 text-center flex flex-col items-center justify-center gap-3 min-h-[350px]">
-                <ShieldCheck className="w-12 h-12 text-[#9bbef5]" />
-                <h3 className="text-sm font-bold text-[#141e30]">فحص بنود الصلاحيات</h3>
-                <p className="text-xs text-[#63728d] max-w-xs">
-                  قم باختيار أو تسجيل وكالة شرعية لعرض البنود والصلاحيات القضائية المعتمدة
-                </p>
-                <Button
-                  onClick={handleOpenCreate}
-                  className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold mt-2"
+        {/* ── POAs Cards List (Full Width) ── */}
+        <div className="space-y-3.5">
+          {filteredPoas.length === 0 ? (
+            <div className="bg-white rounded-xl border border-[#dbe6f8] p-12 text-center shadow-2xs">
+              <FileText className="w-12 h-12 text-[#9bb3d8] mx-auto mb-3" />
+              <h3 className="text-base font-bold text-[#141e30] mb-1">لا توجد وكالات شرعية مسجلة</h3>
+              <p className="text-xs text-[#637189] max-w-sm mx-auto mb-5">
+                لم يتم العثور على أي وكالات مطابقة للبحث أو التصفية الحالية، أو لم يتم إضافة وكالات بعد.
+              </p>
+              <Button
+                onClick={handleOpenCreate}
+                className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg"
+              >
+                <Plus className="w-4 h-4 ml-1.5" />
+                إضافة وكالة جديدة
+              </Button>
+            </div>
+          ) : (
+            filteredPoas.map((poa) => {
+              const isExpiringCard = poa.isExpiringSoon || poa.status === 'expiring';
+
+              return (
+                <div
+                  key={poa.id}
+                  className={`bg-white rounded-xl border p-4 transition-all shadow-2xs relative ${
+                    isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
+                  } hover:border-[#b8d1fc]`}
                 >
-                  + إضافة وكالة جديدة
-                </Button>
-              </div>
-            ) : (
-              <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-4 space-y-3.5">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-[#141e30] flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-[#00236f]" />
-                      فحص بنود الصلاحيات
-                    </h3>
-                    <span className="font-mono text-[10px] text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc] font-bold">
-                      الوكالة: {selectedPoa.poaNumber}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#63728d] leading-relaxed">
-                    تدقيق فوري لبنود الوكالة المحددة وفق الشروط القضائية المعتمدة تفادياً لرد المذكرات أو الدفوع الشكلية.
-                  </p>
-                </div>
-
-                {/* Clauses List */}
-                <div className="space-y-2 pt-1 border-t border-[#edf3fc]">
-                  {selectedPoa.clauses?.map((clause, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 rounded-lg bg-[#fafcff] border border-[#e5eefa] text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        {clause.isAuthorized ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        ) : (
-                          <X className="w-4 h-4 text-rose-600 shrink-0" />
-                        )}
-                        <span className="text-[#152033] font-medium">{clause.title}</span>
-                      </div>
-                      {clause.isAuthorized ? (
-                        <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.2 rounded border border-emerald-200">
-                          مفوض
-                        </span>
-                      ) : (
-                        <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-0.2 rounded border border-rose-200">
-                          غير مفوض
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Ministry of Justice Link Box */}
-                <div className="bg-[#f5f8ff] border border-[#d4e4fc] rounded-lg p-2.5 text-xs space-y-1">
-                  <div className="font-bold text-[#00236f] flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    حالة الارتباط بوزارة العدل: متصل 100%
-                  </div>
-                  <p className="text-[10px] text-[#556480] leading-relaxed">
-                    آخر مزامنة آلية: اليوم في تمام الساعة 08:30 صباحاً عبر خدمة الربط الحكومي.
-                  </p>
-                </div>
-
-                {/* Download PDF report button */}
-                <Button
-                  onClick={() => {
-                    toast({
-                      title: 'تقرير صلاحيات الوكالة',
-                      description: `تم تصدير تقرير فحص الصلاحيات للوكالة ${selectedPoa.poaNumber} بنجاح.`,
-                    });
-                  }}
-                  className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-9 gap-2 rounded-lg cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  تحميل تقرير صلاحيات الوكالة (PDF)
-                </Button>
-              </div>
-            )}
-
-
-          </div>
-
-          {/* ════════ RIGHT COLUMN: POAs Cards List (8 Cols in RTL) ════════ */}
-          <div className="lg:col-span-8 space-y-3.5">
-            {filteredPoas.length === 0 ? (
-              <div className="bg-white rounded-xl border border-[#dbe6f8] p-12 text-center shadow-2xs">
-                <FileText className="w-12 h-12 text-[#9bb3d8] mx-auto mb-3" />
-                <h3 className="text-base font-bold text-[#141e30] mb-1">لا توجد وكالات شرعية مسجلة</h3>
-                <p className="text-xs text-[#637189] max-w-sm mx-auto mb-5">
-                  لم يتم العثور على أي وكالات مطابقة للبحث أو التصفية الحالية، أو لم يتم إضافة وكالات بعد.
-                </p>
-                <Button
-                  onClick={handleOpenCreate}
-                  className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg"
-                >
-                  <Plus className="w-4 h-4 ml-1.5" />
-                  إضافة وكالة جديدة
-                </Button>
-              </div>
-            ) : (
-              filteredPoas.map((poa) => {
-                const isSelected = selectedPoaId === poa.id;
-                const isExpiringCard = poa.isExpiringSoon || poa.status === 'expiring';
-
-                return (
-                  <div
-                    key={poa.id}
-                    onClick={() => setSelectedPoaId(poa.id)}
-                    className={`bg-white rounded-xl border p-4 transition-all cursor-pointer shadow-2xs relative ${
-                      isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
-                    } ${isSelected ? 'ring-2 ring-[#00236f]/30 bg-[#fafcff]' : 'hover:border-[#b8d1fc]'}`}
-                  >
                     {/* Top Bar of the Card */}
                     <div className="flex items-start justify-between gap-3">
                       {/* Client info on Right */}
@@ -927,9 +822,12 @@ export default function PowerOfAttorneyPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedPoaId(poa.id);
+                            toast({
+                              title: 'فحص الصلاحيات المعتمدة',
+                              description: `الوكالة رقم ${poa.poaNumber} معتمدة ومطابقة للاشتراطات العدلية.`,
+                            });
                           }}
-                          className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc]"
+                          className="text-[#00236f] hover:underline font-bold text-[11px] flex items-center gap-1 bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc] cursor-pointer"
                         >
                           <ShieldCheck className="w-3 h-3 text-[#00236f]" />
                           فحص الصلاحيات
@@ -976,7 +874,6 @@ export default function PowerOfAttorneyPage() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* ── Dialog: Add / Edit Power of Attorney ── */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

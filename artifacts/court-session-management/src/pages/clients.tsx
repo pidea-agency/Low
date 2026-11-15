@@ -109,9 +109,6 @@ export default function ClientsPage() {
   const [poaStatusFilter, setPoaStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
-  // Selected Client for Left Details Panel
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
-
   // Backend clients
   const [backendClients, setBackendClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -226,12 +223,6 @@ export default function ClientsPage() {
       return true;
     });
   }, [allClients, activeTab, search, lawyerFilter, poaStatusFilter]);
-
-  // Selected Client Object
-  const selectedClient = useMemo(() => {
-    if (allClients.length === 0) return null;
-    return allClients.find((c) => c.id === selectedClientId) || allClients[0] || null;
-  }, [allClients, selectedClientId]);
 
   // Handle Save Client
   const handleSaveClient = async (e: React.FormEvent) => {
@@ -616,174 +607,39 @@ export default function ClientsPage() {
           </div>
         </div>
 
-        {/* ── Main Two-Column Layout (Client Cards on Right, Selected Profile on Left) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* ════════ LEFT COLUMN: Selected Client Quick Profile (4 Cols in RTL) ════════ */}
-          <div className="lg:col-span-4 space-y-4">
-            {!selectedClient ? (
-              <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-8 text-center">
-                <Users className="w-10 h-10 text-[#9bb3d8] mx-auto mb-2" />
-                <h3 className="text-sm font-bold text-[#141e30] mb-1">لا يوجد موكل محدد</h3>
-                <p className="text-xs text-[#637189]">اختر موكلاً من القائمة أو أضف موكلاً جديداً لعرض تفاصيل ملفه.</p>
-              </div>
-            ) : (
-              <div className="bg-white border border-[#dbe6f8] rounded-xl shadow-2xs p-4 space-y-3.5">
-                {/* Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-[#edf3fc]">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#141e30]">
-                    <span className="w-2 h-2 rounded-full bg-[#00236f]" />
-                    معاينة ملف الموكل المحدد
-                  </div>
-                  <span className="font-mono text-[10px] text-[#00236f] bg-[#eef4ff] px-2 py-0.5 rounded border border-[#cfdffc] font-bold">
-                    ID: {selectedClient.id}
-                  </span>
-                </div>
+        {/* ── Clients Cards Ledger (Full Width) ── */}
+        <div className="space-y-3.5">
+          {filteredClients.length === 0 ? (
+            <div className="bg-white rounded-xl border border-[#dbe6f8] p-12 text-center shadow-2xs">
+              <Users className="w-12 h-12 text-[#9bb3d8] mx-auto mb-3" />
+              <h3 className="text-base font-bold text-[#141e30] mb-1">لا يوجد موكلون مسجلون</h3>
+              <p className="text-xs text-[#637189] max-w-sm mx-auto mb-5">
+                لم يتم العثور على أي عملاء مطابقين لخيارات البحث والتصفية، أو لم يتم تسجيل موكلين بعد في قاعدة البيانات.
+              </p>
+              <Button
+                onClick={() => {
+                  setFormName('');
+                  setFormPhone('');
+                  setFormNotes('');
+                  setCreateOpen(true);
+                }}
+                className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg"
+              >
+                <Plus className="w-4 h-4 ml-1.5" />
+                تسجيل موكل جديد
+              </Button>
+            </div>
+          ) : (
+            filteredClients.map((client) => {
+              const isExpiringCard = client.isExpiringPoa;
 
-                {/* Client Badge Card */}
-                <div className="bg-[#fffdf8] border border-[#faecd8] rounded-xl p-3 flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm font-semibold text-[#141e30]">{selectedClient.name}</h3>
-                    <div className="text-xs text-[#556480] flex items-center gap-1 font-mono">
-                      <span>{selectedClient.phone || '—'}</span>
-                      <span>•</span>
-                      <span>{selectedClient.location || 'الرياض'}</span>
-                    </div>
-                    <div className="pt-1">
-                      <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.2 rounded border border-emerald-200">
-                        مطابقة ناجز 100%
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-900 font-bold text-base flex items-center justify-center shrink-0">
-                    {selectedClient.type === 'company' ? (
-                      <Building2 className="w-6 h-6 text-amber-800" />
-                    ) : (
-                      selectedClient.name.slice(0, 1)
-                    )}
-                  </div>
-                </div>
-
-
-
-                {/* Approved POA Clauses */}
-                <div className="space-y-2 pt-1 border-t border-[#edf3fc]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#152033]">صلاحيات الوكالة المعتمدة</span>
-                    <span className="text-[10px] text-[#00236f] font-bold">فحص ناجز الفوري</span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {selectedClient.poaClauses?.map((clause, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2 rounded-lg bg-[#fafcff] border border-[#e5eefa] text-xs"
-                      >
-                        <span className="text-[#141f33] font-medium text-[11px] truncate max-w-[170px]">
-                          {clause.title}
-                        </span>
-                        {clause.status === 'authorized' && (
-                          <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
-                            {clause.statusText}
-                          </span>
-                        )}
-                        {clause.status === 'special_permission' && (
-                          <span className="bg-amber-50 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-amber-200">
-                            {clause.statusText}
-                          </span>
-                        )}
-                        {clause.status === 'unauthorized' && (
-                          <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-rose-200">
-                            {clause.statusText}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Fees & Billing Box */}
-                <div className="bg-[#f9fbff] border border-[#dce7f6] rounded-xl p-3 text-xs space-y-1.5">
-                  <span className="font-bold text-[#141e30] block">حالة الأتعاب والفواتير</span>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-[#657591]">إجمالي الأتعاب المتفق عليها:</span>
-                    <strong className="font-mono text-[#141e30]">{selectedClient.totalFees || '—'}</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-[#657591]">المدفوع:</span>
-                    <strong className="font-mono text-emerald-700">{selectedClient.paidFees || '—'}</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#edf3fc]">
-                    <span className="text-[#657591]">المتبقي (دفعة الحكم):</span>
-                    <strong className="font-mono text-amber-800 font-bold">{selectedClient.remainingFees || '—'}</strong>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-2 pt-1">
-                  <Button
-                    onClick={() => {
-                      setLocation('/cases?create=true');
-                    }}
-                    className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-9 gap-1.5 rounded-lg cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    + إضافة قضية أو وكالة جديدة للموكل
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      toast({
-                        title: 'تنزيل تقرير الموكل',
-                        description: `تم توليد ملف التقرير الفني المعتمد للموكل ${selectedClient.name}.`,
-                      });
-                    }}
-                    className="w-full text-xs text-[#42526e] border-[#d2e0f4] hover:bg-[#edf3ff] h-8 gap-1.5 rounded-lg cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    تحميل تقرير سجل العميل (PDF)
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ════════ RIGHT COLUMN: Clients Cards Ledger (8 Cols in RTL) ════════ */}
-          <div className="lg:col-span-8 space-y-3.5">
-            {filteredClients.length === 0 ? (
-              <div className="bg-white rounded-xl border border-[#dbe6f8] p-12 text-center shadow-2xs">
-                <Users className="w-12 h-12 text-[#9bb3d8] mx-auto mb-3" />
-                <h3 className="text-base font-bold text-[#141e30] mb-1">لا يوجد موكلون مسجلون</h3>
-                <p className="text-xs text-[#637189] max-w-sm mx-auto mb-5">
-                  لم يتم العثور على أي عملاء مطابقين لخيارات البحث والتصفية، أو لم يتم تسجيل موكلين بعد في قاعدة البيانات.
-                </p>
-                <Button
-                  onClick={() => {
-                    setFormName('');
-                    setFormPhone('');
-                    setFormNotes('');
-                    setCreateOpen(true);
-                  }}
-                  className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg"
+              return (
+                <div
+                  key={client.id}
+                  className={`bg-white rounded-xl border p-4 transition-all shadow-2xs relative ${
+                    isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
+                  } hover:border-[#b8d1fc]`}
                 >
-                  <Plus className="w-4 h-4 ml-1.5" />
-                  تسجيل موكل جديد
-                </Button>
-              </div>
-            ) : (
-              filteredClients.map((client) => {
-                const isSelected = selectedClientId === client.id;
-                const isExpiringCard = client.isExpiringPoa;
-
-                return (
-                  <div
-                    key={client.id}
-                    onClick={() => setSelectedClientId(client.id)}
-                    className={`bg-white rounded-xl border p-4 transition-all cursor-pointer shadow-2xs relative ${
-                      isExpiringCard ? 'border-t-4 border-t-[#fd8a42] border-[#e2ecfa]' : 'border-[#dbe6f8]'
-                    } ${isSelected ? 'ring-2 ring-[#00236f]/30 bg-[#fafcff]' : 'hover:border-[#b8d1fc]'}`}
-                  >
                     {/* Card Top Row */}
                     <div className="flex items-start justify-between gap-3">
                       {/* Client Info */}
@@ -970,7 +826,6 @@ export default function ClientsPage() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* ── Dialog: Add / Edit Client ── */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
