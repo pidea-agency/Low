@@ -543,9 +543,11 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
 
     // 1. Resolve Client phone
     let clientPhone: string | null = null;
-    if (session.clientId) {
+    const sessionAny = session as any;
+    const clientId = sessionAny.clientId || sessionAny.client_id;
+    if (clientId) {
       try {
-        const client = await getClientById(session.clientId, officeId);
+        const client = await postgresService.getClientById(clientId, officeId);
         if (client?.phone?.trim()) {
           clientPhone = client.phone.trim();
         }
@@ -554,8 +556,9 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
 
     // 2. Resolve Assigned Lawyer phone
     let lawyerPhone: string | null = null;
-    if (session.assignedLawyerId) {
-      const lawyer = users.find((u) => u.id === session.assignedLawyerId);
+    const assignedLawyerId = sessionAny.assignedLawyerId || sessionAny.assigned_lawyer_id;
+    if (assignedLawyerId) {
+      const lawyer = users.find((u) => u.id === assignedLawyerId);
       if (lawyer?.phone?.trim()) {
         lawyerPhone = lawyer.phone.trim();
       }

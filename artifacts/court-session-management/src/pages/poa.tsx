@@ -226,10 +226,10 @@ export default function PowerOfAttorneyPage() {
       poaType: b.poaType || 'وكالة قضايا ومرافعة',
       assignedLawyer:
         b.assignedLawyer ||
-        b.assigned_lawyer ||
-        b.assignedLawyerName ||
+        (b as any).assigned_lawyer ||
+        (b as any).assignedLawyerName ||
         (b.assignedLawyerId && lawyersMap[b.assignedLawyerId]) ||
-        (b.assigned_lawyer_id && lawyersMap[b.assigned_lawyer_id]) ||
+        ((b as any).assigned_lawyer_id && lawyersMap[(b as any).assigned_lawyer_id]) ||
         'المحامي المكلف بالمكتب',
       status: b.daysRemaining <= 0 ? 'expired' : b.daysRemaining <= 30 ? 'expiring' : 'active',
       statusText:

@@ -827322,7 +827322,7 @@ __export(postgres_service_exports, {
   getCaseById: () => getCaseById,
   getCaseDetail: () => getCaseDetail,
   getCaseStats: () => getCaseStats,
-  getClientById: () => getClientById2,
+  getClientById: () => getClientById,
   getJudgmentById: () => getJudgmentById,
   getPoaById: () => getPoaById,
   getSessionById: () => getSessionById,
@@ -827587,7 +827587,7 @@ async function listClients(officeId) {
   }
   return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
 }
-async function getClientById2(id, officeId) {
+async function getClientById(id, officeId) {
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -829980,7 +829980,7 @@ async function getCaseDetail(id, officeId) {
     listSessions(officeId),
     listJudgments(officeId),
     listAttachments(officeId, "case", id),
-    caseRecord.clientId ? getClientById2(caseRecord.clientId, officeId) : Promise.resolve(null)
+    caseRecord.clientId ? getClientById(caseRecord.clientId, officeId) : Promise.resolve(null)
   ]);
   const linkedSessions = allSessions.filter((s3) => {
     const cId = s3.caseId || s3.case_id;
@@ -852668,7 +852668,7 @@ async function verifyRecordAccess(officeId, relatedRecordType, relatedRecordId, 
   const isAdmin = authUser.role === "admin" || authUser.role === "super_admin";
   switch (relatedRecordType) {
     case "client": {
-      const client = await getClientById2(relatedRecordId, officeId);
+      const client = await getClientById(relatedRecordId, officeId);
       if (!client) {
         return { allowed: false, status: 404, error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." };
       }
@@ -853232,9 +853232,11 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
     const users = await listSupabaseUsers2().catch(() => []);
     const officeUser = users.find((u) => u.id === officeId || u.username === officeId || u.id === req.authUser?.userId);
     let clientPhone = null;
-    if (session.clientId) {
+    const sessionAny = session;
+    const clientId = sessionAny.clientId || sessionAny.client_id;
+    if (clientId) {
       try {
-        const client = await getClientById(session.clientId, officeId);
+        const client = await getClientById(clientId, officeId);
         if (client?.phone?.trim()) {
           clientPhone = client.phone.trim();
         }
@@ -853242,8 +853244,9 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
       }
     }
     let lawyerPhone = null;
-    if (session.assignedLawyerId) {
-      const lawyer = users.find((u) => u.id === session.assignedLawyerId);
+    const assignedLawyerId = sessionAny.assignedLawyerId || sessionAny.assigned_lawyer_id;
+    if (assignedLawyerId) {
+      const lawyer = users.find((u) => u.id === assignedLawyerId);
       if (lawyer?.phone?.trim()) {
         lawyerPhone = lawyer.phone.trim();
       }
@@ -854967,7 +854970,7 @@ router9.post("/poa", async (req, res) => {
     return;
   }
   try {
-    const clientRecord = await getClientById2(clientId, officeId);
+    const clientRecord = await getClientById(clientId, officeId);
     if (!clientRecord) {
       res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
       return;
@@ -855060,7 +855063,7 @@ router9.put("/poa/:rowId", async (req, res) => {
       res.status(400).json({ error: "\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
       return;
     }
-    const clientRecord = await getClientById2(targetClientId, officeId);
+    const clientRecord = await getClientById(targetClientId, officeId);
     if (!clientRecord) {
       res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
       return;
@@ -857035,7 +857038,7 @@ router15.get("/clients/:id", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
   try {
-    const client = await getClientById2(id, officeId);
+    const client = await getClientById(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -857119,7 +857122,7 @@ router15.get("/clients/:id/timeline", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
   try {
-    const client = await getClientById2(id, officeId);
+    const client = await getClientById(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -857161,7 +857164,7 @@ router15.get("/clients/:id/notes", async (req, res) => {
   const officeId = getOfficeId5(req);
   const id = String(req.params.id);
   try {
-    const client = await getClientById2(id, officeId);
+    const client = await getClientById(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -857207,7 +857210,7 @@ router15.post("/clients/:id/notes", async (req, res) => {
   }
   const bodyText = req.body?.body ? String(req.body.body).trim() : "";
   try {
-    const client = await getClientById2(id, officeId);
+    const client = await getClientById(id, officeId);
     if (!client) {
       res.status(404).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F." });
       return;
@@ -859352,7 +859355,7 @@ router20.post("/cases", async (req, res) => {
     res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0642\u0636\u064A\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
-  const client = await getClientById2(String(clientId).trim(), officeId);
+  const client = await getClientById(String(clientId).trim(), officeId);
   if (!client) {
     res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
     return;
@@ -859482,7 +859485,7 @@ router20.patch("/cases/:id", async (req, res) => {
     }
     const clientId = body.clientId ?? body.client_id;
     if (clientId !== void 0) {
-      const client = await getClientById2(clientId, officeId);
+      const client = await getClientById(clientId, officeId);
       if (!client) {
         res.status(400).json({ error: "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u062A\u0628." });
         return;
