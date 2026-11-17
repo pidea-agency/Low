@@ -541,12 +541,7 @@ export default function LoginPage() {
               {/* Forgot Password Link */}
               <button
                 type="button"
-                onClick={() => {
-                  toast({
-                    title: 'استعادة كلمة المرور',
-                    description: 'يرجى التواصل مع مدير مكتبك أو المشرف لإعادة ضبط كلمة المرور.',
-                  });
-                }}
+                onClick={() => setLocation('/forgot-password')}
                 className="text-xs sm:text-sm font-semibold text-[#C99732] hover:text-[#A87A1E] hover:underline transition-colors cursor-pointer"
               >
                 نسيت كلمة المرور؟

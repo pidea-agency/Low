@@ -18978,14 +18978,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto8 = require("crypto");
+    var crypto9 = require("crypto");
     var Stats = require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto8.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto9.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router22;
+    module2.exports = Router23;
     module2.exports.Route = Route;
-    function Router22(options) {
-      if (!(this instanceof Router22)) {
-        return new Router22(options);
+    function Router23(options) {
+      if (!(this instanceof Router23)) {
+        return new Router23(options);
       }
       const opts = options || {};
-      function router22(req, res, next) {
-        router22.handle(req, res, next);
+      function router23(req, res, next) {
+        router23.handle(req, res, next);
       }
-      Object.setPrototypeOf(router22, this);
-      router22.caseSensitive = opts.caseSensitive;
-      router22.mergeParams = opts.mergeParams;
-      router22.params = {};
-      router22.strict = opts.strict;
-      router22.stack = [];
-      return router22;
+      Object.setPrototypeOf(router23, this);
+      router23.caseSensitive = opts.caseSensitive;
+      router23.mergeParams = opts.mergeParams;
+      router23.params = {};
+      router23.strict = opts.strict;
+      router23.stack = [];
+      return router23;
     }
-    Router22.prototype = function() {
+    Router23.prototype = function() {
     };
-    Router22.prototype.param = function param(name, fn) {
+    Router23.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router22.prototype.handle = function handle(req, res, callback) {
+    Router23.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router22.prototype.use = function use(handler2) {
+    Router23.prototype.use = function use(handler2) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router22.prototype.route = function route(path6) {
+    Router23.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router22.prototype[method] = function(path6) {
+      Router23.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve3 = require("node:path").resolve;
     var once2 = require_once();
-    var Router22 = require_router();
+    var Router23 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init4() {
-      var router22 = null;
+      var router23 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router22 === null) {
-            router22 = new Router22({
+          if (router23 === null) {
+            router23 = new Router23({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router22;
+          return router23;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router22 = this.router;
+      var router23 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router22.use(path6, fn2);
+          return router23.use(path6, fn2);
         }
         debug(".use app under %s", path6);
         fn2.mountpath = path6;
         fn2.parent = this;
-        router22.use(path6, function mounted_app(req, res, next) {
+        router23.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22472,17 +22472,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto8 = require("crypto");
+    var crypto9 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto8.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto9.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports2.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto8.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto9.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter4 = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router22 = require_router();
+    var Router23 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router22.Route;
-    exports2.Router = Router22;
+    exports2.Route = Router23.Route;
+    exports2.Router = Router23;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -24112,11 +24112,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports2) {
-    var crypto8 = require("crypto");
+    var crypto9 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto8.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto9.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -24125,7 +24125,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto8.createHash("sha1").update(str).digest("hex");
+      return crypto9.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -54925,7 +54925,7 @@ var require_bcrypt = __commonJS({
         (global2["dcodeIO"] = global2["dcodeIO"] || {})["bcrypt"] = factory();
     })(exports2, function() {
       "use strict";
-      var bcrypt2 = {};
+      var bcrypt3 = {};
       var randomFallback = null;
       function random(len) {
         if (typeof module2 !== "undefined" && module2 && module2["exports"])
@@ -54950,10 +54950,10 @@ var require_bcrypt = __commonJS({
       } catch (e2) {
       }
       randomFallback = null;
-      bcrypt2.setRandomFallback = function(random2) {
+      bcrypt3.setRandomFallback = function(random2) {
         randomFallback = random2;
       };
-      bcrypt2.genSaltSync = function(rounds, seed_length) {
+      bcrypt3.genSaltSync = function(rounds, seed_length) {
         rounds = rounds || GENSALT_DEFAULT_LOG2_ROUNDS;
         if (typeof rounds !== "number")
           throw Error("Illegal arguments: " + typeof rounds + ", " + typeof seed_length);
@@ -54970,7 +54970,7 @@ var require_bcrypt = __commonJS({
         salt.push(base64_encode(random(BCRYPT_SALT_LEN), BCRYPT_SALT_LEN));
         return salt.join("");
       };
-      bcrypt2.genSalt = function(rounds, seed_length, callback) {
+      bcrypt3.genSalt = function(rounds, seed_length, callback) {
         if (typeof seed_length === "function")
           callback = seed_length, seed_length = void 0;
         if (typeof rounds === "function")
@@ -54982,7 +54982,7 @@ var require_bcrypt = __commonJS({
         function _async(callback2) {
           nextTick(function() {
             try {
-              callback2(null, bcrypt2.genSaltSync(rounds));
+              callback2(null, bcrypt3.genSaltSync(rounds));
             } catch (err) {
               callback2(err);
             }
@@ -55003,19 +55003,19 @@ var require_bcrypt = __commonJS({
             });
           });
       };
-      bcrypt2.hashSync = function(s3, salt) {
+      bcrypt3.hashSync = function(s3, salt) {
         if (typeof salt === "undefined")
           salt = GENSALT_DEFAULT_LOG2_ROUNDS;
         if (typeof salt === "number")
-          salt = bcrypt2.genSaltSync(salt);
+          salt = bcrypt3.genSaltSync(salt);
         if (typeof s3 !== "string" || typeof salt !== "string")
           throw Error("Illegal arguments: " + typeof s3 + ", " + typeof salt);
         return _hash(s3, salt);
       };
-      bcrypt2.hash = function(s3, salt, callback, progressCallback) {
+      bcrypt3.hash = function(s3, salt, callback, progressCallback) {
         function _async(callback2) {
           if (typeof s3 === "string" && typeof salt === "number")
-            bcrypt2.genSalt(salt, function(err, salt2) {
+            bcrypt3.genSalt(salt, function(err, salt2) {
               _hash(s3, salt2, callback2, progressCallback);
             });
           else if (typeof s3 === "string" && typeof salt === "string")
@@ -55050,14 +55050,14 @@ var require_bcrypt = __commonJS({
           return false;
         return wrong === 0;
       }
-      bcrypt2.compareSync = function(s3, hash) {
+      bcrypt3.compareSync = function(s3, hash) {
         if (typeof s3 !== "string" || typeof hash !== "string")
           throw Error("Illegal arguments: " + typeof s3 + ", " + typeof hash);
         if (hash.length !== 60)
           return false;
-        return safeStringCompare(bcrypt2.hashSync(s3, hash.substr(0, hash.length - 31)), hash);
+        return safeStringCompare(bcrypt3.hashSync(s3, hash.substr(0, hash.length - 31)), hash);
       };
-      bcrypt2.compare = function(s3, hash, callback, progressCallback) {
+      bcrypt3.compare = function(s3, hash, callback, progressCallback) {
         function _async(callback2) {
           if (typeof s3 !== "string" || typeof hash !== "string") {
             nextTick(callback2.bind(this, Error("Illegal arguments: " + typeof s3 + ", " + typeof hash)));
@@ -55067,7 +55067,7 @@ var require_bcrypt = __commonJS({
             nextTick(callback2.bind(this, null, false));
             return;
           }
-          bcrypt2.hash(s3, hash.substr(0, 29), function(err, comp) {
+          bcrypt3.hash(s3, hash.substr(0, 29), function(err, comp) {
             if (err)
               callback2(err);
             else
@@ -55089,12 +55089,12 @@ var require_bcrypt = __commonJS({
             });
           });
       };
-      bcrypt2.getRounds = function(hash) {
+      bcrypt3.getRounds = function(hash) {
         if (typeof hash !== "string")
           throw Error("Illegal arguments: " + typeof hash);
         return parseInt(hash.split("$")[2], 10);
       };
-      bcrypt2.getSalt = function(hash) {
+      bcrypt3.getSalt = function(hash) {
         if (typeof hash !== "string")
           throw Error("Illegal arguments: " + typeof hash);
         if (hash.length !== 60)
@@ -56717,9 +56717,9 @@ var require_bcrypt = __commonJS({
           }, progressCallback);
         }
       }
-      bcrypt2.encodeBase64 = base64_encode;
-      bcrypt2.decodeBase64 = base64_decode;
-      return bcrypt2;
+      bcrypt3.encodeBase64 = base64_encode;
+      bcrypt3.decodeBase64 = base64_decode;
+      return bcrypt3;
     });
   }
 });
@@ -74618,22 +74618,22 @@ var require_crypto2 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto8 = require("crypto");
+    var crypto9 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto8.createHash("sha256").update(str).digest("base64");
+        return crypto9.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto8.randomBytes(count).toString("base64");
+        return crypto9.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto8.createVerify("RSA-SHA256");
+        const verifier = crypto9.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto8.createSign("RSA-SHA256");
+        const signer = crypto9.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -74651,7 +74651,7 @@ var require_crypto2 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto8.createHash("sha256").update(str).digest("hex");
+        return crypto9.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -74663,7 +74663,7 @@ var require_crypto2 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto8.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto9.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -75569,10 +75569,10 @@ var require_oauth2client = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto8 = (0, crypto_1.createCrypto)();
-        const randomString = crypto8.randomBytesBase64(96);
+        const crypto9 = (0, crypto_1.createCrypto)();
+        const randomString = crypto9.randomBytesBase64(96);
         const codeVerifier = randomString.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto8.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto9.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -76013,7 +76013,7 @@ var require_oauth2client = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto8 = (0, crypto_1.createCrypto)();
+        const crypto9 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -76026,7 +76026,7 @@ var require_oauth2client = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto8.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto9.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -76037,7 +76037,7 @@ var require_oauth2client = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto8.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto9.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -76054,7 +76054,7 @@ var require_oauth2client = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto8.verify(cert, signed, signature);
+        const verified = await crypto9.verify(cert, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt);
         }
@@ -76429,14 +76429,14 @@ var require_buffer_equal_constant_time = __commonJS({
 var require_jwa = __commonJS({
   "../../node_modules/.pnpm/jwa@2.0.1/node_modules/jwa/index.js"(exports2, module2) {
     var Buffer4 = require_safe_buffer().Buffer;
-    var crypto8 = require("crypto");
+    var crypto9 = require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util2 = require("util");
     var MSG_INVALID_ALGORITHM = '"%s" is not a valid algorithm.\n  Supported algorithms are:\n  "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512" and "none".';
     var MSG_INVALID_SECRET = "secret must be a string or buffer";
     var MSG_INVALID_VERIFIER_KEY = "key must be a string or a buffer";
     var MSG_INVALID_SIGNER_KEY = "key must be a string, a buffer or an object";
-    var supportsKeyObjects = typeof crypto8.createPublicKey === "function";
+    var supportsKeyObjects = typeof crypto9.createPublicKey === "function";
     if (supportsKeyObjects) {
       MSG_INVALID_VERIFIER_KEY += " or a KeyObject";
       MSG_INVALID_SECRET += "or a KeyObject";
@@ -76526,17 +76526,17 @@ var require_jwa = __commonJS({
       return function sign(thing, secret) {
         checkIsSecretKey(secret);
         thing = normalizeInput(thing);
-        var hmac = crypto8.createHmac("sha" + bits, secret);
+        var hmac = crypto9.createHmac("sha" + bits, secret);
         var sig = (hmac.update(thing), hmac.digest("base64"));
         return fromBase64(sig);
       };
     }
     var bufferEqual;
-    var timingSafeEqual = "timingSafeEqual" in crypto8 ? function timingSafeEqual2(a, b) {
+    var timingSafeEqual = "timingSafeEqual" in crypto9 ? function timingSafeEqual2(a, b) {
       if (a.byteLength !== b.byteLength) {
         return false;
       }
-      return crypto8.timingSafeEqual(a, b);
+      return crypto9.timingSafeEqual(a, b);
     } : function timingSafeEqual2(a, b) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
@@ -76553,7 +76553,7 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto8.createSign("RSA-SHA" + bits);
+        var signer = crypto9.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign(privateKey, "base64"));
         return fromBase64(sig);
       };
@@ -76563,7 +76563,7 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto8.createVerify("RSA-SHA" + bits);
+        var verifier = crypto9.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify(publicKey, signature, "base64");
       };
@@ -76572,11 +76572,11 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto8.createSign("RSA-SHA" + bits);
+        var signer = crypto9.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign({
           key: privateKey,
-          padding: crypto8.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto8.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto9.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto9.constants.RSA_PSS_SALTLEN_DIGEST
         }, "base64"));
         return fromBase64(sig);
       };
@@ -76586,12 +76586,12 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto8.createVerify("RSA-SHA" + bits);
+        var verifier = crypto9.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify({
           key: publicKey,
-          padding: crypto8.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto8.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto9.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto9.constants.RSA_PSS_SALTLEN_DIGEST
         }, signature, "base64");
       };
     }
@@ -79389,14 +79389,14 @@ var require_awsrequestsigner = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign(crypto8, key, msg) {
-      return await crypto8.signWithHmacSha256(key, msg);
+    async function sign(crypto9, key, msg) {
+      return await crypto9.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto8, key, dateStamp, region, serviceName) {
-      const kDate = await sign(crypto8, `AWS4${key}`, dateStamp);
-      const kRegion = await sign(crypto8, kDate, region);
-      const kService = await sign(crypto8, kRegion, serviceName);
-      const kSigning = await sign(crypto8, kService, "aws4_request");
+    async function getSigningKey(crypto9, key, dateStamp, region, serviceName) {
+      const kDate = await sign(crypto9, `AWS4${key}`, dateStamp);
+      const kRegion = await sign(crypto9, kDate, region);
+      const kService = await sign(crypto9, kRegion, serviceName);
+      const kSigning = await sign(crypto9, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -81110,24 +81110,24 @@ var require_googleauth = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto8 = (0, crypto_1.createCrypto)();
+        const crypto9 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign = await crypto8.sign(client.key, data);
+          const sign = await crypto9.sign(client.key, data);
           return sign;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto8, creds.client_email, data, endpoint);
+        return this.signBlob(crypto9, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto8, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto9, emailOrUniqueId, data, endpoint) {
         const url = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url.href,
           data: {
-            payload: crypto8.encodeBase64StringUtf8(data)
+            payload: crypto9.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -818334,22 +818334,22 @@ var require_crypto5 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto8 = require("crypto");
+    var crypto9 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto8.createHash("sha256").update(str).digest("base64");
+        return crypto9.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto8.randomBytes(count).toString("base64");
+        return crypto9.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto8.createVerify("RSA-SHA256");
+        const verifier = crypto9.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto8.createSign("RSA-SHA256");
+        const signer = crypto9.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -818367,7 +818367,7 @@ var require_crypto5 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto8.createHash("sha256").update(str).digest("hex");
+        return crypto9.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -818379,7 +818379,7 @@ var require_crypto5 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto8.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto9.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -819070,10 +819070,10 @@ var require_oauth2client2 = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto8 = (0, crypto_1.createCrypto)();
-        const randomString = crypto8.randomBytesBase64(96);
+        const crypto9 = (0, crypto_1.createCrypto)();
+        const randomString = crypto9.randomBytesBase64(96);
         const codeVerifier = randomString.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto8.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto9.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -819514,7 +819514,7 @@ var require_oauth2client2 = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto8 = (0, crypto_1.createCrypto)();
+        const crypto9 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -819527,7 +819527,7 @@ var require_oauth2client2 = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto8.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto9.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -819538,7 +819538,7 @@ var require_oauth2client2 = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto8.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto9.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -819555,7 +819555,7 @@ var require_oauth2client2 = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto8.verify(cert, signed, signature);
+        const verified = await crypto9.verify(cert, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt);
         }
@@ -822125,14 +822125,14 @@ var require_awsrequestsigner2 = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign(crypto8, key, msg) {
-      return await crypto8.signWithHmacSha256(key, msg);
+    async function sign(crypto9, key, msg) {
+      return await crypto9.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto8, key, dateStamp, region, serviceName) {
-      const kDate = await sign(crypto8, `AWS4${key}`, dateStamp);
-      const kRegion = await sign(crypto8, kDate, region);
-      const kService = await sign(crypto8, kRegion, serviceName);
-      const kSigning = await sign(crypto8, kService, "aws4_request");
+    async function getSigningKey(crypto9, key, dateStamp, region, serviceName) {
+      const kDate = await sign(crypto9, `AWS4${key}`, dateStamp);
+      const kRegion = await sign(crypto9, kDate, region);
+      const kService = await sign(crypto9, kRegion, serviceName);
+      const kSigning = await sign(crypto9, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -823098,7 +823098,7 @@ var require_gdchclient = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.GdchClient = exports2.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
-    var crypto8 = require("crypto");
+    var crypto9 = require("crypto");
     var fs6 = require("fs");
     var https2 = require("https");
     var oauth2client_1 = require_oauth2client2();
@@ -823289,7 +823289,7 @@ var require_gdchclient = __commonJS({
         const encodedHeader = this.base64UrlEncode(JSON.stringify(header));
         const encodedPayload = this.base64UrlEncode(JSON.stringify(payload));
         const signingInput = `${encodedHeader}.${encodedPayload}`;
-        const signature = crypto8.sign("sha256", Buffer.from(signingInput), {
+        const signature = crypto9.sign("sha256", Buffer.from(signingInput), {
           key: this.privateKey,
           dsaEncoding: "ieee-p1363"
         });
@@ -824150,24 +824150,24 @@ var require_googleauth2 = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto8 = (0, crypto_1.createCrypto)();
+        const crypto9 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign = await crypto8.sign(client.key, data);
+          const sign = await crypto9.sign(client.key, data);
           return sign;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto8, creds.client_email, data, endpoint);
+        return this.signBlob(crypto9, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto8, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto9, emailOrUniqueId, data, endpoint) {
         const url = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url.href,
           data: {
-            payload: crypto8.encodeBase64StringUtf8(data)
+            payload: crypto9.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -835359,7 +835359,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express22 = __toESM(require_express2(), 1);
+var import_express23 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -835368,7 +835368,7 @@ var import_fs3 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express21 = __toESM(require_express2(), 1);
+var import_express22 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -860397,29 +860397,427 @@ router20.delete("/cases/:id", async (req, res) => {
 });
 var cases_default = router20;
 
-// src/routes/index.ts
+// src/routes/password-reset.ts
+var import_express21 = __toESM(require_express2(), 1);
+init_logger();
+
+// src/services/password-reset.service.ts
+var import_crypto6 = __toESM(require("crypto"), 1);
+var import_bcryptjs2 = __toESM(require_bcryptjs(), 1);
+init_env();
+init_logger();
+init_src();
+init_supabase_service();
+init_whatsappChannel();
+var pendingResets = /* @__PURE__ */ new Map();
+var consumedNonces = /* @__PURE__ */ new Set();
+var ipRequestTimestamps = /* @__PURE__ */ new Map();
+var userRequestTimestamps = /* @__PURE__ */ new Map();
+var ipVerifyTimestamps = /* @__PURE__ */ new Map();
+var ONE_HOUR_MS = 60 * 60 * 1e3;
+var CODE_EXPIRY_MS = 10 * 60 * 1e3;
+var RESET_TOKEN_EXPIRY_MS = 10 * 60 * 1e3;
+var MAX_VERIFY_ATTEMPTS = 5;
+function cleanOldTimestamps(timestamps, windowMs) {
+  const cutoff = Date.now() - windowMs;
+  return timestamps.filter((t2) => t2 > cutoff);
+}
+function checkAndRecordRequestRateLimit(username, ip) {
+  const cleanUser = username.trim().toLowerCase();
+  const cleanIp = ip.trim();
+  const ipHistory = cleanOldTimestamps(ipRequestTimestamps.get(cleanIp) || [], ONE_HOUR_MS);
+  if (ipHistory.length >= 10) {
+    ipRequestTimestamps.set(cleanIp, ipHistory);
+    return { allowed: false, reason: "ip" };
+  }
+  const userHistory = cleanOldTimestamps(userRequestTimestamps.get(cleanUser) || [], ONE_HOUR_MS);
+  if (userHistory.length >= 3) {
+    userRequestTimestamps.set(cleanUser, userHistory);
+    return { allowed: false, reason: "user" };
+  }
+  ipHistory.push(Date.now());
+  ipRequestTimestamps.set(cleanIp, ipHistory);
+  userHistory.push(Date.now());
+  userRequestTimestamps.set(cleanUser, userHistory);
+  return { allowed: true };
+}
+function checkAndRecordVerifyRateLimit(ip) {
+  const cleanIp = ip.trim();
+  const ipHistory = cleanOldTimestamps(ipVerifyTimestamps.get(cleanIp) || [], ONE_HOUR_MS);
+  if (ipHistory.length >= 10) {
+    ipVerifyTimestamps.set(cleanIp, ipHistory);
+    return { allowed: false };
+  }
+  ipHistory.push(Date.now());
+  ipVerifyTimestamps.set(cleanIp, ipHistory);
+  return { allowed: true };
+}
+function signResetToken(data) {
+  const nonce = import_crypto6.default.randomBytes(16).toString("hex");
+  const payload = {
+    userId: data.userId,
+    username: data.username,
+    purpose: "password_reset",
+    nonce,
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + RESET_TOKEN_EXPIRY_MS
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = import_crypto6.default.createHmac("sha256", env.sessionSecret).update(payloadB64).digest("base64url");
+  return `${payloadB64}.${signature}`;
+}
+function verifyResetToken(token) {
+  if (!token || typeof token !== "string" || !token.includes(".")) {
+    return null;
+  }
+  const [payloadB64, signature] = token.split(".");
+  if (!payloadB64 || !signature) {
+    return null;
+  }
+  const expectedSignature = import_crypto6.default.createHmac("sha256", env.sessionSecret).update(payloadB64).digest("base64url");
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expectedSignature);
+  if (sigBuf.length !== expBuf.length || !import_crypto6.default.timingSafeEqual(sigBuf, expBuf)) {
+    return null;
+  }
+  try {
+    const payloadJson = Buffer.from(payloadB64, "base64url").toString("utf-8");
+    const payload = JSON.parse(payloadJson);
+    if (payload.purpose !== "password_reset") return null;
+    if (!payload.userId || !payload.username || !payload.nonce) return null;
+    if (Date.now() > payload.expiresAt) return null;
+    if (consumedNonces.has(payload.nonce)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+function consumeResetTokenNonce(nonce) {
+  consumedNonces.add(nonce);
+}
+var GENERIC_REQUEST_SUCCESS_MESSAGE = "\u0625\u0630\u0627 \u0643\u0627\u0646 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0648\u062C\u0648\u062F\u0627\u064B\u060C \u0633\u064A\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0625\u0644\u0649 \u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0645\u0633\u062C\u0644.";
+async function requestPasswordReset(username, ip, options) {
+  const startTime = Date.now();
+  const cleanUsername = (username || "").trim();
+  const rateLimit = checkAndRecordRequestRateLimit(cleanUsername, ip);
+  let targetUser = null;
+  if (cleanUsername) {
+    try {
+      targetUser = await findUserByIdOrUsername(cleanUsername);
+    } catch (err) {
+      logger.error({ err, username: cleanUsername }, "Error finding user for password reset");
+    }
+  }
+  let generatedOtp;
+  if (rateLimit.allowed && targetUser && targetUser.phone) {
+    const rawCode = import_crypto6.default.randomInt(1e5, 999999).toString();
+    const codeHash = import_crypto6.default.createHash("sha256").update(rawCode).digest("hex");
+    const record = {
+      userId: targetUser.id,
+      username: targetUser.username,
+      codeHash,
+      expiresAt: Date.now() + CODE_EXPIRY_MS,
+      attempts: 0,
+      createdAt: Date.now(),
+      testRawCode: false ? rawCode : void 0
+    };
+    pendingResets.set(targetUser.username.toLowerCase(), record);
+    generatedOtp = rawCode;
+    const message = `\u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642 \u0627\u0644\u062E\u0627\u0635 \u0628\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0641\u064A \u0645\u0646\u0635\u0629 \u0645\u064A\u0632\u0627\u0646 \u0644\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0647\u0648: ${rawCode}
+\u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0631\u0645\u0632 10 \u062F\u0642\u0627\u0626\u0642. \u0644\u0627 \u062A\u0634\u0627\u0631\u0643 \u0647\u0630\u0627 \u0627\u0644\u0631\u0645\u0632 \u0645\u0639 \u0623\u064A \u0634\u062E\u0635 \u062D\u0641\u0627\u0638\u0627\u064B \u0639\u0644\u0649 \u0623\u0645\u0627\u0646 \u0645\u0644\u0641\u0627\u062A\u0643.`;
+    try {
+      const channel = new WhatsappReminderChannel();
+      const sendResult = await channel.sendRaw(message, targetUser.phone, {
+        throwIfNotConfigured: false
+      });
+      if (!sendResult.success) {
+        logger.error(
+          {
+            userId: targetUser.id,
+            username: targetUser.username,
+            phone: targetUser.phone,
+            error: sendResult.error
+          },
+          "Failed to send password reset OTP via WhatsApp"
+        );
+      } else {
+        logger.info(
+          { userId: targetUser.id, username: targetUser.username },
+          "Password reset WhatsApp OTP sent successfully"
+        );
+      }
+    } catch (sendErr) {
+      logger.error(
+        { err: sendErr, userId: targetUser.id, username: targetUser.username },
+        "Exception while sending password reset OTP via WhatsApp"
+      );
+    }
+  } else if (!rateLimit.allowed) {
+    logger.warn(
+      { username: cleanUsername, ip, reason: rateLimit.reason },
+      "Password reset request rate-limit exceeded; silently dropping send"
+    );
+  }
+  const targetMinDelay = options?.targetMinDelayMs ?? 200;
+  const elapsed = Date.now() - startTime;
+  if (elapsed < targetMinDelay) {
+    await new Promise((resolve3) => setTimeout(resolve3, targetMinDelay - elapsed));
+  }
+  return {
+    success: true,
+    message: GENERIC_REQUEST_SUCCESS_MESSAGE,
+    testOtp: false ? generatedOtp : void 0
+  };
+}
+async function verifyPasswordResetCode(username, code, ip) {
+  const cleanIp = ip.trim();
+  const rateLimit = checkAndRecordVerifyRateLimit(cleanIp);
+  if (!rateLimit.allowed) {
+    return {
+      success: false,
+      error: "\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",
+      statusCode: 429
+    };
+  }
+  const cleanUser = (username || "").trim().toLowerCase();
+  const cleanCode = (code || "").trim();
+  if (!cleanUser || !cleanCode) {
+    return {
+      success: false,
+      error: "\u0631\u0645\u0632 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D",
+      statusCode: 400
+    };
+  }
+  const record = pendingResets.get(cleanUser);
+  if (!record) {
+    return {
+      success: false,
+      error: "\u0631\u0645\u0632 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D",
+      statusCode: 400
+    };
+  }
+  if (Date.now() > record.expiresAt) {
+    pendingResets.delete(cleanUser);
+    return {
+      success: false,
+      error: "\u0631\u0645\u0632 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D",
+      statusCode: 400
+    };
+  }
+  if (record.attempts >= MAX_VERIFY_ATTEMPTS) {
+    pendingResets.delete(cleanUser);
+    return {
+      success: false,
+      error: "\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A. \u064A\u0631\u062C\u0649 \u0637\u0644\u0628 \u0631\u0645\u0632 \u062C\u062F\u064A\u062F.",
+      statusCode: 400
+    };
+  }
+  const inputHash = import_crypto6.default.createHash("sha256").update(cleanCode).digest("hex");
+  const expectedBuf = Buffer.from(record.codeHash, "hex");
+  const actualBuf = Buffer.from(inputHash, "hex");
+  const isMatch = expectedBuf.length === actualBuf.length && import_crypto6.default.timingSafeEqual(expectedBuf, actualBuf);
+  if (!isMatch) {
+    record.attempts += 1;
+    if (record.attempts >= MAX_VERIFY_ATTEMPTS) {
+      pendingResets.delete(cleanUser);
+      return {
+        success: false,
+        error: "\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A. \u064A\u0631\u062C\u0649 \u0637\u0644\u0628 \u0631\u0645\u0632 \u062C\u062F\u064A\u062F.",
+        statusCode: 400
+      };
+    }
+    return {
+      success: false,
+      error: "\u0631\u0645\u0632 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D",
+      statusCode: 400
+    };
+  }
+  pendingResets.delete(cleanUser);
+  const resetToken = signResetToken({
+    userId: record.userId,
+    username: record.username
+  });
+  return {
+    success: true,
+    resetToken
+  };
+}
+async function completePasswordReset(input) {
+  const { resetToken, newPassword, confirmPassword } = input;
+  if (!resetToken || typeof resetToken !== "string") {
+    return {
+      success: false,
+      error: "\u0631\u0645\u0632 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u0645\u0637\u0644\u0648\u0628.",
+      statusCode: 400
+    };
+  }
+  const tokenPayload = verifyResetToken(resetToken);
+  if (!tokenPayload) {
+    return {
+      success: false,
+      error: "\u0631\u0645\u0632 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u0645\u0646\u062A\u0647\u064A \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629.",
+      statusCode: 400
+    };
+  }
+  if (!newPassword || typeof newPassword !== "string") {
+    return {
+      success: false,
+      error: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u0645\u0637\u0644\u0648\u0628\u0629.",
+      statusCode: 400
+    };
+  }
+  if (!confirmPassword || typeof confirmPassword !== "string") {
+    return {
+      success: false,
+      error: "\u062A\u0623\u0643\u064A\u062F \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628.",
+      statusCode: 400
+    };
+  }
+  if (newPassword !== confirmPassword) {
+    return {
+      success: false,
+      error: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0648\u062A\u0623\u0643\u064A\u062F\u0647\u0627 \u063A\u064A\u0631 \u0645\u062A\u0637\u0627\u0628\u0642\u064A\u0646.",
+      statusCode: 400
+    };
+  }
+  const user = await findUserByIdOrUsername(tokenPayload.userId);
+  if (!user || user.username.toLowerCase() !== tokenPayload.username.toLowerCase()) {
+    return {
+      success: false,
+      error: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u063A\u064A\u0631 \u0645\u062A\u0637\u0627\u0628\u0642 \u0645\u0639 \u062C\u0644\u0633\u0629 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646.",
+      statusCode: 400
+    };
+  }
+  const passwordValidation = validatePassword(newPassword, {
+    username: user.username,
+    email: user.email || void 0
+  });
+  if (!passwordValidation.isValid) {
+    return {
+      success: false,
+      error: passwordValidation.message || "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0644\u0627 \u062A\u0633\u062A\u0648\u0641\u064A \u0634\u0631\u0648\u0637 \u0627\u0644\u0623\u0645\u0627\u0646.",
+      statusCode: 400
+    };
+  }
+  const password_hash = await import_bcryptjs2.default.hash(newPassword.trim(), 10);
+  await updateSupabaseUser(user.id, {
+    password_hash
+  });
+  consumeResetTokenNonce(tokenPayload.nonce);
+  pendingResets.delete(user.username.toLowerCase());
+  revokeUserSessions(user.id);
+  try {
+    await recordAuditLog({
+      actor_id: user.id,
+      actor_username: user.username,
+      action: "password_reset_via_whatsapp",
+      target_office_id: user.office_id || user.admin_id || user.id,
+      details: {
+        method: "whatsapp_otp",
+        target_user_id: user.id,
+        target_username: user.username
+      }
+    });
+  } catch (auditErr) {
+    logger.warn({ err: auditErr }, "Failed to write audit log for password reset");
+  }
+  logger.info(
+    { userId: user.id, username: user.username },
+    "Password reset completed successfully via WhatsApp OTP"
+  );
+  return {
+    success: true,
+    message: "\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0628\u0646\u062C\u0627\u062D. \u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629.",
+    username: user.username
+  };
+}
+
+// src/routes/password-reset.ts
 var router21 = (0, import_express21.Router)();
-router21.use(health_default);
-router21.use(auth_default);
-router21.use(dashboard_default);
-router21.use(ai_default);
-router21.use(sessions_default);
-router21.use(settings_default);
-router21.use(reports_default);
-router21.use(cron_default);
-router21.use(poa_default);
-router21.use(judgments_default);
-router21.use(tasks_default);
-router21.use(users_default);
-router21.use(super_admin_default);
-router21.use(subscription_default);
-router21.use(clients_default);
-router21.use(notifications_default);
-router21.use(attachments_default);
-router21.use(search_default);
-router21.use(workload_default);
-router21.use(cases_default);
-var routes_default = router21;
+function getClientIp2(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.socket?.remoteAddress || req.ip || "127.0.0.1";
+}
+router21.post("/auth/password-reset/request", async (req, res) => {
+  try {
+    const username = String(req.body?.username || "").trim();
+    const ip = getClientIp2(req);
+    const result = await requestPasswordReset(username, ip);
+    res.json({
+      success: true,
+      message: result.message
+    });
+  } catch (err) {
+    logger.error({ err }, "Error in /auth/password-reset/request");
+    res.json({
+      success: true,
+      message: "\u0625\u0630\u0627 \u0643\u0627\u0646 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0648\u062C\u0648\u062F\u0627\u064B\u060C \u0633\u064A\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0625\u0644\u0649 \u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0645\u0633\u062C\u0644."
+    });
+  }
+});
+router21.post("/auth/password-reset/verify", async (req, res) => {
+  try {
+    const username = String(req.body?.username || "").trim();
+    const code = String(req.body?.code || "").trim();
+    const ip = getClientIp2(req);
+    const result = await verifyPasswordResetCode(username, code, ip);
+    if (!result.success) {
+      res.status(result.statusCode).json({ error: result.error });
+      return;
+    }
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Error in /auth/password-reset/verify");
+    res.status(400).json({ error: "\u0631\u0645\u0632 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D" });
+  }
+});
+router21.post("/auth/password-reset/complete", async (req, res) => {
+  try {
+    const { resetToken, newPassword, confirmPassword } = req.body || {};
+    const result = await completePasswordReset({
+      resetToken,
+      newPassword,
+      confirmPassword
+    });
+    if (!result.success) {
+      res.status(result.statusCode).json({ error: result.error });
+      return;
+    }
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Error in /auth/password-reset/complete");
+    res.status(400).json({ error: err?.message || "\u0641\u0634\u0644 \u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629." });
+  }
+});
+var password_reset_default = router21;
+
+// src/routes/index.ts
+var router22 = (0, import_express22.Router)();
+router22.use(health_default);
+router22.use(auth_default);
+router22.use(password_reset_default);
+router22.use(dashboard_default);
+router22.use(ai_default);
+router22.use(sessions_default);
+router22.use(settings_default);
+router22.use(reports_default);
+router22.use(cron_default);
+router22.use(poa_default);
+router22.use(judgments_default);
+router22.use(tasks_default);
+router22.use(users_default);
+router22.use(super_admin_default);
+router22.use(subscription_default);
+router22.use(clients_default);
+router22.use(notifications_default);
+router22.use(attachments_default);
+router22.use(search_default);
+router22.use(workload_default);
+router22.use(cases_default);
+var routes_default = router22;
 
 // src/app.ts
 init_logger();
@@ -860443,7 +860841,7 @@ void refreshSettingsFromSupabase().catch((err) => {
 });
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path5.default.dirname(currentFilename);
-var app = (0, import_express22.default)();
+var app = (0, import_express23.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -860476,8 +860874,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express22.default.json());
-app.use(import_express22.default.urlencoded({ extended: true }));
+app.use(import_express23.default.json());
+app.use(import_express23.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -860497,7 +860895,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express22.default.static(distPath));
+  app.use(import_express23.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path5.default.join(distPath, "index.html"));

@@ -21,6 +21,7 @@ const NotFound = React.lazy(() => import('@/pages/not-found'));
 const LoginPage = React.lazy(() => import('@/pages/login'));
 const AdminLoginPage = React.lazy(() => import('@/pages/admin-login'));
 const ActivatePage = React.lazy(() => import('@/pages/activate'));
+const ForgotPasswordPage = React.lazy(() => import('@/pages/forgot-password'));
 const SuperAdminPage = React.lazy(() => import('@/pages/super-admin'));
 const OfficeMembersPage = React.lazy(() => import('@/pages/users'));
 const DashboardPage = React.lazy(() => import('@/pages/dashboard'));
@@ -148,6 +149,13 @@ function Router() {
       <Route path="/activate">
         <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
           <ActivatePage />
+        </Suspense>
+      </Route>
+
+      {/* Forgot Password Flow via WhatsApp OTP */}
+      <Route path="/forgot-password">
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+          <ForgotPasswordPage />
         </Suspense>
       </Route>
 
