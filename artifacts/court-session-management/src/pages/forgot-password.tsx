@@ -296,9 +296,9 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#080d1a] font-sans text-right" dir="rtl">
-      {/* ── LEFT HERO PANEL (Dark Branding & Aesthetics) ── */}
-      <div className="hidden md:flex md:w-[46%] lg:w-[48%] bg-[#060a14] relative flex-col justify-between p-10 lg:p-14 overflow-hidden border-l border-white/5">
+    <div className="h-screen max-h-screen w-full flex flex-col md:flex-row-reverse bg-[#080d1a] font-sans text-right overflow-hidden" dir="rtl">
+      {/* ── HERO PANEL (Dark Branding & Aesthetics) ── */}
+      <div className="hidden md:flex md:w-[46%] lg:w-[48%] h-full bg-[#060a14] relative flex-col justify-between p-8 lg:p-12 overflow-hidden border-r border-[#C99732]/20 select-none">
         {/* Luxury Law Firm Office Hero Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center transition-all duration-700"
@@ -306,41 +306,50 @@ export default function ForgotPasswordPage() {
         />
         {/* Cinematic dark luxury gradient overlay & backdrop blur for pristine readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#060a14] via-[#060a14]/85 to-[#060a14]/60 backdrop-blur-[0.5px]" />
-        <div className="absolute inset-0 bg-radial from-amber-500/10 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#C99732]/10 rounded-full blur-3xl pointer-events-none" />
+        
+        {/* Warm Golden Ambient Glows */}
+        <div className="absolute inset-0 bg-radial from-[#C99732]/12 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#C99732]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-0 w-80 h-80 bg-[#C99732]/10 rounded-full blur-[90px] pointer-events-none" />
 
-        {/* Top Tag */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-mono text-amber-400/80 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>LEX ENGINE SAUDI ARABIA</span>
+        {/* Bottom Hero Content */}
+        <div className="relative z-10 space-y-4 px-20 py-40">
+          <div className="space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#C99732]/25 via-black/50 to-[#C99732]/10 border border-[#C99732]/45 flex items-center justify-center text-white shadow-[0_4px_24px_rgba(201,151,50,0.22)] backdrop-blur-md">
+              <ShieldCheck className="w-6 h-6 text-[#E8C477]" />
+            </div>
+
+            <h2 className="text-2xl lg:text-3xl font-extrabold text-white tracking-wide leading-tight">
+              الريادة في{' '}
+              <span className="bg-gradient-to-l from-[#FFF4DE] via-[#E8C477] to-[#C99732] bg-clip-text text-transparent drop-shadow-sm">
+                حلول المحاماة الرقمية
+              </span>
+            </h2>
+
+            <p className="text-xs lg:text-sm text-slate-300/90 leading-relaxed max-w-md font-normal">
+              بنية تحتية قانونية متكاملة مصممة لإدارة القضايا والترافع الذكي وفق المعايير والأنظمة العدلية.
+            </p>
           </div>
-        </div>
 
-        {/* Center Scales Emblem */}
-        <div className="relative z-10 my-auto py-12 flex flex-col items-center justify-center text-center">
-          <div className="w-24 h-24 mb-6 rounded-2xl bg-gradient-to-b from-[#C99732]/20 to-transparent border border-[#C99732]/30 flex items-center justify-center shadow-2xl">
-            <ShieldCheck className="w-12 h-12 text-[#E8C477]" />
+          {/* Bottom Security Note */}
+          <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-[#C99732]/20 pt-3.5">
+            <div className="flex items-center gap-1.5 text-[#E8C477]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#E8C477]" />
+              <span className="text-slate-300">بيئة موثقة ومشفرة بالكامل</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-400">
+              <span className="hover:text-[#E8C477] transition-colors cursor-pointer">الشروط والخصوصية</span>
+              <span>•</span>
+              <span className="hover:text-[#E8C477] transition-colors cursor-pointer">المساعدة</span>
+            </div>
           </div>
-          <h2 className="text-2xl lg:text-3xl font-extrabold text-white tracking-wide">
-            الريادة في حلول المحاماة الرقمية
-          </h2>
-          <p className="text-sm text-slate-400 mt-3 max-w-md leading-relaxed">
-            بنية تحتية قانونية متكاملة مصممة لإدارة القضايا والترافع الذكي وفق المعايير والأنظمة العدلية.
-          </p>
-        </div>
-
-        {/* Bottom Security Note */}
-        <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-500 border-t border-white/5 pt-4">
-          <span>بيئة موثقة ومشفرة بالكامل</span>
-          <span>منظومة متوافقة مع متطلبات الأمن السيبراني</span>
         </div>
       </div>
 
       {/* ── RIGHT MAIN PANEL (Interactive Form Flow) ── */}
-      <div className="flex-1 flex flex-col justify-between bg-white px-6 sm:px-12 lg:px-20 py-8 lg:py-12 min-h-screen">
+      <div className="flex-1 h-full flex flex-col justify-between bg-white px-6 sm:px-10 lg:px-16 py-6 sm:py-8 overflow-y-auto">
         {/* Top Navigation & Brand Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#0b1b3d] flex items-center justify-center text-[#E8C477] font-bold text-sm">
               ⚖
@@ -367,19 +376,10 @@ export default function ForgotPasswordPage() {
           {/* ═════════════════════════════════════════════════════════════ */}
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
-                  الخطوة 1 من 3
-                </span>
-                <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> التحقق الثنائي
-                </span>
-              </div>
+             
 
               <div>
-                <div className="w-12 h-12 rounded-xl bg-slate-100 text-[#0b1b3d] flex items-center justify-center mb-4 border border-slate-200">
-                  <KeyRound className="w-6 h-6 text-[#0b1b3d]" />
-                </div>
+               
                 <h1 className="text-2xl font-extrabold text-[#0c1a30]">استعادة كلمة المرور</h1>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                   أدخل اسم المستخدم المسجل لإرسال رمز التحقق عبر الواتساب.
@@ -426,19 +426,7 @@ export default function ForgotPasswordPage() {
               </form>
 
               {/* Help Box */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-                <div>
-                  <div className="font-bold text-slate-800">تواجه مشكلة في الوصول للرقم؟</div>
-                  <div className="text-[11px] text-slate-500">تواصل مع مسؤول الأنظمة القانونية بالمكتب</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toast({ title: 'الدعم الفني', description: 'يرجى مراجعة مدير النظام بمكتبك لمساعدتك.' })}
-                  className="text-xs font-bold text-[#0b1b3d] hover:underline"
-                >
-                  طلب مساعدة
-                </button>
-              </div>
+              
             </div>
           )}
 
@@ -447,23 +435,11 @@ export default function ForgotPasswordPage() {
           {/* ═════════════════════════════════════════════════════════════ */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
-                  الخطوة 2 من 3
-                </span>
-                <span className="text-xs text-amber-600 font-semibold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" /> في انتظار الرمز
-                </span>
-              </div>
+              
 
               <div>
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100">
-                  <MessageSquare className="w-6 h-6 text-blue-600" />
-                </div>
-                <h1 className="text-2xl font-extrabold text-[#0c1a30]">رمز التحقق</h1>
-                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  تم إرسال رمز الأمان المكون من 6 أرقام عبر WhatsApp إلى رقم هاتفك المسجل.
-                </p>
+                 <h1 className="text-2xl font-extrabold text-[#0c1a30]">رمز التحقق</h1>
+               
                 <div className="mt-2 text-[11px] bg-slate-50 border border-slate-200 p-2 rounded-lg text-slate-600 font-medium">
                   المستخدم: <strong className="font-mono text-slate-900">{username}</strong> (إذا كان الحساب مسجلاً، ستصلك رسالة الواتساب بالرمز).
                 </div>
@@ -554,19 +530,10 @@ export default function ForgotPasswordPage() {
           {/* ═════════════════════════════════════════════════════════════ */}
           {step === 3 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
-                  الخطوة 3 من 3
-                </span>
-                <span className="text-xs text-indigo-600 font-semibold flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> تحديث أمان الحساب
-                </span>
-              </div>
+             
 
               <div>
-                <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 border border-purple-100">
-                  <Lock className="w-6 h-6 text-purple-600" />
-                </div>
+                
                 <h1 className="text-2xl font-extrabold text-[#0c1a30]">كلمة المرور الجديدة</h1>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                   يرجى إدخال كلمة مرور قوية لحماية حسابك الاستشاري وملفاتك.
