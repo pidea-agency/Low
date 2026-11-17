@@ -299,7 +299,13 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#080d1a] font-sans text-right" dir="rtl">
       {/* ── LEFT HERO PANEL (Dark Branding & Aesthetics) ── */}
       <div className="hidden md:flex md:w-[46%] lg:w-[48%] bg-[#060a14] relative flex-col justify-between p-10 lg:p-14 overflow-hidden border-l border-white/5">
-        {/* Background glow & subtle patterns */}
+        {/* Luxury Law Firm Office Hero Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
+          style={{ backgroundImage: `url('/law-firm-hero.jpg')` }}
+        />
+        {/* Cinematic dark luxury gradient overlay & backdrop blur for pristine readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#060a14] via-[#060a14]/85 to-[#060a14]/60 backdrop-blur-[0.5px]" />
         <div className="absolute inset-0 bg-radial from-amber-500/10 via-transparent to-transparent pointer-events-none" />
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#C99732]/10 rounded-full blur-3xl pointer-events-none" />
 
