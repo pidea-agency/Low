@@ -362,7 +362,7 @@ export default function ForgotPasswordPage() {
 
           <button
             onClick={() => setLocation('/login')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#0b1b3d] transition-colors cursor-pointer py-1.5 px-3 rounded-lg hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#C99732] transition-colors cursor-pointer py-1.5 px-3 rounded-lg hover:bg-slate-50"
           >
             <ArrowRight className="w-3.5 h-3.5" />
             <span>العودة لتسجيل الدخول</span>
@@ -404,7 +404,7 @@ export default function ForgotPasswordPage() {
                       placeholder="مثال: a.alotaibi أو admin_office"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="pr-9 h-10 text-xs font-mono border-slate-200 focus:border-[#0b1b3d]"
+                      className="pr-9 h-10 text-xs font-mono border-slate-200 focus:border-[#C99732] focus:ring-1 focus:ring-[#C99732]"
                       dir="ltr"
                     />
                   </div>
@@ -413,9 +413,12 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   disabled={isRequesting}
-                  className="w-full h-11 bg-black hover:bg-slate-900 text-white font-bold text-xs gap-2 rounded-xl shadow-md transition-all cursor-pointer"
+                  className="w-full h-11 text-white font-bold text-xs gap-2 rounded-xl shadow-md shadow-[#C99732]/20 border-0 active:scale-[0.99] hover:brightness-105 transition-all cursor-pointer"
+                  style={{
+                    background: 'linear-gradient(135deg, #C99732 0%, #B28325 100%)',
+                  }}
                 >
-                  <MessageSquare className="w-4 h-4 text-emerald-400" />
+                  <MessageSquare className="w-4 h-4 text-white" />
                   {isRequesting ? 'جارٍ التحقق...' : 'إرسال رمز التحقق عبر WhatsApp'}
                 </Button>
 
@@ -477,7 +480,7 @@ export default function ForgotPasswordPage() {
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                         onPaste={handleOtpPaste}
-                        className="w-11 sm:w-12 h-12 sm:h-14 text-center text-lg sm:text-xl font-bold font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#0b1b3d] focus:ring-2 focus:ring-[#0b1b3d]/20 transition-all outline-none"
+                        className="w-11 sm:w-12 h-12 sm:h-14 text-center text-lg sm:text-xl font-bold font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#C99732] focus:ring-2 focus:ring-[#C99732]/20 transition-all outline-none"
                       />
                     ))}
                   </div>
@@ -501,7 +504,7 @@ export default function ForgotPasswordPage() {
                     type="button"
                     onClick={handleRequestOtp}
                     disabled={isRequesting}
-                    className="text-[11px] font-bold text-[#0b1b3d] hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-bold text-[#C99732] hover:text-[#A87A1E] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <RotateCcw className="w-3 h-3" />
                     <span>إعادة إرسال الرمز</span>
@@ -511,7 +514,10 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   disabled={isVerifying || otpDigits.join('').length !== 6}
-                  className="w-full h-11 bg-black hover:bg-slate-900 text-white font-bold text-xs gap-2 rounded-xl shadow-md transition-all cursor-pointer"
+                  className="w-full h-11 text-white font-bold text-xs gap-2 rounded-xl shadow-md shadow-[#C99732]/20 border-0 active:scale-[0.99] hover:brightness-105 transition-all cursor-pointer"
+                  style={{
+                    background: 'linear-gradient(135deg, #C99732 0%, #B28325 100%)',
+                  }}
                 >
                   {isVerifying ? 'جارٍ التحقق...' : 'تأكيد الرمز والمتابعة'}
                   <ArrowRight className="w-4 h-4 rotate-180" />
@@ -561,7 +567,7 @@ export default function ForgotPasswordPage() {
                         setNewPassword(e.target.value);
                         setPasswordError(null);
                       }}
-                      className="pl-10 h-10 text-xs font-mono border-slate-200"
+                      className="pl-10 h-10 text-xs font-mono border-slate-200 focus:border-[#C99732] focus:ring-1 focus:ring-[#C99732]"
                       dir="ltr"
                     />
                     <button
@@ -623,7 +629,7 @@ export default function ForgotPasswordPage() {
                         setConfirmPassword(e.target.value);
                         setPasswordError(null);
                       }}
-                      className="pl-10 h-10 text-xs font-mono border-slate-200"
+                      className="pl-10 h-10 text-xs font-mono border-slate-200 focus:border-[#C99732] focus:ring-1 focus:ring-[#C99732]"
                       dir="ltr"
                     />
                     <button
@@ -642,7 +648,7 @@ export default function ForgotPasswordPage() {
                     type="checkbox"
                     checked={revokeSessionsChecked}
                     readOnly
-                    className="w-4 h-4 text-black rounded border-slate-300 pointer-events-none accent-black"
+                    className="w-4 h-4 rounded border-slate-300 pointer-events-none accent-[#0B2A4A]"
                   />
                   <span>تسجيل الخروج الفوري من جميع الأجهزة والجلسات المفتوحة مسبقاً (إلزامي لضمان الأمان)</span>
                 </div>
@@ -650,7 +656,10 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   disabled={isSubmittingPassword || !passwordValidation.isValid || newPassword !== confirmPassword}
-                  className="w-full h-11 bg-black hover:bg-slate-900 text-white font-bold text-xs gap-2 rounded-xl shadow-md transition-all cursor-pointer"
+                  className="w-full h-11 text-white font-bold text-xs gap-2 rounded-xl shadow-md shadow-[#C99732]/20 border-0 active:scale-[0.99] hover:brightness-105 transition-all cursor-pointer"
+                  style={{
+                    background: 'linear-gradient(135deg, #C99732 0%, #B28325 100%)',
+                  }}
                 >
                   {isSubmittingPassword ? 'جارٍ الحفظ...' : 'تعيين كلمة المرور والمتابعة'}
                   <ArrowRight className="w-4 h-4 rotate-180" />
@@ -681,7 +690,10 @@ export default function ForgotPasswordPage() {
 
               <Button
                 onClick={() => setLocation('/login')}
-                className="w-full h-11 bg-black hover:bg-slate-900 text-white font-bold text-xs gap-2 rounded-xl shadow-md cursor-pointer"
+                className="w-full h-11 text-white font-bold text-xs gap-2 rounded-xl shadow-md shadow-[#C99732]/20 border-0 active:scale-[0.99] hover:brightness-105 transition-all cursor-pointer"
+                style={{
+                  background: 'linear-gradient(135deg, #C99732 0%, #B28325 100%)',
+                }}
               >
                 <span>الانتقال إلى تسجيل الدخول</span>
                 <ArrowRight className="w-4 h-4 rotate-180" />

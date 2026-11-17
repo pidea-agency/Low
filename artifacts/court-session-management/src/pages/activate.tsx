@@ -159,8 +159,8 @@ export default function ActivatePage() {
       <div className="w-full max-w-md space-y-6">
         {/* Brand / Logo */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary text-white shadow-xs">
-            <Scale className="w-6 h-6 text-[#C9A449]" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#0b1b3d] text-white shadow-xs">
+            <Scale className="w-6 h-6 text-[#E8C477]" />
           </div>
           <h2 className="text-lg font-bold text-foreground">منظومة إدارة الجلسات والمكاتب</h2>
           <p className="text-xs text-muted-foreground">تفعيل حساب المحامي وتعيين كلمة المرور</p>
@@ -226,7 +226,10 @@ export default function ActivatePage() {
             <CardContent className="space-y-4 pt-2">
               <Button
                 onClick={() => setLocation('/login')}
-                className="w-full text-xs font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="w-full text-xs font-bold gap-2 text-white border-0 shadow-md shadow-[#C99732]/20 hover:brightness-105 h-11 rounded-xl transition-all cursor-pointer"
+                style={{
+                  background: 'linear-gradient(135deg, #C99732 0%, #B28325 100%)',
+                }}
               >
                 الانتقال إلى تسجيل الدخول ({countdown})
                 <ArrowRight className="w-4 h-4 rotate-180" />
@@ -281,7 +284,7 @@ export default function ActivatePage() {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="text-xs h-10 pr-3 pl-10 font-mono"
+                      className="text-xs h-10 pr-3 pl-10 font-mono focus:border-[#C99732] focus:ring-1 focus:ring-[#C99732]"
                       autoFocus
                     />
                     <button
@@ -304,7 +307,7 @@ export default function ActivatePage() {
                     placeholder="••••••••"
                     value={passwordConfirmation}
                     onChange={(e) => setPasswordConfirmation(e.target.value)}
-                    className="text-xs h-10 font-mono"
+                    className="text-xs h-10 font-mono focus:border-[#C99732] focus:ring-1 focus:ring-[#C99732]"
                   />
                   {passwordConfirmation && password !== passwordConfirmation && (
                     <p className="text-[11px] text-destructive flex items-center gap-1 pt-0.5">
@@ -332,7 +335,10 @@ export default function ActivatePage() {
                 <Button
                   type="submit"
                   disabled={isSubmitting || !password || password !== passwordConfirmation}
-                  className="w-full text-xs font-bold h-10 gap-2"
+                  className="w-full text-xs font-bold h-11 gap-2 text-white border-0 shadow-md shadow-[#C99732]/20 hover:brightness-105 rounded-xl transition-all cursor-pointer"
+                  style={{
+                    background: 'linear-gradient(135deg, #C99732 0%, #B28325 100%)',
+                  }}
                 >
                   {isSubmitting ? (
                     'جاري تفعيل الحساب...'
@@ -353,7 +359,7 @@ export default function ActivatePage() {
           هل لديك حساب مفعل بالفعل؟{' '}
           <button
             onClick={() => setLocation('/login')}
-            className="text-primary hover:underline font-semibold"
+            className="text-[#C99732] hover:text-[#A87A1E] hover:underline font-bold transition-colors cursor-pointer"
           >
             تسجيل الدخول
           </button>

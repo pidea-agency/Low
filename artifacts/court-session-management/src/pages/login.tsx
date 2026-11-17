@@ -240,25 +240,10 @@ export default function LoginPage() {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200" />
               </div>
-              <div className="relative flex justify-center text-xs text-slate-400">
-                <span className="bg-white px-3 font-medium">أو</span>
-              </div>
+               
             </div>
 
-            {/* Nafath SSO Button */}
-            <button
-              type="button"
-              onClick={() => {
-                toast({
-                  title: 'الدخول الموحد عبر نفاذ',
-                  description: 'خدمة تسجيل الدخول بالنفاذ الوطني الموحد مخصصة للمحامين والممارسين المعتمدين.',
-                });
-              }}
-              className="w-full h-11 rounded-xl bg-[#F0F5FF] hover:bg-[#E4EEFF] text-[#1E3A8A] font-bold text-sm flex items-center justify-center gap-2.5 border border-[#DBEAFE] transition-all cursor-pointer"
-            >
-              <Fingerprint className="w-4 h-4 text-[#2563EB]" />
-              <span>الدخول الموحد عبر نفاذ</span>
-            </button>
+           
 
           
           </form>

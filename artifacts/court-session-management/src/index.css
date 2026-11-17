@@ -353,6 +353,51 @@
   td {
     font-weight: 400;
   }
+
+  /* Global Modern Custom Scrollbar matching Visual Identity */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(11, 42, 74, 0.22) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgba(201, 151, 50, 0.3) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(11, 42, 74, 0.2);
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(11, 42, 74, 0.45);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background-color: rgba(11, 42, 74, 0.7);
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: rgba(201, 151, 50, 0.25);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(201, 151, 50, 0.55);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:active {
+    background-color: rgba(201, 151, 50, 0.8);
+  }
 }
 
 @layer utilities {
