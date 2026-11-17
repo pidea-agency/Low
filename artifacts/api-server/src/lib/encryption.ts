@@ -5,9 +5,9 @@ const IV_LENGTH = 12; // Standard 96-bit IV for GCM
 const AUTH_TAG_LENGTH = 16; // Standard 128-bit auth tag
 
 function getEncryptionKey(): Buffer {
-  const secret = process.env.SETTINGS_ENCRYPTION_KEY;
-  if (!secret || secret.trim().length === 0) {
-    throw new Error("SETTINGS_ENCRYPTION_KEY environment variable is required and cannot be empty.");
+  const secret = process.env.SETTINGS_ENCRYPTION_KEY?.trim() || process.env.SESSION_SECRET?.trim();
+  if (!secret) {
+    throw new Error("SETTINGS_ENCRYPTION_KEY or SESSION_SECRET environment variable is required and cannot be empty.");
   }
   return crypto.createHash("sha256").update(secret).digest();
 }

@@ -114,6 +114,7 @@ type SessionItem = {
   notes?: string | null;
   reportStatus?: string | null;
   assignedLawyer?: string | null;
+  assignedLawyerId?: string | null;
   isRemote?: boolean;
   registrationNumber?: string | null;
   [key: string]: unknown;
@@ -223,6 +224,7 @@ export default function SessionsPage() {
         status: s.status,
         reportStatus: !s.notes ? 'تدوين التقرير' : s.status === 'Finished' ? 'عرض الضبط القضائي' : 'بانتظار الانعقاد',
         assignedLawyer: (s as any).assignedLawyer || 'غير محدد',
+        assignedLawyerId: (s as any).assignedLawyerId || (s as any).assigned_lawyer_id || null,
         notes: s.notes || 'جلسة قضائية مسجلة في النظام',
       }));
     }
@@ -895,14 +897,18 @@ export default function SessionsPage() {
                                 إعادة تعيين المحامي
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => setDeleteTarget(s)}
-                              className="text-rose-600 cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 ml-1.5" />
-                              حذف الجلسة
-                            </DropdownMenuItem>
+                            {(isAdmin || (currentUser?.id && (s.assignedLawyerId === currentUser.id || (s as any).assigned_lawyer_id === currentUser.id))) && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteTarget(s)}
+                                  className="text-rose-600 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 ml-1.5" />
+                                  حذف الجلسة
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

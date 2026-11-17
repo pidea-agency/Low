@@ -1257,18 +1257,20 @@ export default function TasksPage() {
                 تعديل
               </Button>
 
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => {
-                  setDeleteTarget(viewTask);
-                  setViewTask(null);
-                }}
-                className="text-xs"
-              >
-                <Trash2 className="w-3.5 h-3.5 ml-1" />
-                حذف
-              </Button>
+              {(isAdmin || (currentUser?.id && viewTask.assignedLawyerId === currentUser.id)) && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteTarget(viewTask);
+                    setViewTask(null);
+                  }}
+                  className="text-xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5 ml-1" />
+                  حذف
+                </Button>
+              )}
 
               <Button
                 size="sm"

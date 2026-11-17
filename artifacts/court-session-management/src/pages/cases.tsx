@@ -1245,16 +1245,18 @@ export default function CasesPage() {
             </div>
 
             <DialogFooter className="gap-2 sm:justify-start pt-2">
-              <Button
-                onClick={() => {
-                  setReassignCaseTarget(selectedCase);
-                  setIsFullDetailModalOpen(false);
-                }}
-                variant="outline"
-                className="text-xs"
-              >
-                إعادة تعيين المحامي المكلف
-              </Button>
+              {isAdmin && (
+                <Button
+                  onClick={() => {
+                    setReassignCaseTarget(selectedCase);
+                    setIsFullDetailModalOpen(false);
+                  }}
+                  variant="outline"
+                  className="text-xs"
+                >
+                  إعادة تعيين المحامي المكلف
+                </Button>
+              )}
               <Button
                 onClick={() => setIsFullDetailModalOpen(false)}
                 className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs"

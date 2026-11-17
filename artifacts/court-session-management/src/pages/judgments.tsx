@@ -696,15 +696,17 @@ export default function JudgmentsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[#edf3fc] text-xs">
                   {/* Left Secondary Actions */}
                   <div className="flex items-center gap-1.5 text-[#556480]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteTarget(item)}
-                      className="h-8 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 gap-1 px-2.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      حذف
-                    </Button>
+                    {(isAdmin || (currentUser?.id && (item.assignedLawyerId === currentUser.id || (item as any).assigned_lawyer_id === currentUser.id))) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteTarget(item)}
+                        className="h-8 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 gap-1 px-2.5 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        حذف
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -723,15 +725,17 @@ export default function JudgmentsPage() {
                       <Paperclip className="w-3.5 h-3.5" />
                       المرفقات ({item.attachmentsCount || 2})
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setReassignTarget(item)}
-                      className="h-8 text-xs text-[#44526e] hover:bg-[#edf3ff] gap-1 px-2.5 cursor-pointer"
-                    >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      إعادة تعيين
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setReassignTarget(item)}
+                        className="h-8 text-xs text-[#44526e] hover:bg-[#edf3ff] gap-1 px-2.5 cursor-pointer"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        إعادة تعيين
+                      </Button>
+                    )}
                   </div>
 
                   {/* Right Primary Actions */}

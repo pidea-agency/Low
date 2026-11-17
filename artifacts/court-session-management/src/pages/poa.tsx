@@ -729,16 +729,18 @@ export default function PowerOfAttorneyPage() {
                       <div className="flex items-center gap-2">
                         {/* Action Icons */}
                         <div className="flex items-center gap-1 text-[#657591]">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteTarget(poa);
-                            }}
-                            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                            title="حذف"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {(isAdmin || (currentUser?.id && (poa.assignedLawyerId === currentUser.id || (poa as any).assigned_lawyer_id === currentUser.id))) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTarget(poa);
+                              }}
+                              className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                              title="حذف"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

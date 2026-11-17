@@ -319,19 +319,21 @@ export function Sidebar({
                 </nav>
               </div>
 
-              {/* Section 3: Office Management */}
-              <div>
-                <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
-                  إدارة المكتب
-                </span>
-                <nav className="space-y-1">
-                  {managementNavItems.map((item) => (
-                    <React.Fragment key={item.path}>
-                      {renderNavItem(item)}
-                    </React.Fragment>
-                  ))}
-                </nav>
-              </div>
+              {/* Section 3: Office Management (Admin Only) */}
+              {isAdmin && (
+                <div>
+                  <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
+                    إدارة المكتب
+                  </span>
+                  <nav className="space-y-1">
+                    {managementNavItems.map((item) => (
+                      <React.Fragment key={item.path}>
+                        {renderNavItem(item)}
+                      </React.Fragment>
+                    ))}
+                  </nav>
+                </div>
+              )}
             </div>
           </div>
 

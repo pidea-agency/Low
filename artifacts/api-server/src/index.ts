@@ -11,11 +11,15 @@ if (!isSupabaseConfigured()) {
   }
 }
 
-// Startup check: Fail loudly if SETTINGS_ENCRYPTION_KEY is missing
-if (!process.env.SETTINGS_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY.trim().length === 0) {
-  logger.fatal("FATAL: SETTINGS_ENCRYPTION_KEY is not configured. The server cannot start without a valid encryption key.");
+// Startup check: Fail loudly if SETTINGS_ENCRYPTION_KEY and SESSION_SECRET are both missing
+const activeEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY?.trim() || process.env.SESSION_SECRET?.trim();
+if (activeEncryptionKey && !process.env.SETTINGS_ENCRYPTION_KEY?.trim()) {
+  process.env.SETTINGS_ENCRYPTION_KEY = activeEncryptionKey;
+}
+if (!activeEncryptionKey) {
+  logger.fatal("FATAL: Neither SETTINGS_ENCRYPTION_KEY nor SESSION_SECRET is configured. The server cannot start without a valid encryption key.");
   if (process.env.NODE_ENV !== "test") {
-    throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY environment variable is required.");
+    throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY or SESSION_SECRET environment variable is required.");
   }
 }
 

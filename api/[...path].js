@@ -56733,9 +56733,9 @@ var require_bcryptjs = __commonJS({
 
 // src/lib/encryption.ts
 function getEncryptionKey() {
-  const secret = process.env.SETTINGS_ENCRYPTION_KEY;
-  if (!secret || secret.trim().length === 0) {
-    throw new Error("SETTINGS_ENCRYPTION_KEY environment variable is required and cannot be empty.");
+  const secret = process.env.SETTINGS_ENCRYPTION_KEY?.trim() || process.env.SESSION_SECRET?.trim();
+  if (!secret) {
+    throw new Error("SETTINGS_ENCRYPTION_KEY or SESSION_SECRET environment variable is required and cannot be empty.");
   }
   return import_crypto.default.createHash("sha256").update(secret).digest();
 }
@@ -859623,9 +859623,13 @@ if (!isSupabaseConfigured() && true) {
   logger.fatal("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
   throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
 }
-if ((!process.env.SETTINGS_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY.trim().length === 0) && true) {
-  logger.fatal("FATAL: SETTINGS_ENCRYPTION_KEY is not configured. The server cannot start without a valid encryption key.");
-  throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY environment variable is required.");
+var activeEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY?.trim() || process.env.SESSION_SECRET?.trim();
+if (activeEncryptionKey && !process.env.SETTINGS_ENCRYPTION_KEY?.trim()) {
+  process.env.SETTINGS_ENCRYPTION_KEY = activeEncryptionKey;
+}
+if (!activeEncryptionKey && true) {
+  logger.fatal("FATAL: Neither SETTINGS_ENCRYPTION_KEY nor SESSION_SECRET is configured. The server cannot start without a valid encryption key.");
+  throw new Error("FATAL: SETTINGS_ENCRYPTION_KEY or SESSION_SECRET environment variable is required.");
 }
 void refreshSettingsFromSupabase().catch((err) => {
   logger.warn({ err }, "Initial settings sync from Supabase encountered error, falling back to disk/env");

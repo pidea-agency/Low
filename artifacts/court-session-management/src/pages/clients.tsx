@@ -98,6 +98,7 @@ export interface ClientItem {
 export default function ClientsPage() {
   const [, setLocation] = useLocation();
   const { data: currentUser } = useGetCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
   const { toast } = useToast();
 
   // Active Tab: 'all' | 'companies' | 'individuals' | 'active_cases' | 'pending_docs'
@@ -692,16 +693,18 @@ export default function ClientsPage() {
 
                       {/* Actions on Left */}
                       <div className="flex items-center gap-1.5 text-[#657591]">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(client);
-                          }}
-                          className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(client);
+                            }}
+                            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
