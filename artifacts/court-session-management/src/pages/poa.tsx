@@ -77,10 +77,7 @@ export interface PowerOfAttorney {
   statusText?: string;
   isExpiringSoon?: boolean;
   affectedCasesCount?: number;
-  clauses?: Array<{
-    title: string;
-    isAuthorized: boolean;
-  }>;
+
 }
 
 export type HijriDateValidation =
@@ -239,13 +236,7 @@ export default function PowerOfAttorneyPage() {
           ? `تنتهي خلال ${b.daysRemaining} يوماً`
           : 'سارية ومفعلة',
       isExpiringSoon: b.daysRemaining > 0 && b.daysRemaining <= 30,
-      clauses: [
-        { title: 'المرافعة والمدافعة وتقديم اللوائح', isAuthorized: true },
-        { title: 'الإقرار والإنكار وتوجيه اليمين', isAuthorized: true },
-        { title: 'الصلح والتنازل والإبراء', isAuthorized: true },
-        { title: 'استلام المبالغ المالية والشيكات', isAuthorized: false },
-        { title: 'توكيل الغير ومحامي الباطن', isAuthorized: true },
-      ],
+
     }));
   }, [backendRecords, clientsMap, lawyersMap]);
 

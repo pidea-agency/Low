@@ -87,11 +87,7 @@ export interface ClientItem {
   paidFees?: string;
   remainingFees?: string;
   aiSummary?: string;
-  poaClauses?: Array<{
-    title: string;
-    status: 'authorized' | 'special_permission' | 'unauthorized';
-    statusText: string;
-  }>;
+
   createdAt?: string;
 }
 
@@ -173,12 +169,7 @@ export default function ClientsPage() {
       paidFees: b.paid_fees || '—',
       remainingFees: b.remaining_fees || '—',
       aiSummary: b.ai_summary || 'تم تسجيل الموكل وربط ملفه ببيانات النظام ومتابعة قضاياه والوكالات المعتمدة.',
-      poaClauses: [
-        { title: 'المرافعة والمدافعة وتقديم اللوائح', status: 'authorized', statusText: 'مفوض ✓' },
-        { title: 'الإقرار والإنكار وتوجيه اليمين', status: 'authorized', statusText: 'مفوض ✓' },
-        { title: 'الصلح والتنازل والإبراء', status: 'special_permission', statusText: 'بإذن خاص ⚠' },
-        { title: 'استلام المبالغ المالية والشيكات', status: 'unauthorized', statusText: 'غير مفوض ✗' },
-      ],
+
       isExpiringPoa: Boolean(b.is_expiring_poa),
       expiringDays: b.remaining_days || 0,
       createdAt: b.created_at,
