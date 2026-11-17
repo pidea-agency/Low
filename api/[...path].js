@@ -827317,6 +827317,7 @@ __export(postgres_service_exports, {
   deleteSession: () => deleteSession,
   deleteTask: () => deleteTask,
   exportOfficeDataToGoogleSheets: () => exportOfficeDataToGoogleSheets,
+  formatClient: () => formatClient,
   getAttachmentById: () => getAttachmentById,
   getAttachmentsColumnNaming: () => getAttachmentsColumnNaming,
   getCaseById: () => getCaseById,
@@ -827345,12 +827346,15 @@ __export(postgres_service_exports, {
   listTasks: () => listTasks,
   markAllNotificationsRead: () => markAllNotificationsRead,
   markNotificationRead: () => markNotificationRead,
+  packClientNotes: () => packClientNotes,
+  packPoaNotes: () => packPoaNotes,
   reassignCase: () => reassignCase,
   reassignJudgment: () => reassignJudgment,
   reassignPoa: () => reassignPoa,
   reassignSession: () => reassignSession,
   reassignTask: () => reassignTask,
   resetInMemoryStore: () => resetInMemoryStore,
+  revokePoa: () => revokePoa,
   saveSessionReport: () => saveSessionReport,
   searchClients: () => searchClients,
   searchJudgments: () => searchJudgments,
@@ -827358,6 +827362,8 @@ __export(postgres_service_exports, {
   searchSessions: () => searchSessions,
   searchTasks: () => searchTasks,
   setForceDisableMemoryStoreForTesting: () => setForceDisableMemoryStoreForTesting,
+  unpackClientNotes: () => unpackClientNotes,
+  unpackPoaNotes: () => unpackPoaNotes,
   updateCase: () => updateCase,
   updateClient: () => updateClient,
   updateJudgment: () => updateJudgment,
@@ -827555,23 +827561,69 @@ function formatSession(s3) {
     created_by: s3.createdBy ?? s3.created_by ?? null
   };
 }
+function packClientNotes(notes, meta) {
+  const cleanNotes = (notes || "").replace(CLIENT_META_REGEX, "").trim();
+  const cleanMeta = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v !== void 0 && v !== null && v !== "") {
+      cleanMeta[k] = v;
+    }
+  }
+  if (Object.keys(cleanMeta).length === 0) {
+    return cleanNotes;
+  }
+  const tag = `<!--__CLIENT_META__${JSON.stringify(cleanMeta)}__-->`;
+  return cleanNotes ? `${cleanNotes}
+
+${tag}` : tag;
+}
+function unpackClientNotes(rawNotes) {
+  if (!rawNotes) return { notes: "", meta: {} };
+  const match = rawNotes.match(CLIENT_META_REGEX);
+  let meta = {};
+  if (match) {
+    try {
+      meta = JSON.parse(match[1]);
+    } catch {
+      meta = {};
+    }
+  }
+  const notes = rawNotes.replace(CLIENT_META_REGEX, "").trim();
+  return { notes, meta };
+}
+function formatClient(r2) {
+  const { notes: cleanNotes, meta } = unpackClientNotes(r2.notes);
+  const clientType = r2.client_type || r2.clientType || meta.client_type || meta.clientType || "individual";
+  const repName = r2.company_representative_name !== void 0 && r2.company_representative_name !== null ? r2.company_representative_name : meta.company_representative_name ?? meta.companyRepresentativeName ?? null;
+  const addr = r2.address !== void 0 && r2.address !== null ? r2.address : meta.address ?? null;
+  const secEmail = r2.secondary_email !== void 0 && r2.secondary_email !== null ? r2.secondary_email : meta.secondary_email ?? meta.secondaryEmail ?? null;
+  const refSource = r2.referral_source !== void 0 && r2.referral_source !== null ? r2.referral_source : meta.referral_source ?? meta.referralSource ?? null;
+  return {
+    id: r2.id,
+    officeId: r2.office_id || r2.officeId,
+    name: r2.name,
+    phone: r2.phone || "",
+    notes: cleanNotes,
+    clientType,
+    client_type: clientType,
+    company_representative_name: repName,
+    companyRepresentativeName: repName,
+    address: addr,
+    secondary_email: secEmail,
+    secondaryEmail: secEmail,
+    referral_source: refSource,
+    referralSource: refSource,
+    createdAt: r2.created_at || r2.createdAt,
+    updatedAt: r2.updated_at || r2.updatedAt
+  };
+}
 async function listClients(officeId) {
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("clients").select("*").eq("office_id", officeId).order("created_at", { ascending: false });
       if (!error && data) {
-        return data.map((r2) => ({
-          id: r2.id,
-          officeId: r2.office_id,
-          name: r2.name,
-          phone: r2.phone || "",
-          notes: r2.notes || "",
-          clientType: r2.client_type || "individual",
-          client_type: r2.client_type || "individual",
-          createdAt: r2.created_at,
-          updatedAt: r2.updated_at
-        }));
+        return data.map(formatClient);
       }
       if (error) {
         handleSupabaseFailure("listClients", error);
@@ -827585,7 +827637,7 @@ async function listClients(officeId) {
   if (!isInMemoryFallbackAllowed()) {
     return [];
   }
-  return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
+  return (memoryClients.get(officeId) || []).map(formatClient);
 }
 async function getClientById(id, officeId) {
   const client = getSupabaseClient();
@@ -827593,23 +827645,13 @@ async function getClientById(id, officeId) {
     try {
       const { data, error } = await client.from("clients").select("*").eq("id", id).eq("office_id", officeId).single();
       if (!error && data) {
-        return {
-          id: data.id,
-          officeId: data.office_id,
-          name: data.name,
-          phone: data.phone || "",
-          notes: data.notes || "",
-          clientType: data.client_type || "individual",
-          client_type: data.client_type || "individual",
-          createdAt: data.created_at,
-          updatedAt: data.updated_at
-        };
+        return formatClient(data);
       }
       if (error && error.code === "PGRST116") {
         if (isInMemoryFallbackAllowed()) {
           const list2 = memoryClients.get(officeId) || [];
           const found2 = list2.find((c) => c.id === id);
-          if (found2) return { ...found2 };
+          if (found2) return formatClient(found2);
         }
         return null;
       }
@@ -827627,7 +827669,7 @@ async function getClientById(id, officeId) {
   }
   const list = memoryClients.get(officeId) || [];
   const found = list.find((c) => c.id === id);
-  return found ? { ...found } : null;
+  return found ? formatClient(found) : null;
 }
 async function checkHasClientTypeColumn(client) {
   const now = Date.now();
@@ -827649,26 +827691,46 @@ async function createClient2(data, officeId) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const id = import_crypto2.default.randomUUID();
   const clientType = data.client_type || data.clientType || "individual";
+  const repName = data.company_representative_name ?? data.companyRepresentativeName ?? null;
+  const addr = data.address ?? null;
+  const secEmail = data.secondary_email ?? data.secondaryEmail ?? null;
+  const refSource = data.referral_source ?? data.referralSource ?? null;
+  const packedNotes = packClientNotes(data.notes, {
+    client_type: clientType,
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource
+  });
   const client = getSupabaseClient();
   if (client) {
     try {
-      const hasClientType = await checkHasClientTypeColumn(client);
       const payload = {
         id,
         office_id: officeId,
         name: data.name,
         phone: data.phone || "",
-        notes: data.notes || "",
+        notes: packedNotes,
         created_at: now,
         updated_at: now
       };
-      if (hasClientType) {
-        payload.client_type = clientType;
-      }
+      payload.client_type = clientType;
+      if (repName !== null) payload.company_representative_name = repName;
+      if (addr !== null) payload.address = addr;
+      if (secEmail !== null) payload.secondary_email = secEmail;
+      if (refSource !== null) payload.referral_source = refSource;
       let { data: inserted, error } = await client.from("clients").insert([payload]).select().single();
-      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
-        delete payload.client_type;
-        const retry = await client.from("clients").insert([payload]).select().single();
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload = {
+          id,
+          office_id: officeId,
+          name: data.name,
+          phone: data.phone || "",
+          notes: packedNotes,
+          created_at: now,
+          updated_at: now
+        };
+        const retry = await client.from("clients").insert([basicPayload]).select().single();
         if (!retry.error && retry.data) {
           inserted = retry.data;
           error = null;
@@ -827677,17 +827739,7 @@ async function createClient2(data, officeId) {
         }
       }
       if (!error && inserted) {
-        return {
-          id: inserted.id,
-          officeId: inserted.office_id,
-          name: inserted.name,
-          phone: inserted.phone || "",
-          notes: inserted.notes || "",
-          clientType: inserted.client_type || clientType,
-          client_type: inserted.client_type || clientType,
-          createdAt: inserted.created_at,
-          updatedAt: inserted.updated_at
-        };
+        return formatClient(inserted);
       }
       if (error) {
         handleSupabaseFailure("createClient", error);
@@ -827698,17 +827750,20 @@ async function createClient2(data, officeId) {
   } else {
     handleSupabaseFailure("createClient", new Error("Supabase client is not configured"));
   }
-  const record = {
+  const record = formatClient({
     id,
-    officeId,
+    office_id: officeId,
     name: data.name,
     phone: data.phone || "",
-    notes: data.notes || "",
-    clientType,
+    notes: packedNotes,
     client_type: clientType,
-    createdAt: now,
-    updatedAt: now
-  };
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource,
+    created_at: now,
+    updated_at: now
+  });
   if (isInMemoryFallbackAllowed()) {
     const list = memoryClients.get(officeId) || [];
     list.unshift(record);
@@ -827718,23 +827773,44 @@ async function createClient2(data, officeId) {
 }
 async function updateClient(id, data, officeId) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const existing = await getClientById(id, officeId);
+  if (!existing && !isInMemoryFallbackAllowed()) return null;
+  const clientType = data.client_type ?? data.clientType ?? existing?.clientType ?? "individual";
+  const repName = data.company_representative_name !== void 0 ? data.company_representative_name : data.companyRepresentativeName !== void 0 ? data.companyRepresentativeName : existing?.companyRepresentativeName ?? null;
+  const addr = data.address !== void 0 ? data.address : existing?.address ?? null;
+  const secEmail = data.secondary_email !== void 0 ? data.secondary_email : data.secondaryEmail !== void 0 ? data.secondaryEmail : existing?.secondaryEmail ?? null;
+  const refSource = data.referral_source !== void 0 ? data.referral_source : data.referralSource !== void 0 ? data.referralSource : existing?.referralSource ?? null;
+  const notesToUse = data.notes !== void 0 ? data.notes : existing?.notes || "";
+  const packedNotes = packClientNotes(notesToUse, {
+    client_type: clientType,
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource
+  });
   const client = getSupabaseClient();
   if (client) {
     try {
-      const payload = { updated_at: now };
+      const payload = {
+        updated_at: now,
+        notes: packedNotes
+      };
       if (data.name !== void 0) payload.name = data.name;
       if (data.phone !== void 0) payload.phone = data.phone;
-      if (data.notes !== void 0) payload.notes = data.notes;
-      if (data.client_type !== void 0) payload.client_type = data.client_type;
-      if (data.clientType !== void 0) payload.client_type = data.clientType;
-      const hasClientType = await checkHasClientTypeColumn(client);
-      if (!hasClientType) {
-        delete payload.client_type;
-      }
+      payload.client_type = clientType;
+      if (repName !== void 0) payload.company_representative_name = repName;
+      if (addr !== void 0) payload.address = addr;
+      if (secEmail !== void 0) payload.secondary_email = secEmail;
+      if (refSource !== void 0) payload.referral_source = refSource;
       let { data: updated2, error } = await client.from("clients").update(payload).eq("id", id).eq("office_id", officeId).select().single();
-      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
-        delete payload.client_type;
-        const retry = await client.from("clients").update(payload).eq("id", id).eq("office_id", officeId).select().single();
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload = {
+          updated_at: now,
+          notes: packedNotes
+        };
+        if (data.name !== void 0) basicPayload.name = data.name;
+        if (data.phone !== void 0) basicPayload.phone = data.phone;
+        const retry = await client.from("clients").update(basicPayload).eq("id", id).eq("office_id", officeId).select().single();
         if (!retry.error && retry.data) {
           updated2 = retry.data;
           error = null;
@@ -827743,17 +827819,7 @@ async function updateClient(id, data, officeId) {
         }
       }
       if (!error && updated2) {
-        return {
-          id: updated2.id,
-          officeId: updated2.office_id,
-          name: updated2.name,
-          phone: updated2.phone || "",
-          notes: updated2.notes || "",
-          clientType: updated2.client_type || "individual",
-          client_type: updated2.client_type || "individual",
-          createdAt: updated2.created_at,
-          updatedAt: updated2.updated_at
-        };
+        return formatClient(updated2);
       }
       if (error && error.code === "PGRST116") {
         if (!isInMemoryFallbackAllowed()) return null;
@@ -827774,15 +827840,18 @@ async function updateClient(id, data, officeId) {
   const idx = list.findIndex((c) => c.id === id);
   if (idx === -1) return null;
   const current = list[idx];
-  const updated = {
+  const updated = formatClient({
     ...current,
     name: data.name !== void 0 ? data.name : current.name,
     phone: data.phone !== void 0 ? data.phone : current.phone,
-    notes: data.notes !== void 0 ? data.notes : current.notes,
-    clientType: data.client_type || data.clientType || current.clientType || "individual",
-    client_type: data.client_type || data.clientType || current.client_type || "individual",
-    updatedAt: now
-  };
+    notes: packedNotes,
+    client_type: clientType,
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource,
+    updated_at: now
+  });
   list[idx] = updated;
   return { ...updated };
 }
@@ -828536,7 +828605,48 @@ async function deleteTask(id, officeId) {
   list.splice(idx, 1);
   return true;
 }
+function packPoaNotes(notes, meta) {
+  const cleanNotes = (notes || "").replace(POA_META_REGEX, "").trim();
+  const cleanMeta = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v !== void 0 && v !== null && v !== "") {
+      cleanMeta[k] = v;
+    }
+  }
+  if (Object.keys(cleanMeta).length === 0) {
+    return cleanNotes;
+  }
+  const tag = `<!--__POA_META__${JSON.stringify(cleanMeta)}__-->`;
+  return cleanNotes ? `${cleanNotes}
+
+${tag}` : tag;
+}
+function unpackPoaNotes(rawNotes) {
+  if (!rawNotes) return { notes: "", meta: {} };
+  const match = rawNotes.match(POA_META_REGEX);
+  let meta = {};
+  if (match) {
+    try {
+      meta = JSON.parse(match[1]);
+    } catch {
+      meta = {};
+    }
+  }
+  const notes = rawNotes.replace(POA_META_REGEX, "").trim();
+  return { notes, meta };
+}
 function formatPoa(r2) {
+  const { notes: cleanNotes, meta } = unpackPoaNotes(r2.notes);
+  const poaType = r2.poa_type || r2.poaType || meta.poa_type || meta.poaType || "\u062E\u0627\u0635\u0629";
+  const scopeDesc = r2.scope_description !== void 0 && r2.scope_description !== null ? r2.scope_description : meta.scope_description ?? meta.scopeDescription ?? null;
+  const notarizationAuth = r2.notarization_authority !== void 0 && r2.notarization_authority !== null ? r2.notarization_authority : meta.notarization_authority ?? meta.notarizationAuthority ?? null;
+  const status = r2.status || meta.status || "active";
+  const revokedAt = r2.revoked_at !== void 0 && r2.revoked_at !== null ? r2.revoked_at : meta.revoked_at ?? meta.revokedAt ?? null;
+  const revocationReason = r2.revocation_reason !== void 0 && r2.revocation_reason !== null ? r2.revocation_reason : meta.revocation_reason ?? meta.revocationReason ?? null;
+  const clientId = r2.clientId ?? r2.client_id ?? null;
+  const caseId = r2.caseId ?? r2.case_id ?? null;
+  const assignedLawyerId = r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null;
+  const createdBy = r2.createdBy ?? r2.created_by ?? null;
   return {
     id: r2.id,
     officeId: r2.officeId ?? r2.office_id,
@@ -828545,17 +828655,28 @@ function formatPoa(r2) {
     issueDateHijri: r2.issueDateHijri ?? r2.issue_date_hijri ?? "",
     expiryDateHijri: r2.expiryDateHijri ?? r2.expiry_date_hijri ?? "",
     daysRemaining: r2.daysRemaining ?? r2.days_remaining ?? calcDaysFromHijri(r2.expiryDateHijri || r2.expiry_date_hijri),
-    notes: r2.notes || "",
-    clientId: r2.clientId ?? r2.client_id ?? null,
-    caseId: r2.caseId ?? r2.case_id ?? null,
-    assignedLawyerId: r2.assignedLawyerId ?? r2.assigned_lawyer_id ?? null,
-    createdBy: r2.createdBy ?? r2.created_by ?? null,
+    notes: cleanNotes,
+    clientId,
+    client_id: clientId,
+    caseId,
+    case_id: caseId,
+    assignedLawyerId,
+    assigned_lawyer_id: assignedLawyerId,
+    createdBy,
+    created_by: createdBy,
+    poa_type: poaType,
+    poaType,
+    scope_description: scopeDesc,
+    scopeDescription: scopeDesc,
+    notarization_authority: notarizationAuth,
+    notarizationAuthority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revokedAt,
+    revocation_reason: revocationReason,
+    revocationReason,
     createdAt: r2.createdAt ?? r2.created_at,
-    updatedAt: r2.updatedAt ?? r2.updated_at,
-    ...r2.clientId || r2.client_id ? { client_id: r2.clientId ?? r2.client_id } : {},
-    ...r2.caseId || r2.case_id ? { case_id: r2.caseId ?? r2.case_id } : {},
-    ...r2.assignedLawyerId || r2.assigned_lawyer_id ? { assigned_lawyer_id: r2.assignedLawyerId ?? r2.assigned_lawyer_id } : {},
-    ...r2.createdBy || r2.created_by ? { created_by: r2.createdBy ?? r2.created_by } : {}
+    updatedAt: r2.updatedAt ?? r2.updated_at
   };
 }
 async function listPoa(officeId) {
@@ -828627,24 +828748,65 @@ async function createPoa(data, officeId) {
   const caseId = data.caseId || data.case_id || null;
   const assignedLawyerId = data.assignedLawyerId || data.assigned_lawyer_id || null;
   const createdBy = data.createdBy || data.created_by || null;
+  const poaType = data.poa_type || data.poaType || "\u062E\u0627\u0635\u0629";
+  const scopeDesc = data.scope_description ?? data.scopeDescription ?? null;
+  const notarizationAuth = data.notarization_authority ?? data.notarizationAuthority ?? null;
+  const status = data.status || "active";
+  const revokedAt = data.revoked_at ?? data.revokedAt ?? null;
+  const revocationReason = data.revocation_reason ?? data.revocationReason ?? null;
+  const packedNotes = packPoaNotes(data.notes, {
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason
+  });
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: inserted, error } = await client.from("poa").insert([
-        {
+      const payload = {
+        office_id: officeId,
+        client_name: data.clientName,
+        poa_number: data.poaNumber,
+        issue_date_hijri: data.issueDateHijri || "",
+        expiry_date_hijri: data.expiryDateHijri || "",
+        days_remaining: days,
+        notes: packedNotes,
+        client_id: clientId,
+        case_id: caseId,
+        assigned_lawyer_id: assignedLawyerId,
+        created_by: createdBy,
+        poa_type: poaType,
+        status
+      };
+      if (scopeDesc !== null) payload.scope_description = scopeDesc;
+      if (notarizationAuth !== null) payload.notarization_authority = notarizationAuth;
+      if (revokedAt !== null) payload.revoked_at = revokedAt;
+      if (revocationReason !== null) payload.revocation_reason = revocationReason;
+      let { data: inserted, error } = await client.from("poa").insert([payload]).select().single();
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload = {
           office_id: officeId,
           client_name: data.clientName,
           poa_number: data.poaNumber,
           issue_date_hijri: data.issueDateHijri || "",
           expiry_date_hijri: data.expiryDateHijri || "",
           days_remaining: days,
-          notes: data.notes || "",
+          notes: packedNotes,
           client_id: clientId,
           case_id: caseId,
           assigned_lawyer_id: assignedLawyerId,
           created_by: createdBy
+        };
+        const retry = await client.from("poa").insert([basicPayload]).select().single();
+        if (!retry.error && retry.data) {
+          inserted = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
         }
-      ]).select().single();
+      }
       if (!error && inserted) {
         const formatted = formatPoa(inserted);
         if (isInMemoryFallbackAllowed()) {
@@ -828664,31 +828826,57 @@ async function createPoa(data, officeId) {
     handleSupabaseFailure("createPoa", new Error("Supabase client is not configured"));
   }
   const id = nextId();
-  const record = {
+  const record = formatPoa({
     id,
-    officeId,
-    clientName: data.clientName,
-    poaNumber: data.poaNumber,
-    issueDateHijri: data.issueDateHijri || "",
-    expiryDateHijri: data.expiryDateHijri || "",
-    daysRemaining: days,
-    notes: data.notes || "",
-    clientId,
-    caseId,
-    assignedLawyerId,
-    createdBy,
-    createdAt: now
-  };
+    office_id: officeId,
+    client_name: data.clientName,
+    poa_number: data.poaNumber,
+    issue_date_hijri: data.issueDateHijri || "",
+    expiry_date_hijri: data.expiryDateHijri || "",
+    days_remaining: days,
+    notes: packedNotes,
+    client_id: clientId,
+    case_id: caseId,
+    assigned_lawyer_id: assignedLawyerId,
+    created_by: createdBy,
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason,
+    created_at: now
+  });
   const list = memoryPoa.get(officeId) || [];
   list.unshift(record);
   memoryPoa.set(officeId, list);
   return formatPoa(record);
 }
 async function updatePoa(id, data, officeId) {
+  const existing = await getPoaById(id, officeId);
+  if (!existing && !isInMemoryFallbackAllowed()) return null;
+  const poaType = data.poa_type ?? data.poaType ?? existing?.poaType ?? "\u062E\u0627\u0635\u0629";
+  const scopeDesc = data.scope_description !== void 0 ? data.scope_description : data.scopeDescription !== void 0 ? data.scopeDescription : existing?.scopeDescription ?? null;
+  const notarizationAuth = data.notarization_authority !== void 0 ? data.notarization_authority : data.notarizationAuthority !== void 0 ? data.notarizationAuthority : existing?.notarizationAuthority ?? null;
+  const status = data.status ?? existing?.status ?? "active";
+  const revokedAt = data.revoked_at !== void 0 ? data.revoked_at : data.revokedAt !== void 0 ? data.revokedAt : existing?.revokedAt ?? null;
+  const revocationReason = data.revocation_reason !== void 0 ? data.revocation_reason : data.revocationReason !== void 0 ? data.revocationReason : existing?.revocationReason ?? null;
+  const notesToUse = data.notes !== void 0 ? data.notes : existing?.notes || "";
+  const packedNotes = packPoaNotes(notesToUse, {
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason
+  });
   const client = getSupabaseClient();
   if (client) {
     try {
-      const updatePayload = { updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const updatePayload = {
+        updated_at: (/* @__PURE__ */ new Date()).toISOString(),
+        notes: packedNotes
+      };
       if (data.clientName !== void 0) updatePayload.client_name = data.clientName;
       if (data.poaNumber !== void 0) updatePayload.poa_number = data.poaNumber;
       if (data.issueDateHijri !== void 0) updatePayload.issue_date_hijri = data.issueDateHijri;
@@ -828696,14 +828884,45 @@ async function updatePoa(id, data, officeId) {
         updatePayload.expiry_date_hijri = data.expiryDateHijri;
         updatePayload.days_remaining = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri);
       }
-      if (data.notes !== void 0) updatePayload.notes = data.notes;
       if (data.clientId !== void 0) updatePayload.client_id = data.clientId;
       if (data.client_id !== void 0) updatePayload.client_id = data.client_id;
       if (data.caseId !== void 0) updatePayload.case_id = data.caseId;
       if (data.case_id !== void 0) updatePayload.case_id = data.case_id;
       if (data.assignedLawyerId !== void 0) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if (data.assigned_lawyer_id !== void 0) updatePayload.assigned_lawyer_id = data.assigned_lawyer_id;
-      const { data: updated2, error } = await client.from("poa").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
+      updatePayload.poa_type = poaType;
+      updatePayload.status = status;
+      if (scopeDesc !== void 0) updatePayload.scope_description = scopeDesc;
+      if (notarizationAuth !== void 0) updatePayload.notarization_authority = notarizationAuth;
+      if (revokedAt !== void 0) updatePayload.revoked_at = revokedAt;
+      if (revocationReason !== void 0) updatePayload.revocation_reason = revocationReason;
+      let { data: updated2, error } = await client.from("poa").update(updatePayload).eq("id", id).eq("office_id", officeId).select().single();
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload = {
+          updated_at: (/* @__PURE__ */ new Date()).toISOString(),
+          notes: packedNotes
+        };
+        if (data.clientName !== void 0) basicPayload.client_name = data.clientName;
+        if (data.poaNumber !== void 0) basicPayload.poa_number = data.poaNumber;
+        if (data.issueDateHijri !== void 0) basicPayload.issue_date_hijri = data.issueDateHijri;
+        if (data.expiryDateHijri !== void 0) {
+          basicPayload.expiry_date_hijri = data.expiryDateHijri;
+          basicPayload.days_remaining = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri);
+        }
+        if (data.clientId !== void 0) basicPayload.client_id = data.clientId;
+        if (data.client_id !== void 0) basicPayload.client_id = data.client_id;
+        if (data.caseId !== void 0) basicPayload.case_id = data.caseId;
+        if (data.case_id !== void 0) basicPayload.case_id = data.case_id;
+        if (data.assignedLawyerId !== void 0) basicPayload.assigned_lawyer_id = data.assignedLawyerId;
+        if (data.assigned_lawyer_id !== void 0) basicPayload.assigned_lawyer_id = data.assigned_lawyer_id;
+        const retry = await client.from("poa").update(basicPayload).eq("id", id).eq("office_id", officeId).select().single();
+        if (!retry.error && retry.data) {
+          updated2 = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
       if (!error && updated2) {
         const formatted = formatPoa(updated2);
         if (isInMemoryFallbackAllowed()) {
@@ -828729,21 +828948,41 @@ async function updatePoa(id, data, officeId) {
   const idx = list.findIndex((p) => p.id === id);
   if (idx === -1) return null;
   const current = list[idx];
-  const updated = {
+  const updated = formatPoa({
     ...current,
     clientName: data.clientName !== void 0 ? data.clientName : current.clientName,
     poaNumber: data.poaNumber !== void 0 ? data.poaNumber : current.poaNumber,
     issueDateHijri: data.issueDateHijri !== void 0 ? data.issueDateHijri : current.issueDateHijri,
     expiryDateHijri: data.expiryDateHijri !== void 0 ? data.expiryDateHijri : current.expiryDateHijri,
     daysRemaining: data.daysRemaining !== void 0 ? data.daysRemaining : data.expiryDateHijri !== void 0 ? calcDaysFromHijri(data.expiryDateHijri) : current.daysRemaining,
-    notes: data.notes !== void 0 ? data.notes : current.notes,
+    notes: packedNotes,
     clientId: data.clientId !== void 0 ? data.clientId : data.client_id !== void 0 ? data.client_id : current.clientId,
     caseId: data.caseId !== void 0 ? data.caseId : data.case_id !== void 0 ? data.case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== void 0 ? data.assignedLawyerId : data.assigned_lawyer_id !== void 0 ? data.assigned_lawyer_id : current.assignedLawyerId,
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
+  });
   list[idx] = updated;
   return formatPoa(updated);
+}
+async function revokePoa(id, officeId, reason) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  return updatePoa(
+    id,
+    {
+      status: "revoked",
+      revoked_at: now,
+      revokedAt: now,
+      revocation_reason: reason || null,
+      revocationReason: reason || null
+    },
+    officeId
+  );
 }
 async function reassignPoa(id, assignedLawyerId, officeId) {
   return updatePoa(id, { assignedLawyerId }, officeId);
@@ -830025,7 +830264,7 @@ async function getCaseStats(officeId, filterRecords) {
     postponed
   };
 }
-var import_moment_hijri2, import_crypto2, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, memoryBroadcasts, _nextId, DatabaseUnavailableError, DatabaseQueryError, _forceDisableMemoryStoreForTesting, hasClientTypeColumnCache, lastClientTypeCheck, attachmentsColumnNamingCache;
+var import_moment_hijri2, import_crypto2, memoryClients, memorySessions, memoryTasks, memoryPoa, memoryJudgments, memoryReports, memoryNotifications, memoryAttachments, memoryClientNotes, memoryCases, memoryBroadcasts, _nextId, DatabaseUnavailableError, DatabaseQueryError, _forceDisableMemoryStoreForTesting, CLIENT_META_REGEX, hasClientTypeColumnCache, lastClientTypeCheck, POA_META_REGEX, attachmentsColumnNamingCache;
 var init_postgres_service = __esm({
   "src/services/postgres.service.ts"() {
     "use strict";
@@ -830073,8 +830312,10 @@ var init_postgres_service = __esm({
       }
     };
     _forceDisableMemoryStoreForTesting = false;
+    CLIENT_META_REGEX = /<!--__CLIENT_META__([\s\S]*?)__-->/;
     hasClientTypeColumnCache = null;
     lastClientTypeCheck = 0;
+    POA_META_REGEX = /<!--__POA_META__([\s\S]*?)__-->/;
     attachmentsColumnNamingCache = null;
   }
 });
@@ -830395,6 +830636,23 @@ var init_notification_template_service = __esm({
           "daysRemaining",
           "expiryDate",
           "lawyerName"
+        ]
+      },
+      staff_license_expiring: {
+        eventType: "staff_license_expiring",
+        name: "\u0642\u0631\u0628 \u0627\u0646\u062A\u0647\u0627\u0621 \u0631\u062E\u0635\u0629 \u0645\u062D\u0627\u0645\u0627\u0629 \u0639\u0636\u0648",
+        category: "accounts",
+        categoryArabic: CATEGORY_LABELS.accounts,
+        defaultRecipientRole: "admin",
+        defaultRecipientArabic: RECIPIENT_ROLE_LABELS.admin,
+        titleTemplate: "\u062A\u0646\u0628\u064A\u0647: \u0627\u0642\u062A\u0631\u0627\u0628 \u0627\u0646\u062A\u0647\u0627\u0621 \u0631\u062E\u0635\u0629 \u0645\u062D\u0627\u0645\u0627\u0629 ({{memberName}})",
+        bodyTemplate: '\u062A\u0646\u062A\u0647\u064A \u0631\u062E\u0635\u0629 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u062E\u0627\u0635\u0629 \u0628\u0627\u0644\u0639\u0636\u0648 "{{memberName}}" (\u0631\u0642\u0645 \u0627\u0644\u062A\u0631\u062E\u064A\u0635: {{licenseNumber}}) \u062E\u0644\u0627\u0644 {{daysRemaining}} \u064A\u0648\u0645\u0627\u064B (\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621: {{expiryDate}}).',
+        defaultChannels: { in_app: true, whatsapp: false },
+        availablePlaceholders: [
+          "memberName",
+          "licenseNumber",
+          "daysRemaining",
+          "expiryDate"
         ]
       },
       new_document_uploaded: {
@@ -830754,6 +831012,7 @@ __export(supabase_service_exports, {
   ensureDefaultAdmin: () => ensureDefaultAdmin,
   findUserByActivationToken: () => findUserByActivationToken,
   findUserByIdOrUsername: () => findUserByIdOrUsername,
+  formatUser: () => formatUser,
   getFallbackActivationToken: () => getFallbackActivationToken,
   getFallbackActivationTokenByHash: () => getFallbackActivationTokenByHash,
   getOfficeFeatures: () => getOfficeFeatures,
@@ -830779,6 +831038,7 @@ __export(supabase_service_exports, {
   listSupabaseUsers: () => listSupabaseUsers,
   listSuperAdminUsers: () => listSuperAdminUsers,
   listUnlinkedMembers: () => listUnlinkedMembers,
+  packUserNotes: () => packUserNotes,
   recordAuditLog: () => recordAuditLog,
   resendOfficeMemberActivation: () => resendOfficeMemberActivation,
   resetAdminAiUsage: () => resetAdminAiUsage,
@@ -830792,6 +831052,7 @@ __export(supabase_service_exports, {
   toggleAdminStatus: () => toggleAdminStatus,
   toggleOfficeMemberStatus: () => toggleOfficeMemberStatus,
   toggleUserStatus: () => toggleUserStatus,
+  unpackUserNotes: () => unpackUserNotes,
   updateOfficeMember: () => updateOfficeMember,
   updateOfficeMemberQuota: () => updateOfficeMemberQuota,
   updatePayment: () => updatePayment,
@@ -830801,6 +831062,68 @@ __export(supabase_service_exports, {
   updateSupabaseUser: () => updateSupabaseUser,
   verifySupabaseUser: () => verifySupabaseUser
 });
+function packUserNotes(existingNotes, meta) {
+  const currentText = (existingNotes || "").replace(USER_META_REGEX, "").trim();
+  const metaObj = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v !== void 0 && v !== null && v !== "") {
+      metaObj[k] = v;
+    }
+  }
+  if (Object.keys(metaObj).length === 0) {
+    return currentText;
+  }
+  const comment = `<!--__USER_META__${JSON.stringify(metaObj)}__-->`;
+  return currentText ? `${currentText}
+${comment}` : comment;
+}
+function unpackUserNotes(notes) {
+  if (!notes) return { cleanNotes: "", meta: {} };
+  const match = notes.match(USER_META_REGEX);
+  if (!match) return { cleanNotes: notes, meta: {} };
+  try {
+    const meta = JSON.parse(match[1]);
+    const cleanNotes = notes.replace(USER_META_REGEX, "").trim();
+    return { cleanNotes, meta };
+  } catch {
+    return { cleanNotes: notes, meta: {} };
+  }
+}
+function formatUser(u) {
+  const { cleanNotes, meta } = unpackUserNotes(u.subscription_notes);
+  const legal_specialty = u.legal_specialty !== void 0 && u.legal_specialty !== null ? u.legal_specialty : meta.legal_specialty ?? null;
+  const license_number = u.license_number !== void 0 && u.license_number !== null ? u.license_number : meta.license_number ?? null;
+  const license_expiry_date = u.license_expiry_date !== void 0 && u.license_expiry_date !== null ? u.license_expiry_date : meta.license_expiry_date ?? null;
+  const defaultJoined = u.created_at ? typeof u.created_at === "string" ? u.created_at.split("T")[0] : null : null;
+  const joined_office_at = u.joined_office_at !== void 0 && u.joined_office_at !== null ? u.joined_office_at : meta.joined_office_at ?? defaultJoined;
+  const commercial_registration_number = u.commercial_registration_number !== void 0 && u.commercial_registration_number !== null ? u.commercial_registration_number : meta.commercial_registration_number ?? null;
+  const billing_contact_name = u.billing_contact_name !== void 0 && u.billing_contact_name !== null ? u.billing_contact_name : meta.billing_contact_name ?? null;
+  const billing_contact_phone = u.billing_contact_phone !== void 0 && u.billing_contact_phone !== null ? u.billing_contact_phone : meta.billing_contact_phone ?? null;
+  const billing_contact_email = u.billing_contact_email !== void 0 && u.billing_contact_email !== null ? u.billing_contact_email : meta.billing_contact_email ?? null;
+  const office_address = u.office_address !== void 0 && u.office_address !== null ? u.office_address : meta.office_address ?? null;
+  return {
+    ...u,
+    subscription_notes: cleanNotes || null,
+    legal_specialty,
+    legalSpecialty: legal_specialty,
+    license_number,
+    licenseNumber: license_number,
+    license_expiry_date,
+    licenseExpiryDate: license_expiry_date,
+    joined_office_at,
+    joinedOfficeAt: joined_office_at,
+    commercial_registration_number,
+    commercialRegistrationNumber: commercial_registration_number,
+    billing_contact_name,
+    billingContactName: billing_contact_name,
+    billing_contact_phone,
+    billingContactPhone: billing_contact_phone,
+    billing_contact_email,
+    billingContactEmail: billing_contact_email,
+    office_address,
+    officeAddress: office_address
+  };
+}
 function getUserSessionVersion(userId) {
   if (!userSessionVersions.has(userId)) {
     userSessionVersions.set(userId, 1);
@@ -831140,7 +831463,7 @@ async function findUserByIdOrUsername(identifier) {
     }
     const u = data[0];
     const isPending = u.status === "pending_activation" || hasTestFallbackActivationToken(u.id, u.activation_token_hash);
-    const result = {
+    const rawResult = {
       id: u.id,
       username: u.username,
       email: u.email,
@@ -831160,6 +831483,7 @@ async function findUserByIdOrUsername(identifier) {
       google_sheet_name: u.google_sheet_name,
       created_at: u.created_at
     };
+    const result = formatUser({ ...u, ...rawResult });
     userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
     return result;
   } catch (err) {
@@ -831526,29 +831850,32 @@ async function listSupabaseUsers() {
     logger.error({ error }, "Failed to list users from Supabase");
     throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  return (data || []).filter((u) => u.username !== "__platform_settings__" && u.id !== "00000000-0000-0000-0000-000000000001").map((u) => ({
-    id: u.id,
-    username: u.username,
-    email: u.email,
-    role: u.role || "staff",
-    admin_id: u.admin_id || null,
-    office_name: u.office_name || null,
-    display_name: u.display_name,
-    status: u.status || "active",
-    phone: u.phone || null,
-    subscription_end_date: u.subscription_end_date || null,
-    subscription_notes: u.subscription_notes || null,
-    plan_tier: u.plan_tier,
-    plan_id: u.plan_id || null,
-    ai_quota_limit_override: u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null,
-    billing_cycle: u.billing_cycle,
-    ai_quota_limit: u.ai_quota_limit,
-    ai_usage_count: u.ai_usage_count || 0,
-    has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-    google_spreadsheet_id: u.google_spreadsheet_id || null,
-    google_sheet_name: u.google_sheet_name || null,
-    created_at: u.created_at
-  }));
+  return (data || []).filter((u) => u.username !== "__platform_settings__" && u.id !== "00000000-0000-0000-0000-000000000001").map(
+    (u) => formatUser({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role || "staff",
+      admin_id: u.admin_id || null,
+      office_name: u.office_name || null,
+      display_name: u.display_name,
+      status: u.status || "active",
+      phone: u.phone || null,
+      subscription_end_date: u.subscription_end_date || null,
+      subscription_notes: u.subscription_notes || null,
+      plan_tier: u.plan_tier,
+      plan_id: u.plan_id || null,
+      ai_quota_limit_override: u.ai_quota_limit_override !== void 0 ? u.ai_quota_limit_override : null,
+      billing_cycle: u.billing_cycle,
+      ai_quota_limit: u.ai_quota_limit,
+      ai_usage_count: u.ai_usage_count || 0,
+      has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
+      google_spreadsheet_id: u.google_spreadsheet_id || null,
+      google_sheet_name: u.google_sheet_name || null,
+      created_at: u.created_at,
+      ...u
+    })
+  );
 }
 async function listSubscriptionPlans() {
   const client = getSupabaseClient();
@@ -831876,6 +832203,11 @@ async function createSupabaseAdmin(input) {
     billing_cycle: input.billing_cycle || "annual",
     subscription_end_date: input.subscription_end_date,
     subscription_notes: input.subscription_notes,
+    commercial_registration_number: input.commercial_registration_number || input.commercialRegistrationNumber || null,
+    billing_contact_name: input.billing_contact_name || input.billingContactName || null,
+    billing_contact_phone: input.billing_contact_phone || input.billingContactPhone || null,
+    billing_contact_email: input.billing_contact_email || input.billingContactEmail || null,
+    office_address: input.office_address || input.officeAddress || null,
     ai_quota_limit: quota,
     ai_quota_limit_override: quotaOverride
   });
@@ -832602,6 +832934,14 @@ async function listOfficeMembers(adminId) {
       display_name: u.display_name,
       role_title: u.role_title || null,
       roleTitle: u.role_title || null,
+      legal_specialty: u.legal_specialty || u.legalSpecialty || null,
+      legalSpecialty: u.legal_specialty || u.legalSpecialty || null,
+      license_number: u.license_number || u.licenseNumber || null,
+      licenseNumber: u.license_number || u.licenseNumber || null,
+      license_expiry_date: u.license_expiry_date || u.licenseExpiryDate || null,
+      licenseExpiryDate: u.license_expiry_date || u.licenseExpiryDate || null,
+      joined_office_at: u.joined_office_at || u.joinedOfficeAt || (u.created_at ? u.created_at.split("T")[0] : null),
+      joinedOfficeAt: u.joined_office_at || u.joinedOfficeAt || (u.created_at ? u.created_at.split("T")[0] : null),
       status: isPending ? "pending_activation" : u.status || "active",
       phone: u.phone,
       created_at: u.created_at
@@ -832643,6 +832983,10 @@ async function createOfficeMember(adminId, input) {
     role_title: input.role_title || input.roleTitle || null,
     admin_id: adminId,
     status: input.status || "pending_activation",
+    legal_specialty: input.legal_specialty || input.legalSpecialty || null,
+    license_number: input.license_number || input.licenseNumber || null,
+    license_expiry_date: input.license_expiry_date || input.licenseExpiryDate || null,
+    joined_office_at: input.joined_office_at || input.joinedOfficeAt || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
     activation_token_hash: tokenHash,
     activation_token_expires_at: expiresAt.toISOString()
   });
@@ -832668,6 +833012,16 @@ async function createOfficeMember(adminId, input) {
       display_name: user.display_name,
       status: user.status,
       phone: user.phone,
+      role_title: user.role_title || input.role_title || input.roleTitle || null,
+      roleTitle: user.role_title || input.role_title || input.roleTitle || null,
+      legal_specialty: user.legal_specialty || input.legal_specialty || input.legalSpecialty || null,
+      legalSpecialty: user.legal_specialty || input.legal_specialty || input.legalSpecialty || null,
+      license_number: user.license_number || input.license_number || input.licenseNumber || null,
+      licenseNumber: user.license_number || input.license_number || input.licenseNumber || null,
+      license_expiry_date: user.license_expiry_date || input.license_expiry_date || input.licenseExpiryDate || null,
+      licenseExpiryDate: user.license_expiry_date || input.license_expiry_date || input.licenseExpiryDate || null,
+      joined_office_at: user.joined_office_at || input.joined_office_at || input.joinedOfficeAt || (user.created_at ? user.created_at.split("T")[0] : null),
+      joinedOfficeAt: user.joined_office_at || input.joined_office_at || input.joinedOfficeAt || (user.created_at ? user.created_at.split("T")[0] : null),
       created_at: user.created_at
     },
     emailSent: delivery.emailSent,
@@ -832894,7 +833248,11 @@ async function updateOfficeMember(adminId, memberId, input) {
     email: input.email,
     phone: input.phone,
     status: input.status,
-    role_title: input.role_title !== void 0 ? input.role_title : input.roleTitle
+    role_title: input.role_title !== void 0 ? input.role_title : input.roleTitle,
+    legal_specialty: input.legal_specialty !== void 0 ? input.legal_specialty : input.legalSpecialty,
+    license_number: input.license_number !== void 0 ? input.license_number : input.licenseNumber,
+    license_expiry_date: input.license_expiry_date !== void 0 ? input.license_expiry_date : input.licenseExpiryDate,
+    joined_office_at: input.joined_office_at !== void 0 ? input.joined_office_at : input.joinedOfficeAt
   });
   return {
     id: updated.id,
@@ -832906,6 +833264,15 @@ async function updateOfficeMember(adminId, memberId, input) {
     status: updated.status,
     phone: updated.phone,
     role_title: updated.role_title || null,
+    roleTitle: updated.role_title || null,
+    legal_specialty: updated.legal_specialty || null,
+    legalSpecialty: updated.legal_specialty || null,
+    license_number: updated.license_number || null,
+    licenseNumber: updated.license_number || null,
+    license_expiry_date: updated.license_expiry_date || null,
+    licenseExpiryDate: updated.license_expiry_date || null,
+    joined_office_at: updated.joined_office_at || (updated.created_at ? updated.created_at.split("T")[0] : null),
+    joinedOfficeAt: updated.joined_office_at || (updated.created_at ? updated.created_at.split("T")[0] : null),
     created_at: updated.created_at
   };
 }
@@ -833152,7 +833519,19 @@ async function createSupabaseUser(input) {
   }
   const status = input.status || "active";
   const subscription_end_date = isOfficeAdmin ? input.subscription_end_date || null : null;
-  const subscription_notes = isOfficeAdmin ? input.subscription_notes?.trim() || null : null;
+  const rawNotes = input.subscription_notes?.trim() || "";
+  const meta = {
+    legal_specialty: input.legal_specialty || input.legalSpecialty || null,
+    license_number: input.license_number || input.licenseNumber || null,
+    license_expiry_date: input.license_expiry_date || input.licenseExpiryDate || null,
+    joined_office_at: input.joined_office_at || input.joinedOfficeAt || (role === "staff" ? (/* @__PURE__ */ new Date()).toISOString().split("T")[0] : null),
+    commercial_registration_number: input.commercial_registration_number || input.commercialRegistrationNumber || null,
+    billing_contact_name: input.billing_contact_name || input.billingContactName || null,
+    billing_contact_phone: input.billing_contact_phone || input.billingContactPhone || null,
+    billing_contact_email: input.billing_contact_email || input.billingContactEmail || null,
+    office_address: input.office_address || input.officeAddress || null
+  };
+  const subscription_notes = packUserNotes(rawNotes, meta) || null;
   const plan_tier = isSuper ? "pro" : isOfficeAdmin ? input.plan_tier || "plus" : void 0;
   const billing_cycle = isSuper || isOfficeAdmin ? input.billing_cycle || "annual" : void 0;
   const ai_quota_limit = isSuper ? -1 : isOfficeAdmin ? input.ai_quota_limit !== void 0 ? input.ai_quota_limit : plan_tier === "pro" ? 300 : 100 : void 0;
@@ -833189,6 +833568,15 @@ async function createSupabaseUser(input) {
     google_spreadsheet_id: isOfficeAdmin ? input.google_spreadsheet_id?.trim() || null : null,
     google_sheet_name: isOfficeAdmin ? input.google_sheet_name?.trim() || null : null
   };
+  if (meta.legal_specialty) newUserData.legal_specialty = meta.legal_specialty;
+  if (meta.license_number) newUserData.license_number = meta.license_number;
+  if (meta.license_expiry_date) newUserData.license_expiry_date = meta.license_expiry_date;
+  if (meta.joined_office_at) newUserData.joined_office_at = meta.joined_office_at;
+  if (meta.commercial_registration_number) newUserData.commercial_registration_number = meta.commercial_registration_number;
+  if (meta.billing_contact_name) newUserData.billing_contact_name = meta.billing_contact_name;
+  if (meta.billing_contact_phone) newUserData.billing_contact_phone = meta.billing_contact_phone;
+  if (meta.billing_contact_email) newUserData.billing_contact_email = meta.billing_contact_email;
+  if (meta.office_address) newUserData.office_address = meta.office_address;
   if (hasPhone && input.phone !== void 0) {
     newUserData.phone = input.phone?.trim() || null;
   }
@@ -833209,8 +833597,17 @@ async function createSupabaseUser(input) {
   }
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_spreadsheet_id, google_sheet_name, created_at`;
   let { data, error } = await client.from(tableName).insert([newUserData]).select(selectCols).single();
-  if (error && (error.message?.includes("role_title") || error.code === "PGRST204")) {
+  if (error && (error.message?.includes("role_title") || error.code === "PGRST204" || error.message?.includes("column") || error.message?.includes("does not exist"))) {
     delete newUserData.role_title;
+    delete newUserData.legal_specialty;
+    delete newUserData.license_number;
+    delete newUserData.license_expiry_date;
+    delete newUserData.joined_office_at;
+    delete newUserData.commercial_registration_number;
+    delete newUserData.billing_contact_name;
+    delete newUserData.billing_contact_phone;
+    delete newUserData.billing_contact_email;
+    delete newUserData.office_address;
     const retry = await client.from(tableName).insert([newUserData]).select(selectCols).single();
     if (!retry.error && retry.data) {
       data = retry.data;
@@ -833222,6 +833619,15 @@ async function createSupabaseUser(input) {
   if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
     logger.warn({ err: error.message }, "[createSupabaseUser] DB app_users_status_check rejected 'pending_activation'; inserting with 'suspended' in DB and tracking pending_activation in app layer until migration 004 is applied.");
     newUserData.status = "suspended";
+    delete newUserData.legal_specialty;
+    delete newUserData.license_number;
+    delete newUserData.license_expiry_date;
+    delete newUserData.joined_office_at;
+    delete newUserData.commercial_registration_number;
+    delete newUserData.billing_contact_name;
+    delete newUserData.billing_contact_phone;
+    delete newUserData.billing_contact_email;
+    delete newUserData.office_address;
     const retry = await client.from(tableName).insert([newUserData]).select(selectCols).single();
     if (!retry.error && retry.data) {
       data = retry.data;
@@ -833236,7 +833642,8 @@ async function createSupabaseUser(input) {
   }
   const row = data;
   const isPending = input.status === "pending_activation" || newUserData.status === "pending_activation" || hasTestFallbackActivationToken(row.id, input.activation_token_hash);
-  return {
+  return formatUser({
+    ...row,
     id: row.id,
     username: row.username,
     email: row.email,
@@ -833260,7 +833667,7 @@ async function createSupabaseUser(input) {
     google_spreadsheet_id: row.google_spreadsheet_id,
     google_sheet_name: row.google_sheet_name,
     created_at: row.created_at
-  };
+  });
 }
 async function countActiveAdmins(excludeUserId) {
   const client = getSupabaseClient();
@@ -833364,7 +833771,63 @@ async function updateSupabaseUser(id, input) {
   }
   if (input.status !== void 0) updates.status = input.status;
   if (input.subscription_end_date !== void 0) updates.subscription_end_date = input.subscription_end_date;
-  if (input.subscription_notes !== void 0) updates.subscription_notes = input.subscription_notes?.trim() || null;
+  let existingUserRow = null;
+  try {
+    const { data: data2 } = await client.from(tableName).select("subscription_notes").eq("id", id).maybeSingle();
+    existingUserRow = data2;
+  } catch {
+  }
+  const { cleanNotes: existingCleanNotes, meta: existingMeta } = unpackUserNotes(
+    input.subscription_notes !== void 0 ? input.subscription_notes : existingUserRow?.subscription_notes
+  );
+  const updatedMeta = { ...existingMeta };
+  const incomingSpecialty = input.legal_specialty !== void 0 ? input.legal_specialty : input.legalSpecialty;
+  if (incomingSpecialty !== void 0) {
+    updatedMeta.legal_specialty = incomingSpecialty ? incomingSpecialty.trim() : null;
+    updates.legal_specialty = updatedMeta.legal_specialty;
+  }
+  const incomingLicense = input.license_number !== void 0 ? input.license_number : input.licenseNumber;
+  if (incomingLicense !== void 0) {
+    updatedMeta.license_number = incomingLicense ? incomingLicense.trim() : null;
+    updates.license_number = updatedMeta.license_number;
+  }
+  const incomingExpiry = input.license_expiry_date !== void 0 ? input.license_expiry_date : input.licenseExpiryDate;
+  if (incomingExpiry !== void 0) {
+    updatedMeta.license_expiry_date = incomingExpiry ? incomingExpiry.trim() : null;
+    updates.license_expiry_date = updatedMeta.license_expiry_date;
+  }
+  const incomingJoined = input.joined_office_at !== void 0 ? input.joined_office_at : input.joinedOfficeAt;
+  if (incomingJoined !== void 0) {
+    updatedMeta.joined_office_at = incomingJoined ? incomingJoined.trim() : null;
+    updates.joined_office_at = updatedMeta.joined_office_at;
+  }
+  const incomingCr = input.commercial_registration_number !== void 0 ? input.commercial_registration_number : input.commercialRegistrationNumber;
+  if (incomingCr !== void 0) {
+    updatedMeta.commercial_registration_number = incomingCr ? incomingCr.trim() : null;
+    updates.commercial_registration_number = updatedMeta.commercial_registration_number;
+  }
+  const incomingBcName = input.billing_contact_name !== void 0 ? input.billing_contact_name : input.billingContactName;
+  if (incomingBcName !== void 0) {
+    updatedMeta.billing_contact_name = incomingBcName ? incomingBcName.trim() : null;
+    updates.billing_contact_name = updatedMeta.billing_contact_name;
+  }
+  const incomingBcPhone = input.billing_contact_phone !== void 0 ? input.billing_contact_phone : input.billingContactPhone;
+  if (incomingBcPhone !== void 0) {
+    updatedMeta.billing_contact_phone = incomingBcPhone ? incomingBcPhone.trim() : null;
+    updates.billing_contact_phone = updatedMeta.billing_contact_phone;
+  }
+  const incomingBcEmail = input.billing_contact_email !== void 0 ? input.billing_contact_email : input.billingContactEmail;
+  if (incomingBcEmail !== void 0) {
+    updatedMeta.billing_contact_email = incomingBcEmail ? incomingBcEmail.trim() : null;
+    updates.billing_contact_email = updatedMeta.billing_contact_email;
+  }
+  const incomingAddress = input.office_address !== void 0 ? input.office_address : input.officeAddress;
+  if (incomingAddress !== void 0) {
+    updatedMeta.office_address = incomingAddress ? incomingAddress.trim() : null;
+    updates.office_address = updatedMeta.office_address;
+  }
+  const baseNotes = input.subscription_notes !== void 0 ? input.subscription_notes : existingCleanNotes;
+  updates.subscription_notes = packUserNotes(baseNotes, updatedMeta) || null;
   if (input.plan_tier !== void 0) updates.plan_tier = input.plan_tier;
   if (input.billing_cycle !== void 0) updates.billing_cycle = input.billing_cycle;
   if (input.ai_quota_limit !== void 0) updates.ai_quota_limit = input.ai_quota_limit;
@@ -833399,8 +833862,17 @@ async function updateSupabaseUser(id, input) {
   invalidateUserGoogleCache(id);
   const selectCols = `id, username, email, role, admin_id, office_name, display_name, status, ${hasPhone ? "phone, " : ""}${hasPlan ? "plan_id, ai_quota_limit_override, " : ""}subscription_end_date, subscription_notes, plan_tier, billing_cycle, ai_quota_limit, ai_usage_count, google_service_account_json, google_spreadsheet_id, google_sheet_name, created_at`;
   let { data, error } = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
-  if (error && (error.message?.includes("role_title") || error.code === "PGRST204")) {
+  if (error && (error.message?.includes("role_title") || error.code === "PGRST204" || error.message?.includes("column") || error.message?.includes("does not exist"))) {
     delete updates.role_title;
+    delete updates.legal_specialty;
+    delete updates.license_number;
+    delete updates.license_expiry_date;
+    delete updates.joined_office_at;
+    delete updates.commercial_registration_number;
+    delete updates.billing_contact_name;
+    delete updates.billing_contact_phone;
+    delete updates.billing_contact_email;
+    delete updates.office_address;
     const retry = await client.from(tableName).update(updates).eq("id", id).select(selectCols).single();
     if (!retry.error && retry.data) {
       data = retry.data;
@@ -833418,7 +833890,7 @@ async function updateSupabaseUser(id, input) {
     revokeUserSessions(id);
   }
   const row = data;
-  return {
+  return formatUser({
     id: row.id,
     username: row.username,
     email: row.email,
@@ -833441,8 +833913,9 @@ async function updateSupabaseUser(id, input) {
     has_google_service: Boolean(row.google_service_account_json && row.google_service_account_json.trim().length > 10),
     google_spreadsheet_id: row.google_spreadsheet_id,
     google_sheet_name: row.google_sheet_name,
-    created_at: row.created_at
-  };
+    created_at: row.created_at,
+    ...updates
+  });
 }
 async function resetUserAiUsage(userId) {
   return updateSupabaseUser(userId, { ai_usage_count: 0 });
@@ -833469,7 +833942,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_crypto3, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError2, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, fallbackActivationTokens, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasRoleTitleColumnCache, lastRoleTitleCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_crypto3, USER_META_REGEX, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError2, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, fallbackActivationTokens, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasRoleTitleColumnCache, lastRoleTitleCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -833482,6 +833955,7 @@ var init_supabase_service = __esm({
     init_encryption();
     init_activation_delivery_service();
     init_postgres_service();
+    USER_META_REGEX = /<!--__USER_META__([\s\S]*?)__-->/;
     UserPendingActivationError = class extends Error {
       statusCode = 403;
       constructor(message = "\u064A\u062C\u0628 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644\u0627\u064B \u0639\u0628\u0631 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0631\u0633\u0644 \u0625\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643.") {
@@ -854333,6 +854807,112 @@ async function runPoaExpirySweep(targetOfficeId) {
   };
 }
 
+// src/services/reminder/license-expiry.service.ts
+init_logger();
+init_supabase_service();
+init_postgres_service();
+init_notification_template_service();
+var LICENSE_EXPIRY_THRESHOLD_DAYS = 30;
+function calcDaysToDate(dateStr) {
+  if (!dateStr) return 9999;
+  const target = new Date(dateStr);
+  if (isNaN(target.getTime())) return 9999;
+  const now = /* @__PURE__ */ new Date();
+  now.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const diffMs = target.getTime() - now.getTime();
+  return Math.ceil(diffMs / (1e3 * 60 * 60 * 24));
+}
+async function runLicenseExpirySweep(targetOfficeId) {
+  const officeResults = [];
+  let totalMembersChecked = 0;
+  let totalNotificationsCreated = 0;
+  let allUsers = [];
+  try {
+    allUsers = await listSupabaseUsers();
+  } catch (err) {
+    logger.error({ err }, "runLicenseExpirySweep: failed to fetch users list");
+  }
+  const officeIdsSet = /* @__PURE__ */ new Set();
+  if (targetOfficeId && targetOfficeId.trim()) {
+    officeIdsSet.add(targetOfficeId.trim());
+  } else {
+    for (const u of allUsers) {
+      if (u.status === "suspended") continue;
+      if (u.role === "admin") {
+        officeIdsSet.add(u.id);
+      } else if (u.admin_id) {
+        officeIdsSet.add(u.admin_id);
+      }
+    }
+  }
+  for (const officeId of officeIdsSet) {
+    const officeUsers = allUsers.filter((u) => u.id === officeId || u.admin_id === officeId);
+    const adminUser = officeUsers.find((u) => u.role === "admin" && u.id === officeId) || officeUsers.find((u) => u.role === "admin") || null;
+    if (!adminUser) continue;
+    const staffMembers = officeUsers.filter((u) => u.role === "staff");
+    let membersChecked = 0;
+    let expiringFound = 0;
+    let notificationsCreated = 0;
+    let skippedDuplicate = 0;
+    for (const member of staffMembers) {
+      membersChecked++;
+      const expiryDate = member.license_expiry_date || member.licenseExpiryDate;
+      if (!expiryDate) continue;
+      const daysRemaining = calcDaysToDate(expiryDate);
+      if (daysRemaining > 0 && daysRemaining <= LICENSE_EXPIRY_THRESHOLD_DAYS) {
+        expiringFound++;
+        const memberIdStr = String(member.id);
+        const alreadyNotified = await hasRecentNotification(
+          officeId,
+          "staff_license_expiring",
+          "user",
+          memberIdStr,
+          24
+        );
+        if (alreadyNotified) {
+          skippedDuplicate++;
+          continue;
+        }
+        const memberName = member.display_name || member.username;
+        const licenseNumber = member.license_number || member.licenseNumber || "\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";
+        const res = await dispatchEventNotification({
+          officeId,
+          eventType: "staff_license_expiring",
+          recipientUserId: adminUser.id,
+          placeholderData: {
+            memberName,
+            licenseNumber,
+            daysRemaining: String(daysRemaining),
+            expiryDate
+          },
+          relatedRecordType: "user",
+          relatedRecordId: memberIdStr
+        });
+        if (res.inAppCreated || res.whatsappSent) {
+          notificationsCreated++;
+        }
+      }
+    }
+    totalMembersChecked += membersChecked;
+    totalNotificationsCreated += notificationsCreated;
+    officeResults.push({
+      officeId,
+      membersChecked,
+      expiringFound,
+      notificationsCreated,
+      skippedDuplicate
+    });
+  }
+  return {
+    ok: true,
+    officesProcessed: officeIdsSet.size,
+    membersChecked: totalMembersChecked,
+    notificationsCreated: totalNotificationsCreated,
+    offices: officeResults
+  };
+}
+
 // src/services/reminder/subscription-expiry.service.ts
 init_logger();
 init_supabase_service();
@@ -854803,6 +855383,39 @@ async function handlePoaExpiryCron(req, res) {
 }
 router8.get("/cron/poa-expiry", handlePoaExpiryCron);
 router8.post("/cron/poa-expiry", handlePoaExpiryCron);
+async function handleLicenseExpiryCron(req, res) {
+  const secret = env.cronSecret;
+  if (!secret || !secret.trim()) {
+    logger.error("Cron license expiry endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+  const authHeader = req.headers["authorization"] || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
+  if (!token || !safeCompare(token, secret.trim())) {
+    res.status(401).json({ error: "Unauthorized: Invalid or missing Bearer token." });
+    return;
+  }
+  const startedAt = Date.now();
+  try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
+    const targetOfficeId = req.query.officeId || req.body?.officeId;
+    const result = await runLicenseExpirySweep(targetOfficeId);
+    const durationMs = Date.now() - startedAt;
+    logger.info({ durationMs, officesCount: result.officesProcessed, notificationsCreated: result.notificationsCreated }, "Cron license expiry sweep completed successfully");
+    res.json({ ok: true, durationMs, result });
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    logger.error({ err, durationMs }, "Cron license expiry sweep failed");
+    res.status(500).json({ ok: false, error: "License expiry sweep failed." });
+  }
+}
+router8.get("/cron/license-expiry", handleLicenseExpiryCron);
+router8.post("/cron/license-expiry", handleLicenseExpiryCron);
 async function handleSubscriptionExpiryCron(req, res) {
   const secret = env.cronSecret;
   if (!secret || !secret.trim()) {
@@ -854846,6 +855459,12 @@ init_logger();
 init_postgres_service();
 var CreatePoaSchema = external_exports.object({
   poaNumber: external_exports.string().trim().min(1, "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628."),
+  poaType: external_exports.enum(["\u0639\u0627\u0645\u0629", "\u062E\u0627\u0635\u0629"]).optional(),
+  poa_type: external_exports.enum(["\u0639\u0627\u0645\u0629", "\u062E\u0627\u0635\u0629"]).optional(),
+  scopeDescription: external_exports.string().nullable().optional(),
+  scope_description: external_exports.string().nullable().optional(),
+  notarizationAuthority: external_exports.string().nullable().optional(),
+  notarization_authority: external_exports.string().nullable().optional(),
   clientId: external_exports.string().nullable().optional(),
   client_id: external_exports.string().nullable().optional(),
   caseId: external_exports.string().nullable().optional(),
@@ -854855,8 +855474,11 @@ var CreatePoaSchema = external_exports.object({
   principalName: external_exports.string().optional(),
   agentName: external_exports.string().optional(),
   issueDate: external_exports.string().optional(),
+  issueDateHijri: external_exports.string().optional(),
   expiryDate: external_exports.string().optional(),
-  status: external_exports.string().optional(),
+  expiryDateHijri: external_exports.string().optional(),
+  daysRemaining: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+  status: external_exports.enum(["active", "revoked"]).optional(),
   assignedLawyerId: external_exports.string().nullable().optional(),
   assigned_lawyer_id: external_exports.string().nullable().optional(),
   assignedLawyer: external_exports.string().optional(),
@@ -854864,6 +855486,12 @@ var CreatePoaSchema = external_exports.object({
 });
 var UpdatePoaSchema = external_exports.object({
   poaNumber: external_exports.string().optional(),
+  poaType: external_exports.enum(["\u0639\u0627\u0645\u0629", "\u062E\u0627\u0635\u0629"]).optional(),
+  poa_type: external_exports.enum(["\u0639\u0627\u0645\u0629", "\u062E\u0627\u0635\u0629"]).optional(),
+  scopeDescription: external_exports.string().nullable().optional(),
+  scope_description: external_exports.string().nullable().optional(),
+  notarizationAuthority: external_exports.string().nullable().optional(),
+  notarization_authority: external_exports.string().nullable().optional(),
   clientId: external_exports.string().nullable().optional(),
   client_id: external_exports.string().nullable().optional(),
   caseId: external_exports.string().nullable().optional(),
@@ -854873,8 +855501,15 @@ var UpdatePoaSchema = external_exports.object({
   principalName: external_exports.string().optional(),
   agentName: external_exports.string().optional(),
   issueDate: external_exports.string().optional(),
+  issueDateHijri: external_exports.string().optional(),
   expiryDate: external_exports.string().optional(),
-  status: external_exports.string().optional(),
+  expiryDateHijri: external_exports.string().optional(),
+  daysRemaining: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+  status: external_exports.enum(["active", "revoked"]).optional(),
+  revokedAt: external_exports.string().nullable().optional(),
+  revoked_at: external_exports.string().nullable().optional(),
+  revocationReason: external_exports.string().nullable().optional(),
+  revocation_reason: external_exports.string().nullable().optional(),
   assignedLawyerId: external_exports.string().nullable().optional(),
   assigned_lawyer_id: external_exports.string().nullable().optional(),
   assignedLawyer: external_exports.string().optional(),
@@ -854950,6 +855585,11 @@ router9.post("/poa", async (req, res) => {
     res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628." });
     return;
   }
+  const poaType = body.poaType || body.poa_type;
+  if (!poaType || poaType !== "\u0639\u0627\u0645\u0629" && poaType !== "\u062E\u0627\u0635\u0629") {
+    res.status(400).json({ error: "\u0646\u0648\u0639 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628 \u0648\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F\u0647 \u0643\u0640 (\u0639\u0627\u0645\u0629) \u0623\u0648 (\u062E\u0627\u0635\u0629)." });
+    return;
+  }
   let clientId = body.clientId || body.client_id || null;
   const caseId = body.caseId || body.case_id || null;
   const clientName = (body.clientName || body.client_name || "").trim();
@@ -854997,7 +855637,12 @@ router9.post("/poa", async (req, res) => {
         clientId,
         caseId,
         assignedLawyerId,
-        createdBy
+        createdBy,
+        poa_type: poaType,
+        poaType,
+        scope_description: body.scope_description ?? body.scopeDescription ?? null,
+        notarization_authority: body.notarization_authority ?? body.notarizationAuthority ?? null,
+        status: body.status || "active"
       },
       officeId
     );
@@ -855084,6 +855729,25 @@ router9.put("/poa/:rowId", async (req, res) => {
       }
       payload.assignedLawyerId = targetLawyer;
     }
+    if (body.poa_type !== void 0 || body.poaType !== void 0) {
+      payload.poa_type = body.poa_type || body.poaType;
+      payload.poaType = body.poa_type || body.poaType;
+    }
+    if (body.scope_description !== void 0 || body.scopeDescription !== void 0) {
+      payload.scope_description = body.scope_description !== void 0 ? body.scope_description : body.scopeDescription;
+    }
+    if (body.notarization_authority !== void 0 || body.notarizationAuthority !== void 0) {
+      payload.notarization_authority = body.notarization_authority !== void 0 ? body.notarization_authority : body.notarizationAuthority;
+    }
+    if (body.status !== void 0) {
+      payload.status = body.status;
+    }
+    if (body.revoked_at !== void 0 || body.revokedAt !== void 0) {
+      payload.revoked_at = body.revoked_at !== void 0 ? body.revoked_at : body.revokedAt;
+    }
+    if (body.revocation_reason !== void 0 || body.revocationReason !== void 0) {
+      payload.revocation_reason = body.revocation_reason !== void 0 ? body.revocation_reason : body.revocationReason;
+    }
     const updated = await updatePoa(rowId, payload, officeId);
     if (!updated) {
       res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
@@ -855108,6 +855772,37 @@ router9.put("/poa/:rowId", async (req, res) => {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to update POA record");
     handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u0643\u0627\u0644\u0629");
+  }
+});
+router9.post("/poa/:rowId/revoke", async (req, res) => {
+  if (req.authUser?.role !== "admin") {
+    res.status(403).json({ error: "\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u0645\u0642\u062A\u0635\u0631 \u0639\u0644\u0649 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0641\u0642\u0637." });
+    return;
+  }
+  const officeId = getOfficeId2(req);
+  const rowId = parseInt(String(req.params.rowId), 10);
+  if (isNaN(rowId)) {
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+    return;
+  }
+  try {
+    const existing = await getPoaById(rowId, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "\u0627\u0644\u0648\u0643\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
+      return;
+    }
+    const reason = req.body?.reason || req.body?.revocation_reason || req.body?.revocationReason || null;
+    const revoked = await revokePoa(rowId, officeId, reason);
+    if (!revoked) {
+      res.status(404).json({ error: "\u062A\u0639\u0630\u0631 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0648\u0643\u0627\u0644\u0629." });
+      return;
+    }
+    logger.info({ id: rowId, officeId, reason }, "POA record revoked successfully");
+    res.json(formatPoa2(revoked));
+  } catch (err) {
+    const refId = generateRefId();
+    logger.error({ refId, err, rowId }, "Failed to revoke POA");
+    handleDatabaseOrServerError(res, err, refId, "\u0641\u0634\u0644 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0648\u0643\u0627\u0644\u0629");
   }
 });
 router9.patch("/poa/:id/reassign", async (req, res) => {
@@ -855792,7 +856487,15 @@ var CreateOfficeMemberSchema = external_exports.object({
   displayName: external_exports.string().optional(),
   phone: external_exports.string().nullable().optional(),
   role_title: external_exports.string().nullable().optional(),
-  roleTitle: external_exports.string().nullable().optional()
+  roleTitle: external_exports.string().nullable().optional(),
+  legal_specialty: external_exports.string().nullable().optional(),
+  legalSpecialty: external_exports.string().nullable().optional(),
+  license_number: external_exports.string().nullable().optional(),
+  licenseNumber: external_exports.string().nullable().optional(),
+  license_expiry_date: external_exports.string().nullable().optional(),
+  licenseExpiryDate: external_exports.string().nullable().optional(),
+  joined_office_at: external_exports.string().nullable().optional(),
+  joinedOfficeAt: external_exports.string().nullable().optional()
 });
 var UpdateOfficeMemberSchema = external_exports.object({
   password: external_exports.string().optional(),
@@ -855802,7 +856505,15 @@ var UpdateOfficeMemberSchema = external_exports.object({
   status: external_exports.enum(["active", "suspended", "pending_activation"]).optional(),
   phone: external_exports.string().nullable().optional(),
   role_title: external_exports.string().nullable().optional(),
-  roleTitle: external_exports.string().nullable().optional()
+  roleTitle: external_exports.string().nullable().optional(),
+  legal_specialty: external_exports.string().nullable().optional(),
+  legalSpecialty: external_exports.string().nullable().optional(),
+  license_number: external_exports.string().nullable().optional(),
+  licenseNumber: external_exports.string().nullable().optional(),
+  license_expiry_date: external_exports.string().nullable().optional(),
+  licenseExpiryDate: external_exports.string().nullable().optional(),
+  joined_office_at: external_exports.string().nullable().optional(),
+  joinedOfficeAt: external_exports.string().nullable().optional()
 });
 var ToggleMemberStatusSchema = external_exports.object({
   status: external_exports.enum(["active", "suspended"]).optional()
@@ -855837,7 +856548,23 @@ router12.post("/users", async (req, res) => {
       res.status(400).json({ error: errorMsg });
       return;
     }
-    const { username, email, display_name, phone, role_title, roleTitle } = req.body;
+    const {
+      username,
+      email,
+      display_name,
+      displayName,
+      phone,
+      role_title,
+      roleTitle,
+      legal_specialty,
+      legalSpecialty,
+      license_number,
+      licenseNumber,
+      license_expiry_date,
+      licenseExpiryDate,
+      joined_office_at,
+      joinedOfficeAt
+    } = req.body;
     if (!username || !username.trim()) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0637\u0644\u0648\u0628." });
       return;
@@ -855854,9 +856581,13 @@ router12.post("/users", async (req, res) => {
     const result = await createOfficeMember(adminId, {
       username: username.trim(),
       email: email.trim(),
-      display_name: display_name?.trim() || username.trim(),
+      display_name: display_name?.trim() || displayName?.trim() || username.trim(),
       phone: phone?.trim() || null,
-      role_title: role_title?.trim() || roleTitle?.trim() || null
+      role_title: role_title?.trim() || roleTitle?.trim() || null,
+      legal_specialty: legal_specialty?.trim() || legalSpecialty?.trim() || null,
+      license_number: license_number?.trim() || licenseNumber?.trim() || null,
+      license_expiry_date: license_expiry_date?.trim() || licenseExpiryDate?.trim() || null,
+      joined_office_at: joined_office_at?.trim() || joinedOfficeAt?.trim() || null
     });
     res.status(201).json({
       ...result.member,
@@ -855923,7 +856654,24 @@ router12.patch("/users/:id", async (req, res) => {
       res.status(400).json({ error: errorMsg });
       return;
     }
-    const { password, display_name, displayName, email, status, phone, role_title, roleTitle } = req.body;
+    const {
+      password,
+      display_name,
+      displayName,
+      email,
+      status,
+      phone,
+      role_title,
+      roleTitle,
+      legal_specialty,
+      legalSpecialty,
+      license_number,
+      licenseNumber,
+      license_expiry_date,
+      licenseExpiryDate,
+      joined_office_at,
+      joinedOfficeAt
+    } = req.body;
     if (password !== void 0 && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
       if (!passwordValidation.isValid) {
@@ -855937,7 +856685,11 @@ router12.patch("/users/:id", async (req, res) => {
       email,
       status,
       phone,
-      role_title: role_title !== void 0 ? role_title : roleTitle
+      role_title: role_title !== void 0 ? role_title : roleTitle,
+      legal_specialty: legal_specialty !== void 0 ? legal_specialty : legalSpecialty,
+      license_number: license_number !== void 0 ? license_number : licenseNumber,
+      license_expiry_date: license_expiry_date !== void 0 ? license_expiry_date : licenseExpiryDate,
+      joined_office_at: joined_office_at !== void 0 ? joined_office_at : joinedOfficeAt
     });
     res.json(updated);
   } catch (err) {
@@ -856384,7 +857136,17 @@ router13.post("/super-admin/admins", async (req, res) => {
       subscription_end_date,
       subscription_notes,
       ai_quota_limit,
-      ai_quota_limit_override
+      ai_quota_limit_override,
+      commercial_registration_number,
+      commercialRegistrationNumber,
+      billing_contact_name,
+      billingContactName,
+      billing_contact_phone,
+      billingContactPhone,
+      billing_contact_email,
+      billingContactEmail,
+      office_address,
+      officeAddress
     } = req.body;
     if (!username || !password || !office_name) {
       res.status(400).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u060C \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u060C \u0648\u0627\u0633\u0645 \u0627\u0644\u0645\u0643\u062A\u0628 \u062C\u0645\u064A\u0639\u0647\u0627 \u0645\u0637\u0644\u0648\u0628\u0629." });
@@ -856407,6 +857169,11 @@ router13.post("/super-admin/admins", async (req, res) => {
       billing_cycle,
       subscription_end_date,
       subscription_notes,
+      commercial_registration_number: commercial_registration_number?.trim() || commercialRegistrationNumber?.trim() || null,
+      billing_contact_name: billing_contact_name?.trim() || billingContactName?.trim() || null,
+      billing_contact_phone: billing_contact_phone?.trim() || billingContactPhone?.trim() || null,
+      billing_contact_email: billing_contact_email?.trim() || billingContactEmail?.trim() || null,
+      office_address: office_address?.trim() || officeAddress?.trim() || null,
       ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0,
       ai_quota_limit_override: ai_quota_limit_override !== void 0 && ai_quota_limit_override !== null ? Number(ai_quota_limit_override) : void 0
     });
@@ -856450,7 +857217,17 @@ router13.patch("/super-admin/admins/:id", async (req, res) => {
       subscription_notes,
       ai_quota_limit,
       ai_quota_limit_override,
-      ai_usage_count
+      ai_usage_count,
+      commercial_registration_number,
+      commercialRegistrationNumber,
+      billing_contact_name,
+      billingContactName,
+      billing_contact_phone,
+      billingContactPhone,
+      billing_contact_email,
+      billingContactEmail,
+      office_address,
+      officeAddress
     } = req.body;
     if (password !== void 0 && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
@@ -856471,6 +857248,11 @@ router13.patch("/super-admin/admins/:id", async (req, res) => {
       billing_cycle,
       subscription_end_date,
       subscription_notes,
+      commercial_registration_number: commercial_registration_number !== void 0 ? commercial_registration_number : commercialRegistrationNumber,
+      billing_contact_name: billing_contact_name !== void 0 ? billing_contact_name : billingContactName,
+      billing_contact_phone: billing_contact_phone !== void 0 ? billing_contact_phone : billingContactPhone,
+      billing_contact_email: billing_contact_email !== void 0 ? billing_contact_email : billingContactEmail,
+      office_address: office_address !== void 0 ? office_address : officeAddress,
       ai_quota_limit: ai_quota_limit !== void 0 ? Number(ai_quota_limit) : void 0,
       ai_quota_limit_override: ai_quota_limit_override !== void 0 ? ai_quota_limit_override === null ? null : Number(ai_quota_limit_override) : void 0,
       ai_usage_count: ai_usage_count !== void 0 ? Number(ai_usage_count) : void 0
@@ -856860,14 +857642,28 @@ var CreateClientSchema = external_exports.object({
   notes: external_exports.string().optional(),
   client_type: external_exports.string().optional(),
   clientType: external_exports.string().optional(),
-  type: external_exports.string().optional()
+  type: external_exports.string().optional(),
+  company_representative_name: external_exports.string().nullable().optional(),
+  companyRepresentativeName: external_exports.string().nullable().optional(),
+  address: external_exports.string().nullable().optional(),
+  secondary_email: external_exports.string().nullable().optional(),
+  secondaryEmail: external_exports.string().nullable().optional(),
+  referral_source: external_exports.string().nullable().optional(),
+  referralSource: external_exports.string().nullable().optional()
 });
 var UpdateClientSchema = external_exports.object({
   name: external_exports.string().trim().min(1, "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0637\u0644\u0648\u0628.").optional(),
   phone: external_exports.string().optional(),
   notes: external_exports.string().optional(),
   client_type: external_exports.string().optional(),
-  clientType: external_exports.string().optional()
+  clientType: external_exports.string().optional(),
+  company_representative_name: external_exports.string().nullable().optional(),
+  companyRepresentativeName: external_exports.string().nullable().optional(),
+  address: external_exports.string().nullable().optional(),
+  secondary_email: external_exports.string().nullable().optional(),
+  secondaryEmail: external_exports.string().nullable().optional(),
+  referral_source: external_exports.string().nullable().optional(),
+  referralSource: external_exports.string().nullable().optional()
 });
 var CreateClientNoteSchema = external_exports.object({
   body: external_exports.string().trim().min(1, "\u0646\u0635 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0637\u0644\u0648\u0628.")
@@ -857023,7 +857819,11 @@ router15.post("/clients", async (req, res) => {
         name: body.name.trim(),
         phone: body.phone?.trim() || "",
         notes: body.notes?.trim() || "",
-        client_type: body.client_type || body.clientType || body.type || "individual"
+        client_type: body.client_type || body.clientType || body.type || "individual",
+        company_representative_name: body.company_representative_name ?? body.companyRepresentativeName ?? null,
+        address: body.address ?? null,
+        secondary_email: body.secondary_email ?? body.secondaryEmail ?? null,
+        referral_source: body.referral_source ?? body.referralSource ?? null
       },
       officeId
     );
@@ -857080,7 +857880,12 @@ router15.patch("/clients/:id", async (req, res) => {
       {
         name: body.name !== void 0 ? body.name.trim() : void 0,
         phone: body.phone !== void 0 ? body.phone.trim() : void 0,
-        notes: body.notes !== void 0 ? body.notes.trim() : void 0
+        notes: body.notes !== void 0 ? body.notes.trim() : void 0,
+        client_type: body.client_type || body.clientType,
+        company_representative_name: body.company_representative_name !== void 0 ? body.company_representative_name : body.companyRepresentativeName,
+        address: body.address,
+        secondary_email: body.secondary_email !== void 0 ? body.secondary_email : body.secondaryEmail,
+        referral_source: body.referral_source !== void 0 ? body.referral_source : body.referralSource
       },
       officeId
     );
@@ -859194,6 +859999,8 @@ router19.get("/workload", async (req, res) => {
         lawyerName: m2.display_name || m2.username,
         username: m2.username,
         email: m2.email,
+        legal_specialty: m2.legal_specialty || m2.legalSpecialty || null,
+        legalSpecialty: m2.legal_specialty || m2.legalSpecialty || null,
         activeSessions,
         openPoa,
         pendingTasks,

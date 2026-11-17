@@ -28,6 +28,13 @@ const CreateClientSchema = z.object({
   client_type: z.string().optional(),
   clientType: z.string().optional(),
   type: z.string().optional(),
+  company_representative_name: z.string().nullable().optional(),
+  companyRepresentativeName: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  secondary_email: z.string().nullable().optional(),
+  secondaryEmail: z.string().nullable().optional(),
+  referral_source: z.string().nullable().optional(),
+  referralSource: z.string().nullable().optional(),
 });
 
 const UpdateClientSchema = z.object({
@@ -36,6 +43,13 @@ const UpdateClientSchema = z.object({
   notes: z.string().optional(),
   client_type: z.string().optional(),
   clientType: z.string().optional(),
+  company_representative_name: z.string().nullable().optional(),
+  companyRepresentativeName: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  secondary_email: z.string().nullable().optional(),
+  secondaryEmail: z.string().nullable().optional(),
+  referral_source: z.string().nullable().optional(),
+  referralSource: z.string().nullable().optional(),
 });
 
 const CreateClientNoteSchema = z.object({
@@ -238,6 +252,10 @@ router.post("/clients", async (req, res) => {
         phone: body.phone?.trim() || "",
         notes: body.notes?.trim() || "",
         client_type: body.client_type || body.clientType || body.type || "individual",
+        company_representative_name: body.company_representative_name ?? body.companyRepresentativeName ?? null,
+        address: body.address ?? null,
+        secondary_email: body.secondary_email ?? body.secondaryEmail ?? null,
+        referral_source: body.referral_source ?? body.referralSource ?? null,
       },
       officeId,
     );
@@ -311,6 +329,11 @@ router.patch("/clients/:id", async (req, res) => {
         name: body.name !== undefined ? body.name.trim() : undefined,
         phone: body.phone !== undefined ? body.phone.trim() : undefined,
         notes: body.notes !== undefined ? body.notes.trim() : undefined,
+        client_type: body.client_type || body.clientType,
+        company_representative_name: body.company_representative_name !== undefined ? body.company_representative_name : body.companyRepresentativeName,
+        address: body.address,
+        secondary_email: body.secondary_email !== undefined ? body.secondary_email : body.secondaryEmail,
+        referral_source: body.referral_source !== undefined ? body.referral_source : body.referralSource,
       },
       officeId,
     );

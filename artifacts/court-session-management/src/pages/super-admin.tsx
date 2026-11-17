@@ -121,6 +121,11 @@ export interface OfficeAdmin {
   member_count?: number;
   has_google_service?: boolean;
   google_spreadsheet_id?: string | null;
+  commercial_registration_number?: string | null;
+  billing_contact_name?: string | null;
+  billing_contact_phone?: string | null;
+  billing_contact_email?: string | null;
+  office_address?: string | null;
   created_at?: string;
 }
 
@@ -573,6 +578,11 @@ export default function SuperAdminPage() {
     display_name: '',
     email: '',
     phone: '',
+    commercial_registration_number: '',
+    billing_contact_name: '',
+    billing_contact_phone: '',
+    billing_contact_email: '',
+    office_address: '',
     plan_id: '',
     plan_tier: 'plus' as 'plus' | 'pro' | string,
     billing_cycle: 'annual' as 'monthly' | 'annual',
@@ -1046,6 +1056,11 @@ export default function SuperAdminPage() {
         display_name: formData.display_name.trim() || formData.office_name.trim(),
         email: formData.email.trim() || undefined,
         phone: formData.phone.trim() || undefined,
+        commercial_registration_number: formData.commercial_registration_number.trim() || undefined,
+        billing_contact_name: formData.billing_contact_name.trim() || undefined,
+        billing_contact_phone: formData.billing_contact_phone.trim() || undefined,
+        billing_contact_email: formData.billing_contact_email.trim() || undefined,
+        office_address: formData.office_address.trim() || undefined,
         plan_id: formData.plan_id || undefined,
         plan_tier: selectedPlan?.slug || formData.plan_tier || 'plus',
         billing_cycle: formData.billing_cycle,
@@ -1107,6 +1122,11 @@ export default function SuperAdminPage() {
         display_name: formData.display_name,
         email: formData.email,
         phone: formData.phone,
+        commercial_registration_number: formData.commercial_registration_number.trim() || null,
+        billing_contact_name: formData.billing_contact_name.trim() || null,
+        billing_contact_phone: formData.billing_contact_phone.trim() || null,
+        billing_contact_email: formData.billing_contact_email.trim() || null,
+        office_address: formData.office_address.trim() || null,
         plan_id: formData.plan_id || undefined,
         plan_tier: selectedPlan?.slug || formData.plan_tier || 'plus',
         billing_cycle: formData.billing_cycle,
@@ -1445,6 +1465,11 @@ export default function SuperAdminPage() {
       display_name: admin.display_name || '',
       email: admin.email || '',
       phone: admin.phone || '',
+      commercial_registration_number: admin.commercial_registration_number || '',
+      billing_contact_name: admin.billing_contact_name || '',
+      billing_contact_phone: admin.billing_contact_phone || '',
+      billing_contact_email: admin.billing_contact_email || '',
+      office_address: admin.office_address || '',
       plan_id: admin.plan_id || matchedPlan?.id || '',
       plan_tier: admin.plan_tier || matchedPlan?.slug || 'plus',
       billing_cycle: admin.billing_cycle || 'annual',
@@ -1469,6 +1494,11 @@ export default function SuperAdminPage() {
       display_name: '',
       email: '',
       phone: '',
+      commercial_registration_number: '',
+      billing_contact_name: '',
+      billing_contact_phone: '',
+      billing_contact_email: '',
+      office_address: '',
       plan_id: defaultPlan?.id || '',
       plan_tier: defaultPlan?.slug || 'plus',
       billing_cycle: 'annual',
@@ -2261,6 +2291,21 @@ export default function SuperAdminPage() {
                                       <div className="text-xs text-muted-foreground mt-0.5">
                                         {admin.display_name || admin.username}
                                       </div>
+                                      {admin.commercial_registration_number && (
+                                        <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                          س.ت: {admin.commercial_registration_number}
+                                        </div>
+                                      )}
+                                      {admin.office_address && (
+                                        <div className="text-[10px] text-muted-foreground truncate max-w-[200px]" title={admin.office_address}>
+                                          📍 {admin.office_address}
+                                        </div>
+                                      )}
+                                      {(admin.billing_contact_name || admin.billing_contact_email) && (
+                                        <div className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5">
+                                          فوترة: {admin.billing_contact_name || admin.billing_contact_email}
+                                        </div>
+                                      )}
                                     </td>
 
                                     <td className="p-3.5">
@@ -4099,6 +4144,68 @@ export default function SuperAdminPage() {
                 )}
               </div>
 
+              {/* Legal & Billing Details */}
+              <div className="p-3 bg-muted/20 rounded-xl border border-border space-y-3">
+                <div className="font-bold text-foreground text-xs">بيانات السجل التجاري والفوترة للمكتب</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">رقم السجل التجاري</Label>
+                    <Input
+                      placeholder="1010XXXXXX"
+                      value={formData.commercial_registration_number}
+                      onChange={(e) => setFormData({ ...formData, commercial_registration_number: e.target.value })}
+                      className="text-xs h-9 font-mono"
+                      dir="ltr"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">عنوان المكتب / المقر</Label>
+                    <Input
+                      placeholder="الرياض - حي العليا - طريق الملك فهد"
+                      value={formData.office_address}
+                      onChange={(e) => setFormData({ ...formData, office_address: e.target.value })}
+                      className="text-xs h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">اسم مسؤول الفوترة</Label>
+                    <Input
+                      placeholder="أ. عبد الله المحاسب"
+                      value={formData.billing_contact_name}
+                      onChange={(e) => setFormData({ ...formData, billing_contact_name: e.target.value })}
+                      className="text-xs h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">هاتف الفوترة</Label>
+                    <Input
+                      placeholder="05XXXXXXXX"
+                      value={formData.billing_contact_phone}
+                      onChange={(e) => setFormData({ ...formData, billing_contact_phone: e.target.value })}
+                      className="text-xs h-9 font-mono"
+                      dir="ltr"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">بريد الفوترة</Label>
+                    <Input
+                      type="email"
+                      placeholder="billing@lawfirm.sa"
+                      value={formData.billing_contact_email}
+                      onChange={(e) => setFormData({ ...formData, billing_contact_email: e.target.value })}
+                      className="text-xs h-9 font-mono"
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <Label className="text-xs">ملاحظات الاشتراك / العقد</Label>
                 <Textarea
@@ -4267,6 +4374,68 @@ export default function SuperAdminPage() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Legal & Billing Details */}
+              <div className="p-3 bg-muted/20 rounded-xl border border-border space-y-3">
+                <div className="font-bold text-foreground text-xs">بيانات السجل التجاري والفوترة للمكتب</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">رقم السجل التجاري</Label>
+                    <Input
+                      placeholder="1010XXXXXX"
+                      value={formData.commercial_registration_number}
+                      onChange={(e) => setFormData({ ...formData, commercial_registration_number: e.target.value })}
+                      className="text-xs h-9 font-mono"
+                      dir="ltr"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">عنوان المكتب / المقر</Label>
+                    <Input
+                      placeholder="الرياض - حي العليا - طريق الملك فهد"
+                      value={formData.office_address}
+                      onChange={(e) => setFormData({ ...formData, office_address: e.target.value })}
+                      className="text-xs h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">اسم مسؤول الفوترة</Label>
+                    <Input
+                      placeholder="أ. عبد الله المحاسب"
+                      value={formData.billing_contact_name}
+                      onChange={(e) => setFormData({ ...formData, billing_contact_name: e.target.value })}
+                      className="text-xs h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">هاتف الفوترة</Label>
+                    <Input
+                      placeholder="05XXXXXXXX"
+                      value={formData.billing_contact_phone}
+                      onChange={(e) => setFormData({ ...formData, billing_contact_phone: e.target.value })}
+                      className="text-xs h-9 font-mono"
+                      dir="ltr"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">بريد الفوترة</Label>
+                    <Input
+                      type="email"
+                      placeholder="billing@lawfirm.sa"
+                      value={formData.billing_contact_email}
+                      onChange={(e) => setFormData({ ...formData, billing_contact_email: e.target.value })}
+                      className="text-xs h-9 font-mono"
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1">

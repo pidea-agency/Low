@@ -80,6 +80,13 @@ export interface ClientItem {
   statusNote?: string;
   commercialRegistration?: string;
   representative?: string;
+  companyRepresentativeName?: string | null;
+  company_representative_name?: string | null;
+  address?: string | null;
+  secondaryEmail?: string | null;
+  secondary_email?: string | null;
+  referralSource?: string | null;
+  referral_source?: string | null;
   isExpiringPoa?: boolean;
   expiringDays?: number;
   location?: string;
@@ -119,8 +126,25 @@ export default function ClientsPage() {
   const [formName, setFormName] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formType, setFormType] = useState<'individual' | 'company'>('individual');
+  const [formCompanyRepresentativeName, setFormCompanyRepresentativeName] = useState('');
+  const [formAddress, setFormAddress] = useState('');
+  const [formSecondaryEmail, setFormSecondaryEmail] = useState('');
+  const [formReferralSource, setFormReferralSource] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const openCreateModal = () => {
+    setEditingClient(null);
+    setFormName('');
+    setFormPhone('');
+    setFormType('individual');
+    setFormNotes('');
+    setFormCompanyRepresentativeName('');
+    setFormAddress('');
+    setFormSecondaryEmail('');
+    setFormReferralSource('');
+    setCreateOpen(true);
+  };
 
   // Fetch real clients from backend
   const loadBackendClients = useCallback(async () => {
@@ -164,7 +188,14 @@ export default function ClientsPage() {
       openCasesCount: b.open_cases_count || (b.cases_count || 0),
       openCasesText: (b.open_cases_count || b.cases_count) ? `${b.open_cases_count || b.cases_count} قضايا نشطة` : 'لا توجد قضايا نشطة',
       statusNote: b.notes || 'ملف نشط ومحدث',
-      location: b.location || '—',
+      companyRepresentativeName: b.company_representative_name || b.companyRepresentativeName || null,
+      company_representative_name: b.company_representative_name || b.companyRepresentativeName || null,
+      address: b.address || null,
+      secondaryEmail: b.secondary_email || b.secondaryEmail || null,
+      secondary_email: b.secondary_email || b.secondaryEmail || null,
+      referralSource: b.referral_source || b.referralSource || null,
+      referral_source: b.referral_source || b.referralSource || null,
+      location: b.address || b.location || '—',
       totalFees: b.total_fees || '—',
       paidFees: b.paid_fees || '—',
       remainingFees: b.remaining_fees || '—',
@@ -230,22 +261,34 @@ export default function ClientsPage() {
         phone: formPhone.trim(),
         notes: formNotes.trim(),
         client_type: formType,
+        company_representative_name: formType === 'company' ? (formCompanyRepresentativeName.trim() || null) : null,
+        address: formAddress.trim() || null,
+        secondary_email: formSecondaryEmail.trim() || null,
+        referral_source: formReferralSource.trim() || null,
       };
-      const res = await fetch('/api/clients', {
-        method: 'POST',
+
+      const url = editingClient ? `/api/clients/${editingClient.id}` : '/api/clients';
+      const method = editingClient ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        toast({ title: 'تمت إضافة العميل بنجاح', description: `تم فتح ملف الموكل ${formName}.` });
+        toast({
+          title: editingClient ? 'تم تحديث بيانات العميل بنجاح' : 'تمت إضافة العميل بنجاح',
+          description: `تم حفظ ملف الموكل ${formName}.`,
+        });
         loadBackendClients();
         setCreateOpen(false);
+        setEditingClient(null);
       } else {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: 'فشل إضافة العميل',
+          title: editingClient ? 'فشل تحديث العميل' : 'فشل إضافة العميل',
           description: err.error || 'تعذر حفظ بيانات العميل في قاعدة البيانات.',
           variant: 'destructive',
         });
@@ -323,12 +366,7 @@ export default function ClientsPage() {
           {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2.5">
             <Button
-              onClick={() => {
-                setFormName('');
-                setFormPhone('');
-                setFormNotes('');
-                setCreateOpen(true);
-              }}
+              onClick={openCreateModal}
               className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-bold h-10 px-4 gap-2 rounded-lg shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -609,13 +647,8 @@ export default function ClientsPage() {
                 لم يتم العثور على أي عملاء مطابقين لخيارات البحث والتصفية، أو لم يتم تسجيل موكلين بعد في قاعدة البيانات.
               </p>
               <Button
-                onClick={() => {
-                  setFormName('');
-                  setFormPhone('');
-                  setFormNotes('');
-                  setCreateOpen(true);
-                }}
-                className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg"
+                onClick={openCreateModal}
+                className="bg-[#00236f] hover:bg-[#001a54] text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer"
               >
                 <Plus className="w-4 h-4 ml-1.5" />
                 تسجيل موكل جديد
@@ -671,13 +704,31 @@ export default function ClientsPage() {
                             )}
                           </div>
 
-                          <div className="flex items-center gap-3 text-xs text-[#596883] mt-1 font-mono">
+                          <div className="flex items-center gap-3 text-xs text-[#596883] mt-1 font-mono flex-wrap">
                             {client.phone && <span>{client.phone}</span>}
+                            {client.secondaryEmail && (
+                              <span className="text-[#00236f]">{client.secondaryEmail}</span>
+                            )}
                             {client.commercialRegistration && (
                               <span className="font-semibold text-[#141e30]">{client.commercialRegistration}</span>
                             )}
+                            {client.companyRepresentativeName && client.type === 'company' && (
+                              <span className="bg-blue-50 text-blue-700 font-sans text-[11px] px-1.5 py-0.2 rounded border border-blue-200">
+                                المفوض بالتوقيع: {client.companyRepresentativeName}
+                              </span>
+                            )}
                             <span className="text-[#a5b4cb]">•</span>
                             <span className="font-sans">المحامي المكلف: {client.assignedLawyer}</span>
+                            {client.address && (
+                              <span className="font-sans text-[#44526d] bg-[#f1f5fa] px-1.5 py-0.2 rounded">
+                                العنوان: {client.address}
+                              </span>
+                            )}
+                            {client.referralSource && (
+                              <span className="font-sans text-[#785b12] bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
+                                المصدر: {client.referralSource}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -702,10 +753,15 @@ export default function ClientsPage() {
                             setEditingClient(client);
                             setFormName(client.name);
                             setFormPhone(client.phone || '');
+                            setFormType(client.type || 'individual');
                             setFormNotes(client.statusNote || '');
+                            setFormCompanyRepresentativeName(client.companyRepresentativeName || '');
+                            setFormAddress(client.address || '');
+                            setFormSecondaryEmail(client.secondaryEmail || '');
+                            setFormReferralSource(client.referralSource || '');
                             setCreateOpen(true);
                           }}
-                          className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors"
+                          className="p-1 rounded hover:bg-[#edf3ff] hover:text-[#00236f] transition-colors cursor-pointer"
                           title="تعديل"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -865,6 +921,52 @@ export default function ClientsPage() {
                 <option value="individual">فرد / مستثمر</option>
                 <option value="company">شركة ومؤسسة</option>
               </select>
+            </div>
+
+            {formType === 'company' && (
+              <div className="space-y-1 bg-[#f4f8ff] p-2 rounded-md border border-[#d2e3fc]">
+                <Label className="font-bold text-[#00236f]">اسم ممثل الشركة / المفوض بالتوقيع</Label>
+                <Input
+                  value={formCompanyRepresentativeName}
+                  onChange={(e) => setFormCompanyRepresentativeName(e.target.value)}
+                  placeholder="الاسم الكامل للشخص المفوض بالتوقيع نيابة عن الشركة..."
+                  className="h-8 text-xs bg-white"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">العنوان الوطني / المقر</Label>
+                <Input
+                  value={formAddress}
+                  onChange={(e) => setFormAddress(e.target.value)}
+                  placeholder="مثال: الرياض - طريق الملك فهد"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">البريد الإلكتروني للتواصل</Label>
+                <Input
+                  value={formSecondaryEmail}
+                  onChange={(e) => setFormSecondaryEmail(e.target.value)}
+                  placeholder="contact@company.com"
+                  type="email"
+                  className="h-8 text-xs font-mono"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">مصدر الوصول للمكتب (Referral Source)</Label>
+              <Input
+                value={formReferralSource}
+                onChange={(e) => setFormReferralSource(e.target.value)}
+                placeholder="توصية عميل سابق، منصات التواصل، بحث Google، معرفة شخصية..."
+                className="h-8 text-xs"
+              />
             </div>
 
             <div className="space-y-1">

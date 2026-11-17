@@ -27,6 +27,7 @@ import {
   Eye,
   FileText,
   Lightbulb,
+  Ban,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,11 @@ export interface PowerOfAttorney {
   clientInitials?: string;
   poaNumber: string;
   poaType?: string;
+  poa_type?: 'عامة' | 'خاصة' | string;
+  scope_description?: string | null;
+  scopeDescription?: string | null;
+  notarization_authority?: string | null;
+  notarizationAuthority?: string | null;
   issueDateHijri: string;
   expiryDateHijri: string;
   daysRemaining: number;
@@ -77,7 +83,10 @@ export interface PowerOfAttorney {
   statusText?: string;
   isExpiringSoon?: boolean;
   affectedCasesCount?: number;
-
+  revoked_at?: string | null;
+  revokedAt?: string | null;
+  revocation_reason?: string | null;
+  revocationReason?: string | null;
 }
 
 export type HijriDateValidation =
@@ -157,11 +166,18 @@ export default function PowerOfAttorneyPage() {
   const [clientNameInput, setClientNameInput] = useState('');
   const [assignedLawyerId, setAssignedLawyerId] = useState<string | null>(null);
   const [poaNumber, setPoaNumber] = useState('');
-  const [poaTypeInput, setPoaTypeInput] = useState('وكالة قضايا ومرافعة');
+  const [poaTypeInput, setPoaTypeInput] = useState<'خاصة' | 'عامة'>('خاصة');
+  const [scopeDescriptionInput, setScopeDescriptionInput] = useState('');
+  const [notarizationAuthorityInput, setNotarizationAuthorityInput] = useState('منصة ناجز');
   const [issueDateHijri, setIssueDateHijri] = useState('1446/01/01');
   const [expiryDateHijri, setExpiryDateHijri] = useState('1448/01/01');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Revocation Action State
+  const [revokeTarget, setRevokeTarget] = useState<PowerOfAttorney | null>(null);
+  const [revocationReasonInput, setRevocationReasonInput] = useState('');
+  const [isRevoking, setIsRevoking] = useState(false);
 
   // Fetch real POAs from backend
   const [backendRecords, setBackendRecords] = useState<PowerOfAttorney[]>([]);
@@ -216,28 +232,41 @@ export default function PowerOfAttorneyPage() {
     if (!backendRecords || backendRecords.length === 0) {
       return [];
     }
-    return backendRecords.map((b) => ({
-      ...b,
-      clientName: b.clientId && clientsMap[b.clientId] ? clientsMap[b.clientId] : b.clientName || 'موكل المكتب',
-      clientInitials: b.clientName ? b.clientName.slice(0, 2) : 'وك',
-      poaType: b.poaType || 'وكالة قضايا ومرافعة',
-      assignedLawyer:
-        b.assignedLawyer ||
-        (b as any).assigned_lawyer ||
-        (b as any).assignedLawyerName ||
-        (b.assignedLawyerId && lawyersMap[b.assignedLawyerId]) ||
-        ((b as any).assigned_lawyer_id && lawyersMap[(b as any).assigned_lawyer_id]) ||
-        'المحامي المكلف بالمكتب',
-      status: b.daysRemaining <= 0 ? 'expired' : b.daysRemaining <= 30 ? 'expiring' : 'active',
-      statusText:
-        b.daysRemaining <= 0
+    return backendRecords.map((b) => {
+      const isRevoked = b.status === 'revoked';
+      const isExpired = !isRevoked && b.daysRemaining <= 0;
+      const isExpiring = !isRevoked && !isExpired && b.daysRemaining > 0 && b.daysRemaining <= 30;
+
+      const pType = (b.poa_type || b.poaType || 'خاصة') === 'عامة' ? 'عامة' : 'خاصة';
+
+      return {
+        ...b,
+        poa_type: pType,
+        poaType: pType,
+        scope_description: b.scope_description || (b as any).scopeDescription || null,
+        notarization_authority: b.notarization_authority || (b as any).notarizationAuthority || null,
+        revoked_at: b.revoked_at || (b as any).revokedAt || null,
+        revocation_reason: b.revocation_reason || (b as any).revocationReason || null,
+        clientName: b.clientId && clientsMap[b.clientId] ? clientsMap[b.clientId] : b.clientName || 'موكل المكتب',
+        clientInitials: b.clientName ? b.clientName.slice(0, 2) : 'وك',
+        assignedLawyer:
+          b.assignedLawyer ||
+          (b as any).assigned_lawyer ||
+          (b as any).assignedLawyerName ||
+          (b.assignedLawyerId && lawyersMap[b.assignedLawyerId]) ||
+          ((b as any).assigned_lawyer_id && lawyersMap[(b as any).assigned_lawyer_id]) ||
+          'المحامي المكلف بالمكتب',
+        status: isRevoked ? 'revoked' : isExpired ? 'expired' : isExpiring ? 'expiring' : 'active',
+        statusText: isRevoked
+          ? 'ملغاة'
+          : isExpired
           ? 'منتهية الصلاحية'
-          : b.daysRemaining <= 30
+          : isExpiring
           ? `تنتهي خلال ${b.daysRemaining} يوماً`
           : 'سارية ومفعلة',
-      isExpiringSoon: b.daysRemaining > 0 && b.daysRemaining <= 30,
-
-    }));
+        isExpiringSoon: isExpiring,
+      };
+    });
   }, [backendRecords, clientsMap, lawyersMap]);
 
   // Derived KPI Counts directly from database
@@ -261,16 +290,21 @@ export default function PowerOfAttorneyPage() {
         const matchName = item.clientName?.toLowerCase().includes(q);
         const matchNumber = item.poaNumber.toLowerCase().includes(q);
         const matchLawyer = item.assignedLawyer?.toLowerCase().includes(q);
-        const matchType = item.poaType?.toLowerCase().includes(q);
-        if (!matchName && !matchNumber && !matchLawyer && !matchType) return false;
+        const matchType = item.poaType?.toLowerCase().includes(q) || item.poa_type?.toLowerCase().includes(q);
+        const matchScope = item.scope_description?.toLowerCase().includes(q);
+        const matchAuth = item.notarization_authority?.toLowerCase().includes(q);
+        if (!matchName && !matchNumber && !matchLawyer && !matchType && !matchScope && !matchAuth) return false;
       }
+
+      // Type Filter
+      if (poaTypeFilter !== 'all' && item.poa_type !== poaTypeFilter && item.poaType !== poaTypeFilter) return false;
 
       // Lawyer Filter
       if (lawyerFilter !== 'all' && item.assignedLawyer !== lawyerFilter) return false;
 
       return true;
     });
-  }, [allPoas, activeTab, searchQuery, lawyerFilter]);
+  }, [allPoas, activeTab, searchQuery, poaTypeFilter, lawyerFilter]);
 
   // Open Create Dialog
   const handleOpenCreate = () => {
@@ -279,7 +313,9 @@ export default function PowerOfAttorneyPage() {
     setClientNameInput('');
     setAssignedLawyerId(null);
     setPoaNumber(`QA-${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`);
-    setPoaTypeInput('وكالة قضايا ومرافعة شاملة');
+    setPoaTypeInput('خاصة');
+    setScopeDescriptionInput('');
+    setNotarizationAuthorityInput('منصة ناجز');
     setIssueDateHijri('1446/01/15');
     setExpiryDateHijri('1448/01/15');
     setNotes('');
@@ -293,7 +329,9 @@ export default function PowerOfAttorneyPage() {
     setClientNameInput(rec.clientName || '');
     setAssignedLawyerId(rec.assignedLawyerId || null);
     setPoaNumber(rec.poaNumber);
-    setPoaTypeInput(rec.poaType || 'وكالة قضايا ومرافعة');
+    setPoaTypeInput(rec.poa_type === 'عامة' || rec.poaType === 'عامة' ? 'عامة' : 'خاصة');
+    setScopeDescriptionInput(rec.scope_description || rec.scopeDescription || '');
+    setNotarizationAuthorityInput(rec.notarization_authority || rec.notarizationAuthority || 'منصة ناجز');
     setIssueDateHijri(rec.issueDateHijri);
     setExpiryDateHijri(rec.expiryDateHijri);
     setNotes(rec.notes || '');
@@ -311,6 +349,12 @@ export default function PowerOfAttorneyPage() {
     try {
       const payload = {
         poaNumber: poaNumber.trim(),
+        poaType: poaTypeInput,
+        poa_type: poaTypeInput,
+        scopeDescription: scopeDescriptionInput.trim() || null,
+        scope_description: scopeDescriptionInput.trim() || null,
+        notarizationAuthority: notarizationAuthorityInput.trim() || null,
+        notarization_authority: notarizationAuthorityInput.trim() || null,
         clientName: clientNameInput.trim() || 'موكل المكتب',
         issueDateHijri: issueDateHijri.trim(),
         expiryDateHijri: expiryDateHijri.trim(),
@@ -332,7 +376,7 @@ export default function PowerOfAttorneyPage() {
       if (res.ok) {
         toast({
           title: editingRecord ? 'تم تحديث الوكالة بنجاح' : 'تمت إضافة الوكالة بنجاح',
-          description: `تم حفظ الوكالة ${poaNumber} وربطها بالموكل.`,
+          description: `تم حفظ الوكالة ${poaNumber} بنوع (${poaTypeInput === 'عامة' ? 'عامة' : 'خاصة'}).`,
         });
         loadBackendData();
         setIsOpen(false);
@@ -352,6 +396,44 @@ export default function PowerOfAttorneyPage() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Revoke POA Action (Admin only)
+  const handleRevokePoa = async () => {
+    if (!revokeTarget) return;
+    setIsRevoking(true);
+    try {
+      const res = await fetch(`/api/poa/${revokeTarget.id}/revoke`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason: revocationReasonInput.trim() || null }),
+      });
+      if (res.ok) {
+        toast({
+          title: 'تم إلغاء الوكالة بنجاح',
+          description: `تم تعيين حالة الوكالة ${revokeTarget.poaNumber} إلى ملغاة.`,
+        });
+        loadBackendData();
+        setRevokeTarget(null);
+        setRevocationReasonInput('');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: 'فشل إلغاء الوكالة',
+          description: err.error || 'تعذر إلغاء الوكالة.',
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: 'خطأ في الاتصال',
+        description: 'تعذر الاتصال بالخادم لتنفيذ إلغاء الوكالة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRevoking(false);
     }
   };
 
@@ -629,9 +711,8 @@ export default function PowerOfAttorneyPage() {
                 className="h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
               >
                 <option value="all">نوع الوكالة: كافة الأنواع</option>
-                <option value="قضايا">وكالة قضايا ومرافعة</option>
-                <option value="تأسيس">تأسيس شركات</option>
-                <option value="عقارية">منازعات عقارية</option>
+                <option value="خاصة">وكالة خاصة</option>
+                <option value="عامة">وكالة عامة</option>
               </select>
 
               <select
@@ -691,12 +772,16 @@ export default function PowerOfAttorneyPage() {
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                            isExpiringCard
+                            poa.status === 'revoked'
+                              ? 'bg-rose-100 text-rose-700'
+                              : isExpiringCard
                               ? 'bg-[#fff0e6] text-[#b44800]'
                               : 'bg-[#00236f] text-white'
                           }`}
                         >
-                          {isExpiringCard ? (
+                          {poa.status === 'revoked' ? (
+                            <Ban className="w-5 h-5 text-rose-600" />
+                          ) : isExpiringCard ? (
                             <Building2 className="w-5 h-5 text-[#b44800]" />
                           ) : (
                             poa.clientInitials || 'وك'
@@ -704,14 +789,29 @@ export default function PowerOfAttorneyPage() {
                         </div>
 
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-sm font-bold text-[#141e30]">{poa.clientName}</h3>
-                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                                poa.poa_type === 'عامة'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}
+                            >
+                              {poa.poa_type === 'عامة' ? 'وكالة عامة' : 'وكالة خاصة'}
+                            </span>
+                            {poa.status !== 'revoked' && <ShieldCheck className="w-4 h-4 text-emerald-600" />}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-[#596883] mt-0.5">
                             <span className="font-mono font-bold text-[#00236f]">{poa.poaNumber}</span>
-                            <span className="text-[#a5b4cb]">•</span>
-                            <span className="truncate">{poa.poaType}</span>
+                            {poa.notarization_authority && (
+                              <>
+                                <span className="text-[#a5b4cb]">•</span>
+                                <span className="text-[#475467] font-medium bg-[#f0f4fa] px-1.5 py-0.2 rounded border border-[#d8e3f0]">
+                                  {poa.notarization_authority}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -720,6 +820,19 @@ export default function PowerOfAttorneyPage() {
                       <div className="flex items-center gap-2">
                         {/* Action Icons */}
                         <div className="flex items-center gap-1 text-[#657591]">
+                          {isAdmin && poa.status !== 'revoked' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRevokeTarget(poa);
+                                setRevocationReasonInput('');
+                              }}
+                              className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 transition-colors text-rose-500"
+                              title="إلغاء الوكالة (عزل / فسخ)"
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           {(isAdmin || (currentUser?.id && (poa.assignedLawyerId === currentUser.id || (poa as any).assigned_lawyer_id === currentUser.id))) && (
                             <button
                               onClick={(e) => {
@@ -758,7 +871,12 @@ export default function PowerOfAttorneyPage() {
                         </div>
 
                         {/* Status Badges */}
-                        {!isExpiringCard && (
+                        {poa.status === 'revoked' ? (
+                          <span className="bg-rose-50 text-rose-700 text-[11px] font-bold px-2 py-0.5 rounded border border-rose-200 flex items-center gap-1">
+                            <Ban className="w-3 h-3 text-rose-600" />
+                            ملغاة
+                          </span>
+                        ) : !isExpiringCard ? (
                           <div className="flex items-center gap-1.5">
                             <span className="bg-[#f0fdf4] text-emerald-700 text-[11px] font-bold px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -769,9 +887,40 @@ export default function PowerOfAttorneyPage() {
                               المتبقي: {poa.daysRemaining} يوم
                             </span>
                           </div>
+                        ) : (
+                          <span className="bg-[#fff0e6] text-[#b44800] border border-[#ffd5ba] text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-[#b44800]" />
+                            {poa.statusText}
+                          </span>
                         )}
                       </div>
                     </div>
+
+                    {/* Revoked Banner */}
+                    {poa.status === 'revoked' && (
+                      <div className="mt-2.5 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Ban className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>
+                            <strong>تم إلغاء الوكالة: </strong>
+                            {poa.revocation_reason || 'تم إلغاء سريان الوكالة رسمياً'}
+                          </span>
+                        </div>
+                        {poa.revoked_at && (
+                          <span className="text-[11px] text-rose-600 font-mono shrink-0">
+                            بتاريخ: {new Date(poa.revoked_at).toLocaleDateString('ar-SA')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Scope Description Banner if present */}
+                    {poa.scope_description && (
+                      <div className="mt-2 bg-[#f8faff] border border-[#e2ecfa] rounded-lg p-2 text-xs text-[#334155]">
+                        <span className="font-bold text-[#00236f] ml-1">نطاق وصلاحيات الوكالة:</span>
+                        <span>{poa.scope_description}</span>
+                      </div>
+                    )}
 
                     {/* Expiring Alert Banner inside Card */}
                     {isExpiringCard && (
@@ -893,25 +1042,46 @@ export default function PowerOfAttorneyPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="font-bold text-[#44526d]">نوع الوكالة</Label>
-                <Input
+                <Label className="font-bold text-[#44526d]">نوع الوكالة *</Label>
+                <select
                   value={poaTypeInput}
-                  onChange={(e) => setPoaTypeInput(e.target.value)}
-                  placeholder="وكالة قضايا ومرافعة"
-                  className="h-8 text-xs"
-                />
+                  onChange={(e) => setPoaTypeInput(e.target.value as 'خاصة' | 'عامة')}
+                  className="w-full h-8 text-xs border border-[#cfdffc] rounded-md px-2 bg-white font-bold text-[#00236f] focus:outline-none"
+                  required
+                >
+                  <option value="خاصة">وكالة خاصة</option>
+                  <option value="عامة">وكالة عامة</option>
+                </select>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label className="font-bold text-[#44526d]">الموكل (العميل) *</Label>
-              <ClientPicker
-                value={clientId}
-                onChange={(id, clientName) => {
-                  setClientId(id);
-                  if (clientName) setClientNameInput(clientName);
-                }}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">جهة التوثيق</Label>
+                <Input
+                  list="poa-authorities"
+                  value={notarizationAuthorityInput}
+                  onChange={(e) => setNotarizationAuthorityInput(e.target.value)}
+                  placeholder="مثال: منصة ناجز، كتابة عدل، سفارة..."
+                  className="h-8 text-xs"
+                />
+                <datalist id="poa-authorities">
+                  <option value="منصة ناجز" />
+                  <option value="كتابة عدل" />
+                  <option value="سفارة المملكة بالخارج" />
+                  <option value="موثق معتمد" />
+                </datalist>
+              </div>
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">الموكل (العميل) *</Label>
+                <ClientPicker
+                  value={clientId}
+                  onChange={(id, clientName) => {
+                    setClientId(id);
+                    if (clientName) setClientNameInput(clientName);
+                  }}
+                />
+              </div>
             </div>
 
             {isAdmin && (
@@ -948,11 +1118,22 @@ export default function PowerOfAttorneyPage() {
             </div>
 
             <div className="space-y-1">
-              <Label className="font-bold text-[#44526d]">ملاحظات وصلاحيات خاصة</Label>
+              <Label className="font-bold text-[#44526d]">نطاق وصلاحيات الوكالة</Label>
+              <Textarea
+                value={scopeDescriptionInput}
+                onChange={(e) => setScopeDescriptionInput(e.target.value)}
+                placeholder="وصف تفصيلي لما يحق للمحامي القيام به بموجب هذه الوكالة (المرافعة، الصلح، الإقرار، استلام الشيكات...)"
+                rows={2}
+                className="text-xs resize-none"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="font-bold text-[#44526d]">ملاحظات إضافية</Label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="صلاحيات الصلح، التنازل، استلام المبالغ..."
+                placeholder="أي ملاحظات داخلية تخص الوكالة أو الموكل..."
                 rows={2}
                 className="text-xs resize-none"
               />
@@ -996,6 +1177,46 @@ export default function PowerOfAttorneyPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Dialog: Revoke POA Confirmation ── */}
+      <Dialog open={!!revokeTarget} onOpenChange={(open) => !open && setRevokeTarget(null)}>
+        <DialogContent className="max-w-md text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold text-rose-700 flex items-center gap-2">
+              <Ban className="w-4 h-4" />
+              إلغاء الوكالة الشرعية (عزل / فسخ)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#65738c]">
+              سيتم تعيين حالة الوكالة رقم ({revokeTarget?.poaNumber}) إلى ملغاة فوراً. لا تزال الوكالة محفوظة في السجلات التاريخية.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2 text-xs">
+            <Label className="font-bold text-[#44526d]">سبب إلغاء الوكالة (اختياري)</Label>
+            <Textarea
+              value={revocationReasonInput}
+              onChange={(e) => setRevocationReasonInput(e.target.value)}
+              placeholder="مثال: انتهاء الغرض من التوكيل، صدور صك وكالة جديد، رغبة الموكل في إنهاء التمثيل..."
+              rows={3}
+              className="text-xs resize-none"
+            />
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-start pt-2">
+            <Button
+              type="button"
+              disabled={isRevoking}
+              onClick={handleRevokePoa}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs"
+            >
+              {isRevoking ? 'جارٍ الإلغاء...' : 'تأكيد إلغاء الوكالة'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setRevokeTarget(null)} className="text-xs">
+              تراجع
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Dialog: Reassign Lawyer ── */}
       {reassignTarget && (

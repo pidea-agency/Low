@@ -34,6 +34,13 @@ export interface ClientRecord {
   notes: string;
   clientType?: "individual" | "company" | string;
   client_type?: "individual" | "company" | string;
+  company_representative_name?: string | null;
+  companyRepresentativeName?: string | null;
+  address?: string | null;
+  secondary_email?: string | null;
+  secondaryEmail?: string | null;
+  referral_source?: string | null;
+  referralSource?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -119,6 +126,17 @@ export interface PoaRecord {
   caseId?: string | null;
   assignedLawyerId?: string | null;
   createdBy?: string | null;
+  poa_type?: "عامة" | "خاصة" | string;
+  poaType?: "عامة" | "خاصة" | string;
+  scope_description?: string | null;
+  scopeDescription?: string | null;
+  notarization_authority?: string | null;
+  notarizationAuthority?: string | null;
+  status?: "active" | "revoked" | string;
+  revoked_at?: string | null;
+  revokedAt?: string | null;
+  revocation_reason?: string | null;
+  revocationReason?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -508,6 +526,74 @@ function formatSession(s: any): any {
 // 0. CLIENTS
 // ============================================================================
 
+const CLIENT_META_REGEX = /<!--__CLIENT_META__([\s\S]*?)__-->/;
+
+export function packClientNotes(notes: string | undefined | null, meta: Record<string, any>): string {
+  const cleanNotes = (notes || "").replace(CLIENT_META_REGEX, "").trim();
+  const cleanMeta: Record<string, any> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v !== undefined && v !== null && v !== "") {
+      cleanMeta[k] = v;
+    }
+  }
+  if (Object.keys(cleanMeta).length === 0) {
+    return cleanNotes;
+  }
+  const tag = `<!--__CLIENT_META__${JSON.stringify(cleanMeta)}__-->`;
+  return cleanNotes ? `${cleanNotes}\n\n${tag}` : tag;
+}
+
+export function unpackClientNotes(rawNotes: string | undefined | null): { notes: string; meta: Record<string, any> } {
+  if (!rawNotes) return { notes: "", meta: {} };
+  const match = rawNotes.match(CLIENT_META_REGEX);
+  let meta: Record<string, any> = {};
+  if (match) {
+    try {
+      meta = JSON.parse(match[1]);
+    } catch {
+      meta = {};
+    }
+  }
+  const notes = rawNotes.replace(CLIENT_META_REGEX, "").trim();
+  return { notes, meta };
+}
+
+export function formatClient(r: any): ClientRecord {
+  const { notes: cleanNotes, meta } = unpackClientNotes(r.notes);
+  const clientType = r.client_type || r.clientType || meta.client_type || meta.clientType || "individual";
+  const repName = r.company_representative_name !== undefined && r.company_representative_name !== null
+    ? r.company_representative_name
+    : (meta.company_representative_name ?? meta.companyRepresentativeName ?? null);
+  const addr = r.address !== undefined && r.address !== null
+    ? r.address
+    : (meta.address ?? null);
+  const secEmail = r.secondary_email !== undefined && r.secondary_email !== null
+    ? r.secondary_email
+    : (meta.secondary_email ?? meta.secondaryEmail ?? null);
+  const refSource = r.referral_source !== undefined && r.referral_source !== null
+    ? r.referral_source
+    : (meta.referral_source ?? meta.referralSource ?? null);
+
+  return {
+    id: r.id,
+    officeId: r.office_id || r.officeId,
+    name: r.name,
+    phone: r.phone || "",
+    notes: cleanNotes,
+    clientType,
+    client_type: clientType,
+    company_representative_name: repName,
+    companyRepresentativeName: repName,
+    address: addr,
+    secondary_email: secEmail,
+    secondaryEmail: secEmail,
+    referral_source: refSource,
+    referralSource: refSource,
+    createdAt: r.created_at || r.createdAt,
+    updatedAt: r.updated_at || r.updatedAt,
+  };
+}
+
 export async function listClients(officeId: string): Promise<ClientRecord[]> {
   const client = getSupabaseClient();
   if (client) {
@@ -519,17 +605,7 @@ export async function listClients(officeId: string): Promise<ClientRecord[]> {
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        return data.map((r: any) => ({
-          id: r.id,
-          officeId: r.office_id,
-          name: r.name,
-          phone: r.phone || "",
-          notes: r.notes || "",
-          clientType: r.client_type || "individual",
-          client_type: r.client_type || "individual",
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        }));
+        return data.map(formatClient);
       }
       if (error) {
         handleSupabaseFailure("listClients", error);
@@ -545,7 +621,7 @@ export async function listClients(officeId: string): Promise<ClientRecord[]> {
     return [];
   }
 
-  return (memoryClients.get(officeId) || []).map((c) => ({ ...c }));
+  return (memoryClients.get(officeId) || []).map(formatClient);
 }
 
 export async function getClientById(id: string, officeId: string): Promise<ClientRecord | null> {
@@ -560,23 +636,13 @@ export async function getClientById(id: string, officeId: string): Promise<Clien
         .single();
 
       if (!error && data) {
-        return {
-          id: data.id,
-          officeId: data.office_id,
-          name: data.name,
-          phone: data.phone || "",
-          notes: data.notes || "",
-          clientType: data.client_type || "individual",
-          client_type: data.client_type || "individual",
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
-        };
+        return formatClient(data);
       }
       if (error && error.code === "PGRST116") {
         if (isInMemoryFallbackAllowed()) {
           const list = memoryClients.get(officeId) || [];
           const found = list.find((c) => c.id === id);
-          if (found) return { ...found };
+          if (found) return formatClient(found);
         }
         return null;
       }
@@ -596,7 +662,7 @@ export async function getClientById(id: string, officeId: string): Promise<Clien
 
   const list = memoryClients.get(officeId) || [];
   const found = list.find((c) => c.id === id);
-  return found ? { ...found } : null;
+  return found ? formatClient(found) : null;
 }
 
 let hasClientTypeColumnCache: boolean | null = null;
@@ -620,29 +686,56 @@ export async function checkHasClientTypeColumn(client: any): Promise<boolean> {
 }
 
 export async function createClient(
-  data: { name: string; phone?: string; notes?: string; client_type?: string; clientType?: string },
+  data: {
+    name: string;
+    phone?: string;
+    notes?: string;
+    client_type?: string;
+    clientType?: string;
+    company_representative_name?: string | null;
+    companyRepresentativeName?: string | null;
+    address?: string | null;
+    secondary_email?: string | null;
+    secondaryEmail?: string | null;
+    referral_source?: string | null;
+    referralSource?: string | null;
+  },
   officeId: string,
 ): Promise<ClientRecord> {
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
   const clientType = data.client_type || data.clientType || "individual";
+  const repName = data.company_representative_name ?? data.companyRepresentativeName ?? null;
+  const addr = data.address ?? null;
+  const secEmail = data.secondary_email ?? data.secondaryEmail ?? null;
+  const refSource = data.referral_source ?? data.referralSource ?? null;
+
+  const packedNotes = packClientNotes(data.notes, {
+    client_type: clientType,
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource,
+  });
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const hasClientType = await checkHasClientTypeColumn(client);
       const payload: Record<string, any> = {
         id,
         office_id: officeId,
         name: data.name,
         phone: data.phone || "",
-        notes: data.notes || "",
+        notes: packedNotes,
         created_at: now,
         updated_at: now,
       };
-      if (hasClientType) {
-        payload.client_type = clientType;
-      }
+
+      payload.client_type = clientType;
+      if (repName !== null) payload.company_representative_name = repName;
+      if (addr !== null) payload.address = addr;
+      if (secEmail !== null) payload.secondary_email = secEmail;
+      if (refSource !== null) payload.referral_source = refSource;
 
       let { data: inserted, error } = await client
         .from("clients")
@@ -650,11 +743,19 @@ export async function createClient(
         .select()
         .single();
 
-      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
-        delete payload.client_type;
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload: Record<string, any> = {
+          id,
+          office_id: officeId,
+          name: data.name,
+          phone: data.phone || "",
+          notes: packedNotes,
+          created_at: now,
+          updated_at: now,
+        };
         const retry = await client
           .from("clients")
-          .insert([payload])
+          .insert([basicPayload])
           .select()
           .single();
         if (!retry.error && retry.data) {
@@ -666,17 +767,7 @@ export async function createClient(
       }
 
       if (!error && inserted) {
-        return {
-          id: inserted.id,
-          officeId: inserted.office_id,
-          name: inserted.name,
-          phone: inserted.phone || "",
-          notes: inserted.notes || "",
-          clientType: inserted.client_type || clientType,
-          client_type: inserted.client_type || clientType,
-          createdAt: inserted.created_at,
-          updatedAt: inserted.updated_at,
-        };
+        return formatClient(inserted);
       }
       if (error) {
         handleSupabaseFailure("createClient", error);
@@ -688,17 +779,20 @@ export async function createClient(
     handleSupabaseFailure("createClient", new Error("Supabase client is not configured"));
   }
 
-  const record: ClientRecord = {
+  const record: ClientRecord = formatClient({
     id,
-    officeId,
+    office_id: officeId,
     name: data.name,
     phone: data.phone || "",
-    notes: data.notes || "",
-    clientType,
+    notes: packedNotes,
     client_type: clientType,
-    createdAt: now,
-    updatedAt: now,
-  };
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource,
+    created_at: now,
+    updated_at: now,
+  });
 
   if (isInMemoryFallbackAllowed()) {
     const list = memoryClients.get(officeId) || [];
@@ -711,24 +805,61 @@ export async function createClient(
 
 export async function updateClient(
   id: string,
-  data: { name?: string; phone?: string; notes?: string; client_type?: string; clientType?: string },
+  data: {
+    name?: string;
+    phone?: string;
+    notes?: string;
+    client_type?: string;
+    clientType?: string;
+    company_representative_name?: string | null;
+    companyRepresentativeName?: string | null;
+    address?: string | null;
+    secondary_email?: string | null;
+    secondaryEmail?: string | null;
+    referral_source?: string | null;
+    referralSource?: string | null;
+  },
   officeId: string,
 ): Promise<ClientRecord | null> {
   const now = new Date().toISOString();
+  const existing = await getClientById(id, officeId);
+  if (!existing && !isInMemoryFallbackAllowed()) return null;
+
+  const clientType = data.client_type ?? data.clientType ?? existing?.clientType ?? "individual";
+  const repName = data.company_representative_name !== undefined
+    ? data.company_representative_name
+    : (data.companyRepresentativeName !== undefined ? data.companyRepresentativeName : existing?.companyRepresentativeName ?? null);
+  const addr = data.address !== undefined ? data.address : existing?.address ?? null;
+  const secEmail = data.secondary_email !== undefined
+    ? data.secondary_email
+    : (data.secondaryEmail !== undefined ? data.secondaryEmail : existing?.secondaryEmail ?? null);
+  const refSource = data.referral_source !== undefined
+    ? data.referral_source
+    : (data.referralSource !== undefined ? data.referralSource : existing?.referralSource ?? null);
+
+  const notesToUse = data.notes !== undefined ? data.notes : (existing?.notes || "");
+  const packedNotes = packClientNotes(notesToUse, {
+    client_type: clientType,
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource,
+  });
+
   const client = getSupabaseClient();
   if (client) {
     try {
-      const payload: Record<string, any> = { updated_at: now };
+      const payload: Record<string, any> = {
+        updated_at: now,
+        notes: packedNotes,
+      };
       if (data.name !== undefined) payload.name = data.name;
       if (data.phone !== undefined) payload.phone = data.phone;
-      if (data.notes !== undefined) payload.notes = data.notes;
-      if (data.client_type !== undefined) payload.client_type = data.client_type;
-      if (data.clientType !== undefined) payload.client_type = data.clientType;
-
-      const hasClientType = await checkHasClientTypeColumn(client);
-      if (!hasClientType) {
-        delete payload.client_type;
-      }
+      payload.client_type = clientType;
+      if (repName !== undefined) payload.company_representative_name = repName;
+      if (addr !== undefined) payload.address = addr;
+      if (secEmail !== undefined) payload.secondary_email = secEmail;
+      if (refSource !== undefined) payload.referral_source = refSource;
 
       let { data: updated, error } = await client
         .from("clients")
@@ -738,11 +869,16 @@ export async function updateClient(
         .select()
         .single();
 
-      if (error && (error.code === "PGRST204" || error.message?.includes("client_type"))) {
-        delete payload.client_type;
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload: Record<string, any> = {
+          updated_at: now,
+          notes: packedNotes,
+        };
+        if (data.name !== undefined) basicPayload.name = data.name;
+        if (data.phone !== undefined) basicPayload.phone = data.phone;
         const retry = await client
           .from("clients")
-          .update(payload)
+          .update(basicPayload)
           .eq("id", id)
           .eq("office_id", officeId)
           .select()
@@ -756,17 +892,7 @@ export async function updateClient(
       }
 
       if (!error && updated) {
-        return {
-          id: updated.id,
-          officeId: updated.office_id,
-          name: updated.name,
-          phone: updated.phone || "",
-          notes: updated.notes || "",
-          clientType: updated.client_type || "individual",
-          client_type: updated.client_type || "individual",
-          createdAt: updated.created_at,
-          updatedAt: updated.updated_at,
-        };
+        return formatClient(updated);
       }
       if (error && error.code === "PGRST116") {
         if (!isInMemoryFallbackAllowed()) return null;
@@ -790,15 +916,18 @@ export async function updateClient(
   if (idx === -1) return null;
 
   const current = list[idx];
-  const updated: ClientRecord = {
+  const updated: ClientRecord = formatClient({
     ...current,
     name: data.name !== undefined ? data.name : current.name,
     phone: data.phone !== undefined ? data.phone : current.phone,
-    notes: data.notes !== undefined ? data.notes : current.notes,
-    clientType: data.client_type || data.clientType || current.clientType || "individual",
-    client_type: data.client_type || data.clientType || current.client_type || "individual",
-    updatedAt: now,
-  };
+    notes: packedNotes,
+    client_type: clientType,
+    company_representative_name: repName,
+    address: addr,
+    secondary_email: secEmail,
+    referral_source: refSource,
+    updated_at: now,
+  });
   list[idx] = updated;
   return { ...updated };
 }
@@ -1736,7 +1865,60 @@ export async function deleteTask(id: number, officeId: string): Promise<boolean>
 // 4. POWER OF ATTORNEY (POA)
 // ============================================================================
 
+const POA_META_REGEX = /<!--__POA_META__([\s\S]*?)__-->/;
+
+export function packPoaNotes(notes: string | undefined | null, meta: Record<string, any>): string {
+  const cleanNotes = (notes || "").replace(POA_META_REGEX, "").trim();
+  const cleanMeta: Record<string, any> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v !== undefined && v !== null && v !== "") {
+      cleanMeta[k] = v;
+    }
+  }
+  if (Object.keys(cleanMeta).length === 0) {
+    return cleanNotes;
+  }
+  const tag = `<!--__POA_META__${JSON.stringify(cleanMeta)}__-->`;
+  return cleanNotes ? `${cleanNotes}\n\n${tag}` : tag;
+}
+
+export function unpackPoaNotes(rawNotes: string | undefined | null): { notes: string; meta: Record<string, any> } {
+  if (!rawNotes) return { notes: "", meta: {} };
+  const match = rawNotes.match(POA_META_REGEX);
+  let meta: Record<string, any> = {};
+  if (match) {
+    try {
+      meta = JSON.parse(match[1]);
+    } catch {
+      meta = {};
+    }
+  }
+  const notes = rawNotes.replace(POA_META_REGEX, "").trim();
+  return { notes, meta };
+}
+
 function formatPoa(r: any): PoaRecord {
+  const { notes: cleanNotes, meta } = unpackPoaNotes(r.notes);
+  const poaType = r.poa_type || r.poaType || meta.poa_type || meta.poaType || "خاصة";
+  const scopeDesc = r.scope_description !== undefined && r.scope_description !== null
+    ? r.scope_description
+    : (meta.scope_description ?? meta.scopeDescription ?? null);
+  const notarizationAuth = r.notarization_authority !== undefined && r.notarization_authority !== null
+    ? r.notarization_authority
+    : (meta.notarization_authority ?? meta.notarizationAuthority ?? null);
+  const status = r.status || meta.status || "active";
+  const revokedAt = r.revoked_at !== undefined && r.revoked_at !== null
+    ? r.revoked_at
+    : (meta.revoked_at ?? meta.revokedAt ?? null);
+  const revocationReason = r.revocation_reason !== undefined && r.revocation_reason !== null
+    ? r.revocation_reason
+    : (meta.revocation_reason ?? meta.revocationReason ?? null);
+
+  const clientId = r.clientId ?? r.client_id ?? null;
+  const caseId = r.caseId ?? r.case_id ?? null;
+  const assignedLawyerId = r.assignedLawyerId ?? r.assigned_lawyer_id ?? null;
+  const createdBy = r.createdBy ?? r.created_by ?? null;
+
   return {
     id: r.id,
     officeId: r.officeId ?? r.office_id,
@@ -1745,17 +1927,28 @@ function formatPoa(r: any): PoaRecord {
     issueDateHijri: r.issueDateHijri ?? r.issue_date_hijri ?? "",
     expiryDateHijri: r.expiryDateHijri ?? r.expiry_date_hijri ?? "",
     daysRemaining: r.daysRemaining ?? r.days_remaining ?? calcDaysFromHijri(r.expiryDateHijri || r.expiry_date_hijri),
-    notes: r.notes || "",
-    clientId: r.clientId ?? r.client_id ?? null,
-    caseId: r.caseId ?? r.case_id ?? null,
-    assignedLawyerId: r.assignedLawyerId ?? r.assigned_lawyer_id ?? null,
-    createdBy: r.createdBy ?? r.created_by ?? null,
+    notes: cleanNotes,
+    clientId,
+    client_id: clientId,
+    caseId,
+    case_id: caseId,
+    assignedLawyerId,
+    assigned_lawyer_id: assignedLawyerId,
+    createdBy,
+    created_by: createdBy,
+    poa_type: poaType,
+    poaType,
+    scope_description: scopeDesc,
+    scopeDescription: scopeDesc,
+    notarization_authority: notarizationAuth,
+    notarizationAuthority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revokedAt,
+    revocation_reason: revocationReason,
+    revocationReason,
     createdAt: r.createdAt ?? r.created_at,
     updatedAt: r.updatedAt ?? r.updated_at,
-    ...(r.clientId || r.client_id ? { client_id: r.clientId ?? r.client_id } : {}),
-    ...(r.caseId || r.case_id ? { case_id: r.caseId ?? r.case_id } : {}),
-    ...(r.assignedLawyerId || r.assigned_lawyer_id ? { assigned_lawyer_id: r.assignedLawyerId ?? r.assigned_lawyer_id } : {}),
-    ...(r.createdBy || r.created_by ? { created_by: r.createdBy ?? r.created_by } : {}),
   } as any;
 }
 
@@ -1849,6 +2042,17 @@ export async function createPoa(
     caseId?: string | null;
     assignedLawyerId?: string | null;
     createdBy?: string | null;
+    poa_type?: string;
+    poaType?: string;
+    scope_description?: string | null;
+    scopeDescription?: string | null;
+    notarization_authority?: string | null;
+    notarizationAuthority?: string | null;
+    status?: string;
+    revoked_at?: string | null;
+    revokedAt?: string | null;
+    revocation_reason?: string | null;
+    revocationReason?: string | null;
   },
   officeId: string,
 ): Promise<PoaRecord> {
@@ -1858,29 +2062,77 @@ export async function createPoa(
   const caseId = data.caseId || (data as any).case_id || null;
   const assignedLawyerId = data.assignedLawyerId || (data as any).assigned_lawyer_id || null;
   const createdBy = data.createdBy || (data as any).created_by || null;
+  const poaType = data.poa_type || data.poaType || "خاصة";
+  const scopeDesc = data.scope_description ?? data.scopeDescription ?? null;
+  const notarizationAuth = data.notarization_authority ?? data.notarizationAuthority ?? null;
+  const status = data.status || "active";
+  const revokedAt = data.revoked_at ?? data.revokedAt ?? null;
+  const revocationReason = data.revocation_reason ?? data.revocationReason ?? null;
+
+  const packedNotes = packPoaNotes(data.notes, {
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason,
+  });
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data: inserted, error } = await client
+      const payload: Record<string, any> = {
+        office_id: officeId,
+        client_name: data.clientName,
+        poa_number: data.poaNumber,
+        issue_date_hijri: data.issueDateHijri || "",
+        expiry_date_hijri: data.expiryDateHijri || "",
+        days_remaining: days,
+        notes: packedNotes,
+        client_id: clientId,
+        case_id: caseId,
+        assigned_lawyer_id: assignedLawyerId,
+        created_by: createdBy,
+        poa_type: poaType,
+        status,
+      };
+      if (scopeDesc !== null) payload.scope_description = scopeDesc;
+      if (notarizationAuth !== null) payload.notarization_authority = notarizationAuth;
+      if (revokedAt !== null) payload.revoked_at = revokedAt;
+      if (revocationReason !== null) payload.revocation_reason = revocationReason;
+
+      let { data: inserted, error } = await client
         .from("poa")
-        .insert([
-          {
-            office_id: officeId,
-            client_name: data.clientName,
-            poa_number: data.poaNumber,
-            issue_date_hijri: data.issueDateHijri || "",
-            expiry_date_hijri: data.expiryDateHijri || "",
-            days_remaining: days,
-            notes: data.notes || "",
-            client_id: clientId,
-            case_id: caseId,
-            assigned_lawyer_id: assignedLawyerId,
-            created_by: createdBy,
-          },
-        ])
+        .insert([payload])
         .select()
         .single();
+
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload = {
+          office_id: officeId,
+          client_name: data.clientName,
+          poa_number: data.poaNumber,
+          issue_date_hijri: data.issueDateHijri || "",
+          expiry_date_hijri: data.expiryDateHijri || "",
+          days_remaining: days,
+          notes: packedNotes,
+          client_id: clientId,
+          case_id: caseId,
+          assigned_lawyer_id: assignedLawyerId,
+          created_by: createdBy,
+        };
+        const retry = await client
+          .from("poa")
+          .insert([basicPayload])
+          .select()
+          .single();
+        if (!retry.error && retry.data) {
+          inserted = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
 
       if (!error && inserted) {
         const formatted = formatPoa(inserted);
@@ -1902,21 +2154,27 @@ export async function createPoa(
   }
 
   const id = nextId();
-  const record: PoaRecord = {
+  const record: PoaRecord = formatPoa({
     id,
-    officeId,
-    clientName: data.clientName,
-    poaNumber: data.poaNumber,
-    issueDateHijri: data.issueDateHijri || "",
-    expiryDateHijri: data.expiryDateHijri || "",
-    daysRemaining: days,
-    notes: data.notes || "",
-    clientId,
-    caseId,
-    assignedLawyerId,
-    createdBy,
-    createdAt: now,
-  };
+    office_id: officeId,
+    client_name: data.clientName,
+    poa_number: data.poaNumber,
+    issue_date_hijri: data.issueDateHijri || "",
+    expiry_date_hijri: data.expiryDateHijri || "",
+    days_remaining: days,
+    notes: packedNotes,
+    client_id: clientId,
+    case_id: caseId,
+    assigned_lawyer_id: assignedLawyerId,
+    created_by: createdBy,
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason,
+    created_at: now,
+  });
 
   const list = memoryPoa.get(officeId) || [];
   list.unshift(record);
@@ -1929,10 +2187,41 @@ export async function updatePoa(
   data: Partial<Omit<PoaRecord, "id" | "officeId">>,
   officeId: string,
 ): Promise<PoaRecord | null> {
+  const existing = await getPoaById(id, officeId);
+  if (!existing && !isInMemoryFallbackAllowed()) return null;
+
+  const poaType = data.poa_type ?? data.poaType ?? existing?.poaType ?? "خاصة";
+  const scopeDesc = data.scope_description !== undefined
+    ? data.scope_description
+    : (data.scopeDescription !== undefined ? data.scopeDescription : existing?.scopeDescription ?? null);
+  const notarizationAuth = data.notarization_authority !== undefined
+    ? data.notarization_authority
+    : (data.notarizationAuthority !== undefined ? data.notarizationAuthority : existing?.notarizationAuthority ?? null);
+  const status = data.status ?? existing?.status ?? "active";
+  const revokedAt = data.revoked_at !== undefined
+    ? data.revoked_at
+    : (data.revokedAt !== undefined ? data.revokedAt : existing?.revokedAt ?? null);
+  const revocationReason = data.revocation_reason !== undefined
+    ? data.revocation_reason
+    : (data.revocationReason !== undefined ? data.revocationReason : existing?.revocationReason ?? null);
+
+  const notesToUse = data.notes !== undefined ? data.notes : (existing?.notes || "");
+  const packedNotes = packPoaNotes(notesToUse, {
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason,
+  });
+
   const client = getSupabaseClient();
   if (client) {
     try {
-      const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+      const updatePayload: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+        notes: packedNotes,
+      };
       if (data.clientName !== undefined) updatePayload.client_name = data.clientName;
       if (data.poaNumber !== undefined) updatePayload.poa_number = data.poaNumber;
       if (data.issueDateHijri !== undefined) updatePayload.issue_date_hijri = data.issueDateHijri;
@@ -1940,7 +2229,6 @@ export async function updatePoa(
         updatePayload.expiry_date_hijri = data.expiryDateHijri;
         updatePayload.days_remaining = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri);
       }
-      if (data.notes !== undefined) updatePayload.notes = data.notes;
       if (data.clientId !== undefined) updatePayload.client_id = data.clientId;
       if ((data as any).client_id !== undefined) updatePayload.client_id = (data as any).client_id;
       if (data.caseId !== undefined) updatePayload.case_id = data.caseId;
@@ -1948,13 +2236,54 @@ export async function updatePoa(
       if (data.assignedLawyerId !== undefined) updatePayload.assigned_lawyer_id = data.assignedLawyerId;
       if ((data as any).assigned_lawyer_id !== undefined) updatePayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
 
-      const { data: updated, error } = await client
+      updatePayload.poa_type = poaType;
+      updatePayload.status = status;
+      if (scopeDesc !== undefined) updatePayload.scope_description = scopeDesc;
+      if (notarizationAuth !== undefined) updatePayload.notarization_authority = notarizationAuth;
+      if (revokedAt !== undefined) updatePayload.revoked_at = revokedAt;
+      if (revocationReason !== undefined) updatePayload.revocation_reason = revocationReason;
+
+      let { data: updated, error } = await client
         .from("poa")
         .update(updatePayload)
         .eq("id", id)
         .eq("office_id", officeId)
         .select()
         .single();
+
+      if (error && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const basicPayload: Record<string, any> = {
+          updated_at: new Date().toISOString(),
+          notes: packedNotes,
+        };
+        if (data.clientName !== undefined) basicPayload.client_name = data.clientName;
+        if (data.poaNumber !== undefined) basicPayload.poa_number = data.poaNumber;
+        if (data.issueDateHijri !== undefined) basicPayload.issue_date_hijri = data.issueDateHijri;
+        if (data.expiryDateHijri !== undefined) {
+          basicPayload.expiry_date_hijri = data.expiryDateHijri;
+          basicPayload.days_remaining = data.daysRemaining ?? calcDaysFromHijri(data.expiryDateHijri);
+        }
+        if (data.clientId !== undefined) basicPayload.client_id = data.clientId;
+        if ((data as any).client_id !== undefined) basicPayload.client_id = (data as any).client_id;
+        if (data.caseId !== undefined) basicPayload.case_id = data.caseId;
+        if ((data as any).case_id !== undefined) basicPayload.case_id = (data as any).case_id;
+        if (data.assignedLawyerId !== undefined) basicPayload.assigned_lawyer_id = data.assignedLawyerId;
+        if ((data as any).assigned_lawyer_id !== undefined) basicPayload.assigned_lawyer_id = (data as any).assigned_lawyer_id;
+
+        const retry = await client
+          .from("poa")
+          .update(basicPayload)
+          .eq("id", id)
+          .eq("office_id", officeId)
+          .select()
+          .single();
+        if (!retry.error && retry.data) {
+          updated = retry.data;
+          error = null;
+        } else if (retry.error) {
+          error = retry.error;
+        }
+      }
 
       if (!error && updated) {
         const formatted = formatPoa(updated);
@@ -1983,7 +2312,7 @@ export async function updatePoa(
   if (idx === -1) return null;
 
   const current = list[idx];
-  const updated: PoaRecord = {
+  const updated: PoaRecord = formatPoa({
     ...current,
     clientName: data.clientName !== undefined ? data.clientName : current.clientName,
     poaNumber: data.poaNumber !== undefined ? data.poaNumber : current.poaNumber,
@@ -1995,14 +2324,39 @@ export async function updatePoa(
         : data.expiryDateHijri !== undefined
         ? calcDaysFromHijri(data.expiryDateHijri)
         : current.daysRemaining,
-    notes: data.notes !== undefined ? data.notes : current.notes,
+    notes: packedNotes,
     clientId: data.clientId !== undefined ? data.clientId : (data as any).client_id !== undefined ? (data as any).client_id : current.clientId,
     caseId: data.caseId !== undefined ? data.caseId : (data as any).case_id !== undefined ? (data as any).case_id : current.caseId,
     assignedLawyerId: data.assignedLawyerId !== undefined ? data.assignedLawyerId : (data as any).assigned_lawyer_id !== undefined ? (data as any).assigned_lawyer_id : current.assignedLawyerId,
+    poa_type: poaType,
+    scope_description: scopeDesc,
+    notarization_authority: notarizationAuth,
+    status,
+    revoked_at: revokedAt,
+    revocation_reason: revocationReason,
     updatedAt: new Date().toISOString(),
-  };
+  });
   list[idx] = updated;
   return formatPoa(updated);
+}
+
+export async function revokePoa(
+  id: number,
+  officeId: string,
+  reason?: string | null,
+): Promise<PoaRecord | null> {
+  const now = new Date().toISOString();
+  return updatePoa(
+    id,
+    {
+      status: "revoked",
+      revoked_at: now,
+      revokedAt: now,
+      revocation_reason: reason || null,
+      revocationReason: reason || null,
+    },
+    officeId,
+  );
 }
 
 export async function reassignPoa(

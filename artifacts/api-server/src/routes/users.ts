@@ -23,6 +23,14 @@ const CreateOfficeMemberSchema = z.object({
   phone: z.string().nullable().optional(),
   role_title: z.string().nullable().optional(),
   roleTitle: z.string().nullable().optional(),
+  legal_specialty: z.string().nullable().optional(),
+  legalSpecialty: z.string().nullable().optional(),
+  license_number: z.string().nullable().optional(),
+  licenseNumber: z.string().nullable().optional(),
+  license_expiry_date: z.string().nullable().optional(),
+  licenseExpiryDate: z.string().nullable().optional(),
+  joined_office_at: z.string().nullable().optional(),
+  joinedOfficeAt: z.string().nullable().optional(),
 });
 
 const UpdateOfficeMemberSchema = z.object({
@@ -34,6 +42,14 @@ const UpdateOfficeMemberSchema = z.object({
   phone: z.string().nullable().optional(),
   role_title: z.string().nullable().optional(),
   roleTitle: z.string().nullable().optional(),
+  legal_specialty: z.string().nullable().optional(),
+  legalSpecialty: z.string().nullable().optional(),
+  license_number: z.string().nullable().optional(),
+  licenseNumber: z.string().nullable().optional(),
+  license_expiry_date: z.string().nullable().optional(),
+  licenseExpiryDate: z.string().nullable().optional(),
+  joined_office_at: z.string().nullable().optional(),
+  joinedOfficeAt: z.string().nullable().optional(),
 });
 
 const ToggleMemberStatusSchema = z.object({
@@ -86,7 +102,23 @@ router.post("/users", async (req, res) => {
       res.status(400).json({ error: errorMsg });
       return;
     }
-    const { username, email, display_name, phone, role_title, roleTitle } = req.body;
+    const {
+      username,
+      email,
+      display_name,
+      displayName,
+      phone,
+      role_title,
+      roleTitle,
+      legal_specialty,
+      legalSpecialty,
+      license_number,
+      licenseNumber,
+      license_expiry_date,
+      licenseExpiryDate,
+      joined_office_at,
+      joinedOfficeAt,
+    } = req.body;
 
     if (!username || !username.trim()) {
       res.status(400).json({ error: "اسم المستخدم مطلوب." });
@@ -107,9 +139,13 @@ router.post("/users", async (req, res) => {
     const result = await createOfficeMember(adminId, {
       username: username.trim(),
       email: email.trim(),
-      display_name: display_name?.trim() || username.trim(),
+      display_name: display_name?.trim() || displayName?.trim() || username.trim(),
       phone: phone?.trim() || null,
       role_title: role_title?.trim() || roleTitle?.trim() || null,
+      legal_specialty: legal_specialty?.trim() || legalSpecialty?.trim() || null,
+      license_number: license_number?.trim() || licenseNumber?.trim() || null,
+      license_expiry_date: license_expiry_date?.trim() || licenseExpiryDate?.trim() || null,
+      joined_office_at: joined_office_at?.trim() || joinedOfficeAt?.trim() || null,
     });
 
     res.status(201).json({
@@ -195,7 +231,24 @@ router.patch("/users/:id", async (req, res) => {
       res.status(400).json({ error: errorMsg });
       return;
     }
-    const { password, display_name, displayName, email, status, phone, role_title, roleTitle } = req.body;
+    const {
+      password,
+      display_name,
+      displayName,
+      email,
+      status,
+      phone,
+      role_title,
+      roleTitle,
+      legal_specialty,
+      legalSpecialty,
+      license_number,
+      licenseNumber,
+      license_expiry_date,
+      licenseExpiryDate,
+      joined_office_at,
+      joinedOfficeAt,
+    } = req.body;
 
     if (password !== undefined && typeof password === "string" && password.trim() !== "") {
       const passwordValidation = validatePassword(password, { email });
@@ -212,6 +265,10 @@ router.patch("/users/:id", async (req, res) => {
       status,
       phone,
       role_title: role_title !== undefined ? role_title : roleTitle,
+      legal_specialty: legal_specialty !== undefined ? legal_specialty : legalSpecialty,
+      license_number: license_number !== undefined ? license_number : licenseNumber,
+      license_expiry_date: license_expiry_date !== undefined ? license_expiry_date : licenseExpiryDate,
+      joined_office_at: joined_office_at !== undefined ? joined_office_at : joinedOfficeAt,
     });
 
     res.json(updated);

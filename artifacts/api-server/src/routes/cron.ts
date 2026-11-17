@@ -9,6 +9,7 @@ import { env, isGoogleSheetsConfigured } from "../config/env";
 import { logger } from "../lib/logger";
 import { runReminderSweep } from "../scheduler/reminderScheduler";
 import { runPoaExpirySweep } from "../services/reminder/poa-expiry.service";
+import { runLicenseExpirySweep } from "../services/reminder/license-expiry.service";
 import { runSubscriptionExpirySweep } from "../services/reminder/subscription-expiry.service";
 
 const router: IRouter = Router();
@@ -124,6 +125,51 @@ async function handlePoaExpiryCron(req: any, res: any) {
 
 router.get("/cron/poa-expiry", handlePoaExpiryCron);
 router.post("/cron/poa-expiry", handlePoaExpiryCron);
+
+/**
+ * GET/POST /api/cron/license-expiry
+ *
+ * Daily staff law license expiry tracking sweep endpoint.
+ * Scans staff members whose license is expiring within 30 days and notifies office admin.
+ * Protected by CRON_SECRET Bearer token.
+ */
+async function handleLicenseExpiryCron(req: any, res: any) {
+  const secret = env.cronSecret;
+  if (!secret || !secret.trim()) {
+    logger.error("Cron license expiry endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+
+  const authHeader = req.headers["authorization"] || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
+
+  if (!token || !safeCompare(token, secret.trim())) {
+    res.status(401).json({ error: "Unauthorized: Invalid or missing Bearer token." });
+    return;
+  }
+
+  const startedAt = Date.now();
+  try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "معايير الجدولة غير صالحة." });
+      return;
+    }
+    const targetOfficeId = (req.query.officeId as string) || (req.body?.officeId as string);
+    const result = await runLicenseExpirySweep(targetOfficeId);
+    const durationMs = Date.now() - startedAt;
+    logger.info({ durationMs, officesCount: result.officesProcessed, notificationsCreated: result.notificationsCreated }, "Cron license expiry sweep completed successfully");
+    res.json({ ok: true, durationMs, result });
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    logger.error({ err, durationMs }, "Cron license expiry sweep failed");
+    res.status(500).json({ ok: false, error: "License expiry sweep failed." });
+  }
+}
+
+router.get("/cron/license-expiry", handleLicenseExpiryCron);
+router.post("/cron/license-expiry", handleLicenseExpiryCron);
 
 /**
  * GET/POST /api/cron/subscription-expiry

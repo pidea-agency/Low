@@ -34,6 +34,7 @@ export type NotificationEventType =
   | "reminder_failed"
   | "poa_assigned"
   | "poa_expiring"
+  | "staff_license_expiring"
   | "member_activation_invite"
   | "member_account_suspended"
   | "member_account_reactivated"
@@ -161,6 +162,25 @@ export const NOTIFICATION_EVENT_DEFINITIONS: Record<
       "daysRemaining",
       "expiryDate",
       "lawyerName",
+    ],
+  },
+
+  staff_license_expiring: {
+    eventType: "staff_license_expiring",
+    name: "قرب انتهاء رخصة محاماة عضو",
+    category: "accounts",
+    categoryArabic: CATEGORY_LABELS.accounts,
+    defaultRecipientRole: "admin",
+    defaultRecipientArabic: RECIPIENT_ROLE_LABELS.admin,
+    titleTemplate: "تنبيه: اقتراب انتهاء رخصة محاماة ({{memberName}})",
+    bodyTemplate:
+      "تنتهي رخصة المحاماة الخاصة بالعضو \"{{memberName}}\" (رقم الترخيص: {{licenseNumber}}) خلال {{daysRemaining}} يوماً (تاريخ الانتهاء: {{expiryDate}}).",
+    defaultChannels: { in_app: true, whatsapp: false },
+    availablePlaceholders: [
+      "memberName",
+      "licenseNumber",
+      "daysRemaining",
+      "expiryDate",
     ],
   },
 

@@ -74,6 +74,109 @@ export interface AppUser {
   activation_token_hash?: string | null;
   activation_token_expires_at?: string | null;
   created_at?: string;
+
+  // Staff members fields (APP_USERS)
+  legal_specialty?: string | null;
+  legalSpecialty?: string | null;
+  license_number?: string | null;
+  licenseNumber?: string | null;
+  license_expiry_date?: string | null;
+  licenseExpiryDate?: string | null;
+  joined_office_at?: string | null;
+  joinedOfficeAt?: string | null;
+
+  // Offices fields (OFFICES / Office Admin row)
+  commercial_registration_number?: string | null;
+  commercialRegistrationNumber?: string | null;
+  billing_contact_name?: string | null;
+  billingContactName?: string | null;
+  billing_contact_phone?: string | null;
+  billingContactPhone?: string | null;
+  billing_contact_email?: string | null;
+  billingContactEmail?: string | null;
+  office_address?: string | null;
+  officeAddress?: string | null;
+}
+
+export interface UserExtendedMeta {
+  legal_specialty?: string | null;
+  license_number?: string | null;
+  license_expiry_date?: string | null;
+  joined_office_at?: string | null;
+  commercial_registration_number?: string | null;
+  billing_contact_name?: string | null;
+  billing_contact_phone?: string | null;
+  billing_contact_email?: string | null;
+  office_address?: string | null;
+}
+
+const USER_META_REGEX = /<!--__USER_META__([\s\S]*?)__-->/;
+
+export function packUserNotes(existingNotes: string | null | undefined, meta: UserExtendedMeta): string {
+  const currentText = (existingNotes || "").replace(USER_META_REGEX, "").trim();
+  const metaObj: Record<string, any> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v !== undefined && v !== null && v !== "") {
+      metaObj[k] = v;
+    }
+  }
+  if (Object.keys(metaObj).length === 0) {
+    return currentText;
+  }
+  const comment = `<!--__USER_META__${JSON.stringify(metaObj)}__-->`;
+  return currentText ? `${currentText}\n${comment}` : comment;
+}
+
+export function unpackUserNotes(notes: string | null | undefined): { cleanNotes: string; meta: UserExtendedMeta } {
+  if (!notes) return { cleanNotes: "", meta: {} };
+  const match = notes.match(USER_META_REGEX);
+  if (!match) return { cleanNotes: notes, meta: {} };
+  try {
+    const meta = JSON.parse(match[1]);
+    const cleanNotes = notes.replace(USER_META_REGEX, "").trim();
+    return { cleanNotes, meta };
+  } catch {
+    return { cleanNotes: notes, meta: {} };
+  }
+}
+
+export function formatUser(u: any): AppUser {
+  const { cleanNotes, meta } = unpackUserNotes(u.subscription_notes);
+
+  const legal_specialty = u.legal_specialty !== undefined && u.legal_specialty !== null ? u.legal_specialty : (meta.legal_specialty ?? null);
+  const license_number = u.license_number !== undefined && u.license_number !== null ? u.license_number : (meta.license_number ?? null);
+  const license_expiry_date = u.license_expiry_date !== undefined && u.license_expiry_date !== null ? u.license_expiry_date : (meta.license_expiry_date ?? null);
+  const defaultJoined = u.created_at ? (typeof u.created_at === "string" ? u.created_at.split("T")[0] : null) : null;
+  const joined_office_at = u.joined_office_at !== undefined && u.joined_office_at !== null ? u.joined_office_at : (meta.joined_office_at ?? defaultJoined);
+
+  const commercial_registration_number = u.commercial_registration_number !== undefined && u.commercial_registration_number !== null ? u.commercial_registration_number : (meta.commercial_registration_number ?? null);
+  const billing_contact_name = u.billing_contact_name !== undefined && u.billing_contact_name !== null ? u.billing_contact_name : (meta.billing_contact_name ?? null);
+  const billing_contact_phone = u.billing_contact_phone !== undefined && u.billing_contact_phone !== null ? u.billing_contact_phone : (meta.billing_contact_phone ?? null);
+  const billing_contact_email = u.billing_contact_email !== undefined && u.billing_contact_email !== null ? u.billing_contact_email : (meta.billing_contact_email ?? null);
+  const office_address = u.office_address !== undefined && u.office_address !== null ? u.office_address : (meta.office_address ?? null);
+
+  return {
+    ...u,
+    subscription_notes: cleanNotes || null,
+    legal_specialty,
+    legalSpecialty: legal_specialty,
+    license_number,
+    licenseNumber: license_number,
+    license_expiry_date,
+    licenseExpiryDate: license_expiry_date,
+    joined_office_at,
+    joinedOfficeAt: joined_office_at,
+    commercial_registration_number,
+    commercialRegistrationNumber: commercial_registration_number,
+    billing_contact_name,
+    billingContactName: billing_contact_name,
+    billing_contact_phone,
+    billingContactPhone: billing_contact_phone,
+    billing_contact_email,
+    billingContactEmail: billing_contact_email,
+    office_address,
+    officeAddress: office_address,
+  };
 }
 
 export class UserPendingActivationError extends Error {
@@ -698,7 +801,7 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
     const isPending =
       u.status === "pending_activation" ||
       hasTestFallbackActivationToken(u.id, u.activation_token_hash);
-    const result: AppUser = {
+    const rawResult: AppUser = {
       id: u.id,
       username: u.username,
       email: u.email,
@@ -718,6 +821,7 @@ export async function findUserByIdOrUsername(identifier: string): Promise<AppUse
       google_sheet_name: u.google_sheet_name,
       created_at: u.created_at,
     };
+    const result = formatUser({ ...u, ...rawResult });
     userAuthCache.set(clean, { user: result, cachedAt: Date.now() });
     return result;
   } catch (err: any) {
@@ -1192,29 +1296,32 @@ export async function listSupabaseUsers(): Promise<AppUser[]> {
 
   return (data || [])
     .filter((u: any) => u.username !== "__platform_settings__" && u.id !== "00000000-0000-0000-0000-000000000001")
-    .map((u: any) => ({
-    id: u.id,
-    username: u.username,
-    email: u.email,
-    role: (u.role as any) || "staff",
-    admin_id: u.admin_id || null,
-    office_name: u.office_name || null,
-    display_name: u.display_name,
-    status: u.status || "active",
-    phone: u.phone || null,
-    subscription_end_date: u.subscription_end_date || null,
-    subscription_notes: u.subscription_notes || null,
-    plan_tier: u.plan_tier,
-    plan_id: u.plan_id || null,
-    ai_quota_limit_override: u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null,
-    billing_cycle: u.billing_cycle,
-    ai_quota_limit: u.ai_quota_limit,
-    ai_usage_count: u.ai_usage_count || 0,
-    has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
-    google_spreadsheet_id: u.google_spreadsheet_id || null,
-    google_sheet_name: u.google_sheet_name || null,
-    created_at: u.created_at,
-  }));
+    .map((u: any) =>
+      formatUser({
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        role: (u.role as any) || "staff",
+        admin_id: u.admin_id || null,
+        office_name: u.office_name || null,
+        display_name: u.display_name,
+        status: u.status || "active",
+        phone: u.phone || null,
+        subscription_end_date: u.subscription_end_date || null,
+        subscription_notes: u.subscription_notes || null,
+        plan_tier: u.plan_tier,
+        plan_id: u.plan_id || null,
+        ai_quota_limit_override: u.ai_quota_limit_override !== undefined ? u.ai_quota_limit_override : null,
+        billing_cycle: u.billing_cycle,
+        ai_quota_limit: u.ai_quota_limit,
+        ai_usage_count: u.ai_usage_count || 0,
+        has_google_service: Boolean(u.google_service_account_json && u.google_service_account_json.trim().length > 10),
+        google_spreadsheet_id: u.google_spreadsheet_id || null,
+        google_sheet_name: u.google_sheet_name || null,
+        created_at: u.created_at,
+        ...u,
+      }),
+    );
 }
 
 // ============================================================================
@@ -1589,6 +1696,16 @@ export async function createSupabaseAdmin(input: {
   billing_cycle?: "monthly" | "annual";
   subscription_end_date?: string;
   subscription_notes?: string;
+  commercial_registration_number?: string | null;
+  commercialRegistrationNumber?: string | null;
+  billing_contact_name?: string | null;
+  billingContactName?: string | null;
+  billing_contact_phone?: string | null;
+  billingContactPhone?: string | null;
+  billing_contact_email?: string | null;
+  billingContactEmail?: string | null;
+  office_address?: string | null;
+  officeAddress?: string | null;
   ai_quota_limit?: number;
   ai_quota_limit_override?: number | null;
 }): Promise<AppUser> {
@@ -1648,6 +1765,11 @@ export async function createSupabaseAdmin(input: {
     billing_cycle: input.billing_cycle || "annual",
     subscription_end_date: input.subscription_end_date,
     subscription_notes: input.subscription_notes,
+    commercial_registration_number: input.commercial_registration_number || input.commercialRegistrationNumber || null,
+    billing_contact_name: input.billing_contact_name || input.billingContactName || null,
+    billing_contact_phone: input.billing_contact_phone || input.billingContactPhone || null,
+    billing_contact_email: input.billing_contact_email || input.billingContactEmail || null,
+    office_address: input.office_address || input.officeAddress || null,
     ai_quota_limit: quota,
     ai_quota_limit_override: quotaOverride,
   });
@@ -1669,14 +1791,24 @@ export async function updateSupabaseAdmin(
     display_name?: string;
     email?: string;
     phone?: string | null;
-  role_title?: string | null;
-  roleTitle?: string | null;
+    role_title?: string | null;
+    roleTitle?: string | null;
     status?: "active" | "suspended";
     plan_id?: string;
     plan_tier?: string;
     billing_cycle?: "monthly" | "annual";
     subscription_end_date?: string | null;
     subscription_notes?: string | null;
+    commercial_registration_number?: string | null;
+    commercialRegistrationNumber?: string | null;
+    billing_contact_name?: string | null;
+    billingContactName?: string | null;
+    billing_contact_phone?: string | null;
+    billingContactPhone?: string | null;
+    billing_contact_email?: string | null;
+    billingContactEmail?: string | null;
+    office_address?: string | null;
+    officeAddress?: string | null;
     ai_quota_limit?: number;
     ai_quota_limit_override?: number | null;
     ai_usage_count?: number;
@@ -2700,6 +2832,14 @@ export async function listOfficeMembers(adminId: string): Promise<AppUser[]> {
         display_name: u.display_name,
         role_title: (u as any).role_title || null,
         roleTitle: (u as any).role_title || null,
+        legal_specialty: u.legal_specialty || (u as any).legalSpecialty || null,
+        legalSpecialty: u.legal_specialty || (u as any).legalSpecialty || null,
+        license_number: u.license_number || (u as any).licenseNumber || null,
+        licenseNumber: u.license_number || (u as any).licenseNumber || null,
+        license_expiry_date: u.license_expiry_date || (u as any).licenseExpiryDate || null,
+        licenseExpiryDate: u.license_expiry_date || (u as any).licenseExpiryDate || null,
+        joined_office_at: u.joined_office_at || (u as any).joinedOfficeAt || (u.created_at ? u.created_at.split("T")[0] : null),
+        joinedOfficeAt: u.joined_office_at || (u as any).joinedOfficeAt || (u.created_at ? u.created_at.split("T")[0] : null),
         status: isPending ? ("pending_activation" as const) : (u.status || "active"),
         phone: u.phone,
         created_at: u.created_at,
@@ -2727,6 +2867,14 @@ export async function createOfficeMember(
     status?: "active" | "suspended" | "pending_activation";
     role_title?: string | null;
     roleTitle?: string | null;
+    legal_specialty?: string | null;
+    legalSpecialty?: string | null;
+    license_number?: string | null;
+    licenseNumber?: string | null;
+    license_expiry_date?: string | null;
+    licenseExpiryDate?: string | null;
+    joined_office_at?: string | null;
+    joinedOfficeAt?: string | null;
   },
 ): Promise<CreateOfficeMemberResult> {
   // Validate office admin exists and is active
@@ -2771,6 +2919,10 @@ export async function createOfficeMember(
     role_title: input.role_title || input.roleTitle || null,
     admin_id: adminId,
     status: input.status || "pending_activation",
+    legal_specialty: input.legal_specialty || input.legalSpecialty || null,
+    license_number: input.license_number || input.licenseNumber || null,
+    license_expiry_date: input.license_expiry_date || input.licenseExpiryDate || null,
+    joined_office_at: input.joined_office_at || input.joinedOfficeAt || new Date().toISOString().split("T")[0],
     activation_token_hash: tokenHash,
     activation_token_expires_at: expiresAt.toISOString(),
   });
@@ -2801,6 +2953,16 @@ export async function createOfficeMember(
       display_name: user.display_name,
       status: user.status,
       phone: user.phone,
+      role_title: user.role_title || input.role_title || input.roleTitle || null,
+      roleTitle: user.role_title || input.role_title || input.roleTitle || null,
+      legal_specialty: user.legal_specialty || input.legal_specialty || input.legalSpecialty || null,
+      legalSpecialty: user.legal_specialty || input.legal_specialty || input.legalSpecialty || null,
+      license_number: user.license_number || input.license_number || input.licenseNumber || null,
+      licenseNumber: user.license_number || input.license_number || input.licenseNumber || null,
+      license_expiry_date: user.license_expiry_date || input.license_expiry_date || input.licenseExpiryDate || null,
+      licenseExpiryDate: user.license_expiry_date || input.license_expiry_date || input.licenseExpiryDate || null,
+      joined_office_at: user.joined_office_at || input.joined_office_at || input.joinedOfficeAt || (user.created_at ? user.created_at.split("T")[0] : null),
+      joinedOfficeAt: user.joined_office_at || input.joined_office_at || input.joinedOfficeAt || (user.created_at ? user.created_at.split("T")[0] : null),
       created_at: user.created_at,
     },
     emailSent: delivery.emailSent,
@@ -3100,8 +3262,16 @@ export async function updateOfficeMember(
     display_name?: string;
     email?: string;
     phone?: string | null;
-  role_title?: string | null;
-  roleTitle?: string | null;
+    role_title?: string | null;
+    roleTitle?: string | null;
+    legal_specialty?: string | null;
+    legalSpecialty?: string | null;
+    license_number?: string | null;
+    licenseNumber?: string | null;
+    license_expiry_date?: string | null;
+    licenseExpiryDate?: string | null;
+    joined_office_at?: string | null;
+    joinedOfficeAt?: string | null;
     status?: "active" | "suspended";
   },
 ): Promise<AppUser> {
@@ -3117,6 +3287,10 @@ export async function updateOfficeMember(
     phone: input.phone,
     status: input.status,
     role_title: input.role_title !== undefined ? input.role_title : input.roleTitle,
+    legal_specialty: input.legal_specialty !== undefined ? input.legal_specialty : input.legalSpecialty,
+    license_number: input.license_number !== undefined ? input.license_number : input.licenseNumber,
+    license_expiry_date: input.license_expiry_date !== undefined ? input.license_expiry_date : input.licenseExpiryDate,
+    joined_office_at: input.joined_office_at !== undefined ? input.joined_office_at : input.joinedOfficeAt,
   });
 
   return {
@@ -3128,7 +3302,16 @@ export async function updateOfficeMember(
     display_name: updated.display_name,
     status: updated.status,
     phone: updated.phone,
-    role_title: (updated as any).role_title || null,
+    role_title: updated.role_title || null,
+    roleTitle: updated.role_title || null,
+    legal_specialty: updated.legal_specialty || null,
+    legalSpecialty: updated.legal_specialty || null,
+    license_number: updated.license_number || null,
+    licenseNumber: updated.license_number || null,
+    license_expiry_date: updated.license_expiry_date || null,
+    licenseExpiryDate: updated.license_expiry_date || null,
+    joined_office_at: updated.joined_office_at || (updated.created_at ? updated.created_at.split("T")[0] : null),
+    joinedOfficeAt: updated.joined_office_at || (updated.created_at ? updated.created_at.split("T")[0] : null),
     created_at: updated.created_at,
   };
 }
@@ -3488,6 +3671,24 @@ export async function createSupabaseUser(input: {
   phone?: string | null;
   role_title?: string | null;
   roleTitle?: string | null;
+  legal_specialty?: string | null;
+  legalSpecialty?: string | null;
+  license_number?: string | null;
+  licenseNumber?: string | null;
+  license_expiry_date?: string | null;
+  licenseExpiryDate?: string | null;
+  joined_office_at?: string | null;
+  joinedOfficeAt?: string | null;
+  commercial_registration_number?: string | null;
+  commercialRegistrationNumber?: string | null;
+  billing_contact_name?: string | null;
+  billingContactName?: string | null;
+  billing_contact_phone?: string | null;
+  billingContactPhone?: string | null;
+  billing_contact_email?: string | null;
+  billingContactEmail?: string | null;
+  office_address?: string | null;
+  officeAddress?: string | null;
   subscription_end_date?: string;
   subscription_notes?: string;
   plan_tier?: "plus" | "pro" | string;
@@ -3542,7 +3743,21 @@ export async function createSupabaseUser(input: {
 
   const status = input.status || "active";
   const subscription_end_date = isOfficeAdmin ? (input.subscription_end_date || null) : null;
-  const subscription_notes = isOfficeAdmin ? (input.subscription_notes?.trim() || null) : null;
+  const rawNotes = input.subscription_notes?.trim() || "";
+
+  const meta: UserExtendedMeta = {
+    legal_specialty: input.legal_specialty || (input as any).legalSpecialty || null,
+    license_number: input.license_number || (input as any).licenseNumber || null,
+    license_expiry_date: input.license_expiry_date || (input as any).licenseExpiryDate || null,
+    joined_office_at: input.joined_office_at || (input as any).joinedOfficeAt || (role === "staff" ? new Date().toISOString().split("T")[0] : null),
+    commercial_registration_number: input.commercial_registration_number || (input as any).commercialRegistrationNumber || null,
+    billing_contact_name: input.billing_contact_name || (input as any).billingContactName || null,
+    billing_contact_phone: input.billing_contact_phone || (input as any).billingContactPhone || null,
+    billing_contact_email: input.billing_contact_email || (input as any).billingContactEmail || null,
+    office_address: input.office_address || (input as any).officeAddress || null,
+  };
+
+  const subscription_notes = packUserNotes(rawNotes, meta) || null;
   const plan_tier = isSuper ? "pro" : isOfficeAdmin ? (input.plan_tier || "plus") : undefined;
   const billing_cycle = isSuper || isOfficeAdmin ? (input.billing_cycle || "annual") : undefined;
   const ai_quota_limit = isSuper
@@ -3592,6 +3807,16 @@ export async function createSupabaseUser(input: {
     google_spreadsheet_id: isOfficeAdmin ? (input.google_spreadsheet_id?.trim() || null) : null,
     google_sheet_name: isOfficeAdmin ? (input.google_sheet_name?.trim() || null) : null,
   };
+  if (meta.legal_specialty) newUserData.legal_specialty = meta.legal_specialty;
+  if (meta.license_number) newUserData.license_number = meta.license_number;
+  if (meta.license_expiry_date) newUserData.license_expiry_date = meta.license_expiry_date;
+  if (meta.joined_office_at) newUserData.joined_office_at = meta.joined_office_at;
+  if (meta.commercial_registration_number) newUserData.commercial_registration_number = meta.commercial_registration_number;
+  if (meta.billing_contact_name) newUserData.billing_contact_name = meta.billing_contact_name;
+  if (meta.billing_contact_phone) newUserData.billing_contact_phone = meta.billing_contact_phone;
+  if (meta.billing_contact_email) newUserData.billing_contact_email = meta.billing_contact_email;
+  if (meta.office_address) newUserData.office_address = meta.office_address;
+
   if (hasPhone && input.phone !== undefined) {
     newUserData.phone = input.phone?.trim() || null;
   }
@@ -3619,8 +3844,18 @@ export async function createSupabaseUser(input: {
     .select(selectCols)
     .single();
 
-  if (error && (error.message?.includes("role_title") || (error as any).code === "PGRST204")) {
+  if (error && (error.message?.includes("role_title") || (error as any).code === "PGRST204" || error.message?.includes("column") || error.message?.includes("does not exist"))) {
     delete newUserData.role_title;
+    delete newUserData.legal_specialty;
+    delete newUserData.license_number;
+    delete newUserData.license_expiry_date;
+    delete newUserData.joined_office_at;
+    delete newUserData.commercial_registration_number;
+    delete newUserData.billing_contact_name;
+    delete newUserData.billing_contact_phone;
+    delete newUserData.billing_contact_email;
+    delete newUserData.office_address;
+
     const retry = await client
       .from(tableName)
       .insert([newUserData])
@@ -3638,6 +3873,16 @@ export async function createSupabaseUser(input: {
   if (error && error.message?.includes("app_users_status_check") && newUserData.status === "pending_activation") {
     logger.warn({ err: error.message }, "[createSupabaseUser] DB app_users_status_check rejected 'pending_activation'; inserting with 'suspended' in DB and tracking pending_activation in app layer until migration 004 is applied.");
     newUserData.status = "suspended";
+    delete newUserData.legal_specialty;
+    delete newUserData.license_number;
+    delete newUserData.license_expiry_date;
+    delete newUserData.joined_office_at;
+    delete newUserData.commercial_registration_number;
+    delete newUserData.billing_contact_name;
+    delete newUserData.billing_contact_phone;
+    delete newUserData.billing_contact_email;
+    delete newUserData.office_address;
+
     const retry = await client
       .from(tableName)
       .insert([newUserData])
@@ -3662,7 +3907,8 @@ export async function createSupabaseUser(input: {
     newUserData.status === "pending_activation" ||
     hasTestFallbackActivationToken(row.id, input.activation_token_hash);
 
-  return {
+  return formatUser({
+    ...row,
     id: row.id,
     username: row.username,
     email: row.email,
@@ -3686,7 +3932,7 @@ export async function createSupabaseUser(input: {
     google_spreadsheet_id: row.google_spreadsheet_id,
     google_sheet_name: row.google_sheet_name,
     created_at: row.created_at,
-  };
+  });
 }
 
 export async function countActiveAdmins(excludeUserId?: string): Promise<number> {
@@ -3750,8 +3996,26 @@ export async function updateSupabaseUser(
     email?: string;
     status?: "active" | "suspended" | "pending_activation";
     phone?: string | null;
-  role_title?: string | null;
-  roleTitle?: string | null;
+    role_title?: string | null;
+    roleTitle?: string | null;
+    legal_specialty?: string | null;
+    legalSpecialty?: string | null;
+    license_number?: string | null;
+    licenseNumber?: string | null;
+    license_expiry_date?: string | null;
+    licenseExpiryDate?: string | null;
+    joined_office_at?: string | null;
+    joinedOfficeAt?: string | null;
+    commercial_registration_number?: string | null;
+    commercialRegistrationNumber?: string | null;
+    billing_contact_name?: string | null;
+    billingContactName?: string | null;
+    billing_contact_phone?: string | null;
+    billingContactPhone?: string | null;
+    billing_contact_email?: string | null;
+    billingContactEmail?: string | null;
+    office_address?: string | null;
+    officeAddress?: string | null;
     subscription_end_date?: string | null;
     subscription_notes?: string | null;
     plan_tier?: "plus" | "pro" | string;
@@ -3836,7 +4100,69 @@ export async function updateSupabaseUser(
   }
   if (input.status !== undefined) updates.status = input.status;
   if (input.subscription_end_date !== undefined) updates.subscription_end_date = input.subscription_end_date;
-  if (input.subscription_notes !== undefined) updates.subscription_notes = input.subscription_notes?.trim() || null;
+
+  // Load existing subscription_notes to merge metadata
+  let existingUserRow: any = null;
+  try {
+    const { data } = await client.from(tableName).select("subscription_notes").eq("id", id).maybeSingle();
+    existingUserRow = data;
+  } catch {}
+
+  const { cleanNotes: existingCleanNotes, meta: existingMeta } = unpackUserNotes(
+    input.subscription_notes !== undefined ? input.subscription_notes : existingUserRow?.subscription_notes,
+  );
+
+  const updatedMeta: UserExtendedMeta = { ...existingMeta };
+
+  const incomingSpecialty = input.legal_specialty !== undefined ? input.legal_specialty : input.legalSpecialty;
+  if (incomingSpecialty !== undefined) {
+    updatedMeta.legal_specialty = incomingSpecialty ? incomingSpecialty.trim() : null;
+    updates.legal_specialty = updatedMeta.legal_specialty;
+  }
+  const incomingLicense = input.license_number !== undefined ? input.license_number : input.licenseNumber;
+  if (incomingLicense !== undefined) {
+    updatedMeta.license_number = incomingLicense ? incomingLicense.trim() : null;
+    updates.license_number = updatedMeta.license_number;
+  }
+  const incomingExpiry = input.license_expiry_date !== undefined ? input.license_expiry_date : input.licenseExpiryDate;
+  if (incomingExpiry !== undefined) {
+    updatedMeta.license_expiry_date = incomingExpiry ? incomingExpiry.trim() : null;
+    updates.license_expiry_date = updatedMeta.license_expiry_date;
+  }
+  const incomingJoined = input.joined_office_at !== undefined ? input.joined_office_at : input.joinedOfficeAt;
+  if (incomingJoined !== undefined) {
+    updatedMeta.joined_office_at = incomingJoined ? incomingJoined.trim() : null;
+    updates.joined_office_at = updatedMeta.joined_office_at;
+  }
+  const incomingCr = input.commercial_registration_number !== undefined ? input.commercial_registration_number : input.commercialRegistrationNumber;
+  if (incomingCr !== undefined) {
+    updatedMeta.commercial_registration_number = incomingCr ? incomingCr.trim() : null;
+    updates.commercial_registration_number = updatedMeta.commercial_registration_number;
+  }
+  const incomingBcName = input.billing_contact_name !== undefined ? input.billing_contact_name : input.billingContactName;
+  if (incomingBcName !== undefined) {
+    updatedMeta.billing_contact_name = incomingBcName ? incomingBcName.trim() : null;
+    updates.billing_contact_name = updatedMeta.billing_contact_name;
+  }
+  const incomingBcPhone = input.billing_contact_phone !== undefined ? input.billing_contact_phone : input.billingContactPhone;
+  if (incomingBcPhone !== undefined) {
+    updatedMeta.billing_contact_phone = incomingBcPhone ? incomingBcPhone.trim() : null;
+    updates.billing_contact_phone = updatedMeta.billing_contact_phone;
+  }
+  const incomingBcEmail = input.billing_contact_email !== undefined ? input.billing_contact_email : input.billingContactEmail;
+  if (incomingBcEmail !== undefined) {
+    updatedMeta.billing_contact_email = incomingBcEmail ? incomingBcEmail.trim() : null;
+    updates.billing_contact_email = updatedMeta.billing_contact_email;
+  }
+  const incomingAddress = input.office_address !== undefined ? input.office_address : input.officeAddress;
+  if (incomingAddress !== undefined) {
+    updatedMeta.office_address = incomingAddress ? incomingAddress.trim() : null;
+    updates.office_address = updatedMeta.office_address;
+  }
+
+  const baseNotes = input.subscription_notes !== undefined ? input.subscription_notes : existingCleanNotes;
+  updates.subscription_notes = packUserNotes(baseNotes, updatedMeta) || null;
+
   if (input.plan_tier !== undefined) updates.plan_tier = input.plan_tier;
   if (input.billing_cycle !== undefined) updates.billing_cycle = input.billing_cycle;
   if (input.ai_quota_limit !== undefined) updates.ai_quota_limit = input.ai_quota_limit;
@@ -3884,8 +4210,18 @@ export async function updateSupabaseUser(
     .select(selectCols)
     .single();
 
-  if (error && (error.message?.includes("role_title") || (error as any).code === "PGRST204")) {
+  if (error && (error.message?.includes("role_title") || (error as any).code === "PGRST204" || error.message?.includes("column") || error.message?.includes("does not exist"))) {
     delete updates.role_title;
+    delete updates.legal_specialty;
+    delete updates.license_number;
+    delete updates.license_expiry_date;
+    delete updates.joined_office_at;
+    delete updates.commercial_registration_number;
+    delete updates.billing_contact_name;
+    delete updates.billing_contact_phone;
+    delete updates.billing_contact_email;
+    delete updates.office_address;
+
     const retry = await client
       .from(tableName)
       .update(updates)
@@ -3911,7 +4247,7 @@ export async function updateSupabaseUser(
   }
 
   const row = data as any;
-  return {
+  return formatUser({
     id: row.id,
     username: row.username,
     email: row.email,
@@ -3935,7 +4271,8 @@ export async function updateSupabaseUser(
     google_spreadsheet_id: row.google_spreadsheet_id,
     google_sheet_name: row.google_sheet_name,
     created_at: row.created_at,
-  };
+    ...updates,
+  });
 }
 
 export async function resetUserAiUsage(userId: string): Promise<AppUser> {

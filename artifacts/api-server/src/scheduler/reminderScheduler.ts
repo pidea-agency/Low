@@ -4,6 +4,7 @@ import { logger } from "../lib/logger";
 import { listSessions, markReminderSent } from "../services/session.service";
 import { notify } from "../services/reminder/reminder.service";
 import { runPoaExpirySweep } from "../services/reminder/poa-expiry.service";
+import { runLicenseExpirySweep } from "../services/reminder/license-expiry.service";
 import { runSubscriptionExpirySweep } from "../services/reminder/subscription-expiry.service";
 import { dispatchEventNotification } from "../services/notification-template.service";
 import { computeHearingDateTime } from "../utils/hijri";
@@ -393,10 +394,13 @@ export function startReminderScheduler(): void {
     });
   });
 
-  // Daily sweeps: POA expiry & Subscription expiry
+  // Daily sweeps: POA expiry, Staff License expiry & Subscription expiry
   cron.schedule("0 2 * * *", () => {
     runPoaExpirySweep().catch((err) => {
       logger.error({ err }, "Daily POA expiry sweep failed");
+    });
+    runLicenseExpirySweep().catch((err) => {
+      logger.error({ err }, "Daily license expiry sweep failed");
     });
     runSubscriptionExpirySweep().catch((err) => {
       logger.error({ err }, "Daily subscription expiry sweep failed");

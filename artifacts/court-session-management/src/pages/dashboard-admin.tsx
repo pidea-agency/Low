@@ -291,10 +291,12 @@ export default function DashboardAdminPage() {
     if (workloadData?.members && workloadData.members.length > 0) {
       return workloadData.members.map((m) => {
         const total = m.totalWorkload || 0;
+        const specialty = (m as any).legalSpecialty || (m as any).legal_specialty || null;
         return {
           id: m.lawyerId || m.username,
           name: m.lawyerName || m.username,
           role: m.username === 'superadmin' ? 'مشرف عام' : 'محامٍ ممارس',
+          specialty,
           avatarInitial: (m.lawyerName || m.username).charAt(0).toUpperCase(),
           assignedCases: total,
           activeSessions: m.activeSessions || 0,
@@ -699,7 +701,14 @@ export default function DashboardAdminPage() {
                             {lawyer.avatarInitial}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-[#0b1c30]">{lawyer.name}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-[#0b1c30]">{lawyer.name}</span>
+                              {lawyer.specialty && (
+                                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-semibold px-1.5 py-0.2 rounded">
+                                  {lawyer.specialty}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[11px] text-[#757682]">{lawyer.role}</span>
                           </div>
                         </div>

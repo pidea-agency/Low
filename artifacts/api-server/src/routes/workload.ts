@@ -84,6 +84,8 @@ router.get("/workload", async (req, res) => {
         lawyerName: m.display_name || m.username,
         username: m.username,
         email: m.email,
+        legal_specialty: m.legal_specialty || m.legalSpecialty || null,
+        legalSpecialty: m.legal_specialty || m.legalSpecialty || null,
         activeSessions,
         openPoa,
         pendingTasks,

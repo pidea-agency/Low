@@ -9,6 +9,12 @@ import { notifyLawyerAssignment } from "../services/assignment-notification.serv
 
 const CreatePoaSchema = z.object({
   poaNumber: z.string().trim().min(1, "رقم الوكالة مطلوب."),
+  poaType: z.enum(["عامة", "خاصة"]).optional(),
+  poa_type: z.enum(["عامة", "خاصة"]).optional(),
+  scopeDescription: z.string().nullable().optional(),
+  scope_description: z.string().nullable().optional(),
+  notarizationAuthority: z.string().nullable().optional(),
+  notarization_authority: z.string().nullable().optional(),
   clientId: z.string().nullable().optional(),
   client_id: z.string().nullable().optional(),
   caseId: z.string().nullable().optional(),
@@ -18,8 +24,11 @@ const CreatePoaSchema = z.object({
   principalName: z.string().optional(),
   agentName: z.string().optional(),
   issueDate: z.string().optional(),
+  issueDateHijri: z.string().optional(),
   expiryDate: z.string().optional(),
-  status: z.string().optional(),
+  expiryDateHijri: z.string().optional(),
+  daysRemaining: z.union([z.number(), z.string()]).optional(),
+  status: z.enum(["active", "revoked"]).optional(),
   assignedLawyerId: z.string().nullable().optional(),
   assigned_lawyer_id: z.string().nullable().optional(),
   assignedLawyer: z.string().optional(),
@@ -28,6 +37,12 @@ const CreatePoaSchema = z.object({
 
 const UpdatePoaSchema = z.object({
   poaNumber: z.string().optional(),
+  poaType: z.enum(["عامة", "خاصة"]).optional(),
+  poa_type: z.enum(["عامة", "خاصة"]).optional(),
+  scopeDescription: z.string().nullable().optional(),
+  scope_description: z.string().nullable().optional(),
+  notarizationAuthority: z.string().nullable().optional(),
+  notarization_authority: z.string().nullable().optional(),
   clientId: z.string().nullable().optional(),
   client_id: z.string().nullable().optional(),
   caseId: z.string().nullable().optional(),
@@ -37,8 +52,15 @@ const UpdatePoaSchema = z.object({
   principalName: z.string().optional(),
   agentName: z.string().optional(),
   issueDate: z.string().optional(),
+  issueDateHijri: z.string().optional(),
   expiryDate: z.string().optional(),
-  status: z.string().optional(),
+  expiryDateHijri: z.string().optional(),
+  daysRemaining: z.union([z.number(), z.string()]).optional(),
+  status: z.enum(["active", "revoked"]).optional(),
+  revokedAt: z.string().nullable().optional(),
+  revoked_at: z.string().nullable().optional(),
+  revocationReason: z.string().nullable().optional(),
+  revocation_reason: z.string().nullable().optional(),
   assignedLawyerId: z.string().nullable().optional(),
   assigned_lawyer_id: z.string().nullable().optional(),
   assignedLawyer: z.string().optional(),
@@ -141,6 +163,12 @@ router.post("/poa", async (req, res) => {
     return;
   }
 
+  const poaType = body.poaType || body.poa_type;
+  if (!poaType || (poaType !== "عامة" && poaType !== "خاصة")) {
+    res.status(400).json({ error: "نوع الوكالة مطلوب ويجب تحديده كـ (عامة) أو (خاصة)." });
+    return;
+  }
+
   let clientId = body.clientId || body.client_id || null;
   const caseId = body.caseId || body.case_id || null;
   const clientName = (body.clientName || body.client_name || "").trim();
@@ -195,6 +223,11 @@ router.post("/poa", async (req, res) => {
         caseId,
         assignedLawyerId,
         createdBy,
+        poa_type: poaType,
+        poaType,
+        scope_description: body.scope_description ?? body.scopeDescription ?? null,
+        notarization_authority: body.notarization_authority ?? body.notarizationAuthority ?? null,
+        status: body.status || "active",
       },
       officeId,
     );
@@ -305,6 +338,26 @@ router.put("/poa/:rowId", async (req, res) => {
       payload.assignedLawyerId = targetLawyer;
     }
 
+    if (body.poa_type !== undefined || body.poaType !== undefined) {
+      payload.poa_type = body.poa_type || body.poaType;
+      payload.poaType = body.poa_type || body.poaType;
+    }
+    if (body.scope_description !== undefined || body.scopeDescription !== undefined) {
+      payload.scope_description = body.scope_description !== undefined ? body.scope_description : body.scopeDescription;
+    }
+    if (body.notarization_authority !== undefined || body.notarizationAuthority !== undefined) {
+      payload.notarization_authority = body.notarization_authority !== undefined ? body.notarization_authority : body.notarizationAuthority;
+    }
+    if (body.status !== undefined) {
+      payload.status = body.status;
+    }
+    if (body.revoked_at !== undefined || body.revokedAt !== undefined) {
+      payload.revoked_at = body.revoked_at !== undefined ? body.revoked_at : body.revokedAt;
+    }
+    if (body.revocation_reason !== undefined || body.revocationReason !== undefined) {
+      payload.revocation_reason = body.revocation_reason !== undefined ? body.revocation_reason : body.revocationReason;
+    }
+
     const updated = await postgresService.updatePoa(rowId, payload, officeId);
 
     if (!updated) {
@@ -332,6 +385,46 @@ router.put("/poa/:rowId", async (req, res) => {
     const refId = generateRefId();
     logger.error({ refId, err, rowId }, "Failed to update POA record");
     postgresService.handleDatabaseOrServerError(res, err, refId, "فشل تحديث الوكالة");
+  }
+});
+
+/**
+ * POST /api/poa/:rowId/revoke
+ * Admin-only action: explicitly revokes a POA, recording revocation timestamp and optional reason.
+ */
+router.post("/poa/:rowId/revoke", async (req, res) => {
+  if (req.authUser?.role !== "admin") {
+    res.status(403).json({ error: "إلغاء الوكالة مقتصر على مدير المكتب فقط." });
+    return;
+  }
+
+  const officeId = getOfficeId(req);
+  const rowId = parseInt(String(req.params.rowId), 10);
+  if (isNaN(rowId)) {
+    res.status(400).json({ error: "معرف الوكالة غير صالح." });
+    return;
+  }
+
+  try {
+    const existing = await postgresService.getPoaById(rowId, officeId);
+    if (!existing) {
+      res.status(404).json({ error: "الوكالة غير موجودة." });
+      return;
+    }
+
+    const reason = req.body?.reason || req.body?.revocation_reason || req.body?.revocationReason || null;
+    const revoked = await postgresService.revokePoa(rowId, officeId, reason);
+    if (!revoked) {
+      res.status(404).json({ error: "تعذر إلغاء الوكالة." });
+      return;
+    }
+
+    logger.info({ id: rowId, officeId, reason }, "POA record revoked successfully");
+    res.json(formatPoa(revoked));
+  } catch (err: any) {
+    const refId = generateRefId();
+    logger.error({ refId, err, rowId }, "Failed to revoke POA");
+    postgresService.handleDatabaseOrServerError(res, err, refId, "فشل إلغاء الوكالة");
   }
 });
 

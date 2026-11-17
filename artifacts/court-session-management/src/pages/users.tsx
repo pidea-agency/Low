@@ -78,6 +78,14 @@ export interface OfficeMemberItem {
   started?: boolean;
   role: 'admin' | 'lawyer' | 'consultant' | 'assistant' | string;
   created_at?: string;
+  legal_specialty?: string | null;
+  legalSpecialty?: string | null;
+  license_number?: string | null;
+  licenseNumber?: string | null;
+  license_expiry_date?: string | null;
+  licenseExpiryDate?: string | null;
+  joined_office_at?: string | null;
+  joinedOfficeAt?: string | null;
 }
 
 export type OfficeMember = OfficeMemberItem;
@@ -113,6 +121,10 @@ export default function OfficeMembersPage() {
   const [formPhone, setFormPhone] = useState('');
   const [formRole, setFormRole] = useState<'lawyer' | 'consultant' | 'assistant'>('lawyer');
   const [formRoleTitle, setFormRoleTitle] = useState('محامٍ ممارس • قضايا المحاكم');
+  const [formLegalSpecialty, setFormLegalSpecialty] = useState('تجاري');
+  const [formLicenseNumber, setFormLicenseNumber] = useState('');
+  const [formLicenseExpiryDate, setFormLicenseExpiryDate] = useState('');
+  const [formJoinedOfficeAt, setFormJoinedOfficeAt] = useState('');
 
   // Form State (Edit)
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -120,6 +132,10 @@ export default function OfficeMembersPage() {
   const [editPhone, setEditPhone] = useState('');
   const [editRoleTitle, setEditRoleTitle] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [editLegalSpecialty, setEditLegalSpecialty] = useState('تجاري');
+  const [editLicenseNumber, setEditLicenseNumber] = useState('');
+  const [editLicenseExpiryDate, setEditLicenseExpiryDate] = useState('');
+  const [editJoinedOfficeAt, setEditJoinedOfficeAt] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -187,6 +203,14 @@ export default function OfficeMembersPage() {
       started: b.is_active !== false,
       role: b.role === 'consultant' ? 'consultant' : b.role === 'assistant' ? 'assistant' : 'lawyer',
       created_at: b.created_at,
+      legal_specialty: b.legal_specialty || b.legalSpecialty || null,
+      legalSpecialty: b.legal_specialty || b.legalSpecialty || null,
+      license_number: b.license_number || b.licenseNumber || null,
+      licenseNumber: b.license_number || b.licenseNumber || null,
+      license_expiry_date: b.license_expiry_date || b.licenseExpiryDate || null,
+      licenseExpiryDate: b.license_expiry_date || b.licenseExpiryDate || null,
+      joined_office_at: b.joined_office_at || b.joinedOfficeAt || (b.created_at ? b.created_at.split('T')[0] : null),
+      joinedOfficeAt: b.joined_office_at || b.joinedOfficeAt || (b.created_at ? b.created_at.split('T')[0] : null),
     }));
   }, [backendMembers]);
 
@@ -293,6 +317,10 @@ export default function OfficeMembersPage() {
         phone: formPhone.trim() || undefined,
         role: 'staff',
         role_title: formRoleTitle.trim() || undefined,
+        legal_specialty: formLegalSpecialty.trim() || undefined,
+        license_number: formLicenseNumber.trim() || undefined,
+        license_expiry_date: formLicenseExpiryDate.trim() || undefined,
+        joined_office_at: formJoinedOfficeAt.trim() || undefined,
       };
 
       const res = await fetch('/api/users', {
@@ -338,6 +366,10 @@ export default function OfficeMembersPage() {
         email: editEmail.trim() || undefined,
         phone: editPhone.trim() || null,
         role_title: editRoleTitle.trim() || null,
+        legal_specialty: editLegalSpecialty.trim() || null,
+        license_number: editLicenseNumber.trim() || null,
+        license_expiry_date: editLicenseExpiryDate.trim() || null,
+        joined_office_at: editJoinedOfficeAt.trim() || null,
       };
       if (editPassword.trim()) {
         payload.password = editPassword.trim();
@@ -669,9 +701,33 @@ export default function OfficeMembersPage() {
                             >
                               {member.avatarInitials || member.display_name?.slice(0, 2) || 'أم'}
                             </div>
-                            <div>
-                              <div className="font-bold text-[#141e30]">{member.display_name}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-[#141e30]">{member.display_name}</span>
+                                {member.legal_specialty && (
+                                  <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                                    {member.legal_specialty}
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-[11px] text-[#697994]">{member.roleTitle}</div>
+                              {(member.license_number || member.joined_office_at) && (
+                                <div className="text-[10px] text-[#7888a2] mt-0.5 flex items-center gap-2 flex-wrap">
+                                  {member.license_number && (
+                                    <span>
+                                      رخصة: <strong className="font-mono text-[#42526e]">{member.license_number}</strong>
+                                      {member.license_expiry_date && (
+                                        <span className="text-[#a0acc0] mr-1">(تنتهي: {member.license_expiry_date})</span>
+                                      )}
+                                    </span>
+                                  )}
+                                  {member.joined_office_at && (
+                                    <span className="text-[#8898b0]">
+                                      انضم: {member.joined_office_at}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -776,9 +832,13 @@ export default function OfficeMembersPage() {
                               onClick={() => {
                                 setEditingMember(member);
                                 setEditDisplayName(member.display_name || '');
-                                setEditPhone(member.phone || '');
-                                setEditEmail(member.email || '');
+                                setEditPhone(member.phone && member.phone !== '—' ? member.phone : '');
+                                setEditEmail(member.email && member.email !== '—' ? member.email : '');
                                 setEditRoleTitle(member.roleTitle || (member as any).role_title || '');
+                                setEditLegalSpecialty(member.legal_specialty || 'تجاري');
+                                setEditLicenseNumber(member.license_number || '');
+                                setEditLicenseExpiryDate(member.license_expiry_date || '');
+                                setEditJoinedOfficeAt(member.joined_office_at || '');
                                 setEditPassword('');
                                 setIsEditOpen(true);
                               }}
@@ -976,6 +1036,58 @@ export default function OfficeMembersPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">التخصص القانوني</Label>
+                <select
+                  value={formLegalSpecialty}
+                  onChange={(e) => setFormLegalSpecialty(e.target.value)}
+                  className="w-full h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+                >
+                  <option value="تجاري">تجاري</option>
+                  <option value="جنائي">جنائي</option>
+                  <option value="عمالي">عمالي</option>
+                  <option value="أحوال شخصية">أحوال شخصية</option>
+                  <option value="عقاري">عقاري</option>
+                  <option value="إداري">إداري</option>
+                  <option value="أخرى">أخرى</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">تاريخ الانضمام للمكتب</Label>
+                <Input
+                  value={formJoinedOfficeAt}
+                  onChange={(e) => setFormJoinedOfficeAt(e.target.value)}
+                  type="date"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">رقم رخصة المحاماة</Label>
+                <Input
+                  value={formLicenseNumber}
+                  onChange={(e) => setFormLicenseNumber(e.target.value)}
+                  placeholder="SA-LAW-12345"
+                  className="h-8 text-xs font-mono"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">تاريخ انتهاء الرخصة</Label>
+                <Input
+                  value={formLicenseExpiryDate}
+                  onChange={(e) => setFormLicenseExpiryDate(e.target.value)}
+                  type="date"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
             <DialogFooter className="gap-2 sm:justify-start pt-2">
               <Button
                 type="submit"
@@ -1069,6 +1181,58 @@ export default function OfficeMembersPage() {
                 className="h-8 text-xs font-mono"
                 dir="ltr"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">التخصص القانوني</Label>
+                <select
+                  value={editLegalSpecialty}
+                  onChange={(e) => setEditLegalSpecialty(e.target.value)}
+                  className="w-full h-8 text-xs bg-[#f8faff] border border-[#dce7f6] rounded-md px-2 text-[#33425b] focus:outline-none cursor-pointer"
+                >
+                  <option value="تجاري">تجاري</option>
+                  <option value="جنائي">جنائي</option>
+                  <option value="عمالي">عمالي</option>
+                  <option value="أحوال شخصية">أحوال شخصية</option>
+                  <option value="عقاري">عقاري</option>
+                  <option value="إداري">إداري</option>
+                  <option value="أخرى">أخرى</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">تاريخ الانضمام للمكتب</Label>
+                <Input
+                  value={editJoinedOfficeAt}
+                  onChange={(e) => setEditJoinedOfficeAt(e.target.value)}
+                  type="date"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">رقم رخصة المحاماة</Label>
+                <Input
+                  value={editLicenseNumber}
+                  onChange={(e) => setEditLicenseNumber(e.target.value)}
+                  placeholder="SA-LAW-12345"
+                  className="h-8 text-xs font-mono"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="font-bold text-[#44526d]">تاريخ انتهاء الرخصة</Label>
+                <Input
+                  value={editLicenseExpiryDate}
+                  onChange={(e) => setEditLicenseExpiryDate(e.target.value)}
+                  type="date"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:justify-start pt-2">

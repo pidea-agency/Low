@@ -491,6 +491,16 @@ router.post("/super-admin/admins", async (req, res) => {
       subscription_notes,
       ai_quota_limit,
       ai_quota_limit_override,
+      commercial_registration_number,
+      commercialRegistrationNumber,
+      billing_contact_name,
+      billingContactName,
+      billing_contact_phone,
+      billingContactPhone,
+      billing_contact_email,
+      billingContactEmail,
+      office_address,
+      officeAddress,
     } = req.body;
 
     if (!username || !password || !office_name) {
@@ -516,6 +526,11 @@ router.post("/super-admin/admins", async (req, res) => {
       billing_cycle,
       subscription_end_date,
       subscription_notes,
+      commercial_registration_number: commercial_registration_number?.trim() || commercialRegistrationNumber?.trim() || null,
+      billing_contact_name: billing_contact_name?.trim() || billingContactName?.trim() || null,
+      billing_contact_phone: billing_contact_phone?.trim() || billingContactPhone?.trim() || null,
+      billing_contact_email: billing_contact_email?.trim() || billingContactEmail?.trim() || null,
+      office_address: office_address?.trim() || officeAddress?.trim() || null,
       ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : undefined,
       ai_quota_limit_override:
         ai_quota_limit_override !== undefined && ai_quota_limit_override !== null
@@ -570,6 +585,16 @@ router.patch("/super-admin/admins/:id", async (req, res) => {
       ai_quota_limit,
       ai_quota_limit_override,
       ai_usage_count,
+      commercial_registration_number,
+      commercialRegistrationNumber,
+      billing_contact_name,
+      billingContactName,
+      billing_contact_phone,
+      billingContactPhone,
+      billing_contact_email,
+      billingContactEmail,
+      office_address,
+      officeAddress,
     } = req.body;
 
     if (password !== undefined && typeof password === "string" && password.trim() !== "") {
@@ -592,6 +617,11 @@ router.patch("/super-admin/admins/:id", async (req, res) => {
       billing_cycle,
       subscription_end_date,
       subscription_notes,
+      commercial_registration_number: commercial_registration_number !== undefined ? commercial_registration_number : commercialRegistrationNumber,
+      billing_contact_name: billing_contact_name !== undefined ? billing_contact_name : billingContactName,
+      billing_contact_phone: billing_contact_phone !== undefined ? billing_contact_phone : billingContactPhone,
+      billing_contact_email: billing_contact_email !== undefined ? billing_contact_email : billingContactEmail,
+      office_address: office_address !== undefined ? office_address : officeAddress,
       ai_quota_limit: ai_quota_limit !== undefined ? Number(ai_quota_limit) : undefined,
       ai_quota_limit_override:
         ai_quota_limit_override !== undefined
