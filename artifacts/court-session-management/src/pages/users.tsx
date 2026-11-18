@@ -411,41 +411,13 @@ export default function OfficeMembersPage() {
 
   return (
     <div className="min-h-full bg-[#f8faff] text-[#1c1d22] pb-12 font-sans" dir="rtl">
-      {/* ── Top Ribbon ── */}
-      <div className="bg-[#edf3ff] border-b border-[#d8e4f8] px-4 lg:px-8 py-2 text-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
-          </span>
-          <span className="font-medium text-[#2d4379]">
-            حالة الخادم: متزامن مع ناجز والعدل
-          </span>
-          <span className="text-[#9ab1d8]">|</span>
-          <span className="text-[#5c6e91]">السنة القضائية 1446-1447هـ</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="bg-[#e4eeff] text-[#00236f] text-[11px] font-bold px-2 py-0.5 rounded border border-[#c7d9fc] flex items-center gap-1">
-            <Building2 className="w-3 h-3 text-[#00236f]" />
-            مكتب المحاماة الرئيسي
-          </span>
-        </div>
-      </div>
+     
 
       <div className="px-4 lg:px-8 pt-5 space-y-5">
         {/* ── Top Header Section ── */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            {/* Breadcrumbs */}
-            <div className="flex items-center gap-2 text-xs text-[#6e7687]">
-              <span>لوحة التحكم</span>
-              <span>&gt;</span>
-              <span>إدارة المكتب</span>
-              <span>&gt;</span>
-              <span className="text-[#00236f] font-semibold">أعضاء ومحامو المكتب</span>
-            </div>
-
+           
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-[#fff2e8] text-[#b44800] flex items-center justify-center">
                 <Users className="w-4 h-4" />
@@ -459,58 +431,58 @@ export default function OfficeMembersPage() {
             </p>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button
-              onClick={() => {
-                setFormDisplayName('أحمد محمد العتيبي');
-                setFormUsername('a.alotaibi');
-                setFormEmail('ahmed.alotaibi@court.gov.sa');
-                setFormPhone('972599409123');
-                setFormRole('lawyer');
-                setIsAddOpen(true);
-              }}
-              className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-bold h-10 px-4 gap-2 rounded-lg shadow-sm cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              + إضافة محام / عضو جديد
-            </Button>
+       {/* Action buttons */}
+<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full xl:w-auto">
+  <Button
+    onClick={() => {
+      setFormDisplayName('');
+      setFormUsername('');
+      setFormEmail('');
+      setFormPhone('');
+      setFormRole('lawyer');
+      setIsAddOpen(true);
+    }}
+    className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-bold h-10 px-4 gap-2 rounded-xl shadow-sm cursor-pointer justify-center"
+  >
+    <UserPlus className="w-4 h-4" />
+    إضافة محام / عضو جديد
+  </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => setIsActivityLogOpen(true)}
-              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
-            >
-              <History className="w-3.5 h-3.5 text-[#55627a]" />
-              سجل النشاط
-            </Button>
+  <Button
+    variant="outline"
+    onClick={() => setIsActivityLogOpen(true)}
+    className="bg-white hover:bg-slate-50 text-[#444651] border-slate-200/70 text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer shadow-2xs justify-center"
+  >
+    <History className="w-3.5 h-3.5 text-[#757682]" />
+    سجل النشاط
+  </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => {
-                const csvContent =
-                  'data:text/csv;charset=utf-8,الاسم,اسم المستخدم,الهاتف,البريد,الحالة,القضايا,الوكالات\n' +
-                  allMembers
-                    .map(
-                      (m) =>
-                        `"${m.display_name}","${m.username}","${m.phone}","${m.email}","${m.statusLabel}","${m.casesCount}","${m.poaCount}"`
-                    )
-                    .join('\n');
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement('a');
-                link.setAttribute('href', encodedUri);
-                link.setAttribute('download', 'office_lawyers_registry.csv');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                toast({ title: 'تم تصدير سجل المحامين بصيغة Excel / CSV' });
-              }}
-              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#d4e2f6] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5 text-[#55627a]" />
-              تصدير Excel
-            </Button>
-          </div>
+  <Button
+    variant="outline"
+    onClick={() => {
+      const csvContent =
+        'data:text/csv;charset=utf-8,الاسم,اسم المستخدم,الهاتف,البريد,الحالة,القضايا,الوكالات\n' +
+        allMembers
+          .map(
+            (m) =>
+              `"${m.display_name}","${m.username}","${m.phone}","${m.email}","${m.statusLabel}","${m.casesCount}","${m.poaCount}"`
+          )
+          .join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'office_lawyers_registry.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: 'تم تصدير سجل المحامين بصيغة Excel / CSV' });
+    }}
+    className="bg-white hover:bg-slate-50 text-[#444651] border-slate-200/70 text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer shadow-2xs justify-center"
+  >
+    <Download className="w-3.5 h-3.5 text-[#757682]" />
+    تصدير Excel
+  </Button>
+</div>
         </div>
 
         {/* ── 4 KPI Metric Cards ── */}
@@ -874,83 +846,7 @@ export default function OfficeMembersPage() {
           </div>
         </div>
 
-        {/* ── Bottom Analytical & Quick Action Grid ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          {/* Box 1: استهلاك حصص الذكاء الاصطناعي */}
-          <div className="bg-white border border-[#dbe6f8] rounded-xl p-4 shadow-2xs space-y-2.5">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#fff4ed] text-[#b44800] flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-[#fd8a42]" />
-                </div>
-                <h3 className="text-xs font-bold text-[#141e30]">استهلاك حصص الذكاء الاصطناعي</h3>
-              </div>
-              <span className="font-mono text-xs font-bold text-[#141e30]">
-                {currentUser?.ai_usage_count || 0} / {currentUser?.ai_quota_limit || 50} <span className="text-[10px] text-[#718099] font-sans">استعلام</span>
-              </span>
-            </div>
-
-            <p className="text-[11px] text-[#556480] leading-relaxed">
-              يتم توزيع الحصص الشهرية بالتساوي على المحامين لدراسة لوائح الدعاوى وتحليل المستندات.
-            </p>
-
-            <div className="space-y-1">
-              <div className="w-full bg-[#edf3ff] h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-[#00236f] h-full rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      Math.round(
-                        ((currentUser?.ai_usage_count || 0) / (currentUser?.ai_quota_limit || 50)) * 100
-                      )
-                    )}%`,
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-[11px] pt-1">
-                <span className="text-[#657591]">
-                  متبقي {Math.max(0, (currentUser?.ai_quota_limit || 50) - (currentUser?.ai_usage_count || 0))} استعلام حتى نهاية الشهر
-                </span>
-                <button
-                  onClick={() => toast({ title: 'طلب زيادة الحصة الشهرية للمكتب' })}
-                  className="text-[#00236f] font-bold hover:underline cursor-pointer"
-                >
-                  + زيادة الحصة
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Box 2: دعوة سريعة (Solid Blue Accent Card) */}
-          <div className="bg-[#00236f] text-white rounded-xl p-4 shadow-sm space-y-2 flex flex-col justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-white/80 font-bold">
-                <Zap className="w-3.5 h-3.5 text-[#fd8a42]" />
-                <span>دعوة سريعة</span>
-              </div>
-              <h3 className="text-sm font-semibold text-white">هل انضم محامٍ جديد لمكتبك؟</h3>
-              <p className="text-[11px] text-white/80 leading-relaxed">
-                أرسل رابط تفعيل فوري مع تحديد الصلاحيات بضغطة زر دون الحاجة لإعداد يدوي معقد.
-              </p>
-            </div>
-
-            <div className="pt-2">
-              <button
-                onClick={() => {
-                  setFormDisplayName('');
-                  setFormUsername('');
-                  setFormEmail('');
-                  setFormPhone('');
-                  setIsAddOpen(true);
-                }}
-                className="w-full bg-white hover:bg-slate-100 text-[#00236f] text-xs font-bold h-9 rounded-lg cursor-pointer transition-colors"
-              >
-                إرسال دعوة انضمام الآن
-              </button>
-            </div>
-          </div>
-        </div>
+        
       </div>
 
       {/* ── Dialog: Add New Member ── */}

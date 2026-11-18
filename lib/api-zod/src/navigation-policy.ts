@@ -115,6 +115,15 @@ export const APP_NAVIGATION_CONFIG: NavItemConfig[] = [
     category: "admin",
   },
   {
+    id: "notification_settings",
+    name: "التحكم بالرسائل",
+    path: "/notification-settings",
+    iconName: "MessageSquareCode",
+    roles: ["admin"],
+    keywords: "التحكم بالرسائل قوالب التنبيهات الإشعارات رسائل الواتساب رسالة تجريبية notification settings templates whatsapp",
+    category: "admin",
+  },
+  {
     id: "super_admin_portal",
     name: "إدارة المكاتب والاشتراكات",
     path: "/super-admin",

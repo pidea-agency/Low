@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   useGetDashboardStats,
   useGetCurrentUser,
   useListSessions,
   type Session,
-} from '@workspace/api-client-react';
-import { Link } from 'wouter';
+} from "@workspace/api-client-react";
+import { Link } from "wouter";
 import {
   Calendar,
   FilePlus,
@@ -29,7 +29,7 @@ import {
   Sliders,
   CreditCard,
   Sparkles,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface OfficeTask {
   id: number;
@@ -42,50 +42,79 @@ interface OfficeTask {
 }
 
 const ARABIC_MONTHS = [
-  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  "يناير",
+  "فبراير",
+  "مارس",
+  "أبريل",
+  "مايو",
+  "يونيو",
+  "يوليو",
+  "أغسطس",
+  "سبتمبر",
+  "أكتوبر",
+  "نوفمبر",
+  "ديسمبر",
 ];
 
-const WEEKDAY_NAMES = ['سبت', 'أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'];
+const WEEKDAY_NAMES = [
+  "سبت",
+  "أحد",
+  "إثنين",
+  "ثلاثاء",
+  "أربعاء",
+  "خميس",
+  "جمعة",
+];
 
-function deriveEffectiveStatus(storedStatus: string, hearingAt: string | null | undefined): string {
-  if (storedStatus === 'Cancelled' || storedStatus === 'Finished') return storedStatus;
-  if (!hearingAt) return storedStatus || 'Upcoming';
+function deriveEffectiveStatus(
+  storedStatus: string,
+  hearingAt: string | null | undefined,
+): string {
+  if (storedStatus === "Cancelled" || storedStatus === "Finished")
+    return storedStatus;
+  if (!hearingAt) return storedStatus || "Upcoming";
   const hearingTime = new Date(hearingAt).getTime();
-  if (isNaN(hearingTime)) return storedStatus || 'Upcoming';
+  if (isNaN(hearingTime)) return storedStatus || "Upcoming";
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const todayStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime();
   const todayEnd = todayStart + 24 * 60 * 60 * 1000;
-  if (hearingTime < todayStart) return 'Finished';
-  if (hearingTime >= todayStart && hearingTime < todayEnd) return 'Today';
-  return 'Upcoming';
+  if (hearingTime < todayStart) return "Finished";
+  if (hearingTime >= todayStart && hearingTime < todayEnd) return "Today";
+  return "Upcoming";
 }
 
-function formatArabicTime(hearingAt: string | null | undefined, timeStr?: string | null): string {
+function formatArabicTime(
+  hearingAt: string | null | undefined,
+  timeStr?: string | null,
+): string {
   if (timeStr) {
-    const parts = timeStr.trim().split(':');
+    const parts = timeStr.trim().split(":");
     if (parts.length >= 2) {
       const h = parseInt(parts[0], 10);
-      const m = parts[1].replace(/[^0-9]/g, '').slice(0, 2);
+      const m = parts[1].replace(/[^0-9]/g, "").slice(0, 2);
       if (!isNaN(h)) {
-        const period = h >= 12 ? 'م' : 'ص';
+        const period = h >= 12 ? "م" : "ص";
         const formattedH = h % 12 === 0 ? 12 : h % 12;
-        return `${String(formattedH).padStart(2, '0')}:${m || '00'} ${period}`;
+        return `${String(formattedH).padStart(2, "0")}:${m || "00"} ${period}`;
       }
     }
     return timeStr;
   }
-  if (!hearingAt) return '10:30 ص';
+  if (!hearingAt) return "10:30 ص";
   try {
     const d = new Date(hearingAt);
-    if (isNaN(d.getTime())) return '10:30 ص';
+    if (isNaN(d.getTime())) return "10:30 ص";
     const h = d.getHours();
     const m = d.getMinutes();
-    const period = h >= 12 ? 'م' : 'ص';
+    const period = h >= 12 ? "م" : "ص";
     const formattedH = h % 12 === 0 ? 12 : h % 12;
-    return `${String(formattedH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+    return `${String(formattedH).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
   } catch {
-    return '10:30 ص';
+    return "10:30 ص";
   }
 }
 
@@ -95,41 +124,46 @@ export default function DashboardAdminPage() {
   const { data: allSessions = [] } = useListSessions();
 
   const user = currentUser as any;
-  const userDisplayName = user?.displayName || user?.name || user?.username || 'أ. عبدالله المنصوري';
+  const userDisplayName =
+    user?.displayName || user?.name || user?.username || "أ. عبدالله المنصوري";
 
   // Calendar State
   const now = useMemo(() => new Date(), []);
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(new Date().getDate());
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(
+    new Date().getDate(),
+  );
 
   // Arabic and Hijri date formatting
   const gregorianDateStr = useMemo(() => {
     try {
-      return new Intl.DateTimeFormat('ar-SA', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+      return new Intl.DateTimeFormat("ar-SA", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       }).format(now);
     } catch {
-      return now.toLocaleDateString('ar-SA');
+      return now.toLocaleDateString("ar-SA");
     }
   }, [now]);
 
   const hijriDateStr = useMemo(() => {
     try {
-      return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+      return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       }).format(now);
     } catch {
-      return '';
+      return "";
     }
   }, [now]);
 
   // Table active filter tab
-  const [activeSessionTab, setActiveSessionTab] = useState<'today' | 'week' | 'report'>('today');
+  const [activeSessionTab, setActiveSessionTab] = useState<
+    "today" | "week" | "report"
+  >("today");
 
   // Fetch Cases Statistics for live Case Status Donut breakdown
   const { data: caseStats } = useQuery<{
@@ -138,9 +172,9 @@ export default function DashboardAdminPage() {
     closed: number;
     postponed: number;
   }>({
-    queryKey: ['/api/cases/stats'],
+    queryKey: ["/api/cases/stats"],
     queryFn: async () => {
-      const res = await fetch('/api/cases/stats', { credentials: 'include' });
+      const res = await fetch("/api/cases/stats", { credentials: "include" });
       if (!res.ok) return null;
       return res.json();
     },
@@ -158,20 +192,22 @@ export default function DashboardAdminPage() {
       totalWorkload: number;
     }>;
   }>({
-    queryKey: ['/api/workload'],
+    queryKey: ["/api/workload"],
     queryFn: async () => {
-      const res = await fetch('/api/workload', { credentials: 'include' });
+      const res = await fetch("/api/workload", { credentials: "include" });
       if (!res.ok) return { members: [] };
       return res.json();
     },
   });
 
-  const [officeMembers, setOfficeMembers] = useState<Array<{ id: string; username: string; displayName?: string }>>([]);
+  const [officeMembers, setOfficeMembers] = useState<
+    Array<{ id: string; username: string; displayName?: string }>
+  >([]);
   const [urgentTasks, setUrgentTasks] = useState<OfficeTask[]>([]);
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/users', { credentials: 'include' })
+    fetch("/api/users", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (isMounted && data?.users) {
@@ -180,7 +216,7 @@ export default function DashboardAdminPage() {
               id: u.id,
               username: u.username,
               displayName: u.displayName || u.display_name || u.username,
-            }))
+            })),
           );
         }
       })
@@ -192,11 +228,13 @@ export default function DashboardAdminPage() {
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/tasks', { credentials: 'include' })
+    fetch("/api/tasks", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (isMounted && Array.isArray(data)) {
-          const urgent = data.filter((t: OfficeTask) => t.status !== 'مكتملة' && t.status !== 'ملغاة');
+          const urgent = data.filter(
+            (t: OfficeTask) => t.status !== "مكتملة" && t.status !== "ملغاة",
+          );
           setUrgentTasks(urgent);
         }
       })
@@ -210,20 +248,22 @@ export default function DashboardAdminPage() {
   const todaySessions = useMemo(() => {
     return (allSessions || []).filter((s: Session) => {
       const eff = deriveEffectiveStatus(s.status, s.hearingAt);
-      return eff === 'Today';
+      return eff === "Today";
     });
   }, [allSessions]);
 
   const todayCount = statsData?.todayHearings ?? todaySessions.length;
   const weekCount = statsData?.upcomingHearings ?? allSessions.length;
   const reportCount = useMemo(() => {
-    return (allSessions || []).filter((s: Session) => !s.notes && s.status === 'Finished').length;
+    return (allSessions || []).filter(
+      (s: Session) => !s.notes && s.status === "Finished",
+    ).length;
   }, [allSessions]);
 
   const completedToday = useMemo(() => {
     return (allSessions || []).filter((s: Session) => {
       const eff = deriveEffectiveStatus(s.status, s.hearingAt);
-      if (eff === 'Finished' && s.hearingAt) {
+      if (eff === "Finished" && s.hearingAt) {
         const d = new Date(s.hearingAt);
         return d.toDateString() === now.toDateString();
       }
@@ -232,10 +272,12 @@ export default function DashboardAdminPage() {
   }, [allSessions, now]);
   const remainingToday = Math.max(0, todayCount - completedToday);
 
-  const activeCasesCount = caseStats?.open ?? (statsData?.totalCases ?? 0);
+  const activeCasesCount = caseStats?.open ?? statsData?.totalCases ?? 0;
   const postponedCasesCount = caseStats?.postponed ?? 0;
   const closedCasesCount = caseStats?.closed ?? 0;
-  const totalCasesCalculated = caseStats?.total ?? (activeCasesCount + postponedCasesCount + closedCasesCount);
+  const totalCasesCalculated =
+    caseStats?.total ??
+    activeCasesCount + postponedCasesCount + closedCasesCount;
 
   const urgentTasksCount = urgentTasks.length;
   const urgentDueToday = useMemo(() => {
@@ -249,11 +291,20 @@ export default function DashboardAdminPage() {
   // AI Quota real calculation
   const aiUsageCount = user?.ai_usage_count || 0;
   const aiQuotaLimit = user?.ai_quota_limit;
-  const isUnlimitedAi = user?.role === 'admin' || user?.role === 'super_admin' || aiQuotaLimit === -1 || !aiQuotaLimit;
-  const aiRemaining = isUnlimitedAi ? 'غير محدود' : Math.max(0, (aiQuotaLimit || 50) - aiUsageCount);
-  const aiPercentage = !isUnlimitedAi && aiQuotaLimit && aiQuotaLimit > 0
-    ? Math.min(100, Math.round((aiUsageCount / aiQuotaLimit) * 100))
-    : (aiUsageCount > 0 ? 100 : 0);
+  const isUnlimitedAi =
+    user?.role === "admin" ||
+    user?.role === "super_admin" ||
+    aiQuotaLimit === -1 ||
+    !aiQuotaLimit;
+  const aiRemaining = isUnlimitedAi
+    ? "غير محدود"
+    : Math.max(0, (aiQuotaLimit || 50) - aiUsageCount);
+  const aiPercentage =
+    !isUnlimitedAi && aiQuotaLimit && aiQuotaLimit > 0
+      ? Math.min(100, Math.round((aiUsageCount / aiQuotaLimit) * 100))
+      : aiUsageCount > 0
+        ? 100
+        : 0;
 
   // Filtered Sessions for Table
   const ledgerSessions = useMemo(() => {
@@ -262,27 +313,35 @@ export default function DashboardAdminPage() {
     }
 
     let filtered = allSessions;
-    if (activeSessionTab === 'today') {
-      filtered = allSessions.filter((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Today');
-    } else if (activeSessionTab === 'week') {
-      filtered = allSessions.filter((s) => deriveEffectiveStatus(s.status, s.hearingAt) === 'Upcoming');
-    } else if (activeSessionTab === 'report') {
-      filtered = allSessions.filter((s) => !s.notes && s.status === 'Finished');
+    if (activeSessionTab === "today") {
+      filtered = allSessions.filter(
+        (s) => deriveEffectiveStatus(s.status, s.hearingAt) === "Today",
+      );
+    } else if (activeSessionTab === "week") {
+      filtered = allSessions.filter(
+        (s) => deriveEffectiveStatus(s.status, s.hearingAt) === "Upcoming",
+      );
+    } else if (activeSessionTab === "report") {
+      filtered = allSessions.filter((s) => !s.notes && s.status === "Finished");
     }
 
     return filtered.map((s) => ({
       id: s.id,
       caseNumber: s.caseNumber || `قضية #${s.id}`,
-      court: s.court || 'المحكمة المختصة',
-      circuit: s.courtCircuit || 'الدائرة القضائية',
-      parties: s.plaintiff && s.defendant ? `${s.plaintiff} ضد ${s.defendant}` : (s.plaintiff || s.defendant || 'أطراف الدعوى'),
-      plaintiff: s.plaintiff || 'المدعي',
-      defendant: s.defendant || 'المدعى عليه',
-      lawyer: (s as any).assignedLawyer || 'غير محدد',
-      avatarInitial: ((s as any).assignedLawyer || 'م').charAt(0),
-      time: `${formatArabicTime(s.hearingAt, s.sessionTime)}${(s as any).courtRoom ? ' • ' + (s as any).courtRoom : ''}`,
-      statusText: s.status === 'Finished' ? 'تم تدوين المحضر' : 'جارية الآن بالمحكمة',
-      statusType: s.status === 'Finished' ? 'recorded' : 'in_progress',
+      court: s.court || "المحكمة المختصة",
+      circuit: s.courtCircuit || "الدائرة القضائية",
+      parties:
+        s.plaintiff && s.defendant
+          ? `${s.plaintiff} ضد ${s.defendant}`
+          : s.plaintiff || s.defendant || "أطراف الدعوى",
+      plaintiff: s.plaintiff || "المدعي",
+      defendant: s.defendant || "المدعى عليه",
+      lawyer: (s as any).assignedLawyer || "غير محدد",
+      avatarInitial: ((s as any).assignedLawyer || "م").charAt(0),
+      time: `${formatArabicTime(s.hearingAt, s.sessionTime)}${(s as any).courtRoom ? " • " + (s as any).courtRoom : ""}`,
+      statusText:
+        s.status === "Finished" ? "تم تدوين المحضر" : "جارية الآن بالمحكمة",
+      statusType: s.status === "Finished" ? "recorded" : "in_progress",
     }));
   }, [allSessions, activeSessionTab]);
 
@@ -291,11 +350,12 @@ export default function DashboardAdminPage() {
     if (workloadData?.members && workloadData.members.length > 0) {
       return workloadData.members.map((m) => {
         const total = m.totalWorkload || 0;
-        const specialty = (m as any).legalSpecialty || (m as any).legal_specialty || null;
+        const specialty =
+          (m as any).legalSpecialty || (m as any).legal_specialty || null;
         return {
           id: m.lawyerId || m.username,
           name: m.lawyerName || m.username,
-          role: m.username === 'superadmin' ? 'مشرف عام' : 'محامٍ ممارس',
+          role: m.username === "superadmin" ? "مشرف عام" : "محامٍ ممارس",
           specialty,
           avatarInitial: (m.lawyerName || m.username).charAt(0).toUpperCase(),
           assignedCases: total,
@@ -304,8 +364,8 @@ export default function DashboardAdminPage() {
           aiUsed: m.activeSessions + m.pendingTasks,
           aiTotal: 50,
           aiPercent: Math.min(100, (m.activeSessions + m.pendingTasks) * 10),
-          status: m.activeSessions > 0 ? 'in_hearing' : 'available',
-          statusLabel: m.activeSessions > 0 ? 'في جلسة محكمة' : 'متاح للمرافعة',
+          status: m.activeSessions > 0 ? "in_hearing" : "available",
+          statusLabel: m.activeSessions > 0 ? "في جلسة محكمة" : "متاح للمرافعة",
         };
       });
     }
@@ -314,11 +374,31 @@ export default function DashboardAdminPage() {
   }, [workloadData]);
 
   // Dynamic Case Distribution Percentages for Donut
-  const totalCasesForDonut = (caseStats?.total || (caseStats?.open || 0) + (caseStats?.postponed || 0) + (caseStats?.closed || 0)) || 0;
-  const pOpen = totalCasesForDonut > 0 ? (((caseStats?.open || 0) / totalCasesForDonut) * 100).toFixed(1) : '0';
-  const pPostponed = totalCasesForDonut > 0 ? (((caseStats?.postponed || 0) / totalCasesForDonut) * 100).toFixed(1) : '0';
-  const pClosed = totalCasesForDonut > 0 ? (((caseStats?.closed || 0) / totalCasesForDonut) * 100).toFixed(1) : '0';
-  const pJudged = totalCasesForDonut > 0 ? Math.max(0, 100 - Number(pOpen) - Number(pPostponed) - Number(pClosed)).toFixed(1) : '0';
+  const totalCasesForDonut =
+    caseStats?.total ||
+    (caseStats?.open || 0) +
+      (caseStats?.postponed || 0) +
+      (caseStats?.closed || 0) ||
+    0;
+  const pOpen =
+    totalCasesForDonut > 0
+      ? (((caseStats?.open || 0) / totalCasesForDonut) * 100).toFixed(1)
+      : "0";
+  const pPostponed =
+    totalCasesForDonut > 0
+      ? (((caseStats?.postponed || 0) / totalCasesForDonut) * 100).toFixed(1)
+      : "0";
+  const pClosed =
+    totalCasesForDonut > 0
+      ? (((caseStats?.closed || 0) / totalCasesForDonut) * 100).toFixed(1)
+      : "0";
+  const pJudged =
+    totalCasesForDonut > 0
+      ? Math.max(
+          0,
+          100 - Number(pOpen) - Number(pPostponed) - Number(pClosed),
+        ).toFixed(1)
+      : "0";
 
   // Calendar calculations
   const calYear = calendarDate.getFullYear();
@@ -339,56 +419,67 @@ export default function DashboardAdminPage() {
   }, [allSessions, calYear, calMonth]);
 
   return (
-    <div className="w-full min-h-screen bg-[#f8f9ff] text-[#0b1c30] p-4 sm:p-6 lg:p-8 space-y-6" dir="rtl">
-      {/* ── 1. Executive Welcome & Quick Action Bar ── */}
-      <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border border-[#e5eeff]">
-        {/* Welcome Info */}
-        <div className="flex flex-col gap-1.5 text-right">
-          <div className="flex items-center flex-wrap gap-2.5">
-            <h1 className="text-2xl font-bold text-[#00236f]">
-              مرحباً بك مجدداً، {userDisplayName}
-            </h1>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00164e]">
-              مدير المكتب الرئيسي
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#eff4ff] text-[#444651]">
-              <span className="w-2 h-2 rounded-full bg-[#fd8a42] animate-pulse"></span>
-                  عدد المحامين داخل المكتب  {officeMembers.length}
-            </span>
-          </div>
+    <div
+      className="w-full min-h-screen bg-[#f8f9ff] text-[#0b1c30] p-4 sm:p-6 lg:p-8 space-y-6"
+      dir="rtl"
+    >
+   {/* ── 1. Executive Welcome & Quick Action Bar ── */}
+<div className="bg-white rounded-xl shadow-sm p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border border-[#e5eeff]">
+  {/* Welcome Info */}
+  <div className="flex flex-col gap-2 text-right">
+    <div className="flex items-center flex-wrap gap-2.5">
+      <h1 className="text-2xl font-bold text-[#00236f]">
+        مرحباً بك مجدداً، {userDisplayName}
+      </h1>
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00164e]">
+        مدير المكتب الرئيسي
+      </span>
+    </div>
 
-          <div className="flex items-center gap-2 text-xs text-[#757682]">
-            <Calendar className="w-4 h-4 text-[#757682]" />
-            <span>{hijriDateStr ? `${hijriDateStr} هـ` : 'التقويم القضائي'}</span>
-            <span className="text-[#757682]">/</span>
-            <span>{gregorianDateStr}</span>
-          </div>
-        </div>
-
-        {/* Quick Action Buttons */}
-        <div className="flex items-center flex-wrap gap-2.5">
-          <Link href="/cases">
-            <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#e5eeff] hover:bg-[#dce9ff] text-[#0b1c30] transition-colors text-xs font-semibold cursor-pointer shadow-2xs">
-              <FilePlus className="w-4.5 h-4.5 text-[#00236f]" />
-              <span>تسجيل قضية جديدة</span>
-            </button>
-          </Link>
-
-          <Link href="/chat">
-            <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#dae2fd] hover:bg-[#bec6e0] text-[#131b2e] transition-colors text-xs font-semibold cursor-pointer shadow-2xs">
-              <BrainCircuit className="w-4.5 h-4.5 text-[#9b4500]" />
-              <span>تحليل حكم بالذكاء الاصطناعي</span>
-            </button>
-          </Link>
-
-          <Link href="/sessions">
-            <button className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] text-white transition-all shadow-sm text-xs font-bold cursor-pointer">
-              <PlusCircle className="w-4.5 h-4.5" />
-              <span>إضافة جلسة فورية</span>
-            </button>
-          </Link>
-        </div>
+    <div className="flex items-center flex-wrap gap-3 text-xs text-[#757682]">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#eff4ff] text-[#444651]">
+        <span className="w-2 h-2 rounded-full bg-[#fd8a42] animate-pulse"></span>
+        عدد المحامين داخل المكتب {officeMembers.length}
+      </span>
+      <span className="text-slate-300">|</span>
+      <div className="flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-[#757682]" />
+        <span>
+          {hijriDateStr ? `${hijriDateStr} هـ` : "التقويم القضائي"}
+        </span>
+        <span className="text-[#757682]">/</span>
+        <span>{gregorianDateStr}</span>
       </div>
+    </div>
+  </div>
+
+  {/* Quick Action Buttons */}
+  <div className="grid grid-cols-2 gap-2.5 w-full max-w-md">
+    {/* الزر الأول (فوق - يسار) */}
+    <Link href="/cases" className="w-full">
+      <button className="w-full inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0b1c30] transition-colors text-xs font-semibold cursor-pointer border border-slate-200/60">
+        <FilePlus className="w-4 h-4 text-[#00236f]" />
+        <span>تسجيل قضية جديدة</span>
+      </button>
+    </Link>
+
+    {/* الزر الثاني (فوق - يمين) */}
+    <Link href="/chat" className="w-full">
+      <button className="w-full inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#131b2e] transition-colors text-xs font-semibold cursor-pointer border border-slate-200/60">
+        <BrainCircuit className="w-4 h-4 text-[#9b4500]" />
+        <span>تحليل بالذكاء الاصطناعي</span>
+      </button>
+    </Link>
+
+    {/* الزر الثالث (تحت - بعرض الصندوق كامل) */}
+    <Link href="/sessions" className="col-span-2 w-full">
+      <button className="w-full inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl bg-[#00236f] hover:bg-[#15388c] text-white transition-all text-xs font-bold cursor-pointer shadow-sm">
+        <PlusCircle className="w-4 h-4" />
+        <span>إضافة جلسة فورية</span>
+      </button>
+    </Link>
+  </div>
+</div>
 
       {/* ── 2. Top Primary KPI Metrics Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -396,9 +487,13 @@ export default function DashboardAdminPage() {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div className="flex flex-col text-right">
-              <span className="text-xs font-medium text-[#757682]">الجلسات القضائية اليوم</span>
+              <span className="text-xs font-medium text-[#757682]">
+                الجلسات القضائية اليوم
+              </span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#0b1c30]">{todayCount}</span>
+                <span className="text-2xl font-bold text-[#0b1c30]">
+                  {todayCount}
+                </span>
                 <span className="text-xs text-[#757682]">جلسات مجدولة</span>
               </div>
             </div>
@@ -411,7 +506,9 @@ export default function DashboardAdminPage() {
               {remainingToday} متبقية • {completedToday} مكتملة
             </span>
             <span className="text-xs font-semibold text-[#00236f]">
-              {todayCount > 0 ? `${Math.round((completedToday / todayCount) * 100)}% اليوم` : '0%'}
+              {todayCount > 0
+                ? `${Math.round((completedToday / todayCount) * 100)}% اليوم`
+                : "0%"}
             </span>
           </div>
         </div>
@@ -420,9 +517,13 @@ export default function DashboardAdminPage() {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div className="flex flex-col text-right">
-              <span className="text-xs font-medium text-[#757682]">القضايا المتداولة والنشطة</span>
+              <span className="text-xs font-medium text-[#757682]">
+                القضايا المتداولة والنشطة
+              </span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#0b1c30]">{activeCasesCount}</span>
+                <span className="text-2xl font-bold text-[#0b1c30]">
+                  {activeCasesCount}
+                </span>
                 <span className="text-xs text-[#757682]">ملف قضائي سارٍ</span>
               </div>
             </div>
@@ -444,9 +545,13 @@ export default function DashboardAdminPage() {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div className="flex flex-col text-right">
-              <span className="text-xs font-medium text-[#757682]">المهام والمواعيد الإجرائية</span>
+              <span className="text-xs font-medium text-[#757682]">
+                المهام والمواعيد الإجرائية
+              </span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-[#9b4500]">{urgentTasksCount}</span>
+                <span className="text-2xl font-bold text-[#9b4500]">
+                  {urgentTasksCount}
+                </span>
                 <span className="text-xs text-[#757682]">إجراءات حرجة</span>
               </div>
             </div>
@@ -468,13 +573,17 @@ export default function DashboardAdminPage() {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-[#e5eeff] flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div className="flex flex-col text-right">
-              <span className="text-xs font-medium text-[#757682]">رصيد معالجة الذكاء الاصطناعي</span>
+              <span className="text-xs font-medium text-[#757682]">
+                رصيد معالجة الذكاء الاصطناعي
+              </span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-2xl font-bold text-[#00236f]">
-                  {isUnlimitedAi ? `${aiUsageCount} طلب` : `${aiRemaining} / ${aiQuotaLimit}`}
+                  {isUnlimitedAi
+                    ? `${aiUsageCount} `
+                    : `${aiRemaining} / ${aiQuotaLimit}`}
                 </span>
                 <span className="text-xs text-[#757682]">
-                  {isUnlimitedAi ? 'طلب مستهلك' : 'طلب متوفر'}
+                  {isUnlimitedAi ? "طلب مستهلك" : "طلب متوفر"}
                 </span>
               </div>
             </div>
@@ -484,13 +593,20 @@ export default function DashboardAdminPage() {
           </div>
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs text-[#444651] mb-1 font-medium">
-              <span>الاستهلاك: {isUnlimitedAi ? `${aiUsageCount} عملية` : `${aiPercentage}%`}</span>
-              <span>{user?.plan_tier ? `باقة ${user.plan_tier}` : 'حساب المكتب'}</span>
+              <span>
+                الاستهلاك:{" "}
+                {isUnlimitedAi ? `${aiUsageCount} عملية` : `${aiPercentage}%`}
+              </span>
+              <span>
+                {user?.plan_tier ? `باقة ${user.plan_tier}` : "حساب المكتب"}
+              </span>
             </div>
             <div className="w-full bg-[#e5eeff] h-1.5 rounded-full overflow-hidden">
               <div
                 className="bg-[#00236f] h-full rounded-full transition-all"
-                style={{ width: `${isUnlimitedAi ? Math.min(100, aiUsageCount * 5) : aiPercentage}%` }}
+                style={{
+                  width: `${isUnlimitedAi ? Math.min(100, aiUsageCount * 5) : aiPercentage}%`,
+                }}
               ></div>
             </div>
           </div>
@@ -509,37 +625,39 @@ export default function DashboardAdminPage() {
                 <div className="w-8 h-8 rounded-lg bg-[#dce1ff] flex items-center justify-center text-[#00236f]">
                   <CalendarCheck className="w-4.5 h-4.5" />
                 </div>
-                <h2 className="text-lg font-bold text-[#0b1c30]">جدول الجلسات القادمة والمستعجلة</h2>
+                <h2 className="text-lg font-bold text-[#0b1c30]">
+                  جدول الجلسات القادمة والمستعجلة
+                </h2>
               </div>
 
               {/* Tabs */}
               <div className="flex items-center bg-[#eff4ff] p-1 rounded-lg gap-1 text-xs">
                 <button
-                  onClick={() => setActiveSessionTab('today')}
+                  onClick={() => setActiveSessionTab("today")}
                   className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
-                    activeSessionTab === 'today'
-                      ? 'bg-white text-[#00236f] shadow-xs'
-                      : 'text-[#444651] hover:text-[#0b1c30]'
+                    activeSessionTab === "today"
+                      ? "bg-white text-[#00236f] shadow-xs"
+                      : "text-[#444651] hover:text-[#0b1c30]"
                   }`}
                 >
                   جلسات اليوم ({todayCount})
                 </button>
                 <button
-                  onClick={() => setActiveSessionTab('week')}
+                  onClick={() => setActiveSessionTab("week")}
                   className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
-                    activeSessionTab === 'week'
-                      ? 'bg-white text-[#00236f] shadow-xs'
-                      : 'text-[#444651] hover:text-[#0b1c30]'
+                    activeSessionTab === "week"
+                      ? "bg-white text-[#00236f] shadow-xs"
+                      : "text-[#444651] hover:text-[#0b1c30]"
                   }`}
                 >
                   هذا الأسبوع ({weekCount})
                 </button>
                 <button
-                  onClick={() => setActiveSessionTab('report')}
+                  onClick={() => setActiveSessionTab("report")}
                   className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
-                    activeSessionTab === 'report'
-                      ? 'bg-white text-[#00236f] shadow-xs'
-                      : 'text-[#444651] hover:text-[#0b1c30]'
+                    activeSessionTab === "report"
+                      ? "bg-white text-[#00236f] shadow-xs"
+                      : "text-[#444651] hover:text-[#0b1c30]"
                   }`}
                 >
                   تتطلب تقرير ({reportCount})
@@ -552,85 +670,107 @@ export default function DashboardAdminPage() {
               <table className="w-full text-right text-xs">
                 <thead>
                   <tr className="bg-[#eff4ff] text-[#757682] text-xs">
-                    <th className="py-3 px-4 rounded-r-lg font-semibold">رقم القضية</th>
-                    <th className="py-3 px-4 font-semibold">المحكمة والدائرة</th>
+                    <th className="py-3 px-4 rounded-r-lg font-semibold">
+                      رقم القضية
+                    </th>
+                    <th className="py-3 px-4 font-semibold">
+                      المحكمة والدائرة
+                    </th>
                     <th className="py-3 px-4 font-semibold">أطراف الدعوى</th>
                     <th className="py-3 px-4 font-semibold">المحامي المكلف</th>
                     <th className="py-3 px-4 font-semibold">التوقيت والقاعة</th>
-                    <th className="py-3 px-4 rounded-l-lg font-semibold text-center">الإجراء / الحالة</th>
+                    <th className="py-3 px-4 rounded-l-lg font-semibold text-center">
+                      الإجراء / الحالة
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eff4ff]">
                   {ledgerSessions.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[#757682] text-xs">
+                      <td
+                        colSpan={6}
+                        className="py-8 text-center text-[#757682] text-xs"
+                      >
                         لا توجد جلسات مسجلة في هذا الأسبوع
                       </td>
                     </tr>
                   ) : (
                     ledgerSessions.map((row) => (
-                    <tr key={row.id} className="hover:bg-[#eff4ff]/50 transition-colors">
-                      {/* Case Number */}
-                      <td className="py-3.5 px-4 font-semibold text-[#00236f] whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1">
-                          <FileText className="w-3.5 h-3.5 text-[#757682]" />
-                          {row.caseNumber}
-                        </span>
-                      </td>
+                      <tr
+                        key={row.id}
+                        className="hover:bg-[#eff4ff]/50 transition-colors"
+                      >
+                        {/* Case Number */}
+                        <td className="py-3.5 px-4 font-semibold text-[#00236f] whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1">
+                            <FileText className="w-3.5 h-3.5 text-[#757682]" />
+                            {row.caseNumber}
+                          </span>
+                        </td>
 
-                      {/* Court & Circuit */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-[#0b1c30]">{row.court}</span>
-                          <span className="text-[11px] text-[#757682]">{row.circuit}</span>
-                        </div>
-                      </td>
-
-                      {/* Parties */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-col max-w-[190px]">
-                          <span className="font-medium text-[#0b1c30] truncate">{row.plaintiff}</span>
-                          <span className="text-[11px] text-[#757682] truncate">ضد: {row.defendant}</span>
-                        </div>
-                      </td>
-
-                      {/* Lawyer */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#dce1ff] text-[#00236f] flex items-center justify-center font-bold text-[10px]">
-                            {row.avatarInitial}
+                        {/* Court & Circuit */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-[#0b1c30]">
+                              {row.court}
+                            </span>
+                            <span className="text-[11px] text-[#757682]">
+                              {row.circuit}
+                            </span>
                           </div>
-                          <span className="text-[#0b1c30] font-medium">{row.lawyer}</span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Time & Room */}
-                      <td className="py-3.5 px-4 whitespace-nowrap text-[#0b1c30]">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-[#757682]" />
-                          <span>{row.time}</span>
-                        </div>
-                      </td>
+                        {/* Parties */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex flex-col max-w-[190px]">
+                            <span className="font-medium text-[#0b1c30] truncate">
+                              {row.plaintiff}
+                            </span>
+                            <span className="text-[11px] text-[#757682] truncate">
+                              ضد: {row.defendant}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Status / Action */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        {row.statusType === 'in_progress' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ffdbca] text-[#9b4500]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] animate-pulse"></span>
-                            {row.statusText}
-                          </span>
-                        ) : row.statusType === 'recorded' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00236f]">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            {row.statusText}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#e5eeff] text-[#444651]">
-                            {row.statusText}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                        {/* Lawyer */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-[#dce1ff] text-[#00236f] flex items-center justify-center font-bold text-[10px]">
+                              {row.avatarInitial}
+                            </div>
+                            <span className="text-[#0b1c30] font-medium">
+                              {row.lawyer}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Time & Room */}
+                        <td className="py-3.5 px-4 whitespace-nowrap text-[#0b1c30]">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-[#757682]" />
+                            <span>{row.time}</span>
+                          </div>
+                        </td>
+
+                        {/* Status / Action */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          {row.statusType === "in_progress" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ffdbca] text-[#9b4500]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] animate-pulse"></span>
+                              {row.statusText}
+                            </span>
+                          ) : row.statusType === "recorded" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#dce1ff] text-[#00236f]">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {row.statusText}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#e5eeff] text-[#444651]">
+                              {row.statusText}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
                     ))
                   )}
                 </tbody>
@@ -639,7 +779,10 @@ export default function DashboardAdminPage() {
 
             {/* Table Footer */}
             <div className="pt-3 mt-2 border-t border-[#eff4ff] flex items-center justify-between text-xs text-[#757682]">
-              <span>عرض {ledgerSessions.length} من أصل {weekCount} جلسة مسجلة في هذا الأسبوع</span>
+              <span>
+                عرض {ledgerSessions.length} من أصل {weekCount} جلسة مسجلة في هذا
+                الأسبوع
+              </span>
               <Link href="/sessions">
                 <span className="text-[#00236f] font-bold hover:underline cursor-pointer flex items-center gap-1">
                   عرض جميع الجلسات والتقارير القضائية ←
@@ -657,8 +800,12 @@ export default function DashboardAdminPage() {
                   <Users className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-[#0b1c30]">توزيع عبء العمل والمهام على المحامين</h2>
-                  <p className="text-xs text-[#757682]">متابعة إشغال الفريق، القضايا النشطة، وحصص الذكاء الاصطناعي</p>
+                  <h2 className="text-lg font-bold text-[#0b1c30]">
+                    توزيع عبء العمل والمهام على المحامين
+                  </h2>
+                  <p className="text-xs text-[#757682]">
+                    متابعة إشغال الفريق، القضايا النشطة، وحصص الذكاء الاصطناعي
+                  </p>
                 </div>
               </div>
 
@@ -674,101 +821,139 @@ export default function DashboardAdminPage() {
               <table className="w-full text-right text-xs">
                 <thead>
                   <tr className="bg-[#eff4ff] text-[#757682] text-xs">
-                    <th className="py-3 px-4 rounded-r-lg font-semibold">المحامي</th>
-                    <th className="py-3 px-4 font-semibold text-center">القضايا المسندة</th>
-                    <th className="py-3 px-4 font-semibold text-center">الجلسات النشطة</th>
-                    <th className="py-3 px-4 font-semibold text-center">الوكالات السارية</th>
+                    <th className="py-3 px-4 rounded-r-lg font-semibold">
+                      المحامي
+                    </th>
+                    <th className="py-3 px-4 font-semibold text-center">
+                      القضايا المسندة
+                    </th>
+                    <th className="py-3 px-4 font-semibold text-center">
+                      الجلسات النشطة
+                    </th>
+                    <th className="py-3 px-4 font-semibold text-center">
+                      الوكالات السارية
+                    </th>
                     <th className="py-3 px-4 font-semibold">استهلاك الـ AI</th>
-                    <th className="py-3 px-4 rounded-l-lg font-semibold text-center">الحالة الحالية</th>
+                    <th className="py-3 px-4 rounded-l-lg font-semibold text-center">
+                      الحالة الحالية
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eff4ff]">
                   {lawyerRows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[#757682] text-xs">
+                      <td
+                        colSpan={6}
+                        className="py-8 text-center text-[#757682] text-xs"
+                      >
                         لا توجد بيانات عبء عمل متاحة حالياً
                       </td>
                     </tr>
                   ) : (
                     lawyerRows.map((lawyer) => (
-                    <tr key={lawyer.id} className="hover:bg-[#eff4ff]/50 transition-colors">
-                      {/* Name & Specialty */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-[#dce1ff] text-[#00236f] flex items-center justify-center font-bold text-xs shrink-0">
-                            {lawyer.avatarInitial}
-                          </div>
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-[#0b1c30]">{lawyer.name}</span>
-                              {lawyer.specialty && (
-                                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-semibold px-1.5 py-0.2 rounded">
-                                  {lawyer.specialty}
-                                </span>
-                              )}
+                      <tr
+                        key={lawyer.id}
+                        className="hover:bg-[#eff4ff]/50 transition-colors"
+                      >
+                        {/* Name & Specialty */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-[#dce1ff] text-[#00236f] flex items-center justify-center font-bold text-xs shrink-0">
+                              {lawyer.avatarInitial}
                             </div>
-                            <span className="text-[11px] text-[#757682]">{lawyer.role}</span>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-[#0b1c30]">
+                                  {lawyer.name}
+                                </span>
+                                {lawyer.specialty && (
+                                  <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-semibold px-1.5 py-0.2 rounded">
+                                    {lawyer.specialty}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-[#757682]">
+                                {lawyer.role}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Assigned Cases */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
-                        <div className="flex flex-col items-center">
-                          <span className="font-bold">{lawyer.assignedCases}</span>
-                          <span className="text-[10px] text-[#757682]">قضايا</span>
-                        </div>
-                      </td>
-
-                      {/* Active Sessions */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
-                        <div className="flex flex-col items-center">
-                          <span className="font-bold">{lawyer.activeSessions}</span>
-                          <span className="text-[10px] text-[#757682]">جلسات</span>
-                        </div>
-                      </td>
-
-                      {/* Active POAs */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
-                        <div className="flex flex-col items-center">
-                          <span className="font-bold">{lawyer.activePoa}</span>
-                          <span className="text-[10px] text-[#757682]">وكالة</span>
-                        </div>
-                      </td>
-
-                      {/* AI Usage */}
-                      <td className="py-3.5 px-4 whitespace-nowrap min-w-[130px]">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-[#0b1c30]">{lawyer.aiUsed}/{lawyer.aiTotal}</span>
-                            <span className="text-[#757682]">{lawyer.aiPercent}%</span>
+                        {/* Assigned Cases */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold">
+                              {lawyer.assignedCases}
+                            </span>
+                            <span className="text-[10px] text-[#757682]">
+                              قضايا
+                            </span>
                           </div>
-                          <div className="w-full bg-[#e5eeff] h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                lawyer.aiPercent > 20 ? 'bg-[#fd8a42]' : 'bg-[#00236f]'
-                              }`}
-                              style={{ width: `${lawyer.aiPercent}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Status */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        {lawyer.status === 'in_hearing' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ffdbca] text-[#9b4500]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] animate-pulse"></span>
-                            {lawyer.statusLabel}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#e5eeff] text-[#00236f]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00236f]"></span>
-                            {lawyer.statusLabel}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                        {/* Active Sessions */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold">
+                              {lawyer.activeSessions}
+                            </span>
+                            <span className="text-[10px] text-[#757682]">
+                              جلسات
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Active POAs */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap font-medium text-[#0b1c30]">
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold">
+                              {lawyer.activePoa}
+                            </span>
+                            <span className="text-[10px] text-[#757682]">
+                              وكالة
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* AI Usage */}
+                        <td className="py-3.5 px-4 whitespace-nowrap min-w-[130px]">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-[#0b1c30]">
+                                {lawyer.aiUsed}/{lawyer.aiTotal}
+                              </span>
+                              <span className="text-[#757682]">
+                                {lawyer.aiPercent}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-[#e5eeff] h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  lawyer.aiPercent > 20
+                                    ? "bg-[#fd8a42]"
+                                    : "bg-[#00236f]"
+                                }`}
+                                style={{ width: `${lawyer.aiPercent}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          {lawyer.status === "in_hearing" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ffdbca] text-[#9b4500]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] animate-pulse"></span>
+                              {lawyer.statusLabel}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#e5eeff] text-[#00236f]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#00236f]"></span>
+                              {lawyer.statusLabel}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
                     ))
                   )}
                 </tbody>
@@ -784,14 +969,30 @@ export default function DashboardAdminPage() {
             <div className="flex items-center justify-between pb-3 mb-2 border-b-0">
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[#00236f]" />
-                <h3 className="text-base font-bold text-[#0b1c30]">التقويم القضائي الذكي</h3>
+                <h3 className="text-base font-bold text-[#0b1c30]">
+                  التقويم القضائي الذكي
+                </h3>
               </div>
               <div className="flex items-center gap-1 text-[#0b1c30]">
-                <button onClick={() => setSelectedCalendarDay(Math.max(1, selectedCalendarDay - 1))} className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]">
+                <button
+                  onClick={() =>
+                    setSelectedCalendarDay(Math.max(1, selectedCalendarDay - 1))
+                  }
+                  className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]"
+                >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-                <span className="text-xs font-semibold text-[#00236f]">{calMonthName} {calYear}</span>
-                <button onClick={() => setSelectedCalendarDay(Math.min(31, selectedCalendarDay + 1))} className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]">
+                <span className="text-xs font-semibold text-[#00236f]">
+                  {calMonthName} {calYear}
+                </span>
+                <button
+                  onClick={() =>
+                    setSelectedCalendarDay(
+                      Math.min(31, selectedCalendarDay + 1),
+                    )
+                  }
+                  className="p-1 hover:bg-[#e5eeff] rounded transition-colors text-[#757682]"
+                >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
               </div>
@@ -806,31 +1007,37 @@ export default function DashboardAdminPage() {
               </div>
 
               <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                {Array.from({ length: new Date(calYear, calMonth + 1, 0).getDate() }, (_, i) => {
-                  const day = i + 1;
-                  const isSelected = selectedCalendarDay === day;
-                  const hasSessions = sessionDaysInMonth.has(day);
-                  const isCurrentDay = now.getDate() === day && now.getMonth() === calMonth && now.getFullYear() === calYear;
+                {Array.from(
+                  { length: new Date(calYear, calMonth + 1, 0).getDate() },
+                  (_, i) => {
+                    const day = i + 1;
+                    const isSelected = selectedCalendarDay === day;
+                    const hasSessions = sessionDaysInMonth.has(day);
+                    const isCurrentDay =
+                      now.getDate() === day &&
+                      now.getMonth() === calMonth &&
+                      now.getFullYear() === calYear;
 
-                  return (
-                    <span
-                      key={day}
-                      onClick={() => setSelectedCalendarDay(day)}
-                      className={`py-1 rounded-full cursor-pointer relative transition-all ${
-                        isSelected
-                          ? 'bg-[#00236f] text-white font-bold shadow-xs'
-                          : isCurrentDay
-                          ? 'bg-[#edf4ff] text-[#00236f] font-bold border border-[#bcd5fc]'
-                          : 'hover:bg-[#e5eeff] text-[#0b1c30]'
-                      }`}
-                    >
-                      {day}
-                      {hasSessions && !isSelected && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] absolute bottom-0.5 left-1/2 -translate-x-1/2"></span>
-                      )}
-                    </span>
-                  );
-                })}
+                    return (
+                      <span
+                        key={day}
+                        onClick={() => setSelectedCalendarDay(day)}
+                        className={`py-1 rounded-full cursor-pointer relative transition-all ${
+                          isSelected
+                            ? "bg-[#00236f] text-white font-bold shadow-xs"
+                            : isCurrentDay
+                              ? "bg-[#edf4ff] text-[#00236f] font-bold border border-[#bcd5fc]"
+                              : "hover:bg-[#e5eeff] text-[#0b1c30]"
+                        }`}
+                      >
+                        {day}
+                        {hasSessions && !isSelected && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#fd8a42] absolute bottom-0.5 left-1/2 -translate-x-1/2"></span>
+                        )}
+                      </span>
+                    );
+                  },
+                )}
               </div>
             </div>
 
@@ -851,8 +1058,12 @@ export default function DashboardAdminPage() {
           {/* Widget 2: Case Status Distribution (Donut Breakdown) */}
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col">
             <div className="flex items-center justify-between pb-3 mb-2">
-              <h3 className="text-base font-bold text-[#0b1c30]">توزيع حالات القضايا</h3>
-              <span className="text-xs text-[#757682]">إجمالي {totalCasesCalculated} قضية</span>
+              <h3 className="text-base font-bold text-[#0b1c30]">
+                توزيع حالات القضايا
+              </h3>
+              <span className="text-xs text-[#757682]">
+                إجمالي {totalCasesCalculated} قضية
+              </span>
             </div>
 
             {/* Donut Chart & Legends */}
@@ -861,7 +1072,14 @@ export default function DashboardAdminPage() {
               <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   {/* Background Circle */}
-                  <circle cx="50" cy="50" r="38" fill="transparent" stroke="#eff4ff" strokeWidth="12" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#eff4ff"
+                    strokeWidth="12"
+                  />
                   {totalCasesForDonut > 0 && (
                     <>
                       {/* Active Primary */}
@@ -912,7 +1130,9 @@ export default function DashboardAdminPage() {
                   )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-lg font-bold text-[#0b1c30] leading-tight">{activeCasesCount}</span>
+                  <span className="text-lg font-bold text-[#0b1c30] leading-tight">
+                    {activeCasesCount}
+                  </span>
                   <span className="text-[10px] text-[#757682]">قضية نشطة</span>
                 </div>
               </div>
@@ -931,7 +1151,9 @@ export default function DashboardAdminPage() {
                     <span className="w-2.5 h-2.5 rounded-full bg-[#fd8a42]"></span>
                     <span className="text-[#444651]">مؤجلة لحكم</span>
                   </div>
-                  <span className="font-bold text-[#0b1c30]">{pPostponed}%</span>
+                  <span className="font-bold text-[#0b1c30]">
+                    {pPostponed}%
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-1.5">
@@ -955,7 +1177,9 @@ export default function DashboardAdminPage() {
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-[#e5eeff] flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b-0">
               <CheckCheck className="w-5 h-5 text-[#00236f]" />
-              <h3 className="text-base font-bold text-[#0b1c30]">مزامنة البيانات والخدمات</h3>
+              <h3 className="text-base font-bold text-[#0b1c30]">
+                مزامنة البيانات والخدمات
+              </h3>
             </div>
 
             {/* Google Sheets */}
@@ -965,8 +1189,12 @@ export default function DashboardAdminPage() {
                   <Table className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col text-right">
-                  <span className="text-xs font-bold text-[#0b1c30]">ربط Google Sheets</span>
-                  <span className="text-[10px] text-[#757682]">آخر مزامنة قبل 5 دقائق</span>
+                  <span className="text-xs font-bold text-[#0b1c30]">
+                    ربط Google Sheets
+                  </span>
+                  <span className="text-[10px] text-[#757682]">
+                    آخر مزامنة قبل 5 دقائق
+                  </span>
                 </div>
               </div>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00236f]">
@@ -982,8 +1210,12 @@ export default function DashboardAdminPage() {
                   <MessageSquare className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col text-right">
-                  <span className="text-xs font-bold text-[#0b1c30]">إشعارات الواتساب للموكلين</span>
-                  <span className="text-[10px] text-[#757682]">تسليم 98% بنجاح</span>
+                  <span className="text-xs font-bold text-[#0b1c30]">
+                    إشعارات الواتساب للموكلين
+                  </span>
+                  <span className="text-[10px] text-[#757682]">
+                    تسليم 98% بنجاح
+                  </span>
                 </div>
               </div>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#9b4500]">

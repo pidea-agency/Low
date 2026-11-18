@@ -830321,6 +830321,44 @@ var init_postgres_service = __esm({
 });
 
 // src/services/notification-template.service.ts
+function renderTestMessageWithDummyPlaceholders(template, customOverrides = {}) {
+  if (!template) return "";
+  const map = { ...DUMMY_TEMPLATE_PLACEHOLDERS, ...customOverrides };
+  let result = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
+    return map[key] ?? map[key.toLowerCase()] ?? `[${key}]`;
+  });
+  result = result.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+    return map[key] ?? map[key.toLowerCase()] ?? `[${key}]`;
+  });
+  return result;
+}
+function checkAndRecordTestSend(adminKey) {
+  const now = Date.now();
+  const windowStart = now - ONE_HOUR_MS;
+  const history = (testSendRateLimitMap.get(adminKey) || []).filter((ts) => ts > windowStart);
+  if (history.length >= MAX_TEST_SENDS_PER_HOUR) {
+    const oldest = history[0];
+    const resetInMs = oldest + ONE_HOUR_MS - now;
+    const resetInMinutes = Math.max(1, Math.ceil(resetInMs / 6e4));
+    return { allowed: false, remaining: 0, resetInMinutes };
+  }
+  history.push(now);
+  testSendRateLimitMap.set(adminKey, history);
+  return { allowed: true, remaining: MAX_TEST_SENDS_PER_HOUR - history.length, resetInMinutes: 60 };
+}
+function getTestSendQuota(adminKey) {
+  const now = Date.now();
+  const windowStart = now - ONE_HOUR_MS;
+  const history = (testSendRateLimitMap.get(adminKey) || []).filter((ts) => ts > windowStart);
+  const remaining = Math.max(0, MAX_TEST_SENDS_PER_HOUR - history.length);
+  let resetInMinutes = 0;
+  if (history.length > 0) {
+    const oldest = history[0];
+    const resetInMs = oldest + ONE_HOUR_MS - now;
+    resetInMinutes = Math.max(0, Math.ceil(resetInMs / 6e4));
+  }
+  return { remaining, max: MAX_TEST_SENDS_PER_HOUR, resetInMinutes };
+}
 function renderTemplate(template, placeholders = {}) {
   if (!template) return "";
   return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
@@ -830348,15 +830386,27 @@ function createDefaultRecord(officeId, eventType) {
   };
 }
 async function listOfficeNotificationTemplates(officeId) {
-  const officeMap = isInMemoryFallbackAllowed() ? memoryTemplateStore.get(officeId) || /* @__PURE__ */ new Map() : /* @__PURE__ */ new Map();
+  let officeMap = memoryTemplateStore.get(officeId);
+  if (!officeMap) {
+    officeMap = /* @__PURE__ */ new Map();
+    memoryTemplateStore.set(officeId, officeMap);
+  }
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from("notification_templates").select("*").eq("office_id", officeId);
       if (error) {
-        logger.error({ error, officeId }, "Failed to query notification_templates from Supabase");
-        if (!isInMemoryFallbackAllowed()) {
-          throw new Error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0648\u0627\u0644\u0628 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: " + error.message);
+        const isTableMissing = error.code === "PGRST205" || error.code === "42P01" || String(error.message || "").includes("Could not find the table");
+        if (isTableMissing) {
+          logger.warn(
+            { error: error.message, officeId },
+            "notification_templates table not found in Supabase schema cache, serving built-in default templates"
+          );
+        } else {
+          logger.error({ error, officeId }, "Failed to query notification_templates from Supabase");
+          if (!isInMemoryFallbackAllowed()) {
+            throw new Error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0648\u0627\u0644\u0628 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: " + error.message);
+          }
         }
       } else if (data && Array.isArray(data)) {
         for (const row of data) {
@@ -830385,15 +830435,12 @@ async function listOfficeNotificationTemplates(officeId) {
         }
       }
     } catch (err) {
-      if (!isInMemoryFallbackAllowed()) {
+      if (String(err?.message || "").includes("Could not find the table")) {
+        logger.warn({ err: err?.message, officeId }, "Falling back to default templates");
+      } else if (!isInMemoryFallbackAllowed()) {
         throw err;
       }
     }
-  } else if (!isInMemoryFallbackAllowed()) {
-    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
-  }
-  if (isInMemoryFallbackAllowed()) {
-    memoryTemplateStore.set(officeId, officeMap);
   }
   const allEvents = Object.keys(NOTIFICATION_EVENT_DEFINITIONS);
   return allEvents.map((eventType) => {
@@ -830402,23 +830449,23 @@ async function listOfficeNotificationTemplates(officeId) {
       return existing;
     }
     const defRecord = createDefaultRecord(officeId, eventType);
-    if (isInMemoryFallbackAllowed()) {
-      officeMap.set(eventType, defRecord);
-    }
+    officeMap.set(eventType, defRecord);
     return defRecord;
   });
 }
 async function getOfficeNotificationTemplate(officeId, eventType) {
-  if (isInMemoryFallbackAllowed()) {
-    const officeMap = memoryTemplateStore.get(officeId);
-    if (officeMap && officeMap.has(eventType)) {
-      return officeMap.get(eventType);
-    }
+  const officeMap = memoryTemplateStore.get(officeId);
+  if (officeMap && officeMap.has(eventType)) {
+    return officeMap.get(eventType);
   }
-  const all = await listOfficeNotificationTemplates(officeId);
-  const found = all.find((t2) => t2.event_type === eventType);
-  if (found) {
-    return found;
+  try {
+    const all = await listOfficeNotificationTemplates(officeId);
+    const found = all.find((t2) => t2.event_type === eventType);
+    if (found) {
+      return found;
+    }
+  } catch (err) {
+    logger.warn({ err: err?.message, officeId, eventType }, "Failed to fetch office template, falling back to default record");
   }
   return createDefaultRecord(officeId, eventType);
 }
@@ -830450,24 +830497,28 @@ async function updateOfficeNotificationTemplate(officeId, eventType, patch) {
     };
     const { data, error } = await client.from("notification_templates").upsert(payload, { onConflict: "office_id,event_type" }).select().single();
     if (error) {
-      logger.error({ error, officeId, eventType }, "Failed to upsert notification template to Supabase");
-      if (!isInMemoryFallbackAllowed()) {
-        throw new Error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0648\u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0644\u0628 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: " + (error.message || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"));
+      const isTableMissing = error.code === "PGRST205" || error.code === "42P01" || String(error.message || "").includes("Could not find the table");
+      if (isTableMissing) {
+        logger.warn(
+          { error: error.message, officeId, eventType },
+          "notification_templates table not found in Supabase schema cache, persisted in server memory"
+        );
+      } else {
+        logger.error({ error, officeId, eventType }, "Failed to upsert notification template to Supabase");
+        if (!isInMemoryFallbackAllowed()) {
+          throw new Error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0648\u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0644\u0628 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: " + (error.message || "\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"));
+        }
       }
     } else if (data) {
       updatedRecord.id = data.id;
     }
-  } else if (!isInMemoryFallbackAllowed()) {
-    throw new DatabaseUnavailableError("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
-  if (isInMemoryFallbackAllowed()) {
-    let officeMap = memoryTemplateStore.get(officeId);
-    if (!officeMap) {
-      officeMap = /* @__PURE__ */ new Map();
-      memoryTemplateStore.set(officeId, officeMap);
-    }
-    officeMap.set(eventType, updatedRecord);
+  let officeMap = memoryTemplateStore.get(officeId);
+  if (!officeMap) {
+    officeMap = /* @__PURE__ */ new Map();
+    memoryTemplateStore.set(officeId, officeMap);
   }
+  officeMap.set(eventType, updatedRecord);
   return updatedRecord;
 }
 async function dispatchEventNotification(params) {
@@ -830569,7 +830620,7 @@ async function dispatchEventNotification(params) {
     };
   }
 }
-var CATEGORY_LABELS, RECIPIENT_ROLE_LABELS, NOTIFICATION_EVENT_DEFINITIONS, memoryTemplateStore;
+var CATEGORY_LABELS, RECIPIENT_ROLE_LABELS, NOTIFICATION_EVENT_DEFINITIONS, memoryTemplateStore, DUMMY_TEMPLATE_PLACEHOLDERS, testSendRateLimitMap, MAX_TEST_SENDS_PER_HOUR, ONE_HOUR_MS;
 var init_notification_template_service = __esm({
   "src/services/notification-template.service.ts"() {
     "use strict";
@@ -830789,6 +830840,77 @@ var init_notification_template_service = __esm({
       }
     };
     memoryTemplateStore = /* @__PURE__ */ new Map();
+    DUMMY_TEMPLATE_PLACEHOLDERS = {
+      // Cases, Sessions & Court
+      recordTypeArabic: "\u062C\u0644\u0633\u0629 \u0642\u0636\u0627\u0626\u064A\u0629 (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      record_type_arabic: "\u062C\u0644\u0633\u0629 \u0642\u0636\u0627\u0626\u064A\u0629 (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      recordDescription: "\u062F\u0639\u0648\u0649 \u0645\u0637\u0627\u0644\u0628\u0629 \u0645\u0627\u0644\u064A\u0629 \u0631\u0642\u0645 0000/9999 (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      record_description: "\u062F\u0639\u0648\u0649 \u0645\u0637\u0627\u0644\u0628\u0629 \u0645\u0627\u0644\u064A\u0629 \u0631\u0642\u0645 0000/9999 (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      directLink: "https://app.mansoori-law.sa/sessions/demo",
+      direct_link: "https://app.mansoori-law.sa/sessions/demo",
+      recordId: "9999",
+      record_id: "9999",
+      caseNumber: "0000/9999",
+      case_number: "0000/9999",
+      sessionDate: "1446/05/20\u0647\u0640",
+      session_date: "1446/05/20\u0647\u0640",
+      sessionTime: "10:30 \u0635\u0628\u0627\u062D\u0627\u064B",
+      session_time: "10:30 \u0635\u0628\u0627\u062D\u0627\u064B",
+      court: "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0628\u0627\u0644\u0631\u064A\u0627\u0636 (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      courtName: "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0628\u0627\u0644\u0631\u064A\u0627\u0636 (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      court_name: "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0628\u0627\u0644\u0631\u064A\u0627\u0636 (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      remainingText: "\u062E\u0644\u0627\u0644 \u0633\u0627\u0639\u062A\u064A\u0646",
+      remaining_text: "\u062E\u0644\u0627\u0644 \u0633\u0627\u0639\u062A\u064A\u0646",
+      kind: "\u062C\u0644\u0633\u0629 \u0645\u0631\u0627\u0641\u0639\u0629",
+      // Lawyers, Members & Staff
+      lawyerName: "\u0623. \u0641\u0647\u062F \u0627\u0644\u0645\u0646\u0635\u0648\u0631\u064A (\u0645\u062D\u0627\u0645 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      lawyer_name: "\u0623. \u0641\u0647\u062F \u0627\u0644\u0645\u0646\u0635\u0648\u0631\u064A (\u0645\u062D\u0627\u0645 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      memberName: "\u0623. \u0641\u0647\u062F \u0627\u0644\u0645\u0646\u0635\u0648\u0631\u064A (\u0639\u0636\u0648 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      member_name: "\u0623. \u0641\u0647\u062F \u0627\u0644\u0645\u0646\u0635\u0648\u0631\u064A (\u0639\u0636\u0648 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      licenseNumber: "381234 (\u062A\u0631\u062E\u064A\u0635 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      license_number: "381234 (\u062A\u0631\u062E\u064A\u0635 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      activationLink: "https://app.mansoori-law.sa/activate/demo-token",
+      activation_link: "https://app.mansoori-law.sa/activate/demo-token",
+      // POA & Clients
+      poaNumber: "44123456 (\u0648\u0643\u0627\u0644\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629)",
+      poa_number: "44123456 (\u0648\u0643\u0627\u0644\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629)",
+      clientName: "\u0639\u0628\u062F\u0627\u0644\u0644\u0647 \u0645\u062D\u0645\u062F (\u0639\u0645\u064A\u0644 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      client_name: "\u0639\u0628\u062F\u0627\u0644\u0644\u0647 \u0645\u062D\u0645\u062F (\u0639\u0645\u064A\u0644 \u062A\u062C\u0631\u064A\u0628\u064A)",
+      poaId: "101",
+      poa_id: "101",
+      daysRemaining: "5",
+      days_remaining: "5",
+      expiryDate: "1446/09/15\u0647\u0640",
+      expiry_date: "1446/09/15\u0647\u0640",
+      // Documents & Uploads
+      documentName: "\u0645\u0630\u0643\u0631\u0629_\u062C\u0648\u0627\u0628\u064A\u0629_\u062A\u062C\u0631\u064A\u0628\u064A\u0629.pdf",
+      document_name: "\u0645\u0630\u0643\u0631\u0629_\u062C\u0648\u0627\u0628\u064A\u0629_\u062A\u062C\u0631\u064A\u0628\u064A\u0629.pdf",
+      uploaderName: "\u0645\u0633\u0627\u0639\u062F \u0642\u0627\u0646\u0648\u0646\u064A (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      uploader_name: "\u0645\u0633\u0627\u0639\u062F \u0642\u0627\u0646\u0648\u0646\u064A (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      recordNumber: "0000/9999",
+      record_number: "0000/9999",
+      // Platform & Office
+      platformName: "\u0645\u0646\u0635\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062C\u0644\u0633\u0627\u062A (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      platform_name: "\u0645\u0646\u0635\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062C\u0644\u0633\u0627\u062A (\u062A\u062C\u0631\u064A\u0628\u064A)",
+      officeName: "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A",
+      office_name: "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A",
+      reason: "\u062A\u062D\u062F\u064A\u062B \u062F\u0648\u0631\u064A \u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0636\u0648\u064A\u0629 (\u0625\u062C\u0631\u0627\u0621 \u0627\u062E\u062A\u0628\u0627\u0631\u064A)",
+      // Subscriptions & Payments
+      planName: "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629 (\u062A\u062C\u0631\u064A\u0628\u064A\u0629)",
+      plan_name: "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629 (\u062A\u062C\u0631\u064A\u0628\u064A\u0629)",
+      endDate: "1446/12/30\u0647\u0640",
+      end_date: "1446/12/30\u0647\u0640",
+      amount: "1,500",
+      currency: "\u0631.\u0633",
+      reference: "REC-TEST-999",
+      paymentDate: "2026/11/18",
+      payment_date: "2026/11/18",
+      method: "\u062A\u062D\u0648\u064A\u0644 \u0628\u0646\u0643\u064A",
+      error: "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645 (\u062E\u0637\u0623 \u062A\u062C\u0631\u064A\u0628\u064A \u0644\u0644\u0627\u062E\u062A\u0628\u0627\u0631)"
+    };
+    testSendRateLimitMap = /* @__PURE__ */ new Map();
+    MAX_TEST_SENDS_PER_HOUR = 10;
+    ONE_HOUR_MS = 60 * 60 * 1e3;
   }
 });
 
@@ -830982,7 +831104,7 @@ __export(supabase_service_exports, {
   AccountSourceUnavailableError: () => AccountSourceUnavailableError,
   DEFAULT_PLATFORM_SETTINGS: () => DEFAULT_PLATFORM_SETTINGS,
   DEFAULT_SUBSCRIPTION_PLANS: () => DEFAULT_SUBSCRIPTION_PLANS,
-  DatabaseUnavailableError: () => DatabaseUnavailableError2,
+  DatabaseUnavailableError: () => DatabaseUnavailableError3,
   OfficeMemberNotFoundError: () => OfficeMemberNotFoundError,
   QuotaExceededError: () => QuotaExceededError,
   UserPendingActivationError: () => UserPendingActivationError,
@@ -831302,7 +831424,7 @@ async function verifySupabaseUser(usernameOrEmail, plainPassword) {
   const cleanIdentifier = usernameOrEmail.trim().toLowerCase();
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   try {
     const tableName = env.supabaseTableName;
@@ -831839,7 +831961,7 @@ async function checkHasPlatformSettingsTable(client) {
 async function listSupabaseUsers() {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const tableName = env.supabaseTableName;
   const hasPhone = await checkHasPhoneColumn(client);
@@ -831848,7 +831970,7 @@ async function listSupabaseUsers() {
   const { data, error } = await client.from(tableName).select(selectCols).order("created_at", { ascending: false });
   if (error) {
     logger.error({ error }, "Failed to list users from Supabase");
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   return (data || []).filter((u) => u.username !== "__platform_settings__" && u.id !== "00000000-0000-0000-0000-000000000001").map(
     (u) => formatUser({
@@ -831880,7 +832002,7 @@ async function listSupabaseUsers() {
 async function listSubscriptionPlans() {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   let plans = [];
   try {
@@ -831921,7 +832043,7 @@ async function listSubscriptionPlans() {
       plans = [...DEFAULT_SUBSCRIPTION_PLANS];
     }
   } catch (err) {
-    if (err instanceof DatabaseUnavailableError2) throw err;
+    if (err instanceof DatabaseUnavailableError3) throw err;
     logger.warn({ err }, "Supabase listSubscriptionPlans failed, defaulting to default plans");
     plans = [...DEFAULT_SUBSCRIPTION_PLANS];
   }
@@ -831980,7 +832102,7 @@ async function createSubscriptionPlan(input) {
   };
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const hasTable = await checkHasSubscriptionPlansTable(client);
   if (!hasTable) {
@@ -832035,7 +832157,7 @@ async function updateSubscriptionPlan(id, input) {
   plan.updated_at = (/* @__PURE__ */ new Date()).toISOString();
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const hasTable = await checkHasSubscriptionPlansTable(client);
   if (!hasTable) {
@@ -832071,7 +832193,7 @@ async function deleteSubscriptionPlan(id) {
   }
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const hasTable = await checkHasSubscriptionPlansTable(client);
   if (hasTable) {
@@ -832572,7 +832694,7 @@ async function listAuditLogs(options) {
   const officeId = options?.office_id?.trim();
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const hasTable = await checkHasAuditLogTable(client);
   if (!hasTable) {
@@ -832604,7 +832726,7 @@ async function listAuditLogs(options) {
 async function getPlatformSettings() {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const hasTable = await checkHasPlatformSettingsTable(client);
   if (!hasTable) {
@@ -832636,7 +832758,7 @@ async function updatePlatformSettings(updates) {
   };
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const hasTable = await checkHasPlatformSettingsTable(client);
   if (hasTable) {
@@ -832667,7 +832789,7 @@ async function checkHasPaymentsTable(client) {
 async function createPayment(data) {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const paymentDate = data.payment_date || now.split("T")[0];
@@ -832712,7 +832834,7 @@ async function createPayment(data) {
 async function updatePayment(id, updates) {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const hasTable = await checkHasPaymentsTable(client);
   if (!hasTable) {
@@ -832751,7 +832873,7 @@ async function listPayments(options) {
   const adminMap = new Map(admins.map((a) => [a.id, a]));
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   let items = [];
   const hasTable = await checkHasPaymentsTable(client);
@@ -833538,7 +833660,7 @@ async function createSupabaseUser(input) {
   const ai_usage_count = 0;
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const tableName = env.supabaseTableName;
   const { data: existing } = await client.from(tableName).select("id").ilike("username", username).limit(1);
@@ -833672,7 +833794,7 @@ async function createSupabaseUser(input) {
 async function countActiveAdmins(excludeUserId) {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const tableName = env.supabaseTableName;
   let query = client.from(tableName).select("id", { count: "exact", head: true }).in("role", ["admin", "super_admin"]).eq("status", "active");
@@ -833688,7 +833810,7 @@ async function countActiveAdmins(excludeUserId) {
 async function deleteSupabaseUser(id) {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   invalidateUserGoogleCache(id);
   const tableName = env.supabaseTableName;
@@ -833710,7 +833832,7 @@ async function deleteSupabaseUser(id) {
 async function updateSupabaseUser(id, input) {
   const client = getSupabaseClient();
   if (!client) {
-    throw new DatabaseUnavailableError2("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
+    throw new DatabaseUnavailableError3("\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B");
   }
   const tableName = env.supabaseTableName;
   if (input.role === "staff" || input.status === "suspended") {
@@ -833942,7 +834064,7 @@ async function incrementUserAiUsage(userId) {
     return { ai_usage_count: 1, ai_quota_limit: 50, plan_tier: "plus" };
   }
 }
-var import_bcryptjs, import_crypto3, USER_META_REGEX, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError2, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, fallbackActivationTokens, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasRoleTitleColumnCache, lastRoleTitleCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, OfficeMemberNotFoundError, QuotaExceededError;
+var import_bcryptjs, import_crypto3, USER_META_REGEX, UserPendingActivationError, _supabaseClient, _lastUrl, _lastKey, AccountSourceUnavailableError, DatabaseUnavailableError3, userSessionVersions, USER_CACHE_TTL_MS, userAuthCache, userGoogleCredsCache, CACHE_TTL_MS, fallbackActivationTokens, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_PLATFORM_SETTINGS, officeAiLocks, hasPhoneColumnCache, lastPhoneCheck, hasActivationColumnsCache, lastActivationCheck, hasPlanColumnsCache, lastPlanCheck, hasRoleTitleColumnCache, lastRoleTitleCheck, hasSubscriptionPlansTableCache, lastSubscriptionPlansTableCheck, hasAuditLogTableCache, lastAuditLogTableCheck, hasPlatformSettingsTableCache, lastPlatformSettingsTableCheck, OfficeMemberNotFoundError, QuotaExceededError;
 var init_supabase_service = __esm({
   "src/services/supabase.service.ts"() {
     "use strict";
@@ -833974,7 +834096,7 @@ var init_supabase_service = __esm({
         this.name = "AccountSourceUnavailableError";
       }
     };
-    DatabaseUnavailableError2 = class extends Error {
+    DatabaseUnavailableError3 = class extends Error {
       code = "DATABASE_UNAVAILABLE";
       statusCode = 503;
       constructor(message = "\u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B") {
@@ -853702,6 +853824,14 @@ router5.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (
       res.status(404).json({ error: "\u0627\u0644\u062C\u0644\u0633\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629." });
       return;
     }
+    const hearingDate = session.hearingAt ? new Date(session.hearingAt) : computeHearingDateTime(session.sessionDateHijri, session.sessionTime);
+    const isPastSession = hearingDate && !isNaN(hearingDate.getTime()) && hearingDate.getTime() < Date.now();
+    if (session.status === "Finished" || session.status === "Cancelled" || isPastSession) {
+      res.status(400).json({
+        error: "\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0631\u0633\u0627\u0644 \u062A\u0630\u0643\u064A\u0631 \u0644\u062C\u0644\u0633\u0629 \u0645\u0646\u062A\u0647\u064A\u0629 \u0623\u0648 \u0645\u0644\u063A\u064A\u0629."
+      });
+      return;
+    }
     const { listSupabaseUsers: listSupabaseUsers2, getPlatformSettings: getPlatformSettings2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
     const users = await listSupabaseUsers2().catch(() => []);
     const officeUser = users.find((u) => u.id === officeId || u.username === officeId || u.id === req.authUser?.userId);
@@ -853851,6 +853981,12 @@ var UpdateNotificationTemplateSchema = external_exports.object({
   template_text: external_exports.string().optional(),
   enabled: external_exports.boolean().optional(),
   channel: external_exports.enum(["whatsapp", "in_app", "all"]).optional()
+}).passthrough();
+var TestSendNotificationTemplateSchema = external_exports.object({
+  phone: external_exports.string().min(1, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u0645\u0637\u0644\u0648\u0628"),
+  eventType: external_exports.string().optional(),
+  customMessage: external_exports.string().optional(),
+  placeholders: external_exports.record(external_exports.string()).optional()
 }).passthrough();
 var router6 = (0, import_express6.Router)();
 var testAttemptsMap = /* @__PURE__ */ new Map();
@@ -854343,6 +854479,88 @@ router6.put("/settings/notification-templates/:eventType", async (req, res) => {
   } catch (err) {
     logger.error({ err, eventType: req.params.eventType }, "Failed to update notification template");
     res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0644\u0628 \u0627\u0644\u062A\u0646\u0628\u064A\u0647." });
+  }
+});
+router6.get("/settings/notification-templates/test-send/quota", async (req, res) => {
+  const adminKey = req.authUser.userId || req.authUser.username || "admin";
+  const quota = getTestSendQuota(adminKey);
+  res.json(quota);
+});
+router6.post("/settings/notification-templates/test-send", async (req, res) => {
+  const parseResult = TestSendNotificationTemplateSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+    return;
+  }
+  const adminKey = req.authUser.userId || req.authUser.username || "admin";
+  const rateLimit = checkAndRecordTestSend(adminKey);
+  if (!rateLimit.allowed) {
+    res.status(429).json({
+      error: `\u062A\u062C\u0627\u0648\u0632\u062A \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 (10 \u0631\u0633\u0627\u0626\u0644 \u0641\u064A \u0627\u0644\u0633\u0627\u0639\u0629). \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${rateLimit.resetInMinutes} \u062F\u0642\u064A\u0642\u0629.`,
+      remaining: 0,
+      resetInMinutes: rateLimit.resetInMinutes
+    });
+    return;
+  }
+  const { phone, eventType, customMessage, placeholders } = req.body;
+  const officeId = req.authUser.officeId || req.authUser.userId;
+  try {
+    let rawTemplate = customMessage?.trim();
+    if (!rawTemplate && eventType) {
+      try {
+        const officeTemplate = await getOfficeNotificationTemplate(
+          officeId,
+          eventType
+        );
+        rawTemplate = officeTemplate?.body_template;
+      } catch (err) {
+        logger.warn(
+          { err: err?.message, officeId, eventType },
+          "Falling back to default template definition for test send"
+        );
+      }
+      if (!rawTemplate && NOTIFICATION_EVENT_DEFINITIONS[eventType]) {
+        rawTemplate = NOTIFICATION_EVENT_DEFINITIONS[eventType].bodyTemplate;
+      }
+    }
+    if (!rawTemplate) {
+      res.status(400).json({ error: "\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0646\u0648\u0639 \u0627\u0644\u062D\u062F\u062B \u0623\u0648 \u0643\u062A\u0627\u0628\u0629 \u0646\u0635 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629." });
+      return;
+    }
+    const renderedBody = renderTestMessageWithDummyPlaceholders(rawTemplate, placeholders);
+    const fullTestMessage = [
+      "\u{1F9EA} *[\u0631\u0633\u0627\u0644\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629 - \u0627\u062E\u062A\u0628\u0627\u0631 \u0642\u0627\u0644\u0628 \u0625\u0634\u0639\u0627\u0631]*",
+      "",
+      renderedBody,
+      "",
+      "\u26A0\uFE0F _\u0647\u0630\u0647 \u0631\u0633\u0627\u0644\u0629 \u0627\u062E\u062A\u0628\u0627\u0631\u064A\u0629 \u0645\u0646 \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u0644\u0627 \u062A\u0645\u062B\u0644 \u0625\u062C\u0631\u0627\u0621\u064B \u062D\u0642\u064A\u0642\u064A\u0627\u064B._"
+    ].join("\n");
+    const channel = new WhatsappReminderChannel();
+    const sendRes = await channel.sendRaw(fullTestMessage, phone, {
+      throwIfNotConfigured: true
+    });
+    if (!sendRes || !sendRes.success) {
+      res.status(400).json({
+        success: false,
+        error: sendRes?.error || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0639\u0628\u0631 \u0645\u0632\u0648\u062F \u062E\u062F\u0645\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 (Green API).",
+        remaining: rateLimit.remaining
+      });
+      return;
+    }
+    res.json({
+      success: true,
+      message: `\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0628\u0646\u062C\u0627\u062D \u0625\u0644\u0649 \u0627\u0644\u0631\u0642\u0645 ${phone}!`,
+      idMessage: sendRes.idMessage,
+      remaining: rateLimit.remaining,
+      renderedMessage: fullTestMessage
+    });
+  } catch (err) {
+    logger.error({ err, phone, eventType }, "Failed to send test notification template");
+    res.status(400).json({
+      success: false,
+      error: err?.message || "\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0639\u0628\u0631 \u0645\u0632\u0648\u062F \u062E\u062F\u0645\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.",
+      remaining: rateLimit.remaining
+    });
   }
 });
 var settings_default = router6;
@@ -860414,7 +860632,7 @@ var consumedNonces = /* @__PURE__ */ new Set();
 var ipRequestTimestamps = /* @__PURE__ */ new Map();
 var userRequestTimestamps = /* @__PURE__ */ new Map();
 var ipVerifyTimestamps = /* @__PURE__ */ new Map();
-var ONE_HOUR_MS = 60 * 60 * 1e3;
+var ONE_HOUR_MS2 = 60 * 60 * 1e3;
 var CODE_EXPIRY_MS = 10 * 60 * 1e3;
 var RESET_TOKEN_EXPIRY_MS = 10 * 60 * 1e3;
 var MAX_VERIFY_ATTEMPTS = 5;
@@ -860425,12 +860643,12 @@ function cleanOldTimestamps(timestamps, windowMs) {
 function checkAndRecordRequestRateLimit(username, ip) {
   const cleanUser = username.trim().toLowerCase();
   const cleanIp = ip.trim();
-  const ipHistory = cleanOldTimestamps(ipRequestTimestamps.get(cleanIp) || [], ONE_HOUR_MS);
+  const ipHistory = cleanOldTimestamps(ipRequestTimestamps.get(cleanIp) || [], ONE_HOUR_MS2);
   if (ipHistory.length >= 10) {
     ipRequestTimestamps.set(cleanIp, ipHistory);
     return { allowed: false, reason: "ip" };
   }
-  const userHistory = cleanOldTimestamps(userRequestTimestamps.get(cleanUser) || [], ONE_HOUR_MS);
+  const userHistory = cleanOldTimestamps(userRequestTimestamps.get(cleanUser) || [], ONE_HOUR_MS2);
   if (userHistory.length >= 3) {
     userRequestTimestamps.set(cleanUser, userHistory);
     return { allowed: false, reason: "user" };
@@ -860443,7 +860661,7 @@ function checkAndRecordRequestRateLimit(username, ip) {
 }
 function checkAndRecordVerifyRateLimit(ip) {
   const cleanIp = ip.trim();
-  const ipHistory = cleanOldTimestamps(ipVerifyTimestamps.get(cleanIp) || [], ONE_HOUR_MS);
+  const ipHistory = cleanOldTimestamps(ipVerifyTimestamps.get(cleanIp) || [], ONE_HOUR_MS2);
   if (ipHistory.length >= 10) {
     ipVerifyTimestamps.set(cleanIp, ipHistory);
     return { allowed: false };

@@ -31,6 +31,7 @@ const ChatPage = React.lazy(() => import('@/pages/chat'));
 const SessionsPage = React.lazy(() => import('@/pages/sessions'));
 const SessionDetailPage = React.lazy(() => import('@/pages/session-detail'));
 const SettingsPage = React.lazy(() => import('@/pages/settings'));
+const NotificationSettingsPage = React.lazy(() => import('@/pages/notification-settings'));
 const SubscriptionPage = React.lazy(() => import('@/pages/subscription'));
 const SessionReportPage = React.lazy(() => import('@/pages/session-report'));
 const PoaPage = React.lazy(() => import('@/pages/poa'));
@@ -231,6 +232,15 @@ function Router() {
         <RequireRole roles={['admin']}>
           <AppShell>
             <SettingsPage />
+          </AppShell>
+        </RequireRole>
+      </Route>
+      <Route path="/notification-settings">
+        <RequireRole roles={['admin']}>
+          <AppShell>
+            <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+              <NotificationSettingsPage />
+            </Suspense>
           </AppShell>
         </RequireRole>
       </Route>

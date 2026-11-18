@@ -126,7 +126,7 @@ export function TimeRemainingCard({ hearingAt }: { hearingAt: string | null | un
   const urgencyClass = !remaining
     ? 'border-border bg-muted/30'
     : remaining.isPast
-    ? 'border-border bg-muted/30'
+    ? 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/15'
     : remaining.isToday
     ? 'border-amber-400/60 bg-amber-50/60 dark:bg-amber-950/20'
     : remaining.days <= 3
@@ -152,9 +152,9 @@ export function TimeRemainingCard({ hearingAt }: { hearingAt: string | null | un
         <div className="text-sm text-muted-foreground">لم يتم تحديد تاريخ أو وقت الجلسة</div>
       ) : remaining.isPast ? (
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{buildCountdownText(remaining)}</span>
+          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>الجلسة منتهية ومكتملة — {buildCountdownText(remaining)}</span>
           </div>
         </div>
       ) : (

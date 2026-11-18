@@ -23,15 +23,16 @@ describe("Notification Templates & Centralized Event System", () => {
     resetNotificationTemplateStoreForTesting();
   });
 
-  it("1. All 12 platform event types are registered with correct defaults and metadata", async () => {
+  it("1. All platform event types are registered with correct defaults and metadata", async () => {
     const templates = await listOfficeNotificationTemplates(testOfficeId);
-    expect(templates).toHaveLength(12);
+    expect(templates).toHaveLength(13);
 
     const eventTypes: NotificationEventType[] = [
       "case_assigned",
       "reminder_failed",
       "poa_assigned",
       "poa_expiring",
+      "staff_license_expiring",
       "member_activation_invite",
       "member_account_suspended",
       "member_account_reactivated",

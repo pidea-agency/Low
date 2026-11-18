@@ -1,4 +1,4 @@
-import { useParams, useLocation } from 'wouter';
+import { useParams, useLocation, Link } from 'wouter';
 import { useGetSession, useUpdateSession, useDeleteSession, useGetCurrentUser, getListSessionsQueryKey, getGetDashboardStatsQueryKey, getGetSessionQueryKey } from '@workspace/api-client-react';
 import type { SessionStatus } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { ArrowRight, Save, Trash2, Scale, MessageCircle, Send } from 'lucide-react';
+import {
+  ArrowRight,
+  Save,
+  Trash2,
+  Scale,
+  MessageCircle,
+  Send,
+  CheckCircle2,
+  AlertOctagon,
+  FileText,
+  Pencil,
+  Lock,
+  Unlock,
+  AlertCircle,
+} from 'lucide-react';
 import { TimeRemainingCard } from '@/components/time-remaining';
 import { ClientPicker } from '@/components/clients/client-picker';
 import { LawyerSelect } from '@/components/clients/lawyer-select';
 import { AttachmentsPanel } from '@/components/attachments/attachments-panel';
+import { deriveEffectiveStatus } from '@/lib/hijri';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,11 +87,18 @@ export default function SessionDetailPage() {
 
   const [formData, setFormData] = useState<any>({});
   const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const updateMutation = useUpdateSession();
   const deleteMutation = useDeleteSession();
 
-  useEffect(() => {
+  const effStatus = session ? deriveEffectiveStatus(session.status, session.hearingAt) : 'Upcoming';
+  const isFinished = effStatus === 'Finished' || session?.status === 'Finished';
+  const isCancelled = effStatus === 'Cancelled' || session?.status === 'Cancelled';
+  const isSessionClosed = isFinished || isCancelled;
+  const canEdit = !isSessionClosed || isEditMode;
+
+  const resetFormData = () => {
     if (session) {
       setFormData({
         caseNumber: session.caseNumber || '',
@@ -95,6 +117,10 @@ export default function SessionDetailPage() {
         assignedLawyerId: (session as any).assignedLawyerId || (session as any).assigned_lawyer_id || '',
       });
     }
+  };
+
+  useEffect(() => {
+    resetFormData();
   }, [session]);
 
   const updateField = (field: string, value: string) => {
@@ -110,6 +136,7 @@ export default function SessionDetailPage() {
           queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
           toast({ title: 'تم الحفظ', description: 'تم تحديث الجلسة بنجاح' });
+          setIsEditMode(false);
         },
         onError: (error: any) => {
           toast({ title: 'فشل الحفظ', description: error?.message || 'تعذّر تحديث الجلسة', variant: 'destructive' });
@@ -136,6 +163,15 @@ export default function SessionDetailPage() {
   };
 
   const handleSendWhatsapp = async () => {
+    if (isSessionClosed) {
+      toast({
+        title: 'تنبيه',
+        description: 'لا يمكن إرسال تذكير لجلسة منتهية أو ملغية.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSendingWhatsapp(true);
     try {
       const res = await fetch(`/api/sessions/${sessionId}/send-whatsapp`, {
@@ -191,7 +227,9 @@ export default function SessionDetailPage() {
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <Skeleton className="h-6 w-48" />
           <div className="grid gap-4 sm:grid-cols-2">
-            {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-9 w-full" />)}
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
           </div>
         </div>
       </div>
@@ -201,42 +239,170 @@ export default function SessionDetailPage() {
   if (!session) return null;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto" dir="rtl">
       {/* Header */}
       <div className="fade-in-up flex items-center justify-between gap-4">
         <Button
           variant="ghost"
           onClick={() => setLocation('/sessions')}
           size="sm"
-          className="gap-2 text-muted-foreground hover:text-foreground -mr-2"
+          className="gap-2 text-muted-foreground hover:text-foreground -mr-2 cursor-pointer"
           data-testid="button-back"
         >
           <ArrowRight className="w-4 h-4" />
           العودة إلى الجلسات
         </Button>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleSendWhatsapp}
-            disabled={isSendingWhatsapp}
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-            data-testid="button-send-whatsapp-header"
-          >
-            {isSendingWhatsapp ? (
-              <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            ) : (
-              <MessageCircle className="w-4 h-4" />
-            )}
-            {isSendingWhatsapp ? 'جاري الإرسال...' : 'تذكير واتساب فوراً'}
-          </Button>
 
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusStyleMap[session.status]}`}>
+        <div className="flex items-center gap-2">
+          {isFinished ? (
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600/15 text-emerald-800 dark:text-emerald-300 border border-emerald-600/25"
+              title="الجلسة منتهية - تم إيقاف التذكيرات التلقائية لحفظ سلامة المراسلات"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>الجلسة منتهية (التذكيرات معطلة)</span>
+            </div>
+          ) : isCancelled ? (
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-destructive/15 text-destructive border border-destructive/25"
+              title="الجلسة ملغية أو مؤجلة رسمياً"
+            >
+              <AlertOctagon className="w-4 h-4" />
+              <span>الجلسة ملغية (التذكيرات معطلة)</span>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              onClick={handleSendWhatsapp}
+              disabled={isSendingWhatsapp}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
+              data-testid="button-send-whatsapp-header"
+            >
+              {isSendingWhatsapp ? (
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <MessageCircle className="w-4 h-4" />
+              )}
+              {isSendingWhatsapp ? 'جاري الإرسال...' : 'تذكير واتساب فوراً'}
+            </Button>
+          )}
+
+          <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusStyleMap[session.status]}`}
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
             {statusLabelMap[session.status]}
           </span>
         </div>
       </div>
+
+      {/* Prominent Completion/Status Banner */}
+      {isFinished && (
+        <div className="fade-in-up rounded-2xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/25 p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-base text-emerald-950 dark:text-emerald-100">
+                  هذه الجلسة منتهية ومكتملة
+                </h3>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-emerald-600/20 text-emerald-800 dark:text-emerald-300">
+                  سجل مؤرشف
+                </span>
+              </div>
+              <p className="text-xs text-emerald-900/80 dark:text-emerald-300/80 leading-relaxed max-w-xl">
+                انعقدت هذه الجلسة في موعدها وسُجلت بالسجلات. تم إيقاف التذكيرات التلقائية لمنع مراسلة الموكل بمواعيد سابقة، وتم قفل بيانات الجلسة لحمايتها من التعديل العفوي.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto shrink-0 flex-wrap">
+            <Link href={`/reports/${sessionId}`}>
+              <Button
+                size="sm"
+                className="gap-2 bg-[#00236f] hover:bg-[#001c59] text-white shadow-xs font-semibold cursor-pointer"
+              >
+                <FileText className="w-4 h-4" />
+                عرض الضبط القضائي / التقرير
+              </Button>
+            </Link>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (isEditMode) {
+                  resetFormData();
+                  setIsEditMode(false);
+                } else {
+                  setIsEditMode(true);
+                }
+              }}
+              className="gap-2 border-emerald-600/40 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-500/15 cursor-pointer"
+            >
+              {isEditMode ? (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  قفل التعديل
+                </>
+              ) : (
+                <>
+                  <Pencil className="w-3.5 h-3.5" />
+                  تعديل استثنائي
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isCancelled && (
+        <div className="fade-in-up rounded-2xl border border-destructive/30 bg-destructive/10 p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-destructive/20 text-destructive flex items-center justify-center shrink-0 mt-0.5">
+              <AlertOctagon className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base text-destructive">
+                  هذه الجلسة ملغية أو مؤجلة رسمياً
+                </h3>
+              </div>
+              <p className="text-xs text-destructive/80 leading-relaxed">
+                تم إلغاء الجلسة أو تأجيلها رسمياً. جميع التذكيرات معطلة لحماية دقة الإشعارات وتم قفل البيانات.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (isEditMode) {
+                resetFormData();
+                setIsEditMode(false);
+              } else {
+                setIsEditMode(true);
+              }
+            }}
+            className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0 cursor-pointer"
+          >
+            {isEditMode ? (
+              <>
+                <Lock className="w-3.5 h-3.5" />
+                قفل التعديل
+              </>
+            ) : (
+              <>
+                <Pencil className="w-3.5 h-3.5" />
+                تعديل استثنائي
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Title */}
       <div className="fade-in-up fade-in-up-delay-1">
@@ -260,23 +426,70 @@ export default function SessionDetailPage() {
         <TimeRemainingCard hearingAt={session.hearingAt} />
       </div>
 
+      {/* Mode Indicator when in exceptional edit mode for closed session */}
+      {isSessionClosed && isEditMode && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>وضع التعديل الاستثنائي مفعّل: يمكنك الآن تعديل بيانات الجلسة ثم الضغط على "حفظ التعديلات".</span>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              resetFormData();
+              setIsEditMode(false);
+            }}
+            className="h-7 text-xs text-amber-800 hover:text-amber-950 hover:bg-amber-500/20"
+          >
+            إلغاء التعديل
+          </Button>
+        </div>
+      )}
+
       {/* Form Card */}
       <div className="fade-in-up fade-in-up-delay-2 rounded-xl border border-border bg-card overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-border bg-muted/20 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold">بيانات الجلسة</p>
-            <p className="text-xs text-muted-foreground mt-0.5">عدّل الحقول ثم اضغط حفظ</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold">بيانات الجلسة</p>
+              {!canEdit && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
+                  <Lock className="w-3 h-3" />
+                  قراءة فقط
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {canEdit
+                ? 'عدّل الحقول ثم اضغط حفظ التعديلات'
+                : 'البيانات مقفلة لحماية السجل. اضغط "تعديل استثنائي" بالأعلى لتعديلها.'}
+            </p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSendWhatsapp}
-            disabled={isSendingWhatsapp}
-            className="gap-2 border-emerald-600/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
-          >
-            <Send className="w-3.5 h-3.5" />
-            إرسال إشعار بالواتساب
-          </Button>
+
+          {!isSessionClosed ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSendWhatsapp}
+              disabled={isSendingWhatsapp}
+              className="gap-2 border-emerald-600/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
+            >
+              <Send className="w-3.5 h-3.5" />
+              إرسال إشعار بالواتساب
+            </Button>
+          ) : (
+            <Link href={`/reports/${sessionId}`}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2 border-[#00236f]/30 text-[#00236f] dark:text-[#90b0ff] hover:bg-[#00236f]/5 cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                الضبط القضائي والتقرير
+              </Button>
+            </Link>
+          )}
         </div>
 
         <div className="p-5 space-y-5">
@@ -287,6 +500,7 @@ export default function SessionDetailPage() {
                 value={formData.clientId || null}
                 onChange={(cid) => updateField('clientId', cid || '')}
                 label="العميل المرتبط"
+                disabled={!canEdit}
               />
             </div>
 
@@ -297,8 +511,9 @@ export default function SessionDetailPage() {
               <Select
                 value={formData.clientRole || 'none'}
                 onValueChange={(val) => updateField('clientRole', val === 'none' ? '' : val)}
+                disabled={!canEdit}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className="h-9 text-sm" disabled={!canEdit}>
                   <SelectValue placeholder="اختر صفة الموكل" />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,6 +532,7 @@ export default function SessionDetailPage() {
                 currentUserId={currentUser?.id}
                 currentUserName={(currentUser as any)?.displayName || currentUser?.username}
                 label="المحامي المكلف"
+                disabled={!canEdit}
               />
             </div>
           </div>
@@ -324,15 +540,19 @@ export default function SessionDetailPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {formFields.map((f) => (
               <div key={f.key} className="space-y-1.5">
-                <Label htmlFor={f.key} className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <Label
+                  htmlFor={f.key}
+                  className="text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+                >
                   {f.label}
                 </Label>
                 {f.type === 'select' ? (
                   <Select
                     value={formData.status}
                     onValueChange={(value) => updateField('status', value)}
+                    disabled={!canEdit}
                   >
-                    <SelectTrigger id="status" className="h-9 text-sm" data-testid="select-status">
+                    <SelectTrigger id="status" className="h-9 text-sm" data-testid="select-status" disabled={!canEdit}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -347,8 +567,9 @@ export default function SessionDetailPage() {
                     id={f.key}
                     value={formData[f.key] || ''}
                     onChange={(e) => updateField(f.key, e.target.value)}
-                    className={`${f.mono ? 'font-mono' : ''} h-9 text-sm`}
+                    className={`${f.mono ? 'font-mono' : ''} h-9 text-sm ${!canEdit ? 'bg-muted/40 cursor-not-allowed opacity-90' : ''}`}
                     dir={f.dir}
+                    disabled={!canEdit}
                     data-testid={`input-${f.key}`}
                   />
                 )}
@@ -366,7 +587,8 @@ export default function SessionDetailPage() {
               onChange={(e) => updateField('notes', e.target.value)}
               rows={4}
               dir="auto"
-              className="resize-none text-sm"
+              disabled={!canEdit}
+              className={`resize-none text-sm ${!canEdit ? 'bg-muted/40 cursor-not-allowed opacity-90' : ''}`}
               data-testid="textarea-notes"
             />
           </div>
@@ -380,37 +602,68 @@ export default function SessionDetailPage() {
 
       {/* Action Buttons */}
       <div className="fade-in-up fade-in-up-delay-3 flex flex-wrap gap-3">
-        <Button
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
-          className="flex-1 min-w-40 gap-2 shadow-md shadow-[#C99732]/25 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold border-0 cursor-pointer"
-          data-testid="button-save"
-        >
-          <Save className="w-4 h-4" />
-          {updateMutation.isPending ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}
-        </Button>
+        {canEdit ? (
+          <>
+            <Button
+              onClick={handleSave}
+              disabled={updateMutation.isPending}
+              className="flex-1 min-w-40 gap-2 shadow-md shadow-[#C99732]/25 bg-[#C99732] hover:bg-[#B28325] text-white rounded-xl font-bold border-0 cursor-pointer"
+              data-testid="button-save"
+            >
+              <Save className="w-4 h-4" />
+              {updateMutation.isPending ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}
+            </Button>
 
-        <Button
-          type="button"
-          onClick={handleSendWhatsapp}
-          disabled={isSendingWhatsapp}
-          className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-          data-testid="button-send-whatsapp-bottom"
-        >
-          {isSendingWhatsapp ? (
-            <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-          ) : (
-            <MessageCircle className="w-4 h-4" />
-          )}
-          {isSendingWhatsapp ? 'جاري الإرسال...' : 'تذكير واتساب فوراً'}
-        </Button>
+            {isSessionClosed && isEditMode && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetFormData();
+                  setIsEditMode(false);
+                }}
+                className="gap-2 rounded-xl cursor-pointer"
+              >
+                إلغاء التعديل
+              </Button>
+            )}
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsEditMode(true)}
+            className="flex-1 min-w-40 gap-2 border-primary/40 text-primary hover:bg-primary/5 rounded-xl font-bold cursor-pointer"
+            data-testid="button-enable-edit"
+          >
+            <Pencil className="w-4 h-4" />
+            تعديل استثنائي لبيانات الجلسة
+          </Button>
+        )}
+
+        {!isSessionClosed && (
+          <Button
+            type="button"
+            onClick={handleSendWhatsapp}
+            disabled={isSendingWhatsapp}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
+            data-testid="button-send-whatsapp-bottom"
+          >
+            {isSendingWhatsapp ? (
+              <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            ) : (
+              <MessageCircle className="w-4 h-4" />
+            )}
+            {isSendingWhatsapp ? 'جاري الإرسال...' : 'تذكير واتساب فوراً'}
+          </Button>
+        )}
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="outline"
               disabled={deleteMutation.isPending}
-              className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/8 hover:border-destructive/50"
+              className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/8 hover:border-destructive/50 cursor-pointer"
               data-testid="button-delete"
             >
               <Trash2 className="w-4 h-4" />

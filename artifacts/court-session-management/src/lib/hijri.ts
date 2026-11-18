@@ -158,3 +158,25 @@ export function computeTimeRemaining(hearingAt: string | null | undefined): Time
 
   return { totalMs, days, hours, minutes, seconds, isPast: totalMs < 0, isToday };
 }
+
+/**
+ * Derives the effective status of a session based on stored status and hearing time.
+ */
+export function deriveEffectiveStatus(
+  storedStatus: 'Upcoming' | 'Today' | 'Finished' | 'Cancelled' | string,
+  hearingAt: string | null | undefined,
+): 'Upcoming' | 'Today' | 'Finished' | 'Cancelled' {
+  if (storedStatus === 'Cancelled' || storedStatus === 'Finished') return storedStatus;
+  if (!hearingAt) return (storedStatus as any) || 'Upcoming';
+  const hearing = new Date(hearingAt);
+  if (isNaN(hearing.getTime())) return (storedStatus as any) || 'Upcoming';
+  const now = new Date();
+  if (hearing.getTime() < now.getTime()) return 'Finished';
+  const sameDay =
+    hearing.getUTCFullYear() === now.getUTCFullYear() &&
+    hearing.getUTCMonth() === now.getUTCMonth() &&
+    hearing.getUTCDate() === now.getUTCDate();
+  if (sameDay) return 'Today';
+  return 'Upcoming';
+}
+

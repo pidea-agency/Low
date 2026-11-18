@@ -57,6 +57,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useGetCurrentUser } from '@workspace/api-client-react';
+import { Link } from 'wouter';
 
 interface GoogleBindingState {
   is_connected: boolean;
@@ -82,8 +83,8 @@ export default function OfficeSettingsPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
 
-  // Navigation tab state: 'google' | 'whatsapp' | 'templates'
-  const [activeTab, setActiveTab] = useState<'google' | 'whatsapp' | 'templates'>('whatsapp');
+  // Navigation tab state: 'google' | 'whatsapp'
+  const [activeTab, setActiveTab] = useState<'google' | 'whatsapp'>('whatsapp');
 
   // Google Sheet state
   const [binding, setBinding] = useState<GoogleBindingState | null>(null);
@@ -154,127 +155,6 @@ export default function OfficeSettingsPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
 
-  // Notification templates state
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
-  const [savingTemplateKey, setSavingTemplateKey] = useState<string | null>(null);
-  const [activeTemplateCategory, setActiveTemplateCategory] = useState<string>('all');
-  const [isSavingAllTemplates, setIsSavingAllTemplates] = useState(false);
-
-  // Default fallback templates matching image 3 if API returns empty
-  const defaultInitialTemplates = [
-    {
-      event_type: 'case_assigned',
-      id_number: 1,
-      name: 'تكليف بقضية أو جلسة جديدة',
-      recipient_label: 'المحامي المكلف',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'مرحباً بك أستاذ {{memberName}}، تم تكليفك بـ {{recordTypeArabic}} حسب الإجراءات في {{courtName}}. لمتابعة رابط التفاصيل: {{directLink}}',
-      placeholders: ['recordTypeArabic', 'courtName', 'memberName', 'directLink', 'recordDescription'],
-      category: 'cases_poa',
-    },
-    {
-      event_type: 'poa_assigned',
-      id_number: 2,
-      name: 'تكليف بوكالة قانونية جديدة',
-      recipient_label: 'المحامي المكلف',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'تم تكليفك بوكالة قانونية جديدة برقم {{poaNumber}} الخاصة بالموكل {{clientName}} لمباشرة الإجراءات.',
-      placeholders: ['issueDate', 'clientName', 'poaNumber', 'directLink'],
-      category: 'cases_poa',
-    },
-    {
-      event_type: 'poa_expiring',
-      id_number: 3,
-      name: 'تنبيه قرب انتهاء سريان وكالة (قبل 30 يوماً)',
-      recipient_label: 'المحامي المكلف ومدير المكتب',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'تنبيه هام: تنتهي الوكالة رقم {{poaNumber}} للموكل {{clientName}} خلال {{daysRemaining}} أيام. يرجى تجديد الوكالة لضمان استمرار المرافعة.',
-      placeholders: ['daysRemaining', 'clientName', 'poaNumber', 'expiryDate'],
-      category: 'cases_poa',
-    },
-    {
-      event_type: 'new_document_uploaded',
-      id_number: 4,
-      name: 'رفع مستند أو مرفق قضائي جديد',
-      recipient_label: 'المحامي المكلف',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'قام {{uploaderName}} برفع مستند جديد ({{documentName}}) على {{recordTypeArabic}} رقم {{recordNumber}}',
-      placeholders: ['recordTypeArabic', 'documentName', 'uploaderName', 'recordNumber'],
-      category: 'cases_poa',
-    },
-    {
-      event_type: 'member_activation_invite',
-      id_number: 5,
-      name: 'دعوة تفعيل حساب عضو/محام جديد',
-      recipient_label: 'العضو المعني',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'مرحباً بك أستاذ {{memberName}}، تمت دعوتك للانضمام إلى {{officeName}} على منصة LegalTech. يرجى تفعيل حسابك من خلال الرابط: {{activationLink}}',
-      placeholders: ['activationLink', 'officeName', 'memberName'],
-      category: 'accounts',
-    },
-    {
-      event_type: 'member_account_suspended',
-      id_number: 6,
-      name: 'إيقاف أو تعليق حساب عضو',
-      recipient_label: 'العضو المعني',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'تم إيقاف حسابك في مكتب {{officeName}}. يرجى مراجعة إدارة المكتب لمزيد من التفاصيل.',
-      placeholders: ['adminContact', 'reason', 'officeName'],
-      category: 'accounts',
-    },
-    {
-      event_type: 'subscription_expiring_soon',
-      id_number: 7,
-      name: 'قرب انتهاء اشتراك المكتب السحابي',
-      recipient_label: 'مدير المكتب',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'تنبيه إداري: اشتراك مكتبك في باقة {{planName}} ينتهي خلال {{daysRemaining}} أيام (بتاريخ {{endDate}}). يرجى التجديد لتفادي تعليق الجلسات.',
-      placeholders: ['endDate', 'daysRemaining', 'planName', 'renewLink'],
-      category: 'subscription_payments',
-    },
-    {
-      event_type: 'payment_recorded',
-      id_number: 8,
-      name: 'تسجيل دفعة مالية جديدة من موكل',
-      recipient_label: 'المحامي المكلف ومدير المكتب',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'تم تسجيل دفعة مالية جديدة للمكتب بقيمة {{amount}} {{currency}} برقم سند {{reference}} لصالح القضية {{caseNumber}}',
-      placeholders: ['caseNumber', 'reference', 'currency', 'amount'],
-      category: 'subscription_payments',
-    },
-    {
-      event_type: 'session_upcoming_reminder',
-      id_number: 9,
-      name: 'تذكير بموعد جلسة مقبلة (قبل 24 ساعة)',
-      recipient_label: 'المحامي المكلف ومدير المكتب',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'تذكير: موعد جلسة القضية رقم {{caseNumber}} بتاريخ {{sessionDate}} الساعة {{sessionTime}} لدى {{court}} الدائرة {{circuit}}',
-      placeholders: ['sessionTime', 'sessionDate', 'caseNumber', 'circuit', 'court'],
-      category: 'reminders',
-    },
-    {
-      event_type: 'reminder_failed',
-      id_number: 10,
-      name: 'فشل إرسال تذكير لجلسة تلقائي (إشعار خطأ)',
-      recipient_label: 'مدير المكتب',
-      channels: { in_app: true, whatsapp: true },
-      body_template:
-        'تعذر إرسال تذكير الجلسة القضائية رقم {{caseNumber}} بسبب {{error}}',
-      placeholders: ['recipientPhone', 'error', 'caseNumber'],
-      category: 'reminders',
-    },
-  ];
-
   // Fetch initial data
   const fetchBinding = async () => {
     setIsLoadingBinding(true);
@@ -322,36 +202,9 @@ export default function OfficeSettingsPage() {
     } catch {}
   };
 
-  const fetchTemplates = async () => {
-    setIsLoadingTemplates(true);
-    try {
-      const res = await fetch('/api/settings/notification-templates', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          // Merge with initial defaults for rich UI presentation
-          const merged = defaultInitialTemplates.map((def) => {
-            const found = data.find((d: any) => d.event_type === def.event_type);
-            return found ? { ...def, ...found } : def;
-          });
-          setTemplates(merged);
-        } else {
-          setTemplates(defaultInitialTemplates);
-        }
-      } else {
-        setTemplates(defaultInitialTemplates);
-      }
-    } catch {
-      setTemplates(defaultInitialTemplates);
-    } finally {
-      setIsLoadingTemplates(false);
-    }
-  };
-
   useEffect(() => {
     fetchBinding();
     fetchSettings();
-    fetchTemplates();
   }, []);
 
   // Helper to extract spreadsheet ID in UI
@@ -770,81 +623,9 @@ export default function OfficeSettingsPage() {
     }
   };
 
-  // Notification Template handlers
-  const handleToggleChannel = (eventType: string, channel: 'in_app' | 'whatsapp', enabled: boolean) => {
-    setTemplates((prev) =>
-      prev.map((t) =>
-        t.event_type === eventType
-          ? { ...t, channels: { ...t.channels, [channel]: enabled } }
-          : t
-      )
-    );
-  };
-
-  const handleBodyChange = (eventType: string, text: string) => {
-    setTemplates((prev) =>
-      prev.map((t) => (t.event_type === eventType ? { ...t, body_template: text } : t))
-    );
-  };
-
-  const handleSaveAllTemplates = async () => {
-    setIsSavingAllTemplates(true);
-    try {
-      for (const t of templates) {
-        await fetch(`/api/settings/notification-templates/${t.event_type}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            channels: t.channels,
-            body_template: t.body_template,
-            title_template: t.title_template || t.name,
-          }),
-        });
-      }
-      toast({
-        title: 'تم حفظ كافة القوالب بنجاح ✓',
-        description: 'تم تحديث إعدادات وقنوات إرسال كافة أحداث المنظومة القضائية.',
-      });
-    } catch {
-      toast({
-        title: 'تنبيه',
-        description: 'تم حفظ التعديلات محلياً وتطبيقها على النظام.',
-      });
-    } finally {
-      setIsSavingAllTemplates(false);
-    }
-  };
-
-  const handleResetDefaultTemplates = () => {
-    setTemplates(defaultInitialTemplates);
-    toast({
-      title: 'تمت استعادة القوالب الافتراضية',
-      description: 'تم تعيين النصوص والمتغيرات القياسية لجميع الإشعارات.',
-    });
-  };
-
-  // Filter templates by category
-  const filteredTemplates = templates.filter((t) => {
-    if (activeTemplateCategory === 'all') return true;
-    if (activeTemplateCategory === 'cases_poa') return t.category === 'cases_poa';
-    if (activeTemplateCategory === 'accounts') return t.category === 'accounts';
-    if (activeTemplateCategory === 'subscription_payments') return t.category === 'subscription_payments';
-    if (activeTemplateCategory === 'reminders') return t.category === 'reminders';
-    return true;
-  });
-
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 font-sans select-none" dir="rtl">
-      {/* ── Top Breadcrumbs & Page Header ── */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-1.5 text-xs text-[#64748B]">
-          <span>لوحة التحكم</span>
-          <ChevronDown className="w-3.5 h-3.5 -rotate-90 text-[#94A3B8]" />
-          <span>إدارة المكتب</span>
-          <ChevronDown className="w-3.5 h-3.5 -rotate-90 text-[#94A3B8]" />
-          <span className="text-[#00236f] font-semibold">الإعدادات وقنوات الربط</span>
-        </div>
+   
 
         {/* Executive Header Banner matching screenshots */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white border border-[#D6E0EC] p-5 sm:p-6 rounded-2xl shadow-xs">
@@ -867,10 +648,9 @@ export default function OfficeSettingsPage() {
             <Button
               onClick={() => {
                 if (activeTab === 'whatsapp') handleSaveWhatsapp();
-                else if (activeTab === 'templates') handleSaveAllTemplates();
                 else handleExportToSheets();
               }}
-              disabled={isSavingWhatsapp || isSavingAllTemplates || isExporting}
+              disabled={isSavingWhatsapp || isExporting}
               className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-semibold h-10 px-4 gap-2 rounded-xl shadow-xs cursor-pointer"
             >
               <Check className="w-4 h-4" />
@@ -1015,27 +795,19 @@ export default function OfficeSettingsPage() {
             />
           </button>
 
-          {/* Tab 3: Notification Templates */}
-          <button
-            onClick={() => setActiveTab('templates')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'templates'
-                ? 'bg-[#00236f] text-white shadow-xs'
-                : 'text-[#556480] hover:bg-[#eff4ff] hover:text-[#00236f]'
-            }`}
-          >
-            <Bell className="w-4 h-4" />
-            <span>قوالب وقنوات الإشعارات التلقائية</span>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                activeTab === 'templates' ? 'bg-white/20 text-white' : 'bg-[#fff0e6] text-[#b44800]'
-              }`}
+          {/* Dedicated Page Link: Notification Templates & Messaging Control */}
+          <Link href="/notification-settings">
+            <button
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-[#556480] hover:bg-[#eff4ff] hover:text-[#00236f] transition-all cursor-pointer whitespace-nowrap"
             >
-              11 حدث
-            </span>
-          </button>
+              <Bell className="w-4 h-4 text-[#00236f]" />
+              <span>التحكم بالرسائل والتنبيهات</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#eff4ff] text-[#00236f] border border-[#cfe0fc]">
+                صفحة مستقلة ↗
+              </span>
+            </button>
+          </Link>
         </div>
-      </div>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* TAB 1: GOOGLE SHEETS SYNCHRONIZATION                                   */}
@@ -2015,226 +1787,6 @@ export default function OfficeSettingsPage() {
               <span>•</span>
               <span>سيرفر الرياض (Cloud-01 KSA)</span>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* TAB 3: NOTIFICATION TEMPLATES & CHANNELS (Matching Image 3)           */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'templates' && (
-        <div className="space-y-6">
-          {/* Header Action Bar matching Image 3 */}
-          <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#fff2e8] text-[#b87019] flex items-center justify-center">
-                  <Bell className="w-4 h-4" />
-                </div>
-                <h2 className="text-base font-bold text-[#10233F]">
-                  قوالب وقنوات الإشعارات والتنبيهات التلقائية
-                </h2>
-                <span className="bg-[#fff0e6] text-[#b44800] text-[10px] font-bold px-2 py-0.5 rounded border border-[#ffd5ba]">
-                  11 حدث نشط
-                </span>
-              </div>
-              <p className="text-xs text-[#64748B] leading-relaxed max-w-3xl mr-9">
-                تخصيص نصوص رسائل الواتساب وقنوات الإرسال المسموحة، وضبط المتغيرات الديناميكية الذكية (Smart Variables) لكافة أحداث المنظومة القضائية وشعارات المكتب.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2.5 flex-wrap self-start xl:self-center">
-              <Button
-                onClick={handleSaveAllTemplates}
-                disabled={isSavingAllTemplates}
-                className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-semibold h-10 px-4 gap-2 rounded-xl shadow-xs cursor-pointer"
-              >
-                <Check className="w-4 h-4" />
-                <span>{isSavingAllTemplates ? 'جارٍ الحفظ...' : 'حفظ تغييرات كافة القوالب'}</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleResetDefaultTemplates}
-                className="bg-white hover:bg-[#eff4ff] text-[#44526d] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-[#55627a]" />
-                <span>استعادة القوالب الافتراضية</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setActiveTab('whatsapp');
-                  toast({ title: 'انتقل لتبويب الواتساب لتجربة الإرسال السريع' });
-                }}
-                className="bg-white hover:bg-[#eff4ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer"
-              >
-                <Send className="w-3.5 h-3.5 text-[#00236f]" />
-                <span>إرسال رسالة واتساب تجريبية</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Filter Chips matching Image 3 */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <button
-              onClick={() => setActiveTemplateCategory('all')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                activeTemplateCategory === 'all'
-                  ? 'bg-[#00236f] text-white shadow-xs'
-                  : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-              }`}
-            >
-              الكل 11
-            </button>
-            <button
-              onClick={() => setActiveTemplateCategory('cases_poa')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                activeTemplateCategory === 'cases_poa'
-                  ? 'bg-[#00236f] text-white shadow-xs'
-                  : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-              }`}
-            >
-              أحداث القضايا والوكالات 4
-            </button>
-            <button
-              onClick={() => setActiveTemplateCategory('accounts')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                activeTemplateCategory === 'accounts'
-                  ? 'bg-[#00236f] text-white shadow-xs'
-                  : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-              }`}
-            >
-              أحداث الحسابات وأعضاء المكتب 2
-            </button>
-            <button
-              onClick={() => setActiveTemplateCategory('subscription_payments')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                activeTemplateCategory === 'subscription_payments'
-                  ? 'bg-[#00236f] text-white shadow-xs'
-                  : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-              }`}
-            >
-              الاشتراكات والمدفوعات 2
-            </button>
-            <button
-              onClick={() => setActiveTemplateCategory('reminders')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                activeTemplateCategory === 'reminders'
-                  ? 'bg-[#00236f] text-white shadow-xs'
-                  : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-              }`}
-            >
-              تأخيرات الجلسات والمواعيد 2
-            </button>
-          </div>
-
-          {/* Cards Grid matching Image 3 (2 columns on large screens) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {filteredTemplates.map((template, idx) => {
-              const idNumber = template.id_number || idx + 1;
-
-              return (
-                <div
-                  key={template.event_type}
-                  className="bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs space-y-4 flex flex-col justify-between"
-                >
-                  <div className="space-y-3">
-                    {/* Card Top: Title, ID badge, and channels */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-lg bg-[#eff4ff] text-[#00236f] text-xs font-bold flex items-center justify-center">
-                            {idNumber}
-                          </span>
-                          <h4 className="text-sm font-bold text-[#10233F]">{template.name}</h4>
-                        </div>
-                        <p className="text-[11px] text-[#64748B] mr-7">
-                          المستلم: <strong className="text-[#10233F]">{template.recipient_label || 'المحامي المكلف'}</strong>
-                        </p>
-                      </div>
-
-                      {/* Channels Checkboxes / Badges */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <label className="flex items-center gap-1.5 text-xs text-[#10233F] font-semibold cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={template.channels?.whatsapp ?? true}
-                            onChange={(e) => handleToggleChannel(template.event_type, 'whatsapp', e.target.checked)}
-                            className="rounded text-[#00236f]"
-                          />
-                          <span>واتساب</span>
-                        </label>
-
-                        <label className="flex items-center gap-1.5 text-xs text-[#64748B] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={template.channels?.in_app ?? true}
-                            onChange={(e) => handleToggleChannel(template.event_type, 'in_app', e.target.checked)}
-                            className="rounded text-[#00236f]"
-                          />
-                          <span>داخل التطبيق</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Template Textarea */}
-                    <div className="space-y-1">
-                      <span className="text-[11px] text-[#64748B]">نص قالب رسالة الواتساب:</span>
-                      <Textarea
-                        value={template.body_template}
-                        onChange={(e) => handleBodyChange(template.event_type, e.target.value)}
-                        rows={3}
-                        className="text-xs leading-relaxed bg-[#fafcff] border-[#e2ecfa] focus:border-[#00236f]"
-                      />
-                    </div>
-
-                    {/* Available Placeholders Tags matching Image 3 */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-[#64748B]">المتغيرات المتاحة:</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {(template.placeholders || ['recordTypeArabic', 'directLink', 'clientName']).map((ph: string) => (
-                          <button
-                            key={ph}
-                            type="button"
-                            onClick={() => {
-                              handleBodyChange(template.event_type, `${template.body_template} {{${ph}}}`);
-                              toast({ title: `تم إدراج المتغير {{${ph}}}` });
-                            }}
-                            className="bg-[#eff4ff] hover:bg-[#dce9ff] text-[#00236f] text-[10px] font-mono px-2 py-0.5 rounded border border-[#cfdffc] cursor-pointer"
-                          >
-                            {`{{${ph}}}`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Bottom Action Bar matching Image 3 */}
-                  <div className="pt-3 border-t border-[#f1f5fd] flex items-center justify-between text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        toast({
-                          title: `معاينة رسالة "${template.name}"`,
-                          description: template.body_template.replace(/{{.*?}}/g, 'الرياض 1447'),
-                        });
-                      }}
-                      className="text-[#00236f] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>إرسال معاينة</span>
-                    </button>
-
-                    <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>تم التحقق من سلامة البنية</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}

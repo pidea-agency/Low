@@ -478,67 +478,50 @@ export default function PowerOfAttorneyPage() {
               <h1 className="text-2xl font-bold text-[#131b2e]">
                 إدارة الوكالات الشرعية
               </h1>
-              <span className="bg-[#eef5ff] text-[#00236f] border border-[#cfdffc] text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                ربط مباشر مع بوابة ناجز
-              </span>
+            
             </div>
             <p className="text-xs text-[#55627a] leading-relaxed mr-3.5 max-w-3xl">
               متابعة وتدقيق وكالات الموكلين، الصلاحيات القضائية الحساسة، الرصد الاستباقي لتواريخ الانتهاء والمطابقة اللحظية.
             </p>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button
-              onClick={handleOpenCreate}
-              className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 px-4 gap-2 rounded-lg shadow-sm cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              إضافة وكالة جديدة
-            </Button>
+         {/* Action buttons (Stacked Top & Bottom / Responsive style) */}
+<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full xl:w-auto">
+  <Button
+    onClick={handleOpenCreate}
+    className="bg-[#00236f] hover:bg-[#15388c] text-white text-xs font-bold h-10 px-4 gap-2 rounded-xl shadow-sm cursor-pointer justify-center"
+  >
+    <Plus className="w-4 h-4" />
+    إضافة وكالة جديدة
+  </Button>
+ 
 
-            <Button
-              variant="outline"
-              onClick={() => {
-                loadBackendData();
-                toast({
-                  title: 'تحديث ومزامنة ناجز',
-                  description: 'تم التحقق من سريان الوكالات إلكترونياً مع وزارة العدل بنجاح.',
-                });
-              }}
-              className="bg-white hover:bg-[#edf3ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-[#00236f]" />
-              تحديث ومزامنة ناجز
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                const csvContent =
-                  'data:text/csv;charset=utf-8,رقم الوكالة,الموكل,النوع,تاريخ الإصدار,تاريخ الانتهاء,المحامي,الحالة\n' +
-                  allPoas
-                    .map(
-                      (p) =>
-                        `"${p.poaNumber}","${p.clientName}","${p.poaType}","${p.issueDateHijri}","${p.expiryDateHijri}","${p.assignedLawyer}","${p.statusText}"`
-                    )
-                    .join('\n');
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement('a');
-                link.setAttribute('href', encodedUri);
-                link.setAttribute('download', 'powers_of_attorney_registry.csv');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                toast({ title: 'تم تصدير سجل الوكالات بصيغة Excel / CSV' });
-              }}
-              className="bg-white hover:bg-[#edf3ff] text-[#44526d] border-[#d4e2f6] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5 text-[#55627a]" />
-              تصدير السجل (Excel)
-            </Button>
-          </div>
+  <Button
+    variant="outline"
+    onClick={() => {
+      const csvContent =
+        'data:text/csv;charset=utf-8,رقم الوكالة,الموكل,النوع,تاريخ الإصدار,تاريخ الانتهاء,المحامي,الحالة\n' +
+        allPoas
+          .map(
+            (p) =>
+              `"${p.poaNumber}","${p.clientName}","${p.poaType}","${p.issueDateHijri}","${p.expiryDateHijri}","${p.assignedLawyer}","${p.statusText}"`
+          )
+          .join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'powers_of_attorney_registry.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: 'تم تصدير سجل الوكالات بصيغة Excel / CSV' });
+    }}
+    className="bg-white hover:bg-slate-50 text-[#444651] border-slate-200/70 text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer shadow-2xs justify-center"
+  >
+    <Download className="w-3.5 h-3.5 text-[#757682]" />
+    تصدير السجل (Excel)
+  </Button>
+</div>
         </div>
 
         {/* ── 4 KPI Metric Cards ── */}

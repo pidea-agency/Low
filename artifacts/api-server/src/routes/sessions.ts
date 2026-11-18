@@ -537,6 +537,17 @@ router.post("/sessions/:id/send-whatsapp", attachAuthUser, requireAuth, async (r
       return;
     }
 
+    const hearingDate = session.hearingAt
+      ? new Date(session.hearingAt)
+      : computeHearingDateTime(session.sessionDateHijri, session.sessionTime);
+    const isPastSession = hearingDate && !isNaN(hearingDate.getTime()) && hearingDate.getTime() < Date.now();
+    if (session.status === "Finished" || session.status === "Cancelled" || isPastSession) {
+      res.status(400).json({
+        error: "لا يمكن إرسال تذكير لجلسة منتهية أو ملغية.",
+      });
+      return;
+    }
+
     const { listSupabaseUsers, getPlatformSettings } = await import("../services/supabase.service");
     const users = await listSupabaseUsers().catch(() => []);
     const officeUser = users.find((u) => u.id === officeId || u.username === officeId || u.id === req.authUser?.userId);

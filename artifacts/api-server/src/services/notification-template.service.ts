@@ -346,6 +346,162 @@ export function resetNotificationTemplateStoreForTesting(): void {
 }
 
 /**
+ * Standard dummy / sample values for template placeholders used in test sends.
+ * Clearly marked so the recipient knows it is an obvious test.
+ */
+export const DUMMY_TEMPLATE_PLACEHOLDERS: Record<string, string> = {
+  // Cases, Sessions & Court
+  recordTypeArabic: "جلسة قضائية (تجريبي)",
+  record_type_arabic: "جلسة قضائية (تجريبي)",
+  recordDescription: "دعوى مطالبة مالية رقم 0000/9999 (تجريبي)",
+  record_description: "دعوى مطالبة مالية رقم 0000/9999 (تجريبي)",
+  directLink: "https://app.mansoori-law.sa/sessions/demo",
+  direct_link: "https://app.mansoori-law.sa/sessions/demo",
+  recordId: "9999",
+  record_id: "9999",
+  caseNumber: "0000/9999",
+  case_number: "0000/9999",
+  sessionDate: "1446/05/20هـ",
+  session_date: "1446/05/20هـ",
+  sessionTime: "10:30 صباحاً",
+  session_time: "10:30 صباحاً",
+  court: "المحكمة العامة بالرياض (تجريبي)",
+  courtName: "المحكمة العامة بالرياض (تجريبي)",
+  court_name: "المحكمة العامة بالرياض (تجريبي)",
+  remainingText: "خلال ساعتين",
+  remaining_text: "خلال ساعتين",
+  kind: "جلسة مرافعة",
+
+  // Lawyers, Members & Staff
+  lawyerName: "أ. فهد المنصوري (محام تجريبي)",
+  lawyer_name: "أ. فهد المنصوري (محام تجريبي)",
+  memberName: "أ. فهد المنصوري (عضو تجريبي)",
+  member_name: "أ. فهد المنصوري (عضو تجريبي)",
+  licenseNumber: "381234 (ترخيص تجريبي)",
+  license_number: "381234 (ترخيص تجريبي)",
+  activationLink: "https://app.mansoori-law.sa/activate/demo-token",
+  activation_link: "https://app.mansoori-law.sa/activate/demo-token",
+
+  // POA & Clients
+  poaNumber: "44123456 (وكالة تجريبية)",
+  poa_number: "44123456 (وكالة تجريبية)",
+  clientName: "عبدالله محمد (عميل تجريبي)",
+  client_name: "عبدالله محمد (عميل تجريبي)",
+  poaId: "101",
+  poa_id: "101",
+  daysRemaining: "5",
+  days_remaining: "5",
+  expiryDate: "1446/09/15هـ",
+  expiry_date: "1446/09/15هـ",
+
+  // Documents & Uploads
+  documentName: "مذكرة_جوابية_تجريبية.pdf",
+  document_name: "مذكرة_جوابية_تجريبية.pdf",
+  uploaderName: "مساعد قانوني (تجريبي)",
+  uploader_name: "مساعد قانوني (تجريبي)",
+  recordNumber: "0000/9999",
+  record_number: "0000/9999",
+
+  // Platform & Office
+  platformName: "منصة إدارة الجلسات (تجريبي)",
+  platform_name: "منصة إدارة الجلسات (تجريبي)",
+  officeName: "مكتب المحاماة التجريبي",
+  office_name: "مكتب المحاماة التجريبي",
+  reason: "تحديث دوري لبيانات العضوية (إجراء اختباري)",
+
+  // Subscriptions & Payments
+  planName: "الباقة الاحترافية (تجريبية)",
+  plan_name: "الباقة الاحترافية (تجريبية)",
+  endDate: "1446/12/30هـ",
+  end_date: "1446/12/30هـ",
+  amount: "1,500",
+  currency: "ر.س",
+  reference: "REC-TEST-999",
+  paymentDate: "2026/11/18",
+  payment_date: "2026/11/18",
+  method: "تحويل بنكي",
+  error: "فشل الاتصال بالخادم (خطأ تجريبي للاختبار)",
+};
+
+/**
+ * Replaces placeholders (both {{key}} and {key}) in a template using clearly-marked dummy values.
+ */
+export function renderTestMessageWithDummyPlaceholders(
+  template: string,
+  customOverrides: Record<string, string> = {}
+): string {
+  if (!template) return "";
+  const map: Record<string, string> = { ...DUMMY_TEMPLATE_PLACEHOLDERS, ...customOverrides };
+  // Replace {{key}}
+  let result = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
+    return map[key] ?? map[key.toLowerCase()] ?? `[${key}]`;
+  });
+  // Replace {key}
+  result = result.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+    return map[key] ?? map[key.toLowerCase()] ?? `[${key}]`;
+  });
+  return result;
+}
+
+// In-memory rate limiting store for test sends (max 10 per admin per hour)
+const testSendRateLimitMap = new Map<string, number[]>();
+export const MAX_TEST_SENDS_PER_HOUR = 10;
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Checks and records a test send for an admin.
+ * Sliding window of 1 hour, max 10 sends.
+ */
+export function checkAndRecordTestSend(adminKey: string): {
+  allowed: boolean;
+  remaining: number;
+  resetInMinutes: number;
+} {
+  const now = Date.now();
+  const windowStart = now - ONE_HOUR_MS;
+  const history = (testSendRateLimitMap.get(adminKey) || []).filter((ts) => ts > windowStart);
+
+  if (history.length >= MAX_TEST_SENDS_PER_HOUR) {
+    const oldest = history[0];
+    const resetInMs = oldest + ONE_HOUR_MS - now;
+    const resetInMinutes = Math.max(1, Math.ceil(resetInMs / 60000));
+    return { allowed: false, remaining: 0, resetInMinutes };
+  }
+
+  history.push(now);
+  testSendRateLimitMap.set(adminKey, history);
+  return { allowed: true, remaining: MAX_TEST_SENDS_PER_HOUR - history.length, resetInMinutes: 60 };
+}
+
+/**
+ * Gets remaining test send quota without recording a send.
+ */
+export function getTestSendQuota(adminKey: string): {
+  remaining: number;
+  max: number;
+  resetInMinutes: number;
+} {
+  const now = Date.now();
+  const windowStart = now - ONE_HOUR_MS;
+  const history = (testSendRateLimitMap.get(adminKey) || []).filter((ts) => ts > windowStart);
+  const remaining = Math.max(0, MAX_TEST_SENDS_PER_HOUR - history.length);
+  let resetInMinutes = 0;
+  if (history.length > 0) {
+    const oldest = history[0];
+    const resetInMs = oldest + ONE_HOUR_MS - now;
+    resetInMinutes = Math.max(0, Math.ceil(resetInMs / 60000));
+  }
+  return { remaining, max: MAX_TEST_SENDS_PER_HOUR, resetInMinutes };
+}
+
+/**
+ * Resets test send rate limiter for testing.
+ */
+export function resetTestSendRateLimitForTesting(): void {
+  testSendRateLimitMap.clear();
+}
+
+/**
  * Replaces placeholders of type {{key}} in a template string.
  */
 export function renderTemplate(
@@ -391,9 +547,11 @@ function createDefaultRecord(
 export async function listOfficeNotificationTemplates(
   officeId: string,
 ): Promise<NotificationTemplateRecord[]> {
-  const officeMap = isInMemoryFallbackAllowed()
-    ? (memoryTemplateStore.get(officeId) || new Map<NotificationEventType, NotificationTemplateRecord>())
-    : new Map<NotificationEventType, NotificationTemplateRecord>();
+  let officeMap = memoryTemplateStore.get(officeId);
+  if (!officeMap) {
+    officeMap = new Map<NotificationEventType, NotificationTemplateRecord>();
+    memoryTemplateStore.set(officeId, officeMap);
+  }
 
   // Attempt to load from Supabase
   const client = getSupabaseClient();
@@ -405,9 +563,21 @@ export async function listOfficeNotificationTemplates(
         .eq("office_id", officeId);
 
       if (error) {
-        logger.error({ error, officeId }, "Failed to query notification_templates from Supabase");
-        if (!isInMemoryFallbackAllowed()) {
-          throw new Error("فشل تحميل قوالب الإشعارات من قاعدة البيانات: " + error.message);
+        const isTableMissing =
+          error.code === "PGRST205" ||
+          error.code === "42P01" ||
+          String(error.message || "").includes("Could not find the table");
+
+        if (isTableMissing) {
+          logger.warn(
+            { error: error.message, officeId },
+            "notification_templates table not found in Supabase schema cache, serving built-in default templates"
+          );
+        } else {
+          logger.error({ error, officeId }, "Failed to query notification_templates from Supabase");
+          if (!isInMemoryFallbackAllowed()) {
+            throw new Error("فشل تحميل قوالب الإشعارات من قاعدة البيانات: " + error.message);
+          }
         }
       } else if (data && Array.isArray(data)) {
         for (const row of data) {
@@ -438,29 +608,23 @@ export async function listOfficeNotificationTemplates(
         }
       }
     } catch (err: any) {
-      if (!isInMemoryFallbackAllowed()) {
+      if (String(err?.message || "").includes("Could not find the table")) {
+        logger.warn({ err: err?.message, officeId }, "Falling back to default templates");
+      } else if (!isInMemoryFallbackAllowed()) {
         throw err;
       }
     }
-  } else if (!isInMemoryFallbackAllowed()) {
-    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  if (isInMemoryFallbackAllowed()) {
-    memoryTemplateStore.set(officeId, officeMap);
-  }
-
-  // Ensure all 12 events are returned
+  // Ensure all registered events are returned
   const allEvents = Object.keys(NOTIFICATION_EVENT_DEFINITIONS) as NotificationEventType[];
   return allEvents.map((eventType) => {
-    const existing = officeMap.get(eventType);
+    const existing = officeMap!.get(eventType);
     if (existing) {
       return existing;
     }
     const defRecord = createDefaultRecord(officeId, eventType);
-    if (isInMemoryFallbackAllowed()) {
-      officeMap.set(eventType, defRecord);
-    }
+    officeMap!.set(eventType, defRecord);
     return defRecord;
   });
 }
@@ -472,17 +636,19 @@ export async function getOfficeNotificationTemplate(
   officeId: string,
   eventType: NotificationEventType,
 ): Promise<NotificationTemplateRecord> {
-  if (isInMemoryFallbackAllowed()) {
-    const officeMap = memoryTemplateStore.get(officeId);
-    if (officeMap && officeMap.has(eventType)) {
-      return officeMap.get(eventType)!;
-    }
+  const officeMap = memoryTemplateStore.get(officeId);
+  if (officeMap && officeMap.has(eventType)) {
+    return officeMap.get(eventType)!;
   }
 
-  const all = await listOfficeNotificationTemplates(officeId);
-  const found = all.find((t) => t.event_type === eventType);
-  if (found) {
-    return found;
+  try {
+    const all = await listOfficeNotificationTemplates(officeId);
+    const found = all.find((t) => t.event_type === eventType);
+    if (found) {
+      return found;
+    }
+  } catch (err: any) {
+    logger.warn({ err: err?.message, officeId, eventType }, "Failed to fetch office template, falling back to default record");
   }
 
   return createDefaultRecord(officeId, eventType);
@@ -541,26 +707,34 @@ export async function updateOfficeNotificationTemplate(
       .single();
 
     if (error) {
-      logger.error({ error, officeId, eventType }, "Failed to upsert notification template to Supabase");
-      if (!isInMemoryFallbackAllowed()) {
-        throw new Error("فشل حفظ وتحديث قالب الإشعار في قاعدة البيانات: " + (error.message || "خطأ غير معروف"));
+      const isTableMissing =
+        error.code === "PGRST205" ||
+        error.code === "42P01" ||
+        String(error.message || "").includes("Could not find the table");
+
+      if (isTableMissing) {
+        logger.warn(
+          { error: error.message, officeId, eventType },
+          "notification_templates table not found in Supabase schema cache, persisted in server memory"
+        );
+      } else {
+        logger.error({ error, officeId, eventType }, "Failed to upsert notification template to Supabase");
+        if (!isInMemoryFallbackAllowed()) {
+          throw new Error("فشل حفظ وتحديث قالب الإشعار في قاعدة البيانات: " + (error.message || "خطأ غير معروف"));
+        }
       }
     } else if (data) {
       updatedRecord.id = data.id;
     }
-  } else if (!isInMemoryFallbackAllowed()) {
-    throw new DatabaseUnavailableError("قاعدة البيانات غير متصلة حالياً");
   }
 
-  // Update in-memory cache ONLY in test environment
-  if (isInMemoryFallbackAllowed()) {
-    let officeMap = memoryTemplateStore.get(officeId);
-    if (!officeMap) {
-      officeMap = new Map();
-      memoryTemplateStore.set(officeId, officeMap);
-    }
-    officeMap.set(eventType, updatedRecord);
+  // Always update in-memory cache so updates immediately apply and persist across requests
+  let officeMap = memoryTemplateStore.get(officeId);
+  if (!officeMap) {
+    officeMap = new Map();
+    memoryTemplateStore.set(officeId, officeMap);
   }
+  officeMap.set(eventType, updatedRecord);
 
   return updatedRecord;
 }

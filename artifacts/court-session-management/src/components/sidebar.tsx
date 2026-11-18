@@ -19,6 +19,7 @@ import {
   Sliders,
   Landmark,
   Gavel,
+  MessageSquareCode,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -169,6 +170,12 @@ export function Sidebar({
       name: 'الإعدادات والربط',
       path: '/settings',
       icon: Sliders,
+    },
+    {
+      id: 'notification_settings',
+      name: 'التحكم بالرسائل',
+      path: '/notification-settings',
+      icon: MessageSquareCode,
     },
   ];
 
@@ -337,21 +344,7 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Bottom Area: Cloud Storage Meter */}
-          <div className="shrink-0 p-3 bg-white">
-            <div className="p-3 bg-[#eff4ff] rounded-lg">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-[#444651]">مساحة التخزين السحابي</span>
-                <span className="text-xs font-bold text-[#00236f]">78%</span>
-              </div>
-              <div className="w-full bg-[#e5eeff] h-1.5 rounded-full overflow-hidden">
-                <div className="bg-[#00236f] h-full rounded-full" style={{ width: '78%' }}></div>
-              </div>
-              <span className="text-[11px] text-[#757682] block mt-1 text-right">
-                15.6 جيجابايت من 20 جيجابايت
-              </span>
-            </div>
-          </div>
+          
         </div>
       ) : (
         /* Collapsed Sidebar */
@@ -377,6 +370,16 @@ export function Sidebar({
                   {renderNavItem(item, true)}
                 </React.Fragment>
               ))}
+              {isAdmin && (
+                <>
+                  <div className="w-6 h-px bg-slate-200 my-1" />
+                  {managementNavItems.map((item) => (
+                    <React.Fragment key={item.path}>
+                      {renderNavItem(item, true)}
+                    </React.Fragment>
+                  ))}
+                </>
+              )}
             </nav>
           </div>
         </div>

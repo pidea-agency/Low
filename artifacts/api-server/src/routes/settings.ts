@@ -40,6 +40,13 @@ const UpdateNotificationTemplateSchema = z.object({
   enabled: z.boolean().optional(),
   channel: z.enum(["whatsapp", "in_app", "all"]).optional(),
 }).passthrough();
+
+const TestSendNotificationTemplateSchema = z.object({
+  phone: z.string().min(1, "رقم الهاتف مطلوب"),
+  eventType: z.string().optional(),
+  customMessage: z.string().optional(),
+  placeholders: z.record(z.string()).optional(),
+}).passthrough();
 import {
   getSettings,
   saveSettings,
@@ -60,7 +67,12 @@ import { SHEET_COLUMNS } from "../services/googleSheets.service";
 import { isEncrypted, decryptSecret } from "../lib/encryption";
 import {
   listOfficeNotificationTemplates,
+  getOfficeNotificationTemplate,
   updateOfficeNotificationTemplate,
+  NOTIFICATION_EVENT_DEFINITIONS,
+  renderTestMessageWithDummyPlaceholders,
+  checkAndRecordTestSend,
+  getTestSendQuota,
   type NotificationEventType,
 } from "../services/notification-template.service";
 
@@ -690,6 +702,109 @@ router.put("/settings/notification-templates/:eventType", async (req, res) => {
   } catch (err: any) {
     logger.error({ err, eventType: req.params.eventType }, "Failed to update notification template");
     res.status(400).json({ error: err.message || "فشل تحديث قالب التنبيه." });
+  }
+});
+
+/**
+ * GET /api/settings/notification-templates/test-send/quota
+ * Returns the current remaining test-send quota for the logged-in admin.
+ */
+router.get("/settings/notification-templates/test-send/quota", async (req, res) => {
+  const adminKey = req.authUser!.userId || req.authUser!.username || "admin";
+  const quota = getTestSendQuota(adminKey);
+  res.json(quota);
+});
+
+/**
+ * POST /api/settings/notification-templates/test-send
+ * Sends a real test WhatsApp message using the selected template or custom text,
+ * with dummy placeholder substitutions, rate-limited to max 10 per admin per hour.
+ */
+router.post("/settings/notification-templates/test-send", async (req, res) => {
+  const parseResult = TestSendNotificationTemplateSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "بيانات إرسال الرسالة التجريبية غير صالحة." });
+    return;
+  }
+
+  const adminKey = req.authUser!.userId || req.authUser!.username || "admin";
+  const rateLimit = checkAndRecordTestSend(adminKey);
+  if (!rateLimit.allowed) {
+    res.status(429).json({
+      error: `تجاوزت الحد الأقصى لإرسال الرسائل التجريبية (10 رسائل في الساعة). يرجى المحاولة بعد ${rateLimit.resetInMinutes} دقيقة.`,
+      remaining: 0,
+      resetInMinutes: rateLimit.resetInMinutes,
+    });
+    return;
+  }
+
+  const { phone, eventType, customMessage, placeholders } = req.body;
+  const officeId = req.authUser!.officeId || req.authUser!.userId!;
+
+  try {
+    let rawTemplate = customMessage?.trim();
+
+    if (!rawTemplate && eventType) {
+      try {
+        const officeTemplate = await getOfficeNotificationTemplate(
+          officeId,
+          eventType as NotificationEventType
+        );
+        rawTemplate = officeTemplate?.body_template;
+      } catch (err: any) {
+        logger.warn(
+          { err: err?.message, officeId, eventType },
+          "Falling back to default template definition for test send"
+        );
+      }
+      if (!rawTemplate && NOTIFICATION_EVENT_DEFINITIONS[eventType as NotificationEventType]) {
+        rawTemplate =
+          NOTIFICATION_EVENT_DEFINITIONS[eventType as NotificationEventType].bodyTemplate;
+      }
+    }
+
+    if (!rawTemplate) {
+      res.status(400).json({ error: "يرجى اختيار نوع الحدث أو كتابة نص الرسالة التجريبية." });
+      return;
+    }
+
+    const renderedBody = renderTestMessageWithDummyPlaceholders(rawTemplate, placeholders);
+    const fullTestMessage = [
+      "🧪 *[رسالة تجريبية - اختبار قالب إشعار]*",
+      "",
+      renderedBody,
+      "",
+      "⚠️ _هذه رسالة اختبارية من مدير النظام ولا تمثل إجراءً حقيقياً._",
+    ].join("\n");
+
+    const channel = new WhatsappReminderChannel();
+    const sendRes = await channel.sendRaw(fullTestMessage, phone, {
+      throwIfNotConfigured: true,
+    });
+
+    if (!sendRes || !sendRes.success) {
+      res.status(400).json({
+        success: false,
+        error: sendRes?.error || "فشل إرسال رسالة الاختبار عبر مزود خدمة الواتساب (Green API).",
+        remaining: rateLimit.remaining,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: `تم إرسال الرسالة التجريبية بنجاح إلى الرقم ${phone}!`,
+      idMessage: sendRes.idMessage,
+      remaining: rateLimit.remaining,
+      renderedMessage: fullTestMessage,
+    });
+  } catch (err: any) {
+    logger.error({ err, phone, eventType }, "Failed to send test notification template");
+    res.status(400).json({
+      success: false,
+      error: err?.message || "فشل إرسال رسالة الاختبار عبر مزود خدمة الواتساب.",
+      remaining: rateLimit.remaining,
+    });
   }
 });
 

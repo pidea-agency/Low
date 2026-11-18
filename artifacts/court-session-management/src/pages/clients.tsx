@@ -373,20 +373,7 @@ export default function ClientsPage() {
               + عميل جديد
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => {
-                loadBackendClients();
-                toast({
-                  title: 'مزامنة جهات الاتصال',
-                  description: 'تمت مزامنة بيانات الموكلين مع السجلات وسجل الوكالات بنجاح.',
-                });
-              }}
-              className="bg-white hover:bg-[#edf3ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-lg cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-[#00236f]" />
-              مزامنة جهات الاتصال
-            </Button>
+           
 
             <Button
               variant="outline"
