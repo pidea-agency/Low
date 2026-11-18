@@ -353,7 +353,7 @@ export default function DashboardAdminPage() {
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#eff4ff] text-[#444651]">
               <span className="w-2 h-2 rounded-full bg-[#fd8a42] animate-pulse"></span>
-              المكتب نشط • {officeMembers.length} أعضاء متصلين
+                  عدد المحامين داخل المكتب  {officeMembers.length}
             </span>
           </div>
 
@@ -362,8 +362,6 @@ export default function DashboardAdminPage() {
             <span>{hijriDateStr ? `${hijriDateStr} هـ` : 'التقويم القضائي'}</span>
             <span className="text-[#757682]">/</span>
             <span>{gregorianDateStr}</span>
-            <span className="text-[#757682]">•</span>
-            <span className="text-[#00236f] font-semibold">نظام إدارة الجلسات والمواعيد</span>
           </div>
         </div>
 
