@@ -886,4 +886,101 @@ router.post("/settings/notification-templates/test-send", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/settings/whatsapp-logs
+ * Fetches real outgoing WhatsApp message logs directly from Green API instance.
+ */
+router.get("/settings/whatsapp-logs", async (req, res) => {
+  const s = await ensureSettingsLoaded();
+  const instanceId = s.whatsappInstanceId || "";
+  const token = s.whatsappToken || "";
+  const rawApiUrl = s.whatsappApiUrl || "https://api.green-api.com";
+
+  if (!instanceId || !token) {
+    res.json({
+      success: true,
+      count: 0,
+      logs: [],
+      error: "مزود خدمة الواتساب غير مهيأ بعد.",
+    });
+    return;
+  }
+
+  const base = rawApiUrl.replace(/\/+$/, "");
+  // Fetch logs for the past 30 days (43200 minutes)
+  const targetUrl = `${base}/waInstance${instanceId}/lastOutgoingMessages/${token}?minutes=43200`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      logger.warn({ status: response.status }, "Green API lastOutgoingMessages returned non-200");
+      res.json({
+        success: true,
+        count: 0,
+        logs: [],
+        warning: `تعذر جلب السجلات من Green API (رمز الاستجابة: ${response.status})`,
+      });
+      return;
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      res.json({ success: true, count: 0, logs: [] });
+      return;
+    }
+
+    const formattedLogs = data.map((msg: any) => {
+      const rawChatId = String(msg.chatId || "").replace(/@.*$/, "");
+      const text = msg.textMessage || msg.extendedTextMessage?.text || "";
+
+      let notificationType = "إشعار واتساب";
+      if (text.includes("رسالة تجريبية")) {
+        notificationType = "رسالة تجريبية (قالب إشعار)";
+      } else if (text.includes("تذكير بموعد جلسة")) {
+        notificationType = "تذكير بموعد جلسة قضائية";
+      } else if (text.includes("تكليف") || text.includes("وكالة")) {
+        notificationType = "تكليف وكالة / مهمة قضائية";
+      } else if (text.includes("دفعة") || text.includes("سند")) {
+        notificationType = "إشعار مالي";
+      } else if (text.includes("حكم")) {
+        notificationType = "إشعار حكم قضائي";
+      }
+
+      return {
+        id: msg.idMessage,
+        timestamp: msg.timestamp,
+        chatId: rawChatId,
+        recipient: rawChatId ? (rawChatId.startsWith("+") ? rawChatId : `+${rawChatId}`) : "غير معروف",
+        text,
+        type: notificationType,
+        status: msg.statusMessage || "sent",
+        sendByApi: Boolean(msg.sendByApi),
+      };
+    });
+
+    res.json({
+      success: true,
+      count: formattedLogs.length,
+      logs: formattedLogs,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Failed to fetch WhatsApp logs from Green API");
+    res.json({
+      success: true,
+      count: 0,
+      logs: [],
+      warning: "انتهت مهلة جلب السجلات من Green API",
+    });
+  }
+});
+
 export default router;

@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { useGetCurrentUser, useLogout } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { NotificationsDropdown } from './notifications/notifications-dropdown';
-import { Search, Sparkles, Landmark, ChevronDown } from 'lucide-react';
+import { Search, Sparkles, Landmark, ChevronDown, MessageSquareCode } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,7 +83,24 @@ export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
       </div>
 
       {/* ── Left side: Office Switcher, Notifications, User Profile ── */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        {/* زر التحكم بالرسائل (قوالب وإشعارات الواتساب) */}
+        {(isAdmin || isSuperAdmin) && (
+          <button
+            type="button"
+            onClick={() => setLocation('/notification-settings')}
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+              location === '/notification-settings'
+                ? 'bg-[#00236f] text-white border-[#00236f] shadow-xs'
+                : 'bg-[#eff4ff] text-[#00236f] border-[#dce9ff] hover:bg-[#dce9ff]'
+            }`}
+            title="التحكم بالرسائل وقوالب الإشعارات"
+          >
+            <MessageSquareCode className="w-4 h-4 text-current shrink-0" />
+            <span className="hidden sm:inline">التحكم بالرسائل</span>
+          </button>
+        )}
+
         {/* Office Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -134,6 +151,9 @@ export function TopHeader({ title, onOpenMobileMenu }: TopHeaderProps) {
             </DropdownMenuLabel>
             {isAdmin && (
               <>
+                <DropdownMenuItem onClick={() => setLocation('/notification-settings')} className="p-2 cursor-pointer font-semibold text-[#00236f]">
+                  التحكم بالرسائل وقوالب الإشعارات
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setLocation('/subscription')} className="p-2 cursor-pointer">
                   الاشتراك والحصص
                 </DropdownMenuItem>

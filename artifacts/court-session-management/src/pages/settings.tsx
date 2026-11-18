@@ -92,6 +92,77 @@ function formatPhoneNumber(num?: string | null) {
   return withPlus;
 }
 
+function getPhoneCountryInfo(phone?: string | null) {
+  if (!phone) return { country: 'فلسطين', code: '+970', label: 'فلسطين (+970)' };
+  const clean = phone.replace(/[^\d]/g, '');
+  if (clean.startsWith('970') || clean.startsWith('972')) {
+    return { country: 'فلسطين', code: '+970', label: 'فلسطين (+970)' };
+  }
+  if (clean.startsWith('966')) {
+    return { country: 'السعودية', code: '+966', label: 'السعودية (+966)' };
+  }
+  if (clean.startsWith('971')) {
+    return { country: 'الإمارات', code: '+971', label: 'الإمارات (+971)' };
+  }
+  if (clean.startsWith('962')) {
+    return { country: 'الأردن', code: '+962', label: 'الأردن (+962)' };
+  }
+  if (clean.startsWith('20')) {
+    return { country: 'مصر', code: '+20', label: 'مصر (+20)' };
+  }
+  const prefix = clean.slice(0, 3);
+  return { country: 'دولي', code: `+${prefix}`, label: `دولي (+${prefix})` };
+}
+
+function formatLogTimestamp(ts: number) {
+  if (!ts) return '-';
+  const date = new Date(ts * 1000);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const timeStr = date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+
+  if (isToday) return `اليوم، ${timeStr}`;
+  if (isYesterday) return `أمس، ${timeStr}`;
+  return `${date.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' })}، ${timeStr}`;
+}
+
+function getStatusBadge(status: string) {
+  const s = (status || '').toLowerCase();
+  if (s === 'delivered') {
+    return (
+      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200 inline-flex items-center gap-1">
+        <span>تم التسليم</span>
+        <span>✓✓</span>
+      </span>
+    );
+  }
+  if (s === 'read') {
+    return (
+      <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full font-semibold border border-blue-200 inline-flex items-center gap-1">
+        <span>تمت القراءة</span>
+        <span>✓✓</span>
+      </span>
+    );
+  }
+  if (s === 'sent') {
+    return (
+      <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-semibold border border-amber-200 inline-flex items-center gap-1">
+        <span>تم الإرسال</span>
+        <span>✓</span>
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] text-slate-700 bg-slate-50 px-2 py-0.5 rounded-full font-semibold border border-slate-200">
+      {status || 'غير محدد'}
+    </span>
+  );
+}
+
 export default function OfficeSettingsPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
@@ -170,6 +241,41 @@ export default function OfficeSettingsPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
 
+  // Real WhatsApp message logs state
+  interface WhatsappLogItem {
+    id: string;
+    timestamp: number;
+    chatId: string;
+    recipient: string;
+    text: string;
+    type: string;
+    status: string;
+    sendByApi: boolean;
+  }
+  const [whatsappLogs, setWhatsappLogs] = useState<WhatsappLogItem[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+
+  const fetchWhatsappLogs = async () => {
+    setIsLoadingLogs(true);
+    setLogsError(null);
+    try {
+      const res = await fetch('/api/settings/whatsapp-logs');
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.logs && Array.isArray(data.logs)) {
+          setWhatsappLogs(data.logs);
+        }
+      } else {
+        setLogsError('تعذر جلب سجل الرسائل');
+      }
+    } catch (e: any) {
+      setLogsError(e?.message || 'خطأ في الاتصال بالخادم');
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
   // Fetch initial data
   const fetchBinding = async () => {
     setIsLoadingBinding(true);
@@ -223,6 +329,7 @@ export default function OfficeSettingsPage() {
   useEffect(() => {
     fetchBinding();
     fetchSettings();
+    fetchWhatsappLogs();
   }, []);
 
   // Helper to extract spreadsheet ID in UI
@@ -1396,9 +1503,11 @@ export default function OfficeSettingsPage() {
             <div className="p-2.5 rounded-xl bg-[#fafcff] border border-[#edf3fc] space-y-1">
               <span className="text-[11px] text-[#64748B] block">استهلاك الباقة الشهرية</span>
               <div className="flex items-center gap-1.5 font-mono">
-                <span className="font-bold text-[#10233F]">840 / 3,000</span>
+                <span className="font-bold text-[#10233F]">{whatsappLogs.length} / 3,000</span>
               </div>
-              <span className="text-[10px] text-amber-700 font-semibold block">تم استهلاك 28% • متبقي 2,160</span>
+              <span className="text-[10px] text-amber-700 font-semibold block">
+                تم توثيق {whatsappLogs.length} رسالة • متبقي {Math.max(0, 3000 - whatsappLogs.length)}
+              </span>
             </div>
 
             {/* 4: رقم الهاتف المتصل بالبوابة */}
@@ -1407,7 +1516,9 @@ export default function OfficeSettingsPage() {
               <div className="flex items-center gap-1.5 font-mono" dir="ltr">
                 <span className="font-bold text-[#10233F] text-sm">{formatPhoneNumber(whatsappNumber)}</span>
               </div>
-              <span className="text-[10px] text-emerald-700 font-semibold block">رمز الدولة (+970) • موثق للمكتب</span>
+              <span className="text-[10px] text-emerald-700 font-semibold block">
+                رمز الدولة ({getPhoneCountryInfo(whatsappNumber).code}) • {getPhoneCountryInfo(whatsappNumber).country}
+              </span>
             </div>
 
             {/* 5: تجديد اشتراك Green API */}
@@ -1510,7 +1621,7 @@ export default function OfficeSettingsPage() {
                         رقم الواتساب المتصل بالبوابة (مع الرمز الدولي) *
                       </Label>
                       <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
-                        فلسطين (+970)
+                        {getPhoneCountryInfo(whatsappNumber).label}
                       </span>
                     </div>
                     <Input
@@ -1683,11 +1794,14 @@ export default function OfficeSettingsPage() {
                   {/* Message Logs Notification Strip */}
                   <div className="pt-2 flex items-center justify-between p-3 rounded-xl bg-[#fafcff] border border-[#e2ecfa] text-[11px]">
                     <span className="text-[#55627a]">
-                      تم تسجيل <strong className="text-[#10233F]">840 رسالة</strong> بنجاح خلال الدورة المحاسبية الحالية.
+                      تم تسجيل وتوثيق <strong className="text-[#10233F]">{whatsappLogs.length} رسالة</strong> فعلية عبر Green API.
                     </span>
                     <button
                       type="button"
-                      onClick={() => setIsLogsModalOpen(true)}
+                      onClick={() => {
+                        setIsLogsModalOpen(true);
+                        fetchWhatsappLogs();
+                      }}
                       className="text-[#00236f] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <History className="w-3.5 h-3.5" />
@@ -1721,7 +1835,7 @@ export default function OfficeSettingsPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[#64748B]">الرمز الدولي:</span>
-                    <span className="font-semibold text-emerald-700">فلسطين (+970)</span>
+                    <span className="font-semibold text-emerald-700">{getPhoneCountryInfo(whatsappNumber).label}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[#64748B]">حالة الاتصال الفعلي:</span>
@@ -1864,7 +1978,7 @@ export default function OfficeSettingsPage() {
                   {formatPhoneNumber(qrData?.phone || whatsappNumber)}
                 </div>
                 <span className="text-[10px] text-emerald-800 font-semibold block">
-                  الرمز الدولي (+970) • الجهاز نشط ومسجل بالسجلات
+                  الرمز الدولي ({getPhoneCountryInfo(qrData?.phone || whatsappNumber).code}) • الجهاز نشط ومسجل بالسجلات
                 </span>
               </div>
             ) : qrData?.type === 'qrCode' && qrData?.message ? (
@@ -1914,80 +2028,97 @@ export default function OfficeSettingsPage() {
       {/* ── MODAL: Message Logs Viewer ── */}
       {isLogsModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full shadow-2xl space-y-5 text-right relative animate-in zoom-in-95">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full shadow-2xl space-y-5 text-right relative animate-in zoom-in-95" dir="rtl">
             <button
               onClick={() => setIsLogsModalOpen(false)}
-              className="absolute left-4 top-4 text-[#94a3b8] hover:text-[#10233F]"
+              className="absolute left-4 top-4 text-[#94a3b8] hover:text-[#10233F] cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#eff4ff] text-[#00236f] flex items-center justify-center">
-                <History className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-3 border-b border-[#e2ecfa]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#eff4ff] text-[#00236f] flex items-center justify-center">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#10233F]">سجل الإرسال والرسائل المرسلة (Message Logs)</h3>
+                  <p className="text-xs text-[#64748B]">سجل تدقيق الإشعارات وتأكيدات التسليم اللحظية الفعلية من خادم Green API</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-[#10233F]">سجل الإرسال والرسائل المرسلة (Message Logs)</h3>
-                <p className="text-xs text-[#64748B]">سجل تدقيق الإشعارات وتأكيدات التسليم اللحظية من خادم Green API</p>
-              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchWhatsappLogs}
+                disabled={isLoadingLogs}
+                className="gap-1.5 text-xs h-8 text-[#00236f] border-[#dce9ff] hover:bg-[#eff4ff] cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLogs ? 'animate-spin' : ''}`} />
+                <span>تحديث السجل</span>
+              </Button>
             </div>
 
-            <div className="border border-[#e2ecfa] rounded-2xl overflow-hidden max-h-80 overflow-y-auto">
-              <table className="w-full text-xs text-right">
-                <thead className="bg-[#f8faff] text-[#64748B] border-b border-[#e2ecfa]">
-                  <tr>
-                    <th className="p-3">الوقت</th>
-                    <th className="p-3">المستلم</th>
-                    <th className="p-3">نوع الإشعار</th>
-                    <th className="p-3">الحالة</th>
-                    <th className="p-3">الاستجابة</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#f1f5fd]">
-                  <tr className="hover:bg-[#fafcff]">
-                    <td className="p-3 text-[#64748B]">اليوم، 09:30 ص</td>
-                    <td className="p-3 font-mono font-bold text-[#10233F]" dir="ltr">+966 50 123 4567</td>
-                    <td className="p-3 text-[#10233F]">تذكير موعد جلسة (قبل 24 ساعة)</td>
-                    <td className="p-3">
-                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200">
-                        تم التسليم ✓
-                      </span>
-                    </td>
-                    <td className="p-3 text-[#64748B] font-mono">112ms</td>
-                  </tr>
-                  <tr className="hover:bg-[#fafcff]">
-                    <td className="p-3 text-[#64748B]">اليوم، 08:15 ص</td>
-                    <td className="p-3 font-mono font-bold text-[#10233F]" dir="ltr">+966 55 987 6543</td>
-                    <td className="p-3 text-[#10233F]">تكليف وكالة قانونية جديدة</td>
-                    <td className="p-3">
-                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200">
-                        تم التسليم ✓
-                      </span>
-                    </td>
-                    <td className="p-3 text-[#64748B] font-mono">138ms</td>
-                  </tr>
-                  <tr className="hover:bg-[#fafcff]">
-                    <td className="p-3 text-[#64748B]">أمس، 04:45 م</td>
-                    <td className="p-3 font-mono font-bold text-[#10233F]" dir="ltr">+966 54 321 0987</td>
-                    <td className="p-3 text-[#10233F]">تسجيل دفعة مالية جديدة</td>
-                    <td className="p-3">
-                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200">
-                        تم التسليم ✓
-                      </span>
-                    </td>
-                    <td className="p-3 text-[#64748B] font-mono">145ms</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="border border-[#e2ecfa] rounded-2xl overflow-hidden max-h-96 overflow-y-auto">
+              {isLoadingLogs ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-3 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#00236f]" />
+                  <span className="text-xs text-[#64748B]">جارٍ جلب السجلات الفعلية من Green API...</span>
+                </div>
+              ) : whatsappLogs.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-center text-xs text-[#64748B]">
+                  <p className="font-semibold text-[#10233F]">لا توجد رسائل مسجلة في نافذة الوقت الحالية</p>
+                  <p>سيتم ظهور جميع الإشعارات والرسائل المرسلة تلقائياً بمجرد إرسالها من النظام.</p>
+                </div>
+              ) : (
+                <table className="w-full text-xs text-right">
+                  <thead className="bg-[#f8faff] text-[#64748B] border-b border-[#e2ecfa] sticky top-0 z-10">
+                    <tr>
+                      <th className="p-3">الوقت</th>
+                      <th className="p-3">المستلم</th>
+                      <th className="p-3">نوع الإشعار</th>
+                      <th className="p-3">الحالة</th>
+                      <th className="p-3">نص الرسالة المرسلة</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f1f5fd]">
+                    {whatsappLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-[#fafcff] transition-colors">
+                        <td className="p-3 text-[#64748B] whitespace-nowrap">
+                          {formatLogTimestamp(log.timestamp)}
+                        </td>
+                        <td className="p-3 font-mono font-bold text-[#10233F] whitespace-nowrap" dir="ltr">
+                          {log.recipient}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-[#eff4ff] text-[#00236f] border border-[#dce9ff]">
+                            {log.type}
+                          </span>
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          {getStatusBadge(log.status)}
+                        </td>
+                        <td className="p-3 text-[#334155] max-w-xs">
+                          <p className="truncate leading-relaxed" title={log.text}>
+                            {log.text}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-xs pt-2">
-              <span className="text-[#64748B]">إجمالي السجلات: 840 رسالة موثقة</span>
+              <span className="text-[#64748B]">
+                إجمالي السجلات: <strong className="text-[#10233F]">{whatsappLogs.length}</strong> رسالة موثقة عبر Green API
+              </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsLogsModalOpen(false)}
-                className="text-xs h-9 px-4"
+                className="text-xs h-9 px-4 cursor-pointer"
               >
                 إغلاق
               </Button>

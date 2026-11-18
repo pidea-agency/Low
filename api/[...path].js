@@ -854628,6 +854628,87 @@ router6.post("/settings/notification-templates/test-send", async (req, res) => {
     });
   }
 });
+router6.get("/settings/whatsapp-logs", async (req, res) => {
+  const s3 = await ensureSettingsLoaded();
+  const instanceId = s3.whatsappInstanceId || "";
+  const token = s3.whatsappToken || "";
+  const rawApiUrl = s3.whatsappApiUrl || "https://api.green-api.com";
+  if (!instanceId || !token) {
+    res.json({
+      success: true,
+      count: 0,
+      logs: [],
+      error: "\u0645\u0632\u0648\u062F \u062E\u062F\u0645\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u063A\u064A\u0631 \u0645\u0647\u064A\u0623 \u0628\u0639\u062F."
+    });
+    return;
+  }
+  const base = rawApiUrl.replace(/\/+$/, "");
+  const targetUrl = `${base}/waInstance${instanceId}/lastOutgoingMessages/${token}?minutes=43200`;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1e4);
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      logger.warn({ status: response.status }, "Green API lastOutgoingMessages returned non-200");
+      res.json({
+        success: true,
+        count: 0,
+        logs: [],
+        warning: `\u062A\u0639\u0630\u0631 \u062C\u0644\u0628 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0645\u0646 Green API (\u0631\u0645\u0632 \u0627\u0644\u0627\u0633\u062A\u062C\u0627\u0628\u0629: ${response.status})`
+      });
+      return;
+    }
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      res.json({ success: true, count: 0, logs: [] });
+      return;
+    }
+    const formattedLogs = data.map((msg) => {
+      const rawChatId = String(msg.chatId || "").replace(/@.*$/, "");
+      const text = msg.textMessage || msg.extendedTextMessage?.text || "";
+      let notificationType = "\u0625\u0634\u0639\u0627\u0631 \u0648\u0627\u062A\u0633\u0627\u0628";
+      if (text.includes("\u0631\u0633\u0627\u0644\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629")) {
+        notificationType = "\u0631\u0633\u0627\u0644\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629 (\u0642\u0627\u0644\u0628 \u0625\u0634\u0639\u0627\u0631)";
+      } else if (text.includes("\u062A\u0630\u0643\u064A\u0631 \u0628\u0645\u0648\u0639\u062F \u062C\u0644\u0633\u0629")) {
+        notificationType = "\u062A\u0630\u0643\u064A\u0631 \u0628\u0645\u0648\u0639\u062F \u062C\u0644\u0633\u0629 \u0642\u0636\u0627\u0626\u064A\u0629";
+      } else if (text.includes("\u062A\u0643\u0644\u064A\u0641") || text.includes("\u0648\u0643\u0627\u0644\u0629")) {
+        notificationType = "\u062A\u0643\u0644\u064A\u0641 \u0648\u0643\u0627\u0644\u0629 / \u0645\u0647\u0645\u0629 \u0642\u0636\u0627\u0626\u064A\u0629";
+      } else if (text.includes("\u062F\u0641\u0639\u0629") || text.includes("\u0633\u0646\u062F")) {
+        notificationType = "\u0625\u0634\u0639\u0627\u0631 \u0645\u0627\u0644\u064A";
+      } else if (text.includes("\u062D\u0643\u0645")) {
+        notificationType = "\u0625\u0634\u0639\u0627\u0631 \u062D\u0643\u0645 \u0642\u0636\u0627\u0626\u064A";
+      }
+      return {
+        id: msg.idMessage,
+        timestamp: msg.timestamp,
+        chatId: rawChatId,
+        recipient: rawChatId ? rawChatId.startsWith("+") ? rawChatId : `+${rawChatId}` : "\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",
+        text,
+        type: notificationType,
+        status: msg.statusMessage || "sent",
+        sendByApi: Boolean(msg.sendByApi)
+      };
+    });
+    res.json({
+      success: true,
+      count: formattedLogs.length,
+      logs: formattedLogs
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch WhatsApp logs from Green API");
+    res.json({
+      success: true,
+      count: 0,
+      logs: [],
+      warning: "\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u062C\u0644\u0628 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0645\u0646 Green API"
+    });
+  }
+});
 var settings_default = router6;
 
 // src/routes/reports.ts

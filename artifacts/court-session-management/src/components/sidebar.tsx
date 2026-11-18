@@ -19,7 +19,6 @@ import {
   Sliders,
   Landmark,
   Gavel,
-  MessageSquareCode,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -170,12 +169,6 @@ export function Sidebar({
       name: 'الإعدادات والربط',
       path: '/settings',
       icon: Sliders,
-    },
-    {
-      id: 'notification_settings',
-      name: 'التحكم بالرسائل',
-      path: '/notification-settings',
-      icon: MessageSquareCode,
     },
   ];
 
