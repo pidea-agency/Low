@@ -79,6 +79,19 @@ const WIZARD_STEPS = [
   { id: 7, title: 'فحص المزامنة', desc: 'الاختبار والحفظ' },
 ];
 
+function formatPhoneNumber(num?: string | null) {
+  if (!num) return "+970 56 760 3295";
+  const clean = num.replace(/[^\d+]/g, '');
+  const withPlus = clean.startsWith('+') ? clean : `+${clean}`;
+  if (withPlus.startsWith('+970') && withPlus.length === 13) {
+    return `${withPlus.slice(0, 4)} ${withPlus.slice(4, 6)} ${withPlus.slice(6, 9)} ${withPlus.slice(9)}`;
+  }
+  if (withPlus.startsWith('+966') && withPlus.length === 13) {
+    return `${withPlus.slice(0, 4)} ${withPlus.slice(4, 6)} ${withPlus.slice(6, 9)} ${withPlus.slice(9)}`;
+  }
+  return withPlus;
+}
+
 export default function OfficeSettingsPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
@@ -116,15 +129,17 @@ export default function OfficeSettingsPage() {
   } | null>(null);
 
   // WhatsApp Gateway state
-  const [whatsappNumber, setWhatsappNumber] = useState('972599409123');
+  const [whatsappNumber, setWhatsappNumber] = useState('970567603295');
   const [whatsappApiUrl, setWhatsappApiUrl] = useState('https://7107.api.greenapi.com');
   const [whatsappToken, setWhatsappToken] = useState('••••••••••••••••••••••••••••••••');
   const [whatsappTokenIsSet, setWhatsappTokenIsSet] = useState(true);
-  const [whatsappInstanceId, setWhatsappInstanceId] = useState('710722758832');
+  const [whatsappInstanceId, setWhatsappInstanceId] = useState('710722798002');
   const [showWhatsappToken, setShowWhatsappToken] = useState(false);
   const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrData, setQrData] = useState<{ type?: string; message?: string; phone?: string; deviceId?: string } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     tested: boolean;
     connected: boolean;
@@ -134,7 +149,7 @@ export default function OfficeSettingsPage() {
     tested: true,
     connected: true,
     stateInstance: 'authorized',
-    message: 'المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح!',
+    message: 'المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح (+970 56 760 3295)!',
   });
 
   // Advanced sending & anti-ban settings
@@ -146,7 +161,7 @@ export default function OfficeSettingsPage() {
   const [webhookStatus, setWebhookStatus] = useState<string>('200 OK');
 
   // Quick test sending in sandbox
-  const [sandboxPhone, setSandboxPhone] = useState('+972599409123');
+  const [sandboxPhone, setSandboxPhone] = useState('970567603295');
   const [sandboxMessage, setSandboxMessage] = useState(
     'مكتب المنصوري للمحاماة والاستشارات القانونية\nالسلام عليكم أ. عبدالله، هذه رسالة اختبار آلية لتأكيد نجاح ربط بوابة Green API مع النظام القضائي للمكتب بنجاح.'
   );
@@ -192,7 +207,10 @@ export default function OfficeSettingsPage() {
       if (res.ok) {
         const data = await res.json();
         if (data) {
-          if (data.whatsappNumber) setWhatsappNumber(data.whatsappNumber);
+          if (data.whatsappNumber) {
+            setWhatsappNumber(data.whatsappNumber);
+            setSandboxPhone((prev) => prev || data.whatsappNumber);
+          }
           if (data.whatsappApiUrl) setWhatsappApiUrl(data.whatsappApiUrl);
           if (data.whatsappInstanceId) setWhatsappInstanceId(data.whatsappInstanceId);
           if (data.whatsappToken) setWhatsappToken(data.whatsappToken);
@@ -556,6 +574,10 @@ export default function OfficeSettingsPage() {
       });
 
       if (data.connected) {
+        if (data.phone) {
+          setWhatsappNumber(data.phone);
+          setSandboxPhone((prev) => prev || data.phone);
+        }
         toast({
           title: 'بوابة الواتساب متصلة ✓',
           description: data.message || 'المثيل مصادق عليه ويعمل بكفاءة عالية.',
@@ -575,6 +597,43 @@ export default function OfficeSettingsPage() {
       });
     } finally {
       setIsTestingConnection(false);
+    }
+  };
+
+  const handleOpenQrModal = async () => {
+    setIsQrModalOpen(true);
+    setQrLoading(true);
+    try {
+      const res = await fetch('/api/settings/whatsapp-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: whatsappInstanceId,
+          apiUrl: whatsappApiUrl,
+          token: whatsappToken,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQrData(data);
+        if (data.phone) {
+          setWhatsappNumber(data.phone);
+        }
+      } else {
+        toast({
+          title: 'تنبيه الاقتران',
+          description: data.error || 'فشل جلب رمز QR من المزود.',
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: 'خطأ في الاتصال',
+        description: 'انقطع الاتصال بخادم البوابة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setQrLoading(false);
     }
   };
 
@@ -635,9 +694,7 @@ export default function OfficeSettingsPage() {
               <h1 className="text-xl sm:text-2xl font-bold text-[#10233F]">
                 إعدادات المنظومة وقنوات التواصل السحابية
               </h1>
-              <span className="bg-[#eff4ff] text-[#00236f] border border-[#cfdffc] text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                النسخة السحابية v2.4
-              </span>
+              
             </div>
             <p className="text-xs text-[#64748B] leading-relaxed mr-4.5 max-w-3xl">
               تهيئة مزامنة البيانات عبر Google Sheets وتفعيل إشعارات الواتساب المباشرة وتخصيص قوالب التنبيه التلقائية للمكتب.
@@ -711,13 +768,13 @@ export default function OfficeSettingsPage() {
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-[#64748B]">بوابة الإرسال Green API - WhatsApp</span>
+                  <span className="text-xs font-medium text-[#64748B]">بوابة الإرسال WhatsApp</span>
                   <span className="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
-                    متصل (Instance {whatsappInstanceId ? whatsappInstanceId.slice(0, 4) : '7107'})
+                    متصل 
                   </span>
                 </div>
                 <p className="text-[11px] text-[#475569]">
-                  الرقم المعتمد للمكتب: <strong className="text-[#10233F]" dir="ltr">+{whatsappNumber}</strong>
+                  الرقم المعتمد للمكتب: <strong className="text-[#10233F]" dir="ltr">{formatPhoneNumber(whatsappNumber)}</strong>
                 </p>
               </div>
               <div className="w-9 h-9 rounded-xl bg-[#eff4ff] text-[#00236f] flex items-center justify-center shrink-0">
@@ -740,9 +797,7 @@ export default function OfficeSettingsPage() {
                     تشفير AES-256 محمي
                   </span>
                 </div>
-                <p className="text-[11px] text-[#475569]">
-                  النسخ الاحتياطي التلقائي: <strong className="text-[#10233F]">مجدول يومياً (02:00 ص)</strong>
-                </p>
+                
               </div>
               <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-5 h-5" />
@@ -787,7 +842,7 @@ export default function OfficeSettingsPage() {
             }`}
           >
             <MessageSquare className="w-4 h-4" />
-            <span>خدمة وإعدادات الواتساب (Green API)</span>
+            <span>خدمة وإعدادات الواتساب  </span>
             <span
               className={`w-2 h-2 rounded-full ${
                 connectionStatus?.connected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
@@ -796,17 +851,7 @@ export default function OfficeSettingsPage() {
           </button>
 
           {/* Dedicated Page Link: Notification Templates & Messaging Control */}
-          <Link href="/notification-settings">
-            <button
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-[#556480] hover:bg-[#eff4ff] hover:text-[#00236f] transition-all cursor-pointer whitespace-nowrap"
-            >
-              <Bell className="w-4 h-4 text-[#00236f]" />
-              <span>التحكم بالرسائل والتنبيهات</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#eff4ff] text-[#00236f] border border-[#cfe0fc]">
-                صفحة مستقلة ↗
-              </span>
-            </button>
-          </Link>
+         
         </div>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
@@ -1360,9 +1405,9 @@ export default function OfficeSettingsPage() {
             <div className="p-2.5 rounded-xl bg-[#fafcff] border border-[#edf3fc] space-y-1">
               <span className="text-[11px] text-[#64748B] block">رقم الهاتف المتصل بالبوابة</span>
               <div className="flex items-center gap-1.5 font-mono" dir="ltr">
-                <span className="font-bold text-[#10233F]">+{whatsappNumber}</span>
+                <span className="font-bold text-[#10233F] text-sm">{formatPhoneNumber(whatsappNumber)}</span>
               </div>
-              <span className="text-[10px] text-emerald-700 font-semibold block">موثق للمكتب الرئيسي</span>
+              <span className="text-[10px] text-emerald-700 font-semibold block">رمز الدولة (+970) • موثق للمكتب</span>
             </div>
 
             {/* 5: تجديد اشتراك Green API */}
@@ -1460,14 +1505,24 @@ export default function OfficeSettingsPage() {
 
                   {/* WhatsApp Number */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-[#10233F]">رقم الواتساب المرسل أو المستلم للتجربة *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-[#10233F]">
+                        رقم الواتساب المتصل بالبوابة (مع الرمز الدولي) *
+                      </Label>
+                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
+                        فلسطين (+970)
+                      </span>
+                    </div>
                     <Input
                       value={whatsappNumber}
                       onChange={(e) => setWhatsappNumber(e.target.value)}
-                      placeholder="972599409123"
+                      placeholder="970567603295"
                       className="text-xs h-10 font-mono"
                       dir="ltr"
                     />
+                    <p className="text-[11px] text-[#64748B]">
+                      الرقم الفعلي المقترن مع Green API: <strong className="text-[#10233F]" dir="ltr">{formatPhoneNumber(whatsappNumber)}</strong>
+                    </p>
                   </div>
 
                   {/* API Token / Secret */}
@@ -1645,69 +1700,45 @@ export default function OfficeSettingsPage() {
 
             {/* LEFT COLUMN (4 Columns on desktop): QR Pairing & Sandbox */}
             <div className="lg:col-span-4 space-y-6">
-              {/* Card 1: QR Code Device Pairing matching Image 1 */}
+              {/* Card 1: QR Code & Live Pairing */}
               <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="w-4 h-4 text-[#00236f]" />
-                    <h3 className="text-sm font-bold text-[#10233F]">إقران الهاتف (QR Code)</h3>
+                    <QrCode className="w-4 h-4 text-[#00236f]" />
+                    <h3 className="text-sm font-bold text-[#10233F]">اقتران جهاز الواتساب (QR Pairing)</h3>
                   </div>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    متصل الآن
+                    {connectionStatus?.connected ? 'مقترن ومصادق عليه ✓' : 'غير مقترن'}
                   </span>
                 </div>
 
-                {/* Device Specs Card */}
-                <div className="bg-[#fafcff] border border-[#e2ecfa] rounded-xl p-3 grid grid-cols-2 gap-2 text-[11px]">
-                  <div>
-                    <span className="text-[#64748B] block text-[10px]">جهاز الاتصال:</span>
-                    <span className="font-bold text-[#10233F]">Samsung Galaxy S24 Ultra</span>
+                <div className="p-3.5 rounded-xl bg-[#fafcff] border border-[#e2ecfa] space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B]">الرقم المقترن بالبوابة:</span>
+                    <span className="font-mono font-bold text-[#00236f]" dir="ltr">
+                      {formatPhoneNumber(whatsappNumber)}
+                    </span>
                   </div>
-                  <div>
-                    <span className="text-[#64748B] block text-[10px]">البطارية:</span>
-                    <span className="font-bold text-emerald-700">88%</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B]">الرمز الدولي:</span>
+                    <span className="font-semibold text-emerald-700">فلسطين (+970)</span>
                   </div>
-                  <div>
-                    <span className="text-[#64748B] block text-[10px]">شبكة المكتب:</span>
-                    <span className="font-bold text-[#10233F]">WiFi 6</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B]">حالة الاتصال الفعلي:</span>
+                    <span className="text-emerald-700 font-bold flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Authorized & Active
+                    </span>
                   </div>
-                  <div>
-                    <span className="text-[#64748B] block text-[10px]">نشط منذ:</span>
-                    <span className="font-bold text-[#10233F]">12 يوماً</span>
-                  </div>
-                </div>
-
-                {/* QR Code Container with Overlay */}
-                <div className="relative border-2 border-[#e2ecfa] rounded-2xl p-4 bg-white flex flex-col items-center justify-center">
-                  <div className="w-40 h-40 bg-[#fafcff] rounded-xl border border-dashed border-[#cfdffc] flex items-center justify-center p-2 relative overflow-hidden">
-                    <QrCode className="w-32 h-32 text-[#00236f]/80" />
-                    <div className="absolute inset-0 bg-white/70 backdrop-blur-xs flex flex-col items-center justify-center p-2 text-center">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-1 shadow-sm">
-                        <Check className="w-6 h-6" />
-                      </div>
-                      <span className="text-[11px] font-bold text-[#10233F]">الجهاز مقترن حالياً</span>
-                      <span className="text-[10px] text-[#55627a]">جاهز لتلقي وإرسال الأوامر</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Re-pair Instructions matching Image 1 */}
-                <div className="space-y-1 text-[11px] text-[#55627a] leading-relaxed">
-                  <p className="font-semibold text-[#10233F]">خطوات إعادة إقران جهاز جديد:</p>
-                  <ol className="list-decimal list-inside space-y-0.5 text-[#64748B]">
-                    <li>افتح تطبيق واتساب على هاتف المكتب المعتمد.</li>
-                    <li>انتقل إلى الإعدادات &gt; الأجهزة المرتبطة.</li>
-                    <li>انقر على ربط جهاز ووجّه الكاميرا نحو الكود.</li>
-                  </ol>
                 </div>
 
                 <Button
-                  onClick={() => setIsQrModalOpen(true)}
+                  onClick={handleOpenQrModal}
                   variant="outline"
-                  className="w-full bg-white hover:bg-[#eff4ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 rounded-xl cursor-pointer"
+                  className="w-full border-[#cfe0fc] hover:bg-[#eff4ff] text-[#00236f] text-xs font-bold h-10 rounded-xl gap-2 cursor-pointer"
                 >
-                  <RefreshCw className="w-3.5 h-3.5 text-[#00236f]" />
-                  <span>توليد كود QR جديد للمصادقة</span>
+                  <QrCode className="w-4 h-4" />
+                  <span>فحص رمز الاستجابة السريعة (QR Code)</span>
                 </Button>
               </div>
 
@@ -1733,7 +1764,7 @@ export default function OfficeSettingsPage() {
                     <Input
                       value={sandboxPhone}
                       onChange={(e) => setSandboxPhone(e.target.value)}
-                      placeholder="+972599409123"
+                      placeholder="+970567603295"
                       className="text-xs h-9 font-mono"
                       dir="ltr"
                     />
@@ -1794,10 +1825,10 @@ export default function OfficeSettingsPage() {
       {/* ── MODAL: QR Code Live Pairing ── */}
       {isQrModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-center relative animate-in zoom-in-95">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-center relative animate-in zoom-in-95" dir="rtl">
             <button
               onClick={() => setIsQrModalOpen(false)}
-              className="absolute left-4 top-4 text-[#94a3b8] hover:text-[#10233F]"
+              className="absolute left-4 top-4 text-[#94a3b8] hover:text-[#10233F] cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1807,32 +1838,74 @@ export default function OfficeSettingsPage() {
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-[#10233F]">مسح رمز الاستجابة السريعة (QR Code)</h3>
+              <h3 className="text-lg font-bold text-[#10233F]">رمز الاستجابة السريعة واقتران الواتساب</h3>
               <p className="text-xs text-[#64748B]">
-                افتح تطبيق واتساب على هاتف المكتب &gt; الأجهزة المرتبطة &gt; ربط جهاز
+                حالة الاقتران المباشرة مع بوابة Green API
               </p>
             </div>
 
-            <div className="w-56 h-56 bg-[#fafcff] rounded-2xl border-2 border-dashed border-[#cfdffc] flex items-center justify-center mx-auto p-4 relative">
-              <QrCode className="w-48 h-48 text-[#00236f]" />
-              <div className="absolute top-2 left-2 text-[10px] font-mono text-[#00236f] bg-white/90 px-1.5 py-0.5 rounded border border-[#cfdffc]">
-                صالح لمدة 60 ثانية
+            {qrLoading ? (
+              <div className="p-8 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-[#00236f]" />
+                <span className="text-xs text-[#64748B]">جارٍ جلب حالة الاقتران والرمز من الخادم...</span>
               </div>
-            </div>
-
-            <div className="p-3 bg-[#eff4ff] rounded-xl text-xs text-[#00236f] font-semibold flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-[#00236f]" />
-              <span>بانتظار مسح الرمز من تطبيق الواتساب...</span>
-            </div>
+            ) : qrData?.type === 'alreadyLogged' || (!qrLoading && connectionStatus?.connected) ? (
+              <div className="p-5 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-emerald-900 text-sm">الجهاز مقترن ومصادق عليه بنجاح</h4>
+                  <p className="text-xs text-emerald-700">
+                    بوابة Green API متصلة رسمياً وتعمل بدون انقطاع مع هاتف المكتب:
+                  </p>
+                </div>
+                <div className="py-2 px-3 bg-white rounded-xl border border-emerald-200 font-mono font-bold text-sm text-[#00236f]" dir="ltr">
+                  {formatPhoneNumber(qrData?.phone || whatsappNumber)}
+                </div>
+                <span className="text-[10px] text-emerald-800 font-semibold block">
+                  الرمز الدولي (+970) • الجهاز نشط ومسجل بالسجلات
+                </span>
+              </div>
+            ) : qrData?.type === 'qrCode' && qrData?.message ? (
+              <div className="space-y-3">
+                <div className="w-56 h-56 bg-[#fafcff] rounded-2xl border-2 border-dashed border-[#cfdffc] flex items-center justify-center mx-auto p-2 relative">
+                  <img
+                    src={`data:image/png;base64,${qrData.message}`}
+                    alt="WhatsApp QR Code"
+                    className="w-full h-full object-contain rounded-xl"
+                  />
+                  <div className="absolute top-2 left-2 text-[10px] font-mono text-[#00236f] bg-white/95 px-1.5 py-0.5 rounded border border-[#cfdffc]">
+                    رمز حي
+                  </div>
+                </div>
+                <div className="p-3 bg-[#eff4ff] rounded-xl text-xs text-[#00236f] font-semibold flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#00236f]" />
+                  <span>افتح واتساب &gt; الأجهزة المرتبطة &gt; مسح الرمز</span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <p className="text-xs text-[#64748B]">تعذر جلب رمز الاستجابة السريعة في الوقت الحالي.</p>
+                <Button
+                  onClick={handleOpenQrModal}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs cursor-pointer"
+                >
+                  إعادة المحاولة
+                </Button>
+              </div>
+            )}
 
             <Button
               onClick={() => {
                 setIsQrModalOpen(false);
-                toast({ title: 'تم تأكيد الإقران بنجاح ✓' });
+                toast({ title: 'تم التحقق من الاقتران ✓' });
               }}
-              className="w-full bg-[#00236f] hover:bg-[#001c59] text-white font-bold text-xs h-10 rounded-xl"
+              className="w-full bg-[#00236f] hover:bg-[#001c59] text-white font-bold text-xs h-10 rounded-xl cursor-pointer"
             >
-              تم الاقتران بنجاح
+              إغلاق
             </Button>
           </div>
         </div>

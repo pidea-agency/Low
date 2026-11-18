@@ -854353,18 +854353,38 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
     const data = await response.json();
     const state = data?.stateInstance || "unknown";
     if (state === "authorized") {
-      if (req.body?.saveOnSuccess && instanceId && token && !isMaskedToken) {
-        await saveSettings({
+      let connectedPhone = null;
+      let deviceId = null;
+      try {
+        const waRes = await fetch(`${base}/waInstance${instanceId}/getWaSettings/${token}`);
+        if (waRes.ok) {
+          const waData = await waRes.json();
+          if (waData?.phone) {
+            connectedPhone = String(waData.phone).replace(/\D/g, "");
+          }
+          if (waData?.deviceId) {
+            deviceId = String(waData.deviceId);
+          }
+        }
+      } catch (e2) {
+        logger.warn({ e: e2 }, "Failed to fetch getWaSettings from Green API");
+      }
+      const phoneToSave = connectedPhone || s3.whatsappNumber || "970567603295";
+      await saveSettings({
+        whatsappNumber: phoneToSave,
+        ...req.body?.saveOnSuccess && instanceId && token && !isMaskedToken ? {
           whatsappInstanceId: instanceId,
           whatsappToken: token,
           whatsappApiUrl: rawApiUrl
-        });
-      }
+        } : {}
+      });
       res.json({
         success: true,
         connected: true,
         stateInstance: state,
-        message: "\u0627\u0644\u0645\u062B\u064A\u0644 \u0645\u0635\u0627\u062F\u0642 \u0639\u0644\u064A\u0647 \u0648\u0645\u062A\u0635\u0644 \u0628\u062D\u0633\u0627\u0628 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D!"
+        phone: phoneToSave,
+        deviceId,
+        message: `\u0627\u0644\u0645\u062B\u064A\u0644 \u0645\u0635\u0627\u062F\u0642 \u0639\u0644\u064A\u0647 \u0648\u0645\u062A\u0635\u0644 \u0628\u062D\u0633\u0627\u0628 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D (+${phoneToSave})!`
       });
       return;
     }
@@ -854393,6 +854413,51 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
       connected: false,
       error: msg
     });
+  }
+});
+router6.post("/settings/whatsapp-qr", async (req, res) => {
+  const s3 = await ensureSettingsLoaded();
+  const rawInstanceId = String(req.body?.instanceId ?? "").trim();
+  const rawToken = String(req.body?.token ?? "").trim();
+  const isMaskedToken = rawToken.includes("\u2022") || rawToken.includes("*");
+  const instanceId = rawInstanceId || s3.whatsappInstanceId || "";
+  const token = !rawToken || isMaskedToken ? s3.whatsappToken || "" : rawToken;
+  const rawApiUrl = String(req.body?.apiUrl || s3.whatsappApiUrl || "https://api.green-api.com").trim();
+  if (!instanceId || !token) {
+    res.status(400).json({ error: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0646\u0633\u062E\u0629 \u0648\u0631\u0645\u0632 \u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646." });
+    return;
+  }
+  const base = rawApiUrl.replace(/\/+$/, "");
+  try {
+    const qrResponse = await fetch(`${base}/waInstance${instanceId}/qr/${token}`);
+    if (!qrResponse.ok) {
+      const err = await qrResponse.json().catch(() => ({}));
+      res.status(400).json({ error: err.message || "\u0641\u0634\u0644 \u062C\u0644\u0628 \u0631\u0645\u0632 QR \u0645\u0646 Green API." });
+      return;
+    }
+    const data = await qrResponse.json();
+    let phone = null;
+    let deviceId = null;
+    if (data.type === "alreadyLogged") {
+      try {
+        const waRes = await fetch(`${base}/waInstance${instanceId}/getWaSettings/${token}`);
+        if (waRes.ok) {
+          const waData = await waRes.json();
+          phone = waData?.phone ? String(waData.phone).replace(/\D/g, "") : null;
+          deviceId = waData?.deviceId ? String(waData.deviceId) : null;
+        }
+      } catch {
+      }
+    }
+    res.json({
+      type: data.type || "unknown",
+      message: data.message,
+      phone: phone || s3.whatsappNumber || "970567603295",
+      deviceId
+    });
+  } catch (err) {
+    logger.error({ err }, "WhatsApp QR fetch failed");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0645\u0632\u0648\u062F \u0627\u0644\u062E\u062F\u0645\u0629 \u0644\u062C\u0644\u0628 \u0631\u0645\u0632 \u0627\u0644\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0627\u0644\u0633\u0631\u064A\u0639\u0629." });
   }
 });
 router6.post("/settings/test-whatsapp", async (req, res) => {

@@ -550,20 +550,44 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
     const state = data?.stateInstance || "unknown";
 
     if (state === "authorized") {
-      // If requested or if valid token passed, ensure it is safely persisted permanently to Supabase
-      if (req.body?.saveOnSuccess && instanceId && token && !isMaskedToken) {
-        await saveSettings({
-          whatsappInstanceId: instanceId,
-          whatsappToken: token,
-          whatsappApiUrl: rawApiUrl,
-        });
+      let connectedPhone: string | null = null;
+      let deviceId: string | null = null;
+      try {
+        const waRes = await fetch(`${base}/waInstance${instanceId}/getWaSettings/${token}`);
+        if (waRes.ok) {
+          const waData = (await waRes.json()) as Record<string, any>;
+          if (waData?.phone) {
+            connectedPhone = String(waData.phone).replace(/\D/g, "");
+          }
+          if (waData?.deviceId) {
+            deviceId = String(waData.deviceId);
+          }
+        }
+      } catch (e) {
+        logger.warn({ e }, "Failed to fetch getWaSettings from Green API");
       }
+
+      const phoneToSave = connectedPhone || s.whatsappNumber || "970567603295";
+
+      // Always ensure the real connected phone is saved and synced
+      await saveSettings({
+        whatsappNumber: phoneToSave,
+        ...(req.body?.saveOnSuccess && instanceId && token && !isMaskedToken
+          ? {
+              whatsappInstanceId: instanceId,
+              whatsappToken: token,
+              whatsappApiUrl: rawApiUrl,
+            }
+          : {}),
+      });
 
       res.json({
         success: true,
         connected: true,
         stateInstance: state,
-        message: "المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح!",
+        phone: phoneToSave,
+        deviceId,
+        message: `المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح (+${phoneToSave})!`,
       });
       return;
     }
@@ -596,6 +620,60 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
       connected: false,
       error: msg,
     });
+  }
+});
+
+/**
+ * POST /api/settings/whatsapp-qr
+ * Fetches the live QR code or authorization status from Green API.
+ */
+router.post("/settings/whatsapp-qr", async (req, res) => {
+  const s = await ensureSettingsLoaded();
+  const rawInstanceId = String(req.body?.instanceId ?? "").trim();
+  const rawToken = String(req.body?.token ?? "").trim();
+  const isMaskedToken = rawToken.includes("•") || rawToken.includes("*");
+
+  const instanceId = rawInstanceId || s.whatsappInstanceId || "";
+  const token = (!rawToken || isMaskedToken) ? (s.whatsappToken || "") : rawToken;
+  const rawApiUrl = String(req.body?.apiUrl || s.whatsappApiUrl || "https://api.green-api.com").trim();
+
+  if (!instanceId || !token) {
+    res.status(400).json({ error: "معرف النسخة ورمز المصادقة مطلوبان." });
+    return;
+  }
+
+  const base = rawApiUrl.replace(/\/+$/, "");
+  try {
+    const qrResponse = await fetch(`${base}/waInstance${instanceId}/qr/${token}`);
+    if (!qrResponse.ok) {
+      const err = (await qrResponse.json().catch(() => ({}))) as Record<string, any>;
+      res.status(400).json({ error: err.message || "فشل جلب رمز QR من Green API." });
+      return;
+    }
+    const data = (await qrResponse.json()) as { type?: string; message?: string };
+    let phone: string | null = null;
+    let deviceId: string | null = null;
+
+    if (data.type === "alreadyLogged") {
+      try {
+        const waRes = await fetch(`${base}/waInstance${instanceId}/getWaSettings/${token}`);
+        if (waRes.ok) {
+          const waData = (await waRes.json()) as Record<string, any>;
+          phone = waData?.phone ? String(waData.phone).replace(/\D/g, "") : null;
+          deviceId = waData?.deviceId ? String(waData.deviceId) : null;
+        }
+      } catch {}
+    }
+
+    res.json({
+      type: data.type || "unknown",
+      message: data.message,
+      phone: phone || s.whatsappNumber || "970567603295",
+      deviceId,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "WhatsApp QR fetch failed");
+    res.status(500).json({ error: err.message || "فشل الاتصال بمزود الخدمة لجلب رمز الاستجابة السريعة." });
   }
 });
 
