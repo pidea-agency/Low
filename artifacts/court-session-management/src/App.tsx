@@ -40,6 +40,7 @@ const TasksPage = React.lazy(() => import('@/pages/tasks'));
 const ClientsPage = React.lazy(() => import('@/pages/clients'));
 const ClientProfilePage = React.lazy(() => import('@/pages/client-profile'));
 const CasesPage = React.lazy(() => import('@/pages/cases'));
+const LandingPage = React.lazy(() => import('@/pages/landing/landing-page'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -185,8 +186,19 @@ function Router() {
         <AdminRedirect />
       </Route>
 
-      {/* Staff Workspace Pages */}
+      {/* Landing Page is strictly on root path "/" */}
+      <Route path="/landing">
+        <Redirect to="/" />
+      </Route>
+
       <Route path="/">
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+          <LandingPage />
+        </Suspense>
+      </Route>
+
+      {/* Staff Workspace Pages */}
+      <Route path="/dashboard">
         <AuthGuard>
           <AppShell>
             <DashboardPage />

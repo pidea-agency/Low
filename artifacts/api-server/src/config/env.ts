@@ -232,10 +232,18 @@ export const env = {
   },
 
   get frontendUrl(): string {
-    const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || "http://localhost:5173";
+    const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || (process.env.NODE_ENV === "test" ? "https://example.com" : undefined);
+    if (!raw) {
+      throw new Error("FRONTEND_URL is not set — all outgoing links will be broken");
+    }
     return raw.replace(/\/+$/, "");
   },
 };
+
+/** Returns true only if FRONTEND_URL or APP_URL is present, without throwing. */
+export function isFrontendUrlConfigured(): boolean {
+  return Boolean(readEnv("FRONTEND_URL") || readEnv("APP_URL"));
+}
 
 /** Returns true only if every env var Google Sheets access needs is present, without throwing. */
 export function isGoogleSheetsConfigured(): boolean {

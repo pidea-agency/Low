@@ -437,6 +437,7 @@ function buildSettingsResponse(s: AppSettings) {
     whatsappToken: s.whatsappToken ? maskToken(s.whatsappToken) : "",
     whatsappTokenIsSet: Boolean(s.whatsappToken),
     whatsappInstanceId: s.whatsappInstanceId ?? "",
+    whatsappConnected: Boolean(s.whatsappConnected),
   };
 }
 
@@ -500,12 +501,12 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
     return;
   }
   const s = await ensureSettingsLoaded();
-  const rawInstanceId = String(req.body?.instanceId ?? "").trim();
-  const rawToken = String(req.body?.token ?? "").trim();
-  const isMaskedToken = rawToken.includes("•") || rawToken.includes("*");
+  const rawInstanceId = req.body?.instanceId !== undefined ? String(req.body.instanceId).trim() : undefined;
+  const rawToken = req.body?.token !== undefined ? String(req.body.token).trim() : undefined;
+  const isMaskedToken = rawToken ? (rawToken.includes("•") || rawToken.includes("*")) : false;
 
-  const instanceId = rawInstanceId || s.whatsappInstanceId || "";
-  const token = (!rawToken || isMaskedToken) ? (s.whatsappToken || "") : rawToken;
+  const instanceId = rawInstanceId !== undefined ? rawInstanceId : (s.whatsappInstanceId || "");
+  const token = rawToken !== undefined ? (isMaskedToken ? (s.whatsappToken || "") : rawToken) : (s.whatsappToken || "");
   const rawApiUrl = String(req.body?.apiUrl || s.whatsappApiUrl || "https://api.green-api.com").trim();
 
   if (!instanceId || !token) {
@@ -572,6 +573,7 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
       // Always ensure the real connected phone is saved and synced
       await saveSettings({
         whatsappNumber: phoneToSave,
+        whatsappConnected: true,
         ...(req.body?.saveOnSuccess && instanceId && token && !isMaskedToken
           ? {
               whatsappInstanceId: instanceId,
@@ -592,6 +594,11 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
       return;
     }
 
+    // State is not authorized - mark as disconnected
+    await saveSettings({
+      whatsappConnected: false,
+    });
+
     let message = `حالة المثيل الحالية: ${state}`;
     if (state === "notAuthorized") {
       message = "المثيل غير مصرح حالياً. يرجى مسح رمز الاستجابة السريعة (QR Code) في لوحة تحكم Green API لربط الحساب.";
@@ -611,6 +618,9 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
     });
   } catch (err: any) {
     logger.error({ err, targetUrl }, "WhatsApp test connection failed");
+    await saveSettings({
+      whatsappConnected: false,
+    }).catch(() => {});
     const isTimeout = err?.name === "AbortError" || err?.message?.includes("aborted");
     const msg = isTimeout
       ? "انتهت مهلة الاتصال بمزود Green API (يرجى التحقق من صحة رابط الـ API والاتصال بالإنترنت)."
@@ -620,6 +630,22 @@ router.post("/settings/test-whatsapp-connection", async (req, res) => {
       connected: false,
       error: msg,
     });
+  }
+});
+
+/**
+ * POST /api/settings/disconnect-whatsapp
+ * Disconnects the WhatsApp gateway and sets connection state to false.
+ */
+router.post("/settings/disconnect-whatsapp", async (_req, res) => {
+  try {
+    await saveSettings({
+      whatsappConnected: false,
+    });
+    res.json({ success: true, message: "تم قطع ربط بوابة الواتساب بنجاح." });
+  } catch (err: any) {
+    logger.error({ err }, "Failed to disconnect WhatsApp gateway");
+    res.status(500).json({ error: "فشل قطع ربط بوابة الواتساب." });
   }
 });
 

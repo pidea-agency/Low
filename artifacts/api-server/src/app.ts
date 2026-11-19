@@ -7,8 +7,14 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { env, isSupabaseConfigured } from "./config/env";
+import { env, isSupabaseConfigured, isFrontendUrlConfigured } from "./config/env";
 import { refreshSettingsFromSupabase } from "./config/settings-store";
+
+// Startup check: Fail loudly if FRONTEND_URL and APP_URL are missing (outside tests)
+if (!isFrontendUrlConfigured() && process.env.NODE_ENV !== "test") {
+  logger.fatal("FATAL: FRONTEND_URL is not set — all outgoing links will be broken");
+  throw new Error("FRONTEND_URL is not set — all outgoing links will be broken");
+}
 
 // Startup check: Fail loudly if Supabase credentials are missing (outside tests)
 if (!isSupabaseConfigured() && process.env.NODE_ENV !== "test") {

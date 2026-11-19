@@ -1,20 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Bell,
   MessageSquare,
   Check,
   RotateCcw,
   Send,
-  Sparkles,
-  ChevronDown,
-  Info,
-  ShieldAlert,
   Smartphone,
   CheckCircle2,
   AlertTriangle,
   Search,
   ExternalLink,
-  Edit3,
+  ChevronDown,
+  ChevronUp,
   SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,8 +42,14 @@ const defaultInitialTemplates: NotificationTemplate[] = [
     recipient_label: 'المحامي المكلف',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'مرحباً بك أستاذ {{memberName}}، تم تكليفك بـ {{recordTypeArabic}} حسب الإجراءات في {{courtName}}. لمتابعة رابط التفاصيل: {{directLink}}',
-    placeholders: ['recordTypeArabic', 'courtName', 'memberName', 'directLink', 'recordDescription'],
+      'مرحباً أستاذ {{memberName}}، تم تكليفك بـ {{recordTypeArabic}} في {{courtName}}. لمتابعة التفاصيل: {{directLink}}',
+    placeholders: [
+      'recordTypeArabic',
+      'courtName',
+      'memberName',
+      'directLink',
+      'recordDescription',
+    ],
     category: 'cases_poa',
   },
   {
@@ -57,73 +59,78 @@ const defaultInitialTemplates: NotificationTemplate[] = [
     recipient_label: 'المحامي المكلف',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'تم تكليفك بوكالة قانونية جديدة برقم {{poaNumber}} الخاصة بالموكل {{clientName}} لمباشرة الإجراءات.',
+      'تم تكليفك بوكالة رقم {{poaNumber}} الخاصة بالموكل {{clientName}} لمباشرة الإجراءات.',
     placeholders: ['issueDate', 'clientName', 'poaNumber', 'directLink'],
     category: 'cases_poa',
   },
   {
     event_type: 'poa_expiring',
     id_number: 3,
-    name: 'تنبيه قرب انتهاء سريان وكالة (قبل 30 يوماً)',
+    name: 'تنبيه قرب انتهاء وكالة (قبل 30 يوماً)',
     recipient_label: 'المحامي المكلف ومدير المكتب',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'تنبيه هام: تنتهي الوكالة رقم {{poaNumber}} للموكل {{clientName}} خلال {{daysRemaining}} أيام. يرجى تجديد الوكالة لضمان استمرار المرافعة.',
+      'تنبيه: تنتهي الوكالة رقم {{poaNumber}} للموكل {{clientName}} خلال {{daysRemaining}} أيام. يُرجى متابعة التجديد.',
     placeholders: ['daysRemaining', 'clientName', 'poaNumber', 'expiryDate'],
     category: 'cases_poa',
   },
   {
     event_type: 'new_document_uploaded',
     id_number: 4,
-    name: 'رفع مستند أو مرفق قضائي جديد',
+    name: 'إضافة مستند أو مرفق جديد',
     recipient_label: 'المحامي المكلف',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'قام {{uploaderName}} برفع مستند جديد ({{documentName}}) على {{recordTypeArabic}} رقم {{recordNumber}}',
-    placeholders: ['recordTypeArabic', 'documentName', 'uploaderName', 'recordNumber'],
+      'أضاف {{uploaderName}} مستنداً ({{documentName}}) على {{recordTypeArabic}} رقم {{recordNumber}}.',
+    placeholders: [
+      'recordTypeArabic',
+      'documentName',
+      'uploaderName',
+      'recordNumber',
+    ],
     category: 'cases_poa',
   },
   {
     event_type: 'member_activation_invite',
     id_number: 5,
-    name: 'دعوة تفعيل حساب عضو/محام جديد',
-    recipient_label: 'العضو المعني',
+    name: 'دعوة تفعيل حساب عضو جديد',
+    recipient_label: 'العضو الجديد',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'مرحباً بك أستاذ {{memberName}}، تمت دعوتك للانضمام إلى {{officeName}} على منصة LegalTech. يرجى تفعيل حسابك من خلال الرابط: {{activationLink}}',
+      'أهلاً أستاذ {{memberName}}، تمت دعوتك للانضمام إلى {{officeName}}. فعّل حسابك من هنا: {{activationLink}}',
     placeholders: ['activationLink', 'officeName', 'memberName'],
     category: 'accounts',
   },
   {
     event_type: 'member_account_suspended',
     id_number: 6,
-    name: 'إيقاف أو تعليق حساب عضو',
+    name: 'إيقاف حساب عضو',
     recipient_label: 'العضو المعني',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'تم إيقاف حسابك في مكتب {{officeName}}. يرجى مراجعة إدارة المكتب لمزيد من التفاصيل.',
+      'تم إيقاف حسابك في {{officeName}}. تواصل مع إدارة المكتب لمزيد من التفاصيل.',
     placeholders: ['adminContact', 'reason', 'officeName'],
     category: 'accounts',
   },
   {
     event_type: 'subscription_expiring_soon',
     id_number: 7,
-    name: 'قرب انتهاء اشتراك المكتب السحابي',
+    name: 'قرب انتهاء اشتراك المكتب',
     recipient_label: 'مدير المكتب',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'تنبيه إداري: اشتراك مكتبك في باقة {{planName}} ينتهي خلال {{daysRemaining}} أيام (بتاريخ {{endDate}}). يرجى التجديد لتفادي تعليق الجلسات.',
+      'اشتراك المكتب في {{planName}} ينتهي خلال {{daysRemaining}} أيام ({{endDate}}). يُرجى التجديد للاستمرار دون انقطاع.',
     placeholders: ['endDate', 'daysRemaining', 'planName', 'renewLink'],
     category: 'subscription_payments',
   },
   {
     event_type: 'payment_recorded',
     id_number: 8,
-    name: 'تسجيل دفعة مالية جديدة من موكل',
+    name: 'تسجيل دفعة مالية من موكل',
     recipient_label: 'المحامي المكلف ومدير المكتب',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'تم تسجيل دفعة مالية جديدة للمكتب بقيمة {{amount}} {{currency}} برقم سند {{reference}} لصالح القضية {{caseNumber}}',
+      'تم تسجيل دفعة بقيمة {{amount}} {{currency}} (مرجع {{reference}}) للقضية {{caseNumber}}.',
     placeholders: ['caseNumber', 'reference', 'currency', 'amount'],
     category: 'subscription_payments',
   },
@@ -134,18 +141,24 @@ const defaultInitialTemplates: NotificationTemplate[] = [
     recipient_label: 'المحامي المكلف ومدير المكتب',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'تذكير: موعد جلسة القضية رقم {{caseNumber}} بتاريخ {{sessionDate}} الساعة {{sessionTime}} لدى {{court}} الدائرة {{circuit}}',
-    placeholders: ['sessionTime', 'sessionDate', 'caseNumber', 'circuit', 'court'],
+      'تذكير: جلسة القضية رقم {{caseNumber}} بتاريخ {{sessionDate}} الساعة {{sessionTime}} في {{court}} — الدائرة {{circuit}}.',
+    placeholders: [
+      'sessionTime',
+      'sessionDate',
+      'caseNumber',
+      'circuit',
+      'court',
+    ],
     category: 'reminders',
   },
   {
     event_type: 'reminder_failed',
     id_number: 10,
-    name: 'فشل إرسال تذكير لجلسة تلقائي (إشعار خطأ)',
+    name: 'تعذّر إرسال تذكير جلسة تلقائي',
     recipient_label: 'مدير المكتب',
     channels: { in_app: true, whatsapp: true },
     body_template:
-      'تعذر إرسال تذكير الجلسة القضائية رقم {{caseNumber}} بسبب {{error}}',
+      'تعذّر إرسال تذكير جلسة القضية رقم {{caseNumber}} بسبب: {{error}}.',
     placeholders: ['recipientPhone', 'error', 'caseNumber'],
     category: 'reminders',
   },
@@ -156,83 +169,108 @@ const defaultInitialTemplates: NotificationTemplate[] = [
     recipient_label: 'مدير المكتب',
     channels: { in_app: true, whatsapp: false },
     body_template:
-      'تنتهي رخصة المحاماة الخاصة بالعضو {{memberName}} (رقم الترخيص: {{licenseNumber}}) خلال {{daysRemaining}} يوماً (تاريخ الانتهاء: {{expiryDate}}).',
-    placeholders: ['memberName', 'licenseNumber', 'daysRemaining', 'expiryDate'],
+      'رخصة المحاماة للعضو {{memberName}} (رقم {{licenseNumber}}) تنتهي خلال {{daysRemaining}} يوماً في {{expiryDate}}.',
+    placeholders: [
+      'memberName',
+      'licenseNumber',
+      'daysRemaining',
+      'expiryDate',
+    ],
     category: 'accounts',
   },
   {
     event_type: 'subscription_suspended',
     id_number: 12,
-    name: 'إيقاف أو تعليق اشتراك المكتب',
+    name: 'تعليق اشتراك المكتب',
     recipient_label: 'مدير المكتب',
     channels: { in_app: true, whatsapp: false },
     body_template:
-      'تم إيقاف اشتراك مكتبك في منصة {{platformName}}. يرجى التواصل مع إدارة المنصة لتسوية الحساب وإعادة التفعيل.',
+      'تم تعليق اشتراك {{officeName}} في {{platformName}}. يُرجى مراجعة الإدارة لتسوية الحساب.',
     placeholders: ['platformName', 'officeName', 'reason'],
     category: 'subscription_payments',
   },
 ];
 
 const samplePlaceholderMap: Record<string, string> = {
-  recordTypeArabic: 'جلسة قضائية (تجريبي)',
-  record_type_arabic: 'جلسة قضائية (تجريبي)',
-  recordDescription: 'دعوى رقم 0000/9999 (تجريبي)',
-  directLink: 'https://app.mansoori-law.sa/demo',
-  courtName: 'المحكمة العامة بالرياض',
-  court: 'المحكمة العامة بالرياض',
-  circuit: 'الثالثة عشرة',
-  memberName: 'أ. فهد المنصوري (محام تجريبي)',
-  poaNumber: '44123456 (وكالة تجريبية)',
-  clientName: 'عبدالله محمد (عميل تجريبي)',
+  recordTypeArabic: 'جلسة قضائية',
+  record_type_arabic: 'جلسة قضائية',
+  recordDescription: 'دعوى رقم 1042/1447',
+  directLink: 'https://app.example.com/cases/1042',
+  courtName: 'المحكمة العامة',
+  court: 'المحكمة العامة',
+  circuit: 'الثالثة',
+  memberName: 'أ. سامي العلي',
+  poaNumber: '44123456',
+  clientName: 'خالد المنصور',
   daysRemaining: '5',
-  expiryDate: '1446/09/15هـ',
-  issueDate: '1445/09/15هـ',
-  documentName: 'مذكرة_جوابية_تجريبية.pdf',
-  uploaderName: 'مساعد قانوني (تجريبي)',
-  recordNumber: '0000/9999',
-  activationLink: 'https://app.mansoori-law.sa/activate/demo',
-  officeName: 'مكتب المنصوري للمحاماة (تجريبي)',
+  expiryDate: '1448/04/10',
+  issueDate: '1447/04/10',
+  documentName: 'لائحة_دعوى.pdf',
+  uploaderName: 'أ. ريم الحسن',
+  recordNumber: '1042/1447',
+  activationLink: 'https://app.example.com/activate',
+  officeName: 'مكتب العدالة للمحاماة',
   adminContact: '0500000000',
-  reason: 'تحديث بيانات دوري (إجراء اختباري)',
-  planName: 'الباقة الاحترافية (تجريبية)',
-  endDate: '1446/12/30هـ',
-  renewLink: 'https://app.mansoori-law.sa/subscription',
-  amount: '1,500',
+  reason: 'تحديث بيانات الحساب',
+  planName: 'باقة المكاتب',
+  endDate: '1448/06/30',
+  renewLink: 'https://app.example.com/subscription',
+  amount: '2,500',
   currency: 'ر.س',
-  reference: 'REC-TEST-999',
-  caseNumber: '0000/9999',
-  sessionDate: '1446/05/20هـ',
-  sessionTime: '10:30 صباحاً',
-  recipientPhone: '9665xxxxxxxx',
-  error: 'خطأ في مزود الخدمة (تجريبي)',
-  licenseNumber: '381234 (ترخيص تجريبي)',
-  platformName: 'منصة إدارة الجلسات',
+  reference: 'PAY-804',
+  caseNumber: '1042/1447',
+  sessionDate: '1448/03/25',
+  sessionTime: '10:00 ص',
+  recipientPhone: '966500000000',
+  error: 'انقطاع اتصال البوابة',
+  licenseNumber: '381234',
+  platformName: 'ديوان',
 };
 
 function substitutePlaceholders(text: string): string {
-  let res = text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => {
-    return samplePlaceholderMap[key] || `[${key}]`;
+  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
+    return samplePlaceholderMap[key] ?? `[${key}]`;
   });
-  res = res.replace(/\{([a-zA-Z0-9_]+)\}/g, (_m, key) => {
-    return samplePlaceholderMap[key] || `[${key}]`;
-  });
-  return res;
 }
+
+const CATEGORY_TABS: Array<{
+  id: string;
+  label: string;
+  category?: NotificationTemplate['category'];
+}> = [
+  { id: 'all', label: 'الكل' },
+  { id: 'cases_poa', label: 'القضايا والوكالات', category: 'cases_poa' },
+  { id: 'reminders', label: 'تذكيرات الجلسات', category: 'reminders' },
+  { id: 'accounts', label: 'الحسابات والرخص', category: 'accounts' },
+  {
+    id: 'subscription_payments',
+    label: 'الاشتراك والمدفوعات',
+    category: 'subscription_payments',
+  },
+];
 
 export default function NotificationSettingsPage() {
   const { toast } = useToast();
 
-  const [templates, setTemplates] = useState<NotificationTemplate[]>(defaultInitialTemplates);
+  const [templates, setTemplates] = useState<NotificationTemplate[]>(
+    defaultInitialTemplates
+  );
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [isSavingAll, setIsSavingAll] = useState(false);
+
+  // طريقة عرض هادئة: قسم واحد مفتوح للتعديل في كل مرة، واختبار قابل للطي
+  const [expandedEventType, setExpandedEventType] = useState<string | null>(
+    'case_assigned'
+  );
+  const [isTestDrawerOpen, setIsTestDrawerOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Test send state
   const [testPhone, setTestPhone] = useState('');
   const [testEventType, setTestEventType] = useState<string>('case_assigned');
-  const [isCustomOverride, setIsCustomOverride] = useState(false);
+  const [isCustomText, setIsCustomText] = useState(false);
   const [customTestText, setCustomTestText] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -241,46 +279,50 @@ export default function NotificationSettingsPage() {
     idMessage?: string;
     error?: string;
   } | null>(null);
-  const [testQuota, setTestQuota] = useState<{ remaining: number; max: number } | null>(null);
+  const [testQuota, setTestQuota] = useState<{
+    remaining: number;
+    max: number;
+  } | null>(null);
 
-  // Fetch templates from API
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
   const fetchTemplates = async () => {
     setIsLoadingTemplates(true);
     try {
-      const res = await fetch('/api/settings/notification-templates', { credentials: 'include' });
+      const res = await fetch('/api/settings/notification-templates', {
+        credentials: 'include',
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           const merged = defaultInitialTemplates.map((def) => {
-            const found = data.find((d: any) => d.event_type === def.event_type);
+            const found = data.find(
+              (d: any) => d.event_type === def.event_type
+            );
             return found ? { ...def, ...found } : def;
           });
           setTemplates(merged);
-        } else {
-          setTemplates(defaultInitialTemplates);
         }
-      } else {
-        setTemplates(defaultInitialTemplates);
       }
     } catch {
-      setTemplates(defaultInitialTemplates);
+      // Keep defaults on network failure
     } finally {
       setIsLoadingTemplates(false);
     }
   };
 
-  // Fetch test send quota
   const fetchQuota = async () => {
     try {
-      const res = await fetch('/api/settings/notification-templates/test-send/quota', {
-        credentials: 'include',
-      });
+      const res = await fetch(
+        '/api/settings/notification-templates/test-send/quota',
+        { credentials: 'include' }
+      );
       if (res.ok) {
         const data = await res.json();
         setTestQuota({ remaining: data.remaining, max: data.max });
       }
     } catch {
-      // quota check is non-critical
+      // Non-critical
     }
   };
 
@@ -289,7 +331,11 @@ export default function NotificationSettingsPage() {
     fetchQuota();
   }, []);
 
-  const handleToggleChannel = (eventType: string, channel: 'in_app' | 'whatsapp', enabled: boolean) => {
+  const handleToggleChannel = (
+    eventType: string,
+    channel: 'in_app' | 'whatsapp',
+    enabled: boolean
+  ) => {
     setTemplates((prev) =>
       prev.map((t) =>
         t.event_type === eventType
@@ -301,14 +347,41 @@ export default function NotificationSettingsPage() {
 
   const handleBodyChange = (eventType: string, text: string) => {
     setTemplates((prev) =>
-      prev.map((t) => (t.event_type === eventType ? { ...t, body_template: text } : t))
+      prev.map((t) =>
+        t.event_type === eventType ? { ...t, body_template: text } : t
+      )
     );
   };
 
-  const handleSaveSingleTemplate = async (template: NotificationTemplate) => {
-    setSavingKey(template.event_type);
-    try {
-      const res = await fetch(`/api/settings/notification-templates/${template.event_type}`, {
+  const insertPlaceholderAtCursor = (eventType: string, placeholder: string) => {
+    const token = `{{${placeholder}}}`;
+    const el = textareaRefs.current[eventType];
+    const currentText =
+      templates.find((t) => t.event_type === eventType)?.body_template ?? '';
+
+    if (!el) {
+      handleBodyChange(eventType, `${currentText} ${token}`.trim());
+      return;
+    }
+
+    const start = el.selectionStart ?? currentText.length;
+    const end = el.selectionEnd ?? currentText.length;
+    const nextText =
+      currentText.slice(0, start) + token + currentText.slice(end);
+
+    handleBodyChange(eventType, nextText);
+
+    requestAnimationFrame(() => {
+      el.focus();
+      const nextPos = start + token.length;
+      el.setSelectionRange(nextPos, nextPos);
+    });
+  };
+
+  const persistTemplate = async (template: NotificationTemplate) => {
+    const res = await fetch(
+      `/api/settings/notification-templates/${template.event_type}`,
+      {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -317,21 +390,27 @@ export default function NotificationSettingsPage() {
           body_template: template.body_template,
           title_template: template.title_template || template.name,
         }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'فشل حفظ القالب');
       }
+    );
 
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'تعذر حفظ القالب');
+    }
+  };
+
+  const handleSaveSingleTemplate = async (template: NotificationTemplate) => {
+    setSavingKey(template.event_type);
+    try {
+      await persistTemplate(template);
       toast({
-        title: 'تم حفظ القالب بنجاح ✓',
-        description: `تم حفظ إعدادات وقناة حدث "${template.name}".`,
+        title: 'تم الحفظ',
+        description: `تم تحديث قالب "${template.name}".`,
       });
     } catch (err: any) {
       toast({
-        title: 'خطأ أثناء الحفظ',
-        description: err?.message || 'تعذر حفظ القالب في الخادم.',
+        title: 'لم يتم الحفظ',
+        description: err?.message || 'حدث خطأ أثناء حفظ القالب.',
         variant: 'destructive',
       });
     } finally {
@@ -341,65 +420,55 @@ export default function NotificationSettingsPage() {
 
   const handleSaveAllTemplates = async () => {
     setIsSavingAll(true);
-    try {
-      for (const t of templates) {
-        await fetch(`/api/settings/notification-templates/${t.event_type}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            channels: t.channels,
-            body_template: t.body_template,
-            title_template: t.title_template || t.name,
-          }),
-        });
+    let failedCount = 0;
+
+    for (const t of templates) {
+      try {
+        await persistTemplate(t);
+      } catch {
+        failedCount += 1;
       }
+    }
+
+    setIsSavingAll(false);
+
+    if (failedCount === 0) {
       toast({
-        title: 'تم حفظ كافة القوالب بنجاح ✓',
-        description: 'تم تحديث إعدادات وقنوات إرسال كافة أحداث المنظومة القضائية.',
+        title: 'تم حفظ جميع القوالب',
+        description: 'أصبحت التعديلات معتمدة لجميع التنبيهات.',
       });
-    } catch {
+    } else {
       toast({
-        title: 'تنبيه',
-        description: 'تم حفظ التعديلات محلياً وتطبيقها على النظام.',
+        title: 'تم الحفظ جزئياً',
+        description: `تم حفظ ${templates.length - failedCount} قوالب، وتعذّر حفظ ${failedCount}.`,
+        variant: 'destructive',
       });
-    } finally {
-      setIsSavingAll(false);
     }
   };
 
-  const handleResetDefaultTemplates = () => {
+  const handleResetAllTemplates = () => {
     setTemplates(defaultInitialTemplates);
     toast({
-      title: 'تمت استعادة القوالب القياسية',
-      description: 'تم تعيين النصوص والمتغيرات الافتراضية لجميع الإشعارات.',
+      title: 'تمت الاستعادة',
+      description: 'أُعيدت جميع القوالب إلى نصها الافتراضي (اضغط حفظ لاعتمادها).',
     });
   };
 
-  const handleSelectTemplateForTest = (eventType: string) => {
+  const openTestForEvent = (eventType: string) => {
     setTestEventType(eventType);
+    setIsTestDrawerOpen(true);
     const target = templates.find((t) => t.event_type === eventType);
-    if (target) {
+    if (target && isCustomText) {
       setCustomTestText(target.body_template);
     }
-    // Smooth scroll to test box
-    const testBox = document.getElementById('test-send-panel');
-    if (testBox) {
-      testBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    toast({
-      title: 'تم تحديد القالب للاختبار',
-      description: `يمكنك الآن إدخال رقم هاتفك لإرسال رسالة تجريبية حقيقية.`,
-    });
   };
 
-  // Execute Real Test Send
   const handleExecuteTestSend = async () => {
     const cleanPhone = testPhone.trim();
     if (!cleanPhone) {
       toast({
-        title: 'رقم الهاتف مطلوب',
-        description: 'يرجى إدخال رقم الواتساب الذي تود إرسال الرسالة التجريبية إليه.',
+        title: 'أدخل رقم الهاتف أولاً',
+        description: 'اكتب رقم المستلم مع رمز الدولة لإرسال الرسالة التجريبية.',
         variant: 'destructive',
       });
       return;
@@ -409,55 +478,55 @@ export default function NotificationSettingsPage() {
     setTestResult(null);
 
     try {
-      const payload: any = {
+      const payload: Record<string, any> = {
         phone: cleanPhone,
         eventType: testEventType,
       };
 
-      if (isCustomOverride && customTestText.trim()) {
+      if (isCustomText && customTestText.trim()) {
         payload.customMessage = customTestText.trim();
       }
 
-      const res = await fetch('/api/settings/notification-templates/test-send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        '/api/settings/notification-templates/test-send',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        }
+      );
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        const errorMsg = data.error || 'فشل إرسال الرسالة التجريبية.';
-        setTestResult({
-          success: false,
-          error: errorMsg,
-        });
+        const errorMsg = data.error || 'تعذّر إرسال الرسالة التجريبية.';
+        setTestResult({ success: false, error: errorMsg });
         toast({
-          title: 'فشل إرسال الرسالة التجريبية',
+          title: 'تعذّر الإرسال',
           description: errorMsg,
           variant: 'destructive',
         });
       } else {
         setTestResult({
           success: true,
-          message: data.message,
+          message: data.message || 'تم إرسال الرسالة التجريبية بنجاح.',
           idMessage: data.idMessage,
         });
         if (typeof data.remaining === 'number') {
-          setTestQuota((prev) => ({ remaining: data.remaining, max: prev?.max || 10 }));
+          setTestQuota((prev) => ({
+            remaining: data.remaining,
+            max: prev?.max ?? 10,
+          }));
         }
         toast({
-          title: 'تم الإرسال بنجاح عبر الواتساب ✓',
-          description: data.idMessage ? `معرّف الرسالة: ${data.idMessage}` : data.message,
+          title: 'تم إرسال التجربة',
+          description: 'تحقق من وصول الرسالة إلى هاتفك.',
         });
       }
     } catch (err: any) {
-      const errorMsg = err?.message || 'تعذر الاتصال بالخادم لإجراء اختبار الإرسال.';
-      setTestResult({
-        success: false,
-        error: errorMsg,
-      });
+      const errorMsg = err?.message || 'تعذّر الاتصال بالخادم.';
+      setTestResult({ success: false, error: errorMsg });
       toast({
         title: 'خطأ في الاتصال',
         description: errorMsg,
@@ -469,550 +538,498 @@ export default function NotificationSettingsPage() {
     }
   };
 
-  // Selected template for live test preview
-  const currentSelectedTestTemplate = useMemo(() => {
-    return (
+  const currentSelectedTestTemplate = useMemo(
+    () =>
       templates.find((t) => t.event_type === testEventType) ||
-      defaultInitialTemplates.find((t) => t.event_type === testEventType) ||
-      defaultInitialTemplates[0]
-    );
-  }, [templates, testEventType]);
+      defaultInitialTemplates[0],
+    [templates, testEventType]
+  );
 
-  const previewSourceText = isCustomOverride && customTestText.trim()
-    ? customTestText
-    : currentSelectedTestTemplate.body_template;
+  const previewSourceText =
+    isCustomText && customTestText.trim()
+      ? customTestText
+      : currentSelectedTestTemplate.body_template;
 
-  const renderedPreviewText = useMemo(() => {
-    return substitutePlaceholders(previewSourceText);
-  }, [previewSourceText]);
+  const renderedPreviewText = useMemo(
+    () => substitutePlaceholders(previewSourceText),
+    [previewSourceText]
+  );
 
-  // Filter templates
   const filteredTemplates = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return templates.filter((t) => {
       const matchesCategory =
-        activeCategory === 'all' ||
-        (activeCategory === 'cases_poa' && t.category === 'cases_poa') ||
-        (activeCategory === 'accounts' && t.category === 'accounts') ||
-        (activeCategory === 'subscription_payments' && t.category === 'subscription_payments') ||
-        (activeCategory === 'reminders' && t.category === 'reminders');
-
-      const q = searchQuery.trim().toLowerCase();
+        activeCategory === 'all' || t.category === activeCategory;
       const matchesSearch =
         !q ||
         t.name.toLowerCase().includes(q) ||
-        t.event_type.toLowerCase().includes(q) ||
-        t.body_template.toLowerCase().includes(q);
-
+        t.body_template.toLowerCase().includes(q) ||
+        (t.recipient_label || '').toLowerCase().includes(q);
       return matchesCategory && matchesSearch;
     });
   }, [templates, activeCategory, searchQuery]);
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 font-sans select-none" dir="rtl">
-     
-
- {/* ── Executive Header Banner ── */}
-<div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-5 transition-all">
-  {/* Left/Title Info */}
-  <div className="space-y-2">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-[#eff4ff] text-[#00236f] flex items-center justify-center shadow-2xs shrink-0 border border-[#dce9ff]">
-        <MessageSquare className="w-5 h-5 text-[#00236f]" />
-      </div>
-      <div>
-        <h1 className="text-base sm:text-lg font-bold text-[#0b1c30]">
-          التحكم بقوالب الرسائل والتنبيهات التلقائية
-        </h1>
-      </div>
-    </div>
-    <p className="text-xs text-[#757682] leading-relaxed max-w-3xl pr-0 sm:pr-13">
-      إدارة وتخصيص قوالب رسائل الواتساب وقنوات الإرسال لجميع أحداث المنظومة القضائية، وضبط المتغيرات الذكية (Placeholders) مع إمكانية إرسال رسائل تجريبية حية عبر بوابة Green API الحقيقية.
-    </p>
-  </div>
-
-  {/* Global Action Buttons (Clean & Stacked/Wrapped properly) */}
-  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full xl:w-auto shrink-0 pt-2 xl:pt-0">
-    <Button
-      onClick={handleSaveAllTemplates}
-      disabled={isSavingAll}
-      className="bg-[#00236f] hover:bg-[#15388c] text-white text-xs font-bold h-10 px-4 gap-2 rounded-xl shadow-sm cursor-pointer justify-center transition-all"
+    <div
+      dir="rtl"
+      className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6"
     >
-      <Check className="w-4 h-4" />
-      <span>{isSavingAll ? 'جارٍ الحفظ...' : 'حفظ تغييرات كافة القوالب'}</span>
-    </Button>
-
-    <Button
-      variant="outline"
-      onClick={handleResetDefaultTemplates}
-      className="bg-white hover:bg-slate-50 text-[#444651] border-slate-200/80 text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer shadow-2xs justify-center transition-colors"
-    >
-      <RotateCcw className="w-3.5 h-3.5 text-[#757682]" />
-      <span>استعادة القوالب القياسية</span>
-    </Button>
-
-    <Link href="/settings" className="contents">
-      <Button
-        variant="outline"
-        className="bg-white hover:bg-slate-50 text-[#00236f] border-slate-200/80 text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer shadow-2xs justify-center transition-colors w-full sm:w-auto"
-      >
-        <ExternalLink className="w-3.5 h-3.5 text-[#00236f]" />
-        <span>إعدادات بوابة الواتساب</span>
-      </Button>
-    </Link>
-  </div>
-</div>
-
-      {/* ── FEATURED SECTION: Real Test-Send Panel ── */}
-      <div
-        id="test-send-panel"
-        className="bg-gradient-to-br from-white via-[#fafcff] to-[#f4f7fc] border-2 border-[#cfe0fc] rounded-2xl p-5 sm:p-6 shadow-sm space-y-5"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e5eeff]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#00236f] text-white flex items-center justify-center">
-              <Send className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-[#10233F] flex items-center gap-2">
-                <span>إرسال رسالة تجريبية حية عبر الواتساب</span>
-                <span className="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-emerald-200">
-                  إرسال فعلي حقيقي
-                </span>
-              </h2>
-              <p className="text-[11px] text-[#64748B]">
-                اختر القالب أو اكتب صياغة مخصصة لإرسالها فوراً إلى رقم هاتفك لاختبار التنسيق وسلامة المتغيرات.
-              </p>
-            </div>
+      {/* 1. ترويسة بسيطة وإجراءات واضحة */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#00236f] text-white flex items-center justify-center shrink-0 mt-0.5">
+            <MessageSquare className="w-5 h-5" />
           </div>
-
-          {/* Rate-limit badge */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] font-medium text-[#64748B]">
-              معدل الاستخدام:
-            </span>
-            <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
-                testQuota && testQuota.remaining <= 2
-                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                  : 'bg-[#eff4ff] text-[#00236f] border-[#cfe0fc]'
-              }`}
-            >
-              المتبقي: {testQuota ? testQuota.remaining : 10} من 10 رسائل / ساعة
-            </span>
-          </div>
-        </div>
-
-        {/* Inputs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Phone Number Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#10233F] flex items-center gap-1.5">
-              <Smartphone className="w-3.5 h-3.5 text-[#00236f]" />
-              <span>رقم هاتف المستلم للاختبار *</span>
-            </label>
-            <Input
-              type="text"
-              placeholder="مثال: 972501234567"
-              value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value)}
-              className="h-10 text-xs bg-white border-[#cfe0fc] focus:border-[#00236f] font-mono"
-              dir="ltr"
-            />
-            <p className="text-[10px] text-[#64748B]">
-              أدخل رقمك مع مفتاح الدولة (مثل 9725xxxxxxxx) لاستقبال الرسالة فوراً.
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-[#0b1c30]">
+              قوالب الرسائل والتنبيهات
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              اضغط على أي تنبيه لتعديل نصه أو قنواته، أو افتح التجربة السريعة لإرسال رسالة اختبار.
             </p>
           </div>
-
-          {/* Event Type Dropdown */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#10233F] flex items-center gap-1.5">
-              <Bell className="w-3.5 h-3.5 text-[#00236f]" />
-              <span>اختيار نوع حدث القالب المطلوب اختباره *</span>
-            </label>
-            <select
-              value={testEventType}
-              onChange={(e) => {
-                setTestEventType(e.target.value);
-                const t = templates.find((row) => row.event_type === e.target.value);
-                if (t && isCustomOverride) {
-                  setCustomTestText(t.body_template);
-                }
-              }}
-              className="w-full h-10 px-3 rounded-lg text-xs bg-white border border-[#cfe0fc] text-[#10233F] font-semibold focus:outline-hidden focus:border-[#00236f]"
-            >
-              {templates.map((t) => (
-                <option key={t.event_type} value={t.event_type}>
-                  {t.name} ({t.event_type})
-                </option>
-              ))}
-            </select>
-            <div className="flex items-center justify-between text-[10px] text-[#64748B]">
-              <span>المستلم الافتراضي لهذا الحدث: <strong className="text-[#10233F]">{currentSelectedTestTemplate.recipient_label || 'المعني'}</strong></span>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCustomOverride(!isCustomOverride);
-                  if (!isCustomOverride) {
-                    setCustomTestText(currentSelectedTestTemplate.body_template);
-                  }
-                }}
-                className="text-[#00236f] font-bold hover:underline flex items-center gap-1"
-              >
-                <Edit3 className="w-3 h-3" />
-                <span>{isCustomOverride ? 'إلغاء التعديل اليدوي' : 'تعديل الصياغة قبل التجربة'}</span>
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Free-text override textarea if activated */}
-        {isCustomOverride && (
-          <div className="space-y-1.5 p-3.5 rounded-xl bg-white border border-[#d6e4ff]">
-            <label className="text-xs font-bold text-[#00236f] flex items-center gap-1.5">
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>صياغة رسالة اختبارية مخصصة (غير محفوظة):</span>
-            </label>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsTestDrawerOpen((prev) => !prev)}
+            className="border-[#00236f]/30 text-[#00236f] hover:bg-[#eff4ff] text-xs font-bold h-9 px-3.5 rounded-xl gap-1.5 cursor-pointer"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>{isTestDrawerOpen ? 'إخفاء التجربة' : 'إرسال تجربة'}</span>
+          </Button>
+
+          <Button
+            type="button"
+            onClick={handleSaveAllTemplates}
+            disabled={isSavingAll}
+            className="bg-[#00236f] hover:bg-[#001b56] text-white text-xs font-bold h-9 px-4 rounded-xl gap-1.5 cursor-pointer"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>{isSavingAll ? 'جارٍ الحفظ...' : 'حفظ الكل'}</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleResetAllTemplates}
+            className="text-slate-700 border-slate-200 hover:bg-slate-50 text-xs font-semibold h-9 px-3 rounded-xl gap-1.5 cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+            <span>استعادة الافتراضي</span>
+          </Button>
+
+          <Link href="/settings">
+            <Button
+              variant="outline"
+              className="text-slate-700 border-slate-200 hover:bg-slate-50 text-xs font-semibold h-9 px-3 rounded-xl gap-1.5 cursor-pointer"
+            >
+              <span>البوابة</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* 2. لوحة التجربة السريعة (تُفتح عند الحاجة فقط) */}
+      {isTestDrawerOpen && (
+        <section
+          aria-label="تجربة إرسال رسالة"
+          className="bg-[#f6f9ff] border border-blue-200/80 rounded-2xl p-5 space-y-4"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-[#0b1c30]">
+                تجربة إرسال رسالة على واتساب
+              </h2>
+              <p className="text-xs text-slate-500">
+                أدخل رقماً للاختبار وتأكد من شكل الرسالة قبل اعتمادها.
+              </p>
+            </div>
+            <span className="text-[11px] font-medium text-[#00236f] bg-white border border-blue-200/70 px-3 py-1 rounded-full self-start sm:self-auto">
+              المتبقي: {testQuota ? `${testQuota.remaining} من ${testQuota.max}` : '10'} / ساعة
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-[#00236f]" />
+                <span>رقم الواتساب</span>
+              </label>
+              <Input
+                type="text"
+                dir="ltr"
+                placeholder="972501234567"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                className="h-10 text-xs bg-white border-slate-200 font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700">
+                  التنبيه المختار
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !isCustomText;
+                    setIsCustomText(next);
+                    if (next) {
+                      setCustomTestText(currentSelectedTestTemplate.body_template);
+                    }
+                  }}
+                  className="text-[11px] font-semibold text-[#00236f] hover:underline cursor-pointer"
+                >
+                  {isCustomText ? 'استخدام نص القالب' : 'تعديل النص للتجربة'}
+                </button>
+              </div>
+              <select
+                value={testEventType}
+                onChange={(e) => {
+                  setTestEventType(e.target.value);
+                  const found = templates.find(
+                    (t) => t.event_type === e.target.value
+                  );
+                  if (found && isCustomText) {
+                    setCustomTestText(found.body_template);
+                  }
+                }}
+                className="w-full h-10 px-3 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-800 focus:outline-none focus:border-[#00236f]"
+              >
+                {templates.map((t) => (
+                  <option key={t.event_type} value={t.event_type}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {isCustomText && (
             <Textarea
               value={customTestText}
               onChange={(e) => setCustomTestText(e.target.value)}
-              rows={3}
-              placeholder="اكتب صياغة تجريبية مع إمكانية استخدام المتغيرات مثل {{caseNumber}} و {{memberName}}"
-              className="text-xs bg-[#fafcff] border-[#cfe0fc]"
+              rows={2}
+              className="text-xs bg-white border-slate-200"
             />
-            <div className="flex items-center justify-between text-[10px] text-[#64748B]">
-              <span>سيتم تعويض المتغيرات بالقيم الافتراضية المعروضة أدناه.</span>
-              <button
-                type="button"
-                onClick={() => setCustomTestText(currentSelectedTestTemplate.body_template)}
-                className="text-[#00236f] hover:underline"
-              >
-                استعادة نص القالب الحالي
-              </button>
+          )}
+
+          <div className="rounded-xl bg-white border border-blue-100 p-3.5 space-y-1">
+            <div className="text-[11px] font-semibold text-[#00236f]">
+              معاينة الرسالة
             </div>
-          </div>
-        )}
-
-        {/* Live Preview Box with Dummy Values Substituted */}
-        <div className="p-4 rounded-xl bg-white border border-[#e2ecfa] space-y-2">
-         
-
-          <div className="p-3.5 rounded-lg bg-[#eff4ff]/60 border border-[#d6e4ff] text-xs leading-relaxed text-[#10233F] whitespace-pre-wrap font-sans">
-             
-            {renderedPreviewText}
-            <div className="text-[10px] text-[#64748B] mt-2 pt-1 border-t border-[#d6e4ff]/50">
-              ⚠️ هذه رسالة اختبارية من مدير النظام ولا تمثل إجراءً حقيقياً.
-            </div>
+            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+              {renderedPreviewText}
+            </p>
           </div>
 
-          {/* Dummy Values Chips Info */}
-          <div className="pt-1 flex items-center gap-2 flex-wrap text-[10px] text-[#64748B]">
-            <span className="font-semibold text-[#10233F]">القيم التجريبية المطبقة:</span>
-            <span className="bg-[#eff4ff] px-2 py-0.5 rounded text-[#00236f] font-mono">
-              {`{lawyer_name} → "أ. فهد المنصوري (محام تجريبي)"`}
-            </span>
-            <span className="bg-[#eff4ff] px-2 py-0.5 rounded text-[#00236f] font-mono">
-              {`{case_number} → "0000/9999"`}
-            </span>
-            <span className="bg-[#eff4ff] px-2 py-0.5 rounded text-[#00236f] font-mono">
-              {`{poa_number} → "44123456"`}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Button & Result Feedback */}
-        <div className="space-y-3">
           <div className="flex items-center gap-3">
             <Button
+              type="button"
               onClick={handleExecuteTestSend}
-              disabled={isSendingTest || (testQuota !== null && testQuota.remaining <= 0)}
-              className="bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 px-5 gap-2 rounded-xl shadow-xs cursor-pointer"
+              disabled={
+                isSendingTest || (testQuota !== null && testQuota.remaining <= 0)
+              }
+              className="bg-[#00236f] hover:bg-[#001b56] text-white text-xs font-bold h-9 px-4 rounded-xl gap-2 cursor-pointer"
             >
-              <Send className="w-4 h-4" />
-              <span>{isSendingTest ? 'جارٍ الإرسال  ...' : 'إرسال الرسالة التجريبية الآن'}</span>
+              <Send className="w-3.5 h-3.5" />
+              <span>{isSendingTest ? 'جارٍ الإرسال...' : 'إرسال الآن'}</span>
             </Button>
-
-          
           </div>
 
-          {/* Test Send Result Banner */}
           {testResult && (
             <div
-              className={`p-4 rounded-xl text-xs flex items-start gap-3 border ${
+              className={`p-3 rounded-xl text-xs flex items-start gap-2.5 border ${
                 testResult.success
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-rose-50 text-rose-800 border-rose-200'
+                  ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                  : 'bg-rose-50 text-rose-900 border-rose-200'
               }`}
             >
               {testResult.success ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               ) : (
-                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               )}
-              <div className="space-y-1">
-                <div className="font-bold text-sm">
-                  {testResult.success
-                    ? 'نجحت تجربة الإرسال الفعلية عبر الواتساب!'
-                    : 'تعذر إرسال الرسالة التجريبية'}
+              <div>
+                <div className="font-bold">
+                  {testResult.success ? 'تم الإرسال بنجاح' : 'تعذّر الإرسال'}
                 </div>
-                <div className="leading-relaxed">
-                  {testResult.success ? (
-                    <div>
-                      {testResult.message}
-                      {testResult.idMessage && (
-                        <div className="font-mono text-[11px] mt-1 bg-white/60 p-1.5 rounded inline-block">
-                          معرّف الرسالة من Green API: <strong>{testResult.idMessage}</strong>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div>{testResult.error}</div>
-                  )}
+                <div>
+                  {testResult.success ? testResult.message : testResult.error}
                 </div>
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </section>
+      )}
 
-      {/* ── SECTION: Category Filters & Search Bar ── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Category Tabs */}
+      {/* 3. التصفية والبحث في سطر واحد هادئ */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-          <button
-            onClick={() => setActiveCategory('all')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeCategory === 'all'
-                ? 'bg-[#00236f] text-white shadow-xs'
-                : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-            }`}
-          >
-            الكل ({templates.length})
-          </button>
-          <button
-            onClick={() => setActiveCategory('cases_poa')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeCategory === 'cases_poa'
-                ? 'bg-[#00236f] text-white shadow-xs'
-                : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-            }`}
-          >
-            أحداث القضايا والوكالات (4)
-          </button>
-          <button
-            onClick={() => setActiveCategory('accounts')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeCategory === 'accounts'
-                ? 'bg-[#00236f] text-white shadow-xs'
-                : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-            }`}
-          >
-            الحسابات والتراخيص (3)
-          </button>
-          <button
-            onClick={() => setActiveCategory('subscription_payments')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeCategory === 'subscription_payments'
-                ? 'bg-[#00236f] text-white shadow-xs'
-                : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-            }`}
-          >
-            الاشتراكات والمدفوعات (3)
-          </button>
-          <button
-            onClick={() => setActiveCategory('reminders')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeCategory === 'reminders'
-                ? 'bg-[#00236f] text-white shadow-xs'
-                : 'bg-white text-[#55627a] border border-[#d6e0ec] hover:bg-[#eff4ff]'
-            }`}
-          >
-            تذكيرات الجلسات والمواعيد (2)
-          </button>
+          {CATEGORY_TABS.map((tab) => {
+            const active = activeCategory === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveCategory(tab.id)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+                  active
+                    ? 'bg-[#00236f] text-white'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Search input */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 text-[#94A3B8] absolute right-3 top-1/2 -translate-y-1/2" />
+        <div className="relative w-full md:w-64">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
           <Input
             type="text"
-            placeholder="بحث في القوالب..."
+            placeholder="بحث في التنبيهات..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 pr-9 pl-3 text-xs bg-white border-[#d6e0ec] focus:border-[#00236f]"
+            className="h-9 pr-8 pl-3 text-xs bg-white border-slate-200"
           />
         </div>
       </div>
 
-      {/* ── SECTION: Templates Grid ── */}
+      {/* 4. قائمة منظمة: صف مختصر لكل قالب يفتح للتعديل عند النقر */}
       {isLoadingTemplates ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white border border-[#D6E0EC] rounded-2xl p-5 space-y-4 animate-pulse">
-              <div className="h-5 bg-slate-200 rounded w-1/2"></div>
-              <div className="h-20 bg-slate-100 rounded"></div>
-              <div className="h-6 bg-slate-200 rounded w-1/3"></div>
-            </div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((n) => (
+            <div
+              key={n}
+              className="h-16 rounded-2xl bg-white border border-slate-200/80 animate-pulse"
+            />
           ))}
         </div>
       ) : filteredTemplates.length === 0 ? (
-        <div className="bg-white border border-[#D6E0EC] rounded-2xl p-12 text-center space-y-3">
-          <SlidersHorizontal className="w-8 h-8 text-[#94a3b8] mx-auto" />
-          <h3 className="text-sm font-bold text-[#10233F]">لم يتم العثور على أي قوالب مطابقة</h3>
-          <p className="text-xs text-[#64748B]">جرّب تغيير عبارة البحث أو اختيار تصنيف آخر.</p>
+        <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center space-y-2">
+          <SlidersHorizontal className="w-7 h-7 text-slate-400 mx-auto" />
+          <p className="text-sm font-bold text-slate-800">لا توجد تنبيهات مطابقة</p>
           <Button
+            type="button"
             variant="outline"
+            size="sm"
             onClick={() => {
               setSearchQuery('');
               setActiveCategory('all');
             }}
-            className="text-xs"
+            className="text-xs cursor-pointer"
           >
-            عرض كافة القوالب
+            عرض الكل
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredTemplates.map((template, idx) => {
-            const idNumber = template.id_number || idx + 1;
+        <div className="bg-white border border-slate-200/90 rounded-2xl divide-y divide-slate-100 overflow-hidden">
+          {filteredTemplates.map((template) => {
+            const isExpanded = expandedEventType === template.event_type;
             const isSaving = savingKey === template.event_type;
+            const defaultTpl = defaultInitialTemplates.find(
+              (d) => d.event_type === template.event_type
+            );
+            const isModified =
+              defaultTpl !== undefined &&
+              template.body_template !== defaultTpl.body_template;
+
+            const waOn = template.channels?.whatsapp ?? true;
+            const appOn = template.channels?.in_app ?? true;
 
             return (
-              <div
-                key={template.event_type}
-                className="bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs space-y-4 flex flex-col justify-between hover:border-[#b8d2fe] transition-colors"
-              >
-                <div className="space-y-3">
-                  {/* Top Header: ID, Title, Recipient, Channels */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-lg bg-[#eff4ff] text-[#00236f] text-xs font-bold flex items-center justify-center shrink-0">
-                          {idNumber}
+              <div key={template.event_type} className="transition-colors">
+                {/* صف العنوان المختصر */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    setExpandedEventType(
+                      isExpanded ? null : template.event_type
+                    )
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setExpandedEventType(
+                        isExpanded ? null : template.event_type
+                      );
+                    }
+                  }}
+                  className={`px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer select-none ${
+                    isExpanded ? 'bg-[#f8faff]' : 'hover:bg-slate-50/80'
+                  }`}
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-bold text-[#0b1c30] truncate">
+                        {template.name}
+                      </span>
+                      {isModified && (
+                        <span className="text-[10px] font-semibold text-[#00236f] bg-[#eff4ff] px-2 py-0.5 rounded-full shrink-0">
+                          معدّل
                         </span>
-                        <h3 className="text-sm font-bold text-[#10233F] leading-tight">
-                          {template.name}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2 mr-7 text-[11px] text-[#64748B]">
-                        <span>المستلم: <strong className="text-[#10233F]">{template.recipient_label || 'المحامي المكلف'}</strong></span>
-                        <span>•</span>
-                        <code className="text-[10px] text-[#00236f] bg-[#eff4ff] px-1.5 py-0.2 rounded font-mono">
-                          {template.event_type}
-                        </code>
-                      </div>
-                    </div>
-
-                    {/* Channel Toggles */}
-                    <div className="flex items-center gap-2.5 shrink-0 bg-[#f8faff] p-1.5 rounded-lg border border-[#e5eeff]">
-                      <label className="flex items-center gap-1.5 text-xs text-[#10233F] font-semibold cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={template.channels?.whatsapp ?? true}
-                          onChange={(e) =>
-                            handleToggleChannel(template.event_type, 'whatsapp', e.target.checked)
-                          }
-                          className="rounded text-[#00236f] focus:ring-[#00236f] cursor-pointer"
-                        />
-                        <span className="text-[11px]">واتساب</span>
-                      </label>
-
-                      <label className="flex items-center gap-1.5 text-xs text-[#64748B] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={template.channels?.in_app ?? true}
-                          onChange={(e) =>
-                            handleToggleChannel(template.event_type, 'in_app', e.target.checked)
-                          }
-                          className="rounded text-[#00236f] focus:ring-[#00236f] cursor-pointer"
-                        />
-                        <span className="text-[11px]">إشعار داخلي</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Body Template Textarea */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[11px] text-[#64748B]">
-                      <span>نص قالب رسالة الواتساب:</span>
-                      <span className="font-mono text-[10px]">{template.body_template.length} حرف</span>
-                    </div>
-                    <Textarea
-                      value={template.body_template}
-                      onChange={(e) => handleBodyChange(template.event_type, e.target.value)}
-                      rows={3}
-                      className="text-xs leading-relaxed bg-[#fafcff] border-[#e2ecfa] focus:border-[#00236f] font-sans"
-                    />
-                  </div>
-
-                  {/* Placeholders Tags */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-semibold text-[#64748B]">
-                      المتغيرات المتاحة لهذا الحدث (اضغط للإدراج في النص):
-                    </span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {(template.placeholders || ['recordTypeArabic', 'directLink', 'clientName']).map(
-                        (ph: string) => (
-                          <button
-                            key={ph}
-                            type="button"
-                            onClick={() => {
-                              handleBodyChange(
-                                template.event_type,
-                                `${template.body_template} {{${ph}}}`
-                              );
-                              toast({ title: `تم إدراج المتغير {{${ph}}}` });
-                            }}
-                            className="bg-[#eff4ff] hover:bg-[#dce9ff] text-[#00236f] text-[10px] font-mono px-2 py-0.5 rounded border border-[#cfdffc] transition-colors cursor-pointer"
-                            title="انقر للإدراج في نهاية النص"
-                          >
-                            {`{{${ph}}}`}
-                          </button>
-                        )
                       )}
                     </div>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      المستلم: {template.recipient_label || 'المعني'} —{' '}
+                      {substitutePlaceholders(template.body_template)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                        waOn
+                          ? 'bg-[#eff4ff] text-[#00236f]'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      واتساب {waOn ? 'مفعّل' : 'متوقف'}
+                    </span>
+                    <span
+                      className={`hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                        appOn
+                          ? 'bg-[#eff4ff] text-[#00236f]'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      داخلي {appOn ? 'مفعّل' : 'متوقف'}
+                    </span>
+
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-slate-500" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-slate-500" />
+                    )}
                   </div>
                 </div>
 
-                {/* Card Action Footer */}
-                <div className="pt-3 border-t border-[#f1f5fd] flex items-center justify-between text-xs gap-2">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTemplateForTest(template.event_type)}
-                      className="text-[#00236f] font-bold hover:underline flex items-center gap-1 cursor-pointer bg-[#eff4ff] px-2.5 py-1 rounded-lg"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>تجربة هذا القالب</span>
-                    </button>
+                {/* منطقة التعديل الموسّعة للقالب المحدد فقط */}
+                {isExpanded && (
+                  <div className="px-4 sm:px-5 pb-5 pt-2 bg-[#f8faff] space-y-4 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-4 text-xs">
+                        <label className="flex items-center gap-1.5 text-slate-800 font-semibold cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={waOn}
+                            onChange={(e) =>
+                              handleToggleChannel(
+                                template.event_type,
+                                'whatsapp',
+                                e.target.checked
+                              )
+                            }
+                            className="rounded border-slate-300 text-[#00236f] focus:ring-[#00236f] cursor-pointer"
+                          />
+                          <span>إرسال عبر واتساب</span>
+                        </label>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const original = defaultInitialTemplates.find(
-                          (d) => d.event_type === template.event_type
-                        );
-                        if (original) {
-                          handleBodyChange(template.event_type, original.body_template);
-                          toast({ title: 'تم استرجاع النص القياسي لهذا القالب' });
-                        }
+                        <label className="flex items-center gap-1.5 text-slate-800 font-semibold cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={appOn}
+                            onChange={(e) =>
+                              handleToggleChannel(
+                                template.event_type,
+                                'in_app',
+                                e.target.checked
+                              )
+                            }
+                            className="rounded border-slate-300 text-[#00236f] focus:ring-[#00236f] cursor-pointer"
+                          />
+                          <span>إشعار داخل النظام</span>
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => openTestForEvent(template.event_type)}
+                          className="font-semibold text-[#00236f] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>تجربة هذا القالب</span>
+                        </button>
+
+                        {isModified && defaultTpl && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleBodyChange(
+                                template.event_type,
+                                defaultTpl.body_template
+                              )
+                            }
+                            className="text-slate-500 hover:text-slate-800 cursor-pointer"
+                          >
+                            إرجاع النص الأصلي
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <Textarea
+                      ref={(el) => {
+                        textareaRefs.current[template.event_type] = el;
                       }}
-                      className="text-[#64748B] hover:text-[#10233F] text-[11px] flex items-center gap-1"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>استرجاع الافتراضي</span>
-                    </button>
-                  </div>
+                      value={template.body_template}
+                      onChange={(e) =>
+                        handleBodyChange(template.event_type, e.target.value)
+                      }
+                      rows={3}
+                      className="text-xs sm:text-sm leading-relaxed bg-white border-slate-200 focus:border-[#00236f]"
+                    />
 
-                  <Button
-                    size="sm"
-                    onClick={() => handleSaveSingleTemplate(template)}
-                    disabled={isSaving}
-                    className="bg-[#eff4ff] hover:bg-[#00236f] text-[#00236f] hover:text-white border border-[#cfe0fc] text-xs h-8 px-3 gap-1 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Check className="w-3 h-3" />
-                    <span>{isSaving ? 'جارٍ الحفظ...' : 'حفظ القالب'}</span>
-                  </Button>
-                </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      {template.placeholders?.length > 0 ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] text-slate-500 ml-1">
+                            إدراج متغير:
+                          </span>
+                          {template.placeholders.map((ph) => (
+                            <button
+                              key={ph}
+                              type="button"
+                              onClick={() =>
+                                insertPlaceholderAtCursor(
+                                  template.event_type,
+                                  ph
+                                )
+                              }
+                              className="text-[11px] font-mono bg-white hover:bg-[#eff4ff] text-slate-700 hover:text-[#00236f] border border-slate-200 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                            >
+                              {`{{${ph}}}`}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <span />
+                      )}
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleSaveSingleTemplate(template)}
+                        disabled={isSaving}
+                        className="bg-[#00236f] hover:bg-[#001b56] text-white text-xs font-bold h-8 px-4 rounded-lg gap-1.5 cursor-pointer"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>
+                          {isSaving ? 'جارٍ الحفظ...' : 'حفظ هذا القالب'}
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

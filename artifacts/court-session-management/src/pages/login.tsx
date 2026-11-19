@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLogin } from '@workspace/api-client-react';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,9 +27,16 @@ export default function LoginPage() {
     loginMutation.mutate(
       { data: { username: username.trim(), password: password.trim() } },
       {
-        onSuccess: async () => {
+        onSuccess: async (data: any) => {
           await queryClient.invalidateQueries();
-          setLocation('/');
+          const role = data?.user?.role || data?.role;
+          if (role === 'super_admin') {
+            setLocation('/super-admin');
+          } else if (role === 'admin') {
+            setLocation('/dashboard-admin');
+          } else {
+            setLocation('/dashboard');
+          }
         },
         onError: (error: any) => {
           const detail = String(error?.data?.error || error?.message || '');
@@ -115,12 +122,15 @@ export default function LoginPage() {
               ⚖
             </div>
             <div>
-              <div className="font-extrabold text-sm text-[#0c1a30]">ميزان لتقنية المحاماة</div>
+              <div className="font-extrabold text-sm text-[#0c1a30]">منصة ديوان القانونية</div>
               <div className="text-[10px] text-slate-400">منظومة العدالة الذكية</div>
             </div>
           </div>
 
-        
+          <Link href="/" className="text-xs font-semibold text-[#00236f] hover:underline flex items-center gap-1 cursor-pointer">
+            <span>العودة للصفحة الرئيسية</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {/* Center: Main Form Area (Vertically Balanced) */}

@@ -11,6 +11,7 @@
  * 5. WhatsApp failure MUST NOT block the in-app notification creation or throw an error.
  */
 
+import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import {
   dispatchEventNotification,
@@ -62,6 +63,12 @@ export async function notifyLawyerAssignment(
   const eventType: NotificationEventType =
     recordType === "poa" ? "poa_assigned" : "case_assigned";
 
+  const absoluteLink = directLink
+    ? directLink.startsWith("http://") || directLink.startsWith("https://")
+      ? directLink
+      : `${env.frontendUrl}${directLink.startsWith("/") ? "" : "/"}${directLink}`
+    : env.frontendUrl;
+
   const dispatchRes = await dispatchEventNotification({
     officeId,
     eventType,
@@ -69,7 +76,7 @@ export async function notifyLawyerAssignment(
     placeholderData: {
       recordTypeArabic,
       recordDescription,
-      directLink,
+      directLink: absoluteLink,
       recordId: String(recordId),
       poaNumber: recordDescription,
       clientName: recordDescription,

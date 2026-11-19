@@ -1,5 +1,6 @@
 import { getSettings, ensureSettingsLoaded } from "../../../config/settings-store";
 import { logger } from "../../../lib/logger";
+import { env } from "../../../config/env";
 import type { ReminderChannel, ReminderPayload } from "../reminder.types";
 
 export function formatWhatsappMessage(payload: ReminderPayload): string {
@@ -24,6 +25,11 @@ export function formatWhatsappMessage(payload: ReminderPayload): string {
   if (payload.plaintiff) lines.push(`👤 *المدعي:* ${payload.plaintiff}`);
   if (payload.defendant) lines.push(`👥 *المدعى عليه:* ${payload.defendant}`);
   if (payload.caseSubject) lines.push(`📝 *موضوع القضية:* ${payload.caseSubject}`);
+  if (payload.sessionId) {
+    try {
+      lines.push(`🔗 *رابط الجلسة:* ${env.frontendUrl}/sessions/${payload.sessionId}`);
+    } catch {}
+  }
 
   lines.push("", "الرجاء التحضير والاستعداد للجلسة في الموعد المحدد.");
   return lines.join("\n");

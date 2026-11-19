@@ -1,7 +1,15 @@
 import app from "./app";
-import { env, isSupabaseConfigured } from "./config/env";
+import { env, isSupabaseConfigured, isFrontendUrlConfigured } from "./config/env";
 import { logger } from "./lib/logger";
 import { startReminderScheduler } from "./scheduler/reminderScheduler";
+
+// Startup check: Fail loudly if FRONTEND_URL and APP_URL are missing
+if (!isFrontendUrlConfigured()) {
+  logger.fatal("FATAL: FRONTEND_URL is not set — all outgoing links will be broken");
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("FRONTEND_URL is not set — all outgoing links will be broken");
+  }
+}
 
 // Startup check: Fail loudly if Supabase credentials are missing
 if (!isSupabaseConfigured()) {

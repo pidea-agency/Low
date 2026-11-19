@@ -92,6 +92,19 @@ function formatPhoneNumber(num?: string | null) {
   return withPlus;
 }
 
+function maskPhoneNumber(num?: string | null) {
+  if (!num) return "+970 56 ••• •295";
+  const formatted = formatPhoneNumber(num);
+  const parts = formatted.split(' ');
+  if (parts.length === 4) {
+    return `${parts[0]} ${parts[1]} ••• •${parts[3].slice(-3)}`;
+  }
+  if (formatted.length >= 8) {
+    return `${formatted.slice(0, 5)} ••• •${formatted.slice(-3)}`;
+  }
+  return formatted;
+}
+
 function getPhoneCountryInfo(phone?: string | null) {
   if (!phone) return { country: 'فلسطين', code: '+970', label: 'فلسطين (+970)' };
   const clean = phone.replace(/[^\d]/g, '');
@@ -209,6 +222,9 @@ export default function OfficeSettingsPage() {
   const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isDisconnectingWhatsapp, setIsDisconnectingWhatsapp] = useState(false);
+  const [showWhatsappSetup, setShowWhatsappSetup] = useState(false);
+  const [isWhatsappConnected, setIsWhatsappConnected] = useState(true);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrData, setQrData] = useState<{ type?: string; message?: string; phone?: string; deviceId?: string } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
@@ -321,6 +337,26 @@ export default function OfficeSettingsPage() {
           if (data.whatsappInstanceId) setWhatsappInstanceId(data.whatsappInstanceId);
           if (data.whatsappToken) setWhatsappToken(data.whatsappToken);
           setWhatsappTokenIsSet(Boolean(data.whatsappTokenIsSet || data.whatsappToken));
+          if (typeof data.whatsappConnected === 'boolean') {
+            setIsWhatsappConnected(data.whatsappConnected);
+            setConnectionStatus((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    connected: data.whatsappConnected,
+                    message: data.whatsappConnected
+                      ? `المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح (+${data.whatsappNumber || '970567603295'})!`
+                      : 'بوابة الواتساب غير متصلة أو بانتظار مسح رمز QR.',
+                  }
+                : {
+                    tested: true,
+                    connected: data.whatsappConnected,
+                    message: data.whatsappConnected
+                      ? `المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح (+${data.whatsappNumber || '970567603295'})!`
+                      : 'بوابة الواتساب غير متصلة أو بانتظار مسح رمز QR.',
+                  }
+            );
+          }
         }
       }
     } catch {}
@@ -673,18 +709,21 @@ export default function OfficeSettingsPage() {
         }),
       });
       const data = await res.json();
+      const isConn = Boolean(data.connected);
       setConnectionStatus({
         tested: true,
-        connected: Boolean(data.connected),
+        connected: isConn,
         stateInstance: data.stateInstance,
         message: data.message || data.error,
       });
+      setIsWhatsappConnected(isConn);
 
-      if (data.connected) {
+      if (isConn) {
         if (data.phone) {
           setWhatsappNumber(data.phone);
           setSandboxPhone((prev) => prev || data.phone);
         }
+        setShowWhatsappSetup(false);
         toast({
           title: 'بوابة الواتساب متصلة ✓',
           description: data.message || 'المثيل مصادق عليه ويعمل بكفاءة عالية.',
@@ -702,8 +741,40 @@ export default function OfficeSettingsPage() {
         connected: false,
         message: 'تعذر الاتصال بخادم مزود Green API.',
       });
+      setIsWhatsappConnected(false);
     } finally {
       setIsTestingConnection(false);
+    }
+  };
+
+  const handleDisconnectWhatsapp = async () => {
+    setIsDisconnectingWhatsapp(true);
+    try {
+      const res = await fetch('/api/settings/disconnect-whatsapp', {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setIsWhatsappConnected(false);
+        setShowWhatsappSetup(false);
+        setConnectionStatus({
+          tested: true,
+          connected: false,
+          stateInstance: 'disconnected',
+          message: 'تم قطع ربط بوابة الواتساب.',
+        });
+        toast({
+          title: 'تم قطع الربط',
+          description: 'تم قطع ربط بوابة الواتساب بنجاح.',
+        });
+      }
+    } catch {
+      toast({
+        title: 'خطأ',
+        description: 'تعذر قطع ربط بوابة الواتساب.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDisconnectingWhatsapp(false);
     }
   };
 
@@ -876,12 +947,24 @@ export default function OfficeSettingsPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-[#64748B]">بوابة الإرسال WhatsApp</span>
-                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
-                    متصل 
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                      isWhatsappConnected
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
+                    {isWhatsappConnected ? 'متصل ✓' : 'غير متصل'}
                   </span>
                 </div>
                 <p className="text-[11px] text-[#475569]">
-                  الرقم المعتمد للمكتب: <strong className="text-[#10233F]" dir="ltr">{formatPhoneNumber(whatsappNumber)}</strong>
+                  {isWhatsappConnected ? (
+                    <>
+                      الرقم المعتمد للمكتب: <strong className="text-[#10233F]" dir="ltr">{maskPhoneNumber(whatsappNumber)}</strong>
+                    </>
+                  ) : (
+                    <span className="text-[#94A3B8]">لم يتم ربط رقم معتمد بعد</span>
+                  )}
                 </p>
               </div>
               <div className="w-9 h-9 rounded-xl bg-[#eff4ff] text-[#00236f] flex items-center justify-center shrink-0">
@@ -889,8 +972,12 @@ export default function OfficeSettingsPage() {
               </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-[#f1f5fd] flex items-center justify-between text-[11px]">
-              <span className="text-[#00236f] font-semibold hover:underline">فحص البوابة والإعدادات</span>
-              <span className="text-emerald-700 font-medium">مفعل 100%</span>
+              <span className="text-[#00236f] font-semibold hover:underline">
+                {isWhatsappConnected ? 'فحص البوابة والإعدادات' : 'إعداد الربط الآن'}
+              </span>
+              <span className={isWhatsappConnected ? 'text-emerald-700 font-medium' : 'text-amber-700 font-medium'}>
+                {isWhatsappConnected ? 'مفعل 100%' : 'بانتظار الإعداد'}
+              </span>
             </div>
           </div>
 
@@ -1426,489 +1513,548 @@ export default function OfficeSettingsPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'whatsapp' && (
         <div className="space-y-6">
-          {/* Header Action Bar matching Image 1 */}
-          <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#fff2e8] text-[#b87019] flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4" />
-                </div>
-                <h2 className="text-base font-bold text-[#10233F]">
-                  إعدادات مزود خدمة الواتساب (Green API Gateway)
-                </h2>
-                <span className="bg-[#eff4ff] text-[#00236f] text-[10px] font-semibold px-2 py-0.5 rounded border border-[#cfdffc]">
-                  Enterprise SLA v2.4
-                </span>
+          {/* ── Compact Status Card: Connected State (Matching Google Sheets Wizard Connected Card) ── */}
+          {isWhatsappConnected && !showWhatsappSetup && (
+            <div className="bg-white border border-[#D6E0EC] rounded-2xl p-8 sm:p-10 shadow-xs space-y-6 text-center">
+              {/* Big Centered Checkmark Icon */}
+              <div className="w-24 h-24 rounded-full bg-emerald-50 border-4 border-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm ring-8 ring-emerald-50/50 animate-in zoom-in-90 duration-300">
+                <CheckCircle2 className="w-12 h-12" />
               </div>
-              <p className="text-xs text-[#64748B] leading-relaxed max-w-3xl mr-9">
-                ربط رقم الواتساب المعتمد للمكتب لإرسال التنبيهات، مواعيد الجلسات القضائية، تحديثات القضايا والوكالات للمحامين والموكلين بصورة آلية وموثوقة دون انقطاع.
-              </p>
-            </div>
 
-            <div className="flex items-center gap-2.5 flex-wrap self-start xl:self-center">
-              <Button
-                onClick={handleSaveWhatsapp}
-                disabled={isSavingWhatsapp}
-                className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-semibold h-10 px-4 gap-2 rounded-xl shadow-xs cursor-pointer"
-              >
-                <Check className="w-4 h-4" />
-                <span>{isSavingWhatsapp ? 'جارٍ الحفظ...' : 'حفظ إعدادات الواتساب'}</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleSendSandboxMessage}
-                disabled={isTestingWhatsapp}
-                className="bg-white hover:bg-[#eff4ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer"
-              >
-                <Send className="w-3.5 h-3.5 text-[#00236f]" />
-                <span>{isTestingWhatsapp ? 'جارٍ الإرسال...' : 'إرسال رسالة تجريبية'}</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleTestWhatsappConnection}
-                disabled={isTestingConnection}
-                className="bg-white hover:bg-[#eff4ff] text-[#44526d] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#55627a] ${isTestingConnection ? 'animate-spin' : ''}`} />
-                <span>فحص وتحديث الاتصال</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Live Status Metric Bar matching Image 1 */}
-          <div className="bg-white border border-[#D6E0EC] rounded-2xl p-4 shadow-2xs grid grid-cols-2 lg:grid-cols-5 gap-3.5 text-xs">
-            {/* 1: حالة الـ Instance */}
-            <div className="p-2.5 rounded-xl bg-[#fafcff] border border-[#edf3fc] space-y-1">
-              <span className="text-[11px] text-[#64748B] block">حالة الـ Instance</span>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-bold text-[#10233F]">متصل ويعمل بكفاءة</span>
+              {/* Title & Description */}
+              <div className="space-y-2 max-w-lg mx-auto">
+                <h3 className="text-xl sm:text-2xl font-bold text-[#10233F]">
+                  تم الربط وحفظ بيانات الواتساب بنجاح!
+                </h3>
+                <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">
+                  بوابة Green API مفعلة ومقترنة مع هاتف المكتب المعتمد. تنبيهات مواعيد الجلسات القضائية وتحديثات القضايا والوكالات جاهزة للإرسال الآلي والموثوق دون انقطاع.
+                </p>
               </div>
-              <span className="text-[10px] text-emerald-700 font-semibold block">Authorized & connected</span>
-            </div>
 
-            {/* 2: زمن الاستجابة للشبكة */}
-            <div className="p-2.5 rounded-xl bg-[#fafcff] border border-[#edf3fc] space-y-1">
-              <span className="text-[11px] text-[#64748B] block">زمن الاستجابة للشبكة</span>
-              <div className="flex items-center gap-1.5 font-mono">
-                <Activity className="w-3.5 h-3.5 text-blue-600" />
-                <span className="font-bold text-[#10233F] text-sm">142 ms</span>
-              </div>
-              <span className="text-[10px] text-blue-700 font-semibold block">فائق السرعة (Excellent)</span>
-            </div>
-
-            {/* 3: استهلاك الباقة الشهرية */}
-            <div className="p-2.5 rounded-xl bg-[#fafcff] border border-[#edf3fc] space-y-1">
-              <span className="text-[11px] text-[#64748B] block">استهلاك الباقة الشهرية</span>
-              <div className="flex items-center gap-1.5 font-mono">
-                <span className="font-bold text-[#10233F]">{whatsappLogs.length} / 3,000</span>
-              </div>
-              <span className="text-[10px] text-amber-700 font-semibold block">
-                تم توثيق {whatsappLogs.length} رسالة • متبقي {Math.max(0, 3000 - whatsappLogs.length)}
-              </span>
-            </div>
-
-            {/* 4: رقم الهاتف المتصل بالبوابة */}
-            <div className="p-2.5 rounded-xl bg-[#fafcff] border border-[#edf3fc] space-y-1">
-              <span className="text-[11px] text-[#64748B] block">رقم الهاتف المتصل بالبوابة</span>
-              <div className="flex items-center gap-1.5 font-mono" dir="ltr">
-                <span className="font-bold text-[#10233F] text-sm">{formatPhoneNumber(whatsappNumber)}</span>
-              </div>
-              <span className="text-[10px] text-emerald-700 font-semibold block">
-                رمز الدولة ({getPhoneCountryInfo(whatsappNumber).code}) • {getPhoneCountryInfo(whatsappNumber).country}
-              </span>
-            </div>
-
-            {/* 5: تجديد اشتراك Green API */}
-            <div className="p-2.5 rounded-xl bg-[#fafcff] border border-[#edf3fc] space-y-1 col-span-2 lg:col-span-1">
-              <span className="text-[11px] text-[#64748B] block">تجديد اشتراك Green API</span>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#00236f]" />
-                <span className="font-bold text-[#10233F]">15 رجب 1447هـ</span>
-              </div>
-              <span className="text-[10px] text-[#00236f] font-semibold block">متبقي 42 يوماً على التجديد</span>
-            </div>
-          </div>
-
-          {/* 
-            CRITICAL USER REQUIREMENT for WhatsApp as well:
-            Prominent Success & Live Test Banner
-          */}
-          {connectionStatus?.connected && (
-            <div className="bg-white border border-emerald-200 rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5 text-right">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 border-2 border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-6 h-6" />
+              {/* Connected Parameters Details Box */}
+              <div className="max-w-2xl mx-auto bg-[#fafcff] border border-[#e2ecfa] rounded-xl p-4 text-xs text-right grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <span className="text-[#64748B] block text-[11px]">رقم الواتساب المقترن:</span>
+                  <span className="font-mono font-bold text-[#00236f] truncate block mt-0.5" dir="ltr">
+                    {maskPhoneNumber(whatsappNumber)}
+                  </span>
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-[#10233F]">تم الربط وحفظ بيانات الواتساب بنجاح</h3>
-                  <p className="text-xs text-[#64748B] mt-0.5">
-                    بوابة Green API مفعلة ومقترنة مع هاتف المكتب المعتمد. يمكنك إجراء فحص فوري للتأكد من استجابة الخادم.
-                  </p>
+                  <span className="text-[#64748B] block text-[11px]">معرف النسخة (Instance ID):</span>
+                  <span className="font-mono font-bold text-[#10233F] truncate block mt-0.5" dir="ltr">
+                    {whatsappInstanceId}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#64748B] block text-[11px]">حالة الأمان والربط:</span>
+                  <span className="font-semibold text-emerald-700 block mt-0.5">
+                    متصل ومعتمد (Authorized) ✓
+                  </span>
                 </div>
               </div>
 
-              <Button
-                onClick={handleTestWhatsappConnection}
-                disabled={isTestingConnection}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-xs gap-2 shrink-0 cursor-pointer"
-              >
-                {isTestingConnection ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-200" />}
-                <span>اضغط هنا للاختبار</span>
-              </Button>
+              {/* Live Test Outcome Banner if triggered */}
+              {connectionStatus?.tested && (
+                <div
+                  className={`max-w-2xl mx-auto p-4 rounded-xl text-xs font-semibold flex items-center gap-3 text-right ${
+                    connectionStatus.connected
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {connectionStatus.connected ? (
+                    <CheckCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                  )}
+                  <span>
+                    {connectionStatus.message ||
+                      (connectionStatus.connected
+                        ? 'المثيل مصادق عليه ومتصل بحساب الواتساب بنجاح!'
+                        : 'تعذر الاتصال بالمزود')}
+                  </span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+                <Button
+                  onClick={handleTestWhatsappConnection}
+                  disabled={isTestingConnection}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-12 px-8 rounded-xl shadow-md gap-2.5 cursor-pointer"
+                >
+                  {isTestingConnection ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>جارٍ فحص استجابة خادم Green API...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 text-amber-200" />
+                      <span>اضغط هنا للاختبار</span>
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setShowWhatsappSetup(true)}
+                  className="bg-white hover:bg-[#eff4ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-12 px-5 rounded-xl cursor-pointer"
+                >
+                  <Sliders className="w-4 h-4 text-[#00236f]" />
+                  <span>تعديل البيانات</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnectWhatsapp}
+                  disabled={isDisconnectingWhatsapp}
+                  className="bg-white hover:bg-rose-50 text-rose-700 border-rose-200 text-xs font-semibold h-12 px-4 rounded-xl cursor-pointer"
+                >
+                  <Unlink className="w-4 h-4 text-rose-600" />
+                  <span>{isDisconnectingWhatsapp ? 'جارٍ قطع الربط...' : 'قطع الربط'}</span>
+                </Button>
+              </div>
             </div>
           )}
 
-          {/* Two-Column Layout matching Image 1 */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* RIGHT COLUMN (8 Columns on desktop): Credentials & Advanced Anti-Ban */}
-            <div className="lg:col-span-8 space-y-6">
-              {/* Card 1: Credentials Card */}
-              <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
+          {/* ── Setup / Edit View (Visible when not connected OR when user clicked "تعديل البيانات") ── */}
+          {(!isWhatsappConnected || showWhatsappSetup) && (
+            <div className="space-y-6">
+              {/* Header Action Bar */}
+              <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Key className="w-4 h-4 text-[#00236f]" />
-                    <h3 className="text-sm font-bold text-[#10233F]">بيانات ومفاتيح الربط البرمجي (Credentials)</h3>
+                    <div className="w-7 h-7 rounded-lg bg-[#fff2e8] text-[#b87019] flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4" />
+                    </div>
+                    <h2 className="text-base font-bold text-[#10233F]">
+                      {isWhatsappConnected
+                        ? 'تعديل بيانات واعتماد مزود الواتساب (Green API)'
+                        : 'إعداد وربط مزود خدمة الواتساب (Green API Gateway)'}
+                    </h2>
+                    <span className="bg-[#eff4ff] text-[#00236f] text-[10px] font-semibold px-2 py-0.5 rounded border border-[#cfdffc]">
+                      Enterprise SLA v2.4
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold text-[#00236f] bg-[#eff4ff] px-2 py-0.5 rounded border border-[#cfdffc]">
-                    REST API V2
-                  </span>
+                  <p className="text-xs text-[#64748B] leading-relaxed max-w-3xl mr-9">
+                    ربط رقم الواتساب المعتمد للمكتب لإرسال التنبيهات، مواعيد الجلسات القضائية، تحديثات القضايا والوكالات للمحامين والموكلين بصورة آلية وموثوقة دون انقطاع.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  {/* API Base URL */}
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium text-[#10233F]">رابط مزود خدمة الواتساب (API Base URL) *</Label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(whatsappApiUrl);
-                          toast({ title: 'تم نسخ رابط الـ API' });
-                        }}
-                        className="text-[11px] text-[#00236f] font-semibold hover:underline cursor-pointer"
-                      >
-                        نسخ الرابط
-                      </button>
-                    </div>
-                    <Input
-                      value={whatsappApiUrl}
-                      onChange={(e) => setWhatsappApiUrl(e.target.value)}
-                      placeholder="https://7107.api.greenapi.com"
-                      className="text-xs h-10 font-mono"
-                      dir="ltr"
-                    />
-                  </div>
+                <div className="flex items-center gap-2.5 flex-wrap self-start xl:self-center">
+                  {isWhatsappConnected && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowWhatsappSetup(false)}
+                      className="text-xs text-[#00236f] font-semibold hover:bg-[#eff4ff] h-10 px-3 cursor-pointer"
+                    >
+                      إلغاء والعودة لصفحة الحالة
+                    </Button>
+                  )}
 
-                  {/* Instance ID */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-[#10233F]">معرف النسخة (Instance ID) *</Label>
-                    <Input
-                      value={whatsappInstanceId}
-                      onChange={(e) => setWhatsappInstanceId(e.target.value)}
-                      placeholder="710722758832"
-                      className="text-xs h-10 font-mono"
-                      dir="ltr"
-                    />
-                  </div>
+                  <Button
+                    onClick={handleSaveWhatsapp}
+                    disabled={isSavingWhatsapp}
+                    className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-semibold h-10 px-4 gap-2 rounded-xl shadow-xs cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{isSavingWhatsapp ? 'جارٍ الحفظ...' : 'حفظ إعدادات الواتساب'}</span>
+                  </Button>
 
-                  {/* WhatsApp Number */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium text-[#10233F]">
-                        رقم الواتساب المتصل بالبوابة (مع الرمز الدولي) *
-                      </Label>
-                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
-                        {getPhoneCountryInfo(whatsappNumber).label}
-                      </span>
-                    </div>
-                    <Input
-                      value={whatsappNumber}
-                      onChange={(e) => setWhatsappNumber(e.target.value)}
-                      placeholder="970567603295"
-                      className="text-xs h-10 font-mono"
-                      dir="ltr"
-                    />
-                    <p className="text-[11px] text-[#64748B]">
-                      الرقم الفعلي المقترن مع Green API: <strong className="text-[#10233F]" dir="ltr">{formatPhoneNumber(whatsappNumber)}</strong>
-                    </p>
-                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleSendSandboxMessage}
+                    disabled={isTestingWhatsapp}
+                    className="bg-white hover:bg-[#eff4ff] text-[#00236f] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5 text-[#00236f]" />
+                    <span>{isTestingWhatsapp ? 'جارٍ الإرسال...' : 'إرسال رسالة تجريبية'}</span>
+                  </Button>
 
-                  {/* API Token / Secret */}
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium text-[#10233F]">رمز المصادقة السري (API Token / Secret) *</Label>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowWhatsappToken(!showWhatsappToken)}
-                          className="text-[11px] text-[#00236f] font-semibold hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          {showWhatsappToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          <span>{showWhatsappToken ? 'إخفاء الرمز' : 'إظهار الرمز'}</span>
-                        </button>
-                        <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
-                          محفوظ ومشفّر دائم
-                        </span>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <Input
-                        type={showWhatsappToken ? 'text' : 'password'}
-                        value={whatsappToken}
-                        onChange={(e) => setWhatsappToken(e.target.value)}
-                        placeholder="رمز المصادقة من لوحة Green API"
-                        className="text-xs h-10 font-mono pr-3 pl-20"
-                        dir="ltr"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setWhatsappToken('');
-                          toast({ title: 'أدخل رمز المصادقة الجديد ثم اضغط حفظ' });
-                        }}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-[#55627a] hover:text-[#00236f] font-semibold"
-                      >
-                        توليد جديد
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Permanent Vault Callout matching screenshot */}
-                <div className="bg-[#fafcff] border border-[#e2ecfa] rounded-xl p-4 flex items-start gap-3 text-xs">
-                  <ShieldCheck className="w-5 h-5 text-[#00236f] shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <span className="font-bold text-[#10233F]">الربط الدائم ومخزن المفاتيح السحابي (Supabase Vault)</span>
-                    <p className="text-[#55627a] leading-relaxed text-[11px]">
-                      يتم حفظ وتشفير مفاتيح الواتساب في قاعدة البيانات السحابية (Supabase Vault) تلقائياً، ولن تفقد الاتصال مطلقاً عند عمل Deploy أو إعادة تفعيل الخادم السحابي للمكتب.
-                    </p>
-                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleTestWhatsappConnection}
+                    disabled={isTestingConnection}
+                    className="bg-white hover:bg-[#eff4ff] text-[#44526d] border-[#cfe0fc] text-xs font-semibold h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-[#55627a] ${isTestingConnection ? 'animate-spin' : ''}`} />
+                    <span>فحص وتحديث الاتصال</span>
+                  </Button>
                 </div>
               </div>
 
-              {/* Card 2: Advanced Sending & Anti-Ban Protection */}
-              <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
-                  <div className="flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-[#00236f]" />
-                    <h3 className="text-sm font-bold text-[#10233F]">إعدادات الإرسال المتقدمة ومكافحة حظر الرقم</h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    حماية رقم المكتب مفعلة
-                  </span>
-                </div>
-
-                <div className="space-y-4 text-xs">
-                  {/* Smart Interval Setting */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-[#10233F]">الفاصل الزمني الذكي بين الرسائل</Label>
-                    <select
-                      value={intervalOption}
-                      onChange={(e) => setIntervalOption(e.target.value)}
-                      className="w-full h-10 rounded-xl bg-[#fafcff] border border-[#d6e0ec] text-xs px-3 text-[#10233F] focus:outline-none focus:ring-2 focus:ring-[#00236f]"
-                    >
-                      <option value="2-5">2 إلى 5 ثوانٍ (موصى به للمكاتب - حماية متقدمة)</option>
-                      <option value="5-10">5 إلى 10 ثوانٍ (أمان إضافي للحملات)</option>
-                      <option value="1-2">1 إلى 2 ثانية (سرعة فورية - للأرقام الموثقة رسمياً)</option>
-                    </select>
-                    <p className="text-[11px] text-[#64748B]">
-                      تأخير عشوائي ديناميكي بين 2 إلى 5 ثوانٍ عند إرسال تنبيهات جماعية لمنع قيود خوارزميات ميتا (Meta).
-                    </p>
-                  </div>
-
-                  {/* Webhook Delivery Callbacks */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium text-[#10233F]">
-                        رابط الـ Webhook لاستقبال الردود وحالات التسليم (Delivery Callbacks)
-                      </Label>
+              {/* Two-Column Layout for Credentials & Setup */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* RIGHT COLUMN (8 Columns on desktop): Credentials & Advanced Anti-Ban */}
+                <div className="lg:col-span-8 space-y-6">
+                  {/* Card 1: Credentials Card */}
+                  <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                          STATUS: {webhookStatus}
+                        <Key className="w-4 h-4 text-[#00236f]" />
+                        <h3 className="text-sm font-bold text-[#10233F]">بيانات ومفاتيح الربط البرمجي (Credentials)</h3>
+                      </div>
+                      <span className="text-[10px] font-bold text-[#00236f] bg-[#eff4ff] px-2 py-0.5 rounded border border-[#cfdffc]">
+                        REST API V2
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      {/* API Base URL */}
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium text-[#10233F]">رابط مزود خدمة الواتساب (API Base URL) *</Label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(whatsappApiUrl);
+                              toast({ title: 'تم نسخ رابط الـ API' });
+                            }}
+                            className="text-[11px] text-[#00236f] font-semibold hover:underline cursor-pointer"
+                          >
+                            نسخ الرابط
+                          </button>
+                        </div>
+                        <Input
+                          value={whatsappApiUrl}
+                          onChange={(e) => setWhatsappApiUrl(e.target.value)}
+                          placeholder="https://7107.api.greenapi.com"
+                          className="text-xs h-10 font-mono"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      {/* Instance ID */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-[#10233F]">معرف النسخة (Instance ID) *</Label>
+                        <Input
+                          value={whatsappInstanceId}
+                          onChange={(e) => setWhatsappInstanceId(e.target.value)}
+                          placeholder="710722758832"
+                          className="text-xs h-10 font-mono"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      {/* WhatsApp Number */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium text-[#10233F]">
+                            رقم الواتساب المتصل بالبوابة (مع الرمز الدولي) *
+                          </Label>
+                          <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
+                            {getPhoneCountryInfo(whatsappNumber).label}
+                          </span>
+                        </div>
+                        <Input
+                          value={whatsappNumber}
+                          onChange={(e) => setWhatsappNumber(e.target.value)}
+                          placeholder="970567603295"
+                          className="text-xs h-10 font-mono"
+                          dir="ltr"
+                        />
+                        <p className="text-[11px] text-[#64748B]">
+                          الرقم الفعلي المقترن مع Green API: <strong className="text-[#10233F]" dir="ltr">{formatPhoneNumber(whatsappNumber)}</strong>
+                        </p>
+                      </div>
+
+                      {/* API Token / Secret */}
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium text-[#10233F]">رمز المصادقة السري (API Token / Secret) *</Label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowWhatsappToken(!showWhatsappToken)}
+                              className="text-[11px] text-[#00236f] font-semibold hover:underline cursor-pointer flex items-center gap-1"
+                            >
+                              {showWhatsappToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              <span>{showWhatsappToken ? 'إخفاء الرمز' : 'إظهار الرمز'}</span>
+                            </button>
+                            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
+                              محفوظ ومشفّر دائم
+                            </span>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            type={showWhatsappToken ? 'text' : 'password'}
+                            value={whatsappToken}
+                            onChange={(e) => setWhatsappToken(e.target.value)}
+                            placeholder="رمز المصادقة من لوحة Green API"
+                            className="text-xs h-10 font-mono pr-3 pl-20"
+                            dir="ltr"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWhatsappToken('');
+                              toast({ title: 'أدخل رمز المصادقة الجديد ثم اضغط حفظ' });
+                            }}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-[#55627a] hover:text-[#00236f] font-semibold cursor-pointer"
+                          >
+                            توليد جديد
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Test Connection Button in Credentials Card */}
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#f1f5fd]">
+                      <p className="text-[11px] text-[#64748B]">
+                        اضغط فحص الاتصال للتأكد من صحة المفاتيح قبل الحفظ.
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={handleTestWhatsappConnection}
+                        disabled={isTestingConnection}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-xs gap-2 cursor-pointer w-full sm:w-auto"
+                      >
+                        {isTestingConnection ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 text-amber-200" />
+                        )}
+                        <span>فحص وتأكيد الاتصال الآن</span>
+                      </Button>
+                    </div>
+
+                    {/* Permanent Vault Callout */}
+                    <div className="bg-[#fafcff] border border-[#e2ecfa] rounded-xl p-4 flex items-start gap-3 text-xs">
+                      <ShieldCheck className="w-5 h-5 text-[#00236f] shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <span className="font-bold text-[#10233F]">الربط الدائم ومخزن المفاتيح السحابي (Supabase Vault)</span>
+                        <p className="text-[#55627a] leading-relaxed text-[11px]">
+                          يتم حفظ وتشفير مفاتيح الواتساب في قاعدة البيانات السحابية (Supabase Vault) تلقائياً، ولن تفقد الاتصال مطلقاً عند عمل Deploy أو إعادة تفعيل الخادم السحابي للمكتب.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Advanced Sending & Anti-Ban Protection */}
+                  <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
+                      <div className="flex items-center gap-2">
+                        <Sliders className="w-4 h-4 text-[#00236f]" />
+                        <h3 className="text-sm font-bold text-[#10233F]">إعدادات الإرسال المتقدمة ومكافحة حظر الرقم</h3>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        حماية رقم المكتب مفعلة
+                      </span>
+                    </div>
+
+                    <div className="space-y-4 text-xs">
+                      {/* Smart Interval Setting */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-[#10233F]">الفاصل الزمني الذكي بين الرسائل</Label>
+                        <select
+                          value={intervalOption}
+                          onChange={(e) => setIntervalOption(e.target.value)}
+                          className="w-full h-10 rounded-xl bg-[#fafcff] border border-[#d6e0ec] text-xs px-3 text-[#10233F] focus:outline-none focus:ring-2 focus:ring-[#00236f]"
+                        >
+                          <option value="2-5">2 إلى 5 ثوانٍ (موصى به للمكاتب - حماية متقدمة)</option>
+                          <option value="5-10">5 إلى 10 ثوانٍ (أمان إضافي للحملات)</option>
+                          <option value="1-2">1 إلى 2 ثانية (سرعة فورية - للأرقام الموثقة رسمياً)</option>
+                        </select>
+                        <p className="text-[11px] text-[#64748B]">
+                          تأخير عشوائي ديناميكي بين 2 إلى 5 ثوانٍ عند إرسال تنبيهات جماعية لمنع قيود خوارزميات ميتا (Meta).
+                        </p>
+                      </div>
+
+                      {/* Webhook Delivery Callbacks */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium text-[#10233F]">
+                            رابط الـ Webhook لاستقبال الردود وحالات التسليم (Delivery Callbacks)
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                              STATUS: {webhookStatus}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setWebhookStatus('200 OK');
+                                toast({ title: 'تم التحقق من استجابة الـ Webhook بنجاح ✓' });
+                              }}
+                              className="text-[11px] text-[#00236f] font-semibold hover:underline cursor-pointer"
+                            >
+                              فحص Webhook
+                            </button>
+                          </div>
+                        </div>
+                        <Input
+                          value={webhookUrl}
+                          readOnly
+                          className="text-xs h-10 font-mono bg-[#fafcff]"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      {/* Direct Activation Checkboxes */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                        <label className="flex items-center gap-2.5 p-3 rounded-xl border border-[#e2ecfa] bg-[#fafcff] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enableHearings}
+                            onChange={(e) => setEnableHearings(e.target.checked)}
+                            className="rounded text-[#00236f] focus:ring-[#00236f]"
+                          />
+                          <div>
+                            <span className="font-semibold text-[#10233F] block">تنبيهات الجلسات</span>
+                            <span className="text-[10px] text-[#64748B]">قبل 24 ساعة آلياً</span>
+                          </div>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 p-3 rounded-xl border border-[#e2ecfa] bg-[#fafcff] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enableJudgments}
+                            onChange={(e) => setEnableJudgments(e.target.checked)}
+                            className="rounded text-[#00236f] focus:ring-[#00236f]"
+                          />
+                          <div>
+                            <span className="font-semibold text-[#10233F] block">تقارير الأحكام</span>
+                            <span className="text-[10px] text-[#64748B]">إرسال ملخص الحكم للعميل</span>
+                          </div>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 p-3 rounded-xl border border-[#e2ecfa] bg-[#fafcff] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enableLogs}
+                            onChange={(e) => setEnableLogs(e.target.checked)}
+                            className="rounded text-[#00236f] focus:ring-[#00236f]"
+                          />
+                          <div>
+                            <span className="font-semibold text-[#10233F] block">سجل الإرسال الشامل</span>
+                            <span className="text-[10px] text-[#64748B]">أرشفة تفصيلية للرسائل</span>
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Message Logs Notification Strip */}
+                      <div className="pt-2 flex items-center justify-between p-3 rounded-xl bg-[#fafcff] border border-[#e2ecfa] text-[11px]">
+                        <span className="text-[#55627a]">
+                          تم تسجيل وتوثيق <strong className="text-[#10233F]">{whatsappLogs.length} رسالة</strong> فعلية عبر Green API.
                         </span>
                         <button
                           type="button"
                           onClick={() => {
-                            setWebhookStatus('200 OK');
-                            toast({ title: 'تم التحقق من استجابة الـ Webhook بنجاح ✓' });
+                            setIsLogsModalOpen(true);
+                            fetchWhatsappLogs();
                           }}
-                          className="text-[11px] text-[#00236f] font-semibold hover:underline"
+                          className="text-[#00236f] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          فحص Webhook
+                          <History className="w-3.5 h-3.5" />
+                          <span>فتح سجل الإرسال والرسائل المرسلة (Message Logs)</span>
                         </button>
                       </div>
                     </div>
-                    <Input
-                      value={webhookUrl}
-                      readOnly
-                      className="text-xs h-10 font-mono bg-[#fafcff]"
-                      dir="ltr"
-                    />
                   </div>
+                </div>
 
-                  {/* Direct Activation Checkboxes */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-[#e2ecfa] bg-[#fafcff] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={enableHearings}
-                        onChange={(e) => setEnableHearings(e.target.checked)}
-                        className="rounded text-[#00236f] focus:ring-[#00236f]"
-                      />
-                      <div>
-                        <span className="font-semibold text-[#10233F] block">تنبيهات الجلسات</span>
-                        <span className="text-[10px] text-[#64748B]">قبل 24 ساعة آلياً</span>
+                {/* LEFT COLUMN (4 Columns on desktop): QR Pairing & Sandbox */}
+                <div className="lg:col-span-4 space-y-6">
+                  {/* Card 1: QR Code & Live Pairing */}
+                  <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
+                      <div className="flex items-center gap-2">
+                        <QrCode className="w-4 h-4 text-[#00236f]" />
+                        <h3 className="text-sm font-bold text-[#10233F]">اقتران جهاز الواتساب (QR Pairing)</h3>
                       </div>
-                    </label>
-
-                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-[#e2ecfa] bg-[#fafcff] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={enableJudgments}
-                        onChange={(e) => setEnableJudgments(e.target.checked)}
-                        className="rounded text-[#00236f] focus:ring-[#00236f]"
-                      />
-                      <div>
-                        <span className="font-semibold text-[#10233F] block">تقارير الأحكام</span>
-                        <span className="text-[10px] text-[#64748B]">إرسال ملخص الحكم للعميل</span>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-[#e2ecfa] bg-[#fafcff] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={enableLogs}
-                        onChange={(e) => setEnableLogs(e.target.checked)}
-                        className="rounded text-[#00236f] focus:ring-[#00236f]"
-                      />
-                      <div>
-                        <span className="font-semibold text-[#10233F] block">سجل الإرسال الشامل</span>
-                        <span className="text-[10px] text-[#64748B]">أرشفة تفصيلية للرسائل</span>
-                      </div>
-                    </label>
-                  </div>
-
-                  {/* Message Logs Notification Strip */}
-                  <div className="pt-2 flex items-center justify-between p-3 rounded-xl bg-[#fafcff] border border-[#e2ecfa] text-[11px]">
-                    <span className="text-[#55627a]">
-                      تم تسجيل وتوثيق <strong className="text-[#10233F]">{whatsappLogs.length} رسالة</strong> فعلية عبر Green API.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsLogsModalOpen(true);
-                        fetchWhatsappLogs();
-                      }}
-                      className="text-[#00236f] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <History className="w-3.5 h-3.5" />
-                      <span>فتح سجل الإرسال والرسائل المرسلة (Message Logs)</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* LEFT COLUMN (4 Columns on desktop): QR Pairing & Sandbox */}
-            <div className="lg:col-span-4 space-y-6">
-              {/* Card 1: QR Code & Live Pairing */}
-              <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
-                  <div className="flex items-center gap-2">
-                    <QrCode className="w-4 h-4 text-[#00236f]" />
-                    <h3 className="text-sm font-bold text-[#10233F]">اقتران جهاز الواتساب (QR Pairing)</h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {connectionStatus?.connected ? 'مقترن ومصادق عليه ✓' : 'غير مقترن'}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#fafcff] border border-[#e2ecfa] space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B]">الرقم المقترن بالبوابة:</span>
-                    <span className="font-mono font-bold text-[#00236f]" dir="ltr">
-                      {formatPhoneNumber(whatsappNumber)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B]">الرمز الدولي:</span>
-                    <span className="font-semibold text-emerald-700">{getPhoneCountryInfo(whatsappNumber).label}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B]">حالة الاتصال الفعلي:</span>
-                    <span className="text-emerald-700 font-bold flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Authorized & Active
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleOpenQrModal}
-                  variant="outline"
-                  className="w-full border-[#cfe0fc] hover:bg-[#eff4ff] text-[#00236f] text-xs font-bold h-10 rounded-xl gap-2 cursor-pointer"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>فحص رمز الاستجابة السريعة (QR Code)</span>
-                </Button>
-              </div>
-
-              {/* Card 2: Quick Sandbox Message Test */}
-              <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
-                  <div className="flex items-center gap-2">
-                    <Send className="w-4 h-4 text-[#00236f]" />
-                    <h3 className="text-sm font-bold text-[#10233F]">إرسال رسالة تجريبية سريعة</h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#00236f] bg-[#eff4ff] px-2 py-0.5 rounded border border-[#cfdffc]">
-                    Sandbox
-                  </span>
-                </div>
-
-                <p className="text-xs text-[#64748B] leading-relaxed">
-                  اختبر سلامة الربط البرمجي ووصول الرسائل فوراً لهاتفك قبل تعميم الإشعارات على العملاء.
-                </p>
-
-                <div className="space-y-3 text-xs">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-[#10233F]">رقم هاتف المستلم للاختبار</Label>
-                    <Input
-                      value={sandboxPhone}
-                      onChange={(e) => setSandboxPhone(e.target.value)}
-                      placeholder="+970567603295"
-                      className="text-xs h-9 font-mono"
-                      dir="ltr"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium text-[#10233F]">نص رسالة الاختبار</Label>
-                      <span className="text-[10px] text-[#64748B]">معاينة نص الرسالة</span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        {connectionStatus?.connected ? 'مقترن ومصادق عليه ✓' : 'غير مقترن'}
+                      </span>
                     </div>
-                    <Textarea
-                      value={sandboxMessage}
-                      onChange={(e) => setSandboxMessage(e.target.value)}
-                      rows={4}
-                      className="text-xs leading-relaxed bg-[#fafcff]"
-                    />
+
+                    <div className="p-3.5 rounded-xl bg-[#fafcff] border border-[#e2ecfa] space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B]">الرقم المقترن بالبوابة:</span>
+                        <span className="font-mono font-bold text-[#00236f]" dir="ltr">
+                          {formatPhoneNumber(whatsappNumber)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B]">الرمز الدولي:</span>
+                        <span className="font-semibold text-emerald-700">{getPhoneCountryInfo(whatsappNumber).label}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B]">حالة الاتصال الفعلي:</span>
+                        <span className="text-emerald-700 font-bold flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          {connectionStatus?.connected ? 'Authorized & Active' : 'غير متصل'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleOpenQrModal}
+                      variant="outline"
+                      className="w-full border-[#cfe0fc] hover:bg-[#eff4ff] text-[#00236f] text-xs font-bold h-10 rounded-xl gap-2 cursor-pointer"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span>فحص رمز الاستجابة السريعة (QR Code)</span>
+                    </Button>
                   </div>
 
-                  <Button
-                    onClick={handleSendSandboxMessage}
-                    disabled={isTestingWhatsapp}
-                    className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 rounded-xl shadow-xs gap-2 cursor-pointer"
-                  >
-                    {isTestingWhatsapp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    <span>إرسال تجربة الآن (Test Send)</span>
-                  </Button>
+                  {/* Card 2: Quick Sandbox Message Test */}
+                  <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#f1f5fd]">
+                      <div className="flex items-center gap-2">
+                        <Send className="w-4 h-4 text-[#00236f]" />
+                        <h3 className="text-sm font-bold text-[#10233F]">إرسال رسالة تجريبية سريعة</h3>
+                      </div>
+                      <span className="text-[10px] font-bold text-[#00236f] bg-[#eff4ff] px-2 py-0.5 rounded border border-[#cfdffc]">
+                        Sandbox
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[#64748B] leading-relaxed">
+                      اختبر سلامة الربط البرمجي ووصول الرسائل فوراً لهاتفك قبل تعميم الإشعارات على العملاء.
+                    </p>
+
+                    <div className="space-y-3 text-xs">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-[#10233F]">رقم هاتف المستلم للاختبار</Label>
+                        <Input
+                          value={sandboxPhone}
+                          onChange={(e) => setSandboxPhone(e.target.value)}
+                          placeholder="+970567603295"
+                          className="text-xs h-9 font-mono"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium text-[#10233F]">نص رسالة الاختبار</Label>
+                          <span className="text-[10px] text-[#64748B]">معاينة نص الرسالة</span>
+                        </div>
+                        <Textarea
+                          value={sandboxMessage}
+                          onChange={(e) => setSandboxMessage(e.target.value)}
+                          rows={4}
+                          className="text-xs leading-relaxed bg-[#fafcff]"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleSendSandboxMessage}
+                        disabled={isTestingWhatsapp}
+                        className="w-full bg-[#00236f] hover:bg-[#001c59] text-white text-xs font-bold h-10 rounded-xl shadow-xs gap-2 cursor-pointer"
+                      >
+                        {isTestingWhatsapp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        <span>إرسال تجربة الآن (Test Send)</span>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Bottom Documentation & Footer links matching Image 1 */}
           <div className="bg-[#fafcff] border border-[#e2ecfa] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 text-xs text-[#55627a]">

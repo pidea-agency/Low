@@ -7,6 +7,7 @@
  * notifications for the assigned lawyer and office admin.
  */
 
+import { env } from "../../config/env";
 import { logger } from "../../lib/logger";
 import { listSupabaseUsers, type AppUser } from "../supabase.service";
 import {
@@ -128,6 +129,7 @@ export async function runPoaExpirySweep(targetOfficeId?: string): Promise<PoaExp
               daysRemaining: String(daysRemaining),
               expiryDate: expiryHijri,
               lawyerName,
+              directLink: `${env.frontendUrl}/poa`,
             },
             relatedRecordType: "poa",
             relatedRecordId: poaIdStr,
@@ -148,6 +150,7 @@ export async function runPoaExpirySweep(targetOfficeId?: string): Promise<PoaExp
                 daysRemaining: String(daysRemaining),
                 expiryDate: expiryHijri,
                 lawyerName,
+                directLink: `${env.frontendUrl}/poa`,
               },
               relatedRecordType: "poa",
               relatedRecordId: poaIdStr,
@@ -169,6 +172,7 @@ export async function runPoaExpirySweep(targetOfficeId?: string): Promise<PoaExp
                 daysRemaining: String(daysRemaining),
                 expiryDate: expiryHijri,
                 lawyerName: "غير معين",
+                directLink: `${env.frontendUrl}/poa`,
               },
               relatedRecordType: "poa",
               relatedRecordId: poaIdStr,

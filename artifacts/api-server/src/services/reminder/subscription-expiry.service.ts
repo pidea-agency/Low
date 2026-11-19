@@ -7,6 +7,7 @@
  * via dispatchEventNotification() to the office admin.
  */
 
+import { env } from "../../config/env";
 import { logger } from "../../lib/logger";
 import { listSupabaseUsers, type AppUser } from "../supabase.service";
 import { hasRecentNotification } from "../postgres.service";
@@ -117,6 +118,8 @@ export async function runSubscriptionExpirySweep(
           daysRemaining: String(daysRemaining),
           endDate: endDateStr.split("T")[0],
           officeName: admin.office_name || "مكتب المحاماة",
+          renewLink: `${env.frontendUrl}/settings?tab=subscription`,
+          directLink: `${env.frontendUrl}/settings?tab=subscription`,
         },
         relatedRecordType: "subscription",
         relatedRecordId: officeId,

@@ -1,10 +1,18 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
-import { useLogout, useGetCurrentUser, useGetDashboardStats } from '@workspace/api-client-react';
-import { useQueryClient } from '@tanstack/react-query';
+import {
+  useLogout,
+  useGetCurrentUser,
+  useGetDashboardStats,
+} from '@workspace/api-client-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useSidebarCollapse } from '@/context/sidebar-context';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip';
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -19,6 +27,12 @@ import {
   Sliders,
   Landmark,
   Gavel,
+  LogOut,
+  Pin,
+  PinOff,
+  PanelRightClose,
+  FileSpreadsheet,
+  ExternalLink,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,18 +40,62 @@ interface SidebarProps {
   forceExpanded?: boolean;
 }
 
+interface NavItem {
+  id: string;
+  name: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+  badgeType?: 'orange' | 'ai';
+  isExternal?: boolean;
+}
+
+interface NavSection {
+  id: string;
+  title: string;
+  visible: boolean;
+  items: NavItem[];
+}
+
+interface CurrentUser {
+  role?: 'super_admin' | 'admin' | 'lawyer' | string;
+  officeName?: string;
+  office_name?: string;
+  displayName?: string;
+  name?: string;
+  username?: string;
+}
+
+function getCurrentJudicialYearLabel(): string {
+  try {
+    const hijriYearStr = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
+      year: 'numeric',
+    }).format(new Date());
+    const hijriYear = parseInt(hijriYearStr, 10);
+    if (!Number.isNaN(hijriYear)) {
+      return `${hijriYear}-${hijriYear + 1}`;
+    }
+  } catch {
+    // Fallback to Gregorian year if Islamic calendar formatter is unavailable
+  }
+
+  const gregorianYear = new Date().getFullYear();
+  return `${gregorianYear}-${gregorianYear + 1}`;
+}
+
 export function Sidebar({
   onNavigate,
   forceExpanded = false,
 }: SidebarProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const logoutMutation = useLogout();
   const { data: currentUser } = useGetCurrentUser();
   const { data: statsData } = useGetDashboardStats();
-  const user = currentUser as any;
+
+  const user = (currentUser ?? null) as CurrentUser | null;
 
   const {
     isPinned,
@@ -51,6 +109,28 @@ export function Sidebar({
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = user?.role === 'admin';
+  const canManageOffice = isAdmin || isSuperAdmin;
+
+  const { data: googleBinding } = useQuery({
+    queryKey: ['google-binding-sidebar'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings/google-binding');
+      if (!res.ok) return null;
+      return res.json() as Promise<{
+        is_connected?: boolean;
+        spreadsheet_id?: string | null;
+        sheet_name?: string | null;
+      }>;
+    },
+    enabled: isAdmin,
+    staleTime: 60_000,
+  });
+
+  const hasConnectedSheet = Boolean(isAdmin && googleBinding?.is_connected && googleBinding?.spreadsheet_id);
+  const cleanSpreadsheetId = googleBinding?.spreadsheet_id ? googleBinding.spreadsheet_id.trim() : '';
+  const googleSheetUrl = hasConnectedSheet
+    ? `https://docs.google.com/spreadsheets/d/${encodeURIComponent(cleanSpreadsheetId)}/edit`
+    : '/settings';
 
   const officeName =
     user?.officeName ||
@@ -67,7 +147,14 @@ export function Sidebar({
     user?.displayName ||
     user?.name ||
     user?.username ||
-    'أ. عبدالله المنصوري';
+    '';
+
+  const judicialYearLabel = getCurrentJudicialYearLabel();
+
+  const sessionsCount =
+    typeof statsData?.todayHearings === 'number' && statsData.todayHearings > 0
+      ? statsData.todayHearings
+      : 0;
 
   const handleLogout = () => {
     onNavigate?.();
@@ -75,9 +162,7 @@ export function Sidebar({
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
         queryClient.clear();
-        window.location.href = isSuperAdmin
-          ? '/admin/login'
-          : '/login';
+        setLocation(isSuperAdmin ? '/admin/login' : '/login');
       },
       onError: () => {
         toast({
@@ -89,136 +174,187 @@ export function Sidebar({
     });
   };
 
-  const totalSessionsCount = statsData?.todayHearings !== undefined 
-    ? (statsData.todayHearings > 0 ? statsData.todayHearings : (statsData.upcomingHearings || 16))
-    : 16;
-
-  const mainNavItems = [
+  const navSections: NavSection[] = [
     {
-      id: 'dashboard',
-      name: 'لوحة التحكم',
-      path: '/',
-      icon: LayoutDashboard,
+      id: 'main',
+      title: 'القسم الرئيسي',
+      visible: true,
+      items: [
+        {
+          id: 'dashboard',
+          name: 'لوحة التحكم',
+          path: '/dashboard',
+          icon: LayoutDashboard,
+        },
+        {
+          id: 'sessions',
+          name: 'الجلسات والمواعيد',
+          path: '/sessions',
+          icon: CalendarCheck,
+          badge: sessionsCount > 0 ? String(sessionsCount) : undefined,
+          badgeType: 'orange',
+        },
+        {
+          id: 'tasks',
+          name: 'المهام الإجرائية',
+          path: '/tasks',
+          icon: ClipboardList,
+        },
+        {
+          id: 'chat',
+          name: 'تحليل الرسائل الذكي',
+          path: '/chat',
+          icon: Sparkles,
+          badge: 'AI',
+          badgeType: 'ai',
+        },
+      ],
     },
     {
-      id: 'sessions',
-      name: 'الجلسات والمواعيد',
-      path: '/sessions',
-      icon: CalendarCheck,
-      badge: String(totalSessionsCount),
-      badgeType: 'orange',
+      id: 'records',
+      title: 'سجلات المكتب',
+      visible: true,
+      items: [
+        {
+          id: 'cases',
+          name: 'ملفات القضايا',
+          path: '/cases',
+          icon: FolderOpen,
+        },
+        {
+          id: 'poa',
+          name: 'الوكالات الشرعية',
+          path: '/poa',
+          icon: ShieldCheck,
+        },
+        {
+          id: 'clients',
+          name: 'العملاء والموكلين',
+          path: '/clients',
+          icon: Users,
+        },
+        {
+          id: 'judgments',
+          name: 'الأحكام القضائية',
+          path: '/judgments',
+          icon: Scale,
+        },
+      ],
     },
     {
-      id: 'tasks',
-      name: 'المهام الإجرائية',
-      path: '/tasks',
-      icon: ClipboardList,
-    },
-    {
-      id: 'chat',
-      name: 'تحليل الرسائل الذكي',
-      path: '/chat',
-      icon: Sparkles,
-      badge: 'AI',
-      badgeType: 'ai',
-    },
-  ];
-
-  const recordsNavItems = [
-    {
-      id: 'cases',
-      name: 'ملفات القضايا',
-      path: '/cases',
-      icon: FolderOpen,
-    },
-    {
-      id: 'poa',
-      name: 'الوكالات الشرعية',
-      path: '/poa',
-      icon: ShieldCheck,
-    },
-    {
-      id: 'clients',
-      name: 'العملاء والموكلين',
-      path: '/clients',
-      icon: Users,
-    },
-    {
-      id: 'judgments',
-      name: 'الأحكام القضائية',
-      path: '/judgments',
-      icon: Scale,
-    },
-  ];
-
-  const managementNavItems = [
-    {
-      id: 'office_members',
-      name: 'أعضاء الفريق',
-      path: '/users',
-      icon: UserCheck,
-    },
-    {
-      id: 'subscription',
-      name: 'الاشتراك والحصص',
-      path: '/subscription',
-      icon: CreditCard,
-    },
-    {
-      id: 'settings',
-      name: 'الإعدادات والربط',
-      path: '/settings',
-      icon: Sliders,
+      id: 'management',
+      title: 'إدارة المكتب',
+      visible: canManageOffice,
+      items: [
+        {
+          id: 'office_members',
+          name: 'أعضاء الفريق',
+          path: '/users',
+          icon: UserCheck,
+        },
+        {
+          id: 'subscription',
+          name: 'الاشتراك والحصص',
+          path: '/subscription',
+          icon: CreditCard,
+        },
+        {
+          id: 'settings',
+          name: 'الإعدادات والربط',
+          path: '/settings',
+          icon: Sliders,
+        },
+        ...(isAdmin
+          ? [
+              {
+                id: 'google_sheet',
+                name: 'فتح جدول البيانات',
+                path: googleSheetUrl,
+                icon: FileSpreadsheet,
+                isExternal: hasConnectedSheet,
+              },
+            ]
+          : []),
+      ],
     },
   ];
 
   const isItemActive = (path: string) =>
     path === '/'
       ? location === '/'
-      : location === path || location.startsWith(path + '/');
+      : location === path || location.startsWith(`${path}/`);
 
-  const renderNavItem = (item: any, collapsed = false) => {
+  const renderNavItem = (item: NavItem) => {
     const active = isItemActive(item.path);
     const Icon = item.icon;
 
-    const content = (
-      <Link
+    const linkClasses = [
+      'flex items-center rounded-lg text-xs transition-all duration-150',
+      isExpanded
+        ? 'justify-between px-2.5 py-2 w-full'
+        : 'w-10 h-10 justify-center p-0 mx-auto',
+      active
+        ? 'bg-[#00236f] text-white shadow-xs font-semibold'
+        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground font-medium',
+    ].join(' ');
+
+    const iconClasses = [
+      'w-4 h-4 shrink-0',
+      active
+        ? 'text-white'
+        : item.id === 'chat'
+          ? 'text-[#00236f]'
+          : 'text-muted-foreground',
+    ].join(' ');
+
+    const linkElement = item.isExternal ? (
+      <a
+        key={item.id}
         href={item.path}
+        target="_blank"
+        rel="noopener noreferrer"
         onClick={() => onNavigate?.()}
-        data-testid={`nav-${collapsed ? 'collapsed-' : ''}${item.id}`}
-        className={`
-          flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-all duration-150
-          ${
-            active
-              ? 'bg-[#00236f] text-white shadow-xs font-semibold'
-              : 'text-[#444651] hover:bg-[#dce9ff]/60 hover:text-[#0b1c30] font-medium'
-          }
-          ${collapsed ? 'w-10 h-10 min-h-0 justify-center p-0 mx-auto' : 'w-full'}
-        `}
+        data-testid={`nav-${isExpanded ? '' : 'collapsed-'}${item.id}`}
+        className={linkClasses}
       >
-        <div className={`flex items-center gap-2.5 min-w-0 ${collapsed ? 'justify-center' : ''}`}>
-          <Icon
-            className={`w-4 h-4 shrink-0 ${
-              active
-                ? 'text-white'
-                : item.id === 'chat'
-                  ? 'text-[#9b4500]'
-                  : 'text-[#757682]'
-            }`}
-          />
-          {!collapsed && (
-            <span className="truncate text-xs">{item.name}</span>
-          )}
+        <div
+          className={`flex items-center gap-2.5 min-w-0 ${
+            !isExpanded ? 'justify-center' : ''
+          }`}
+        >
+          <Icon className={iconClasses} />
+          {isExpanded && <span className="truncate text-xs">{item.name}</span>}
         </div>
 
-        {!collapsed && item.badge && (
+        {isExpanded && (
+          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0 opacity-70" />
+        )}
+      </a>
+    ) : (
+      <Link
+        key={item.path}
+        href={item.path}
+        onClick={() => onNavigate?.()}
+        data-testid={`nav-${isExpanded ? '' : 'collapsed-'}${item.id}`}
+        className={linkClasses}
+      >
+        <div
+          className={`flex items-center gap-2.5 min-w-0 ${
+            !isExpanded ? 'justify-center' : ''
+          }`}
+        >
+          <Icon className={iconClasses} />
+          {isExpanded && <span className="truncate text-xs">{item.name}</span>}
+        </div>
+
+        {isExpanded && item.badge && (
           <span
             className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
               active
                 ? 'bg-white/20 text-white'
                 : item.badgeType === 'orange'
-                  ? 'bg-[#fd8a42] text-white'
-                  : 'bg-[#dae2fd] text-[#131b2e]'
+                  ? 'bg-[#00236f] text-white'
+                  : 'bg-secondary text-secondary-foreground'
             }`}
           >
             {item.badge}
@@ -227,156 +363,187 @@ export function Sidebar({
       </Link>
     );
 
-    if (!collapsed) return content;
+    if (isExpanded) {
+      return linkElement;
+    }
 
     return (
       <Tooltip key={item.path}>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="left">
-          {item.name}
-        </TooltipContent>
+        <TooltipTrigger asChild>{linkElement}</TooltipTrigger>
+        <TooltipContent side="left">{item.name}</TooltipContent>
       </Tooltip>
     );
   };
 
+  const visibleSections = navSections.filter((section) => section.visible);
+
   return (
     <aside
       dir="rtl"
-      onMouseEnter={() => !forceExpanded && setIsHovered(true)}
+      onMouseEnter={() => !forceExpanded && !isPinned && setIsHovered(true)}
       onMouseLeave={() => !forceExpanded && setIsHovered(false)}
-      className={`
-        h-full relative z-30 flex flex-col justify-between
-        bg-white text-[#0b1c30]
-        border-l border-[#e5eeff]
-        shadow-[0_1px_8px_rgba(0,0,0,0.04)]
-        transition-all duration-200 ease-in-out
-        ${
-          isExpanded
-            ? 'w-72'
-            : 'w-[70px]'
-        }
-      `}
+      className={`h-full relative z-30 flex flex-col justify-between bg-background text-foreground border-l border-border shadow-xs transition-all duration-200 ease-in-out ${
+        isExpanded ? 'w-72' : 'w-[70px]'
+      }`}
     >
-      {isExpanded ? (
-        <div className="flex flex-col h-full overflow-hidden justify-between">
-          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-            {/* Header / Brand */}
-            <div className="h-16 px-4 flex items-center justify-between shrink-0 bg-white">
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        {/* Header / Brand */}
+        <div
+          className={`h-16 shrink-0 flex items-center ${
+            isExpanded ? 'px-4 justify-between' : 'px-2 justify-center'
+          }`}
+        >
+          {isExpanded ? (
+            <>
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[#00236f] flex items-center justify-center text-white shrink-0 shadow-xs">
-                  <Landmark className="w-4.5 h-4.5 text-white" />
+                  <Landmark className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col min-w-0 text-right">
                   <span className="font-bold text-sm text-[#00236f] truncate leading-tight">
                     {officeName}
                   </span>
-                  <span className="text-[11px] text-[#9b4500] font-semibold truncate mt-0.5">
+                  <span className="text-[11px] text-[#00236f] font-semibold truncate mt-0.5">
                     {roleLabel}
                   </span>
                 </div>
               </div>
 
-              <span className="text-xs font-bold text-[#00236f]">
-                LegalTech
-              </span>
-            </div>
-
-            {/* Judicial Year Badge Chip */}
-            <div className="px-4 py-2 shrink-0">
-              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#eff4ff] text-[#444651]">
-                <span className="text-xs font-medium">السنة القضائية 1446-1447</span>
-                <Gavel className="w-3.5 h-3.5 text-[#00236f]" />
+              <div className="flex items-center gap-1 shrink-0">
+                {!forceExpanded && (
+                  <button
+                    type="button"
+                    onClick={togglePin}
+                    title={isPinned ? 'إلغاء تثبيت القائمة' : 'تثبيت القائمة'}
+                    className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    {isPinned ? (
+                      <PinOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Pin className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                )}
               </div>
-            </div>
-
-            {/* Navigation Lists */}
-            <div className="px-3 py-1 space-y-3">
-              {/* Section 1: Main Section */}
-              <div>
-                <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
-                  القسم الرئيسي
-                </span>
-                <nav className="space-y-1">
-                  {mainNavItems.map((item) => (
-                    <React.Fragment key={item.path}>
-                      {renderNavItem(item)}
-                    </React.Fragment>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Section 2: Office Records */}
-              <div>
-                <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
-                  سجلات المكتب
-                </span>
-                <nav className="space-y-1">
-                  {recordsNavItems.map((item) => (
-                    <React.Fragment key={item.path}>
-                      {renderNavItem(item)}
-                    </React.Fragment>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Section 3: Office Management (Admin Only) */}
-              {isAdmin && (
-                <div>
-                  <span className="text-[11px] font-semibold text-[#757682] px-2 mb-1 block">
-                    إدارة المكتب
-                  </span>
-                  <nav className="space-y-1">
-                    {managementNavItems.map((item) => (
-                      <React.Fragment key={item.path}>
-                        {renderNavItem(item)}
-                      </React.Fragment>
-                    ))}
-                  </nav>
-                </div>
-              )}
-            </div>
-          </div>
-
-          
-        </div>
-      ) : (
-        /* Collapsed Sidebar */
-        <div className="flex flex-col h-full justify-between items-center py-3">
-          <div className="flex flex-col items-center gap-3">
+            </>
+          ) : (
             <button
               type="button"
               onClick={toggleCollapse}
-              className="w-10 h-10 rounded-lg bg-[#00236f] flex items-center justify-center text-white"
+              title="توسيع القائمة"
+              className="w-10 h-10 rounded-lg bg-[#00236f] flex items-center justify-center text-white shadow-xs"
             >
-              <Landmark className="w-5 h-5 text-white" />
+              <Landmark className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Judicial Year Badge */}
+        {isExpanded && (
+          <div className="px-4 py-2 shrink-0">
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-muted text-muted-foreground">
+              <span className="text-xs font-medium">
+                السنة القضائية {judicialYearLabel}
+              </span>
+              <Gavel className="w-3.5 h-3.5 text-[#00236f]" />
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Sections */}
+        <div
+          className={`flex-1 min-h-0 overflow-y-auto py-2 ${
+            isExpanded ? 'px-3 space-y-3' : 'px-2 flex flex-col items-center gap-2'
+          }`}
+        >
+          {visibleSections.map((section, sectionIndex) => (
+            <React.Fragment key={section.id}>
+              {!isExpanded && sectionIndex > 0 && (
+                <div className="w-6 h-px bg-border my-1" />
+              )}
+
+              <div
+                className={
+                  isExpanded
+                    ? 'w-full'
+                    : 'flex flex-col items-center gap-1.5 w-full'
+                }
+              >
+                {isExpanded && (
+                  <span className="text-[11px] font-semibold text-muted-foreground px-2 mb-1 block">
+                    {section.title}
+                  </span>
+                )}
+
+                <nav
+                  className={
+                    isExpanded
+                      ? 'space-y-1'
+                      : 'flex flex-col items-center gap-1.5 w-full'
+                  }
+                >
+                  {section.items.map(renderNavItem)}
+                </nav>
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer: Current User & Logout */}
+      <div className="border-t border-border p-2.5 shrink-0">
+        {isExpanded ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 text-right">
+              {userDisplayName && (
+                <p className="text-xs font-semibold text-foreground truncate">
+                  {userDisplayName}
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground truncate">
+                {roleLabel}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+              title="تسجيل الخروج"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50 transition-colors shrink-0"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>خروج</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              title="توسيع القائمة"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              <PanelRightClose className="w-4 h-4" />
             </button>
 
-            <nav className="flex flex-col items-center gap-1.5 mt-2">
-              {mainNavItems.map((item) => (
-                <React.Fragment key={item.path}>
-                  {renderNavItem(item, true)}
-                </React.Fragment>
-              ))}
-              <div className="w-6 h-px bg-slate-200 my-1" />
-              {recordsNavItems.map((item) => (
-                <React.Fragment key={item.path}>
-                  {renderNavItem(item, true)}
-                </React.Fragment>
-              ))}
-              {isAdmin && (
-                <>
-                  <div className="w-6 h-px bg-slate-200 my-1" />
-                  {managementNavItems.map((item) => (
-                    <React.Fragment key={item.path}>
-                      {renderNavItem(item, true)}
-                    </React.Fragment>
-                  ))}
-                </>
-              )}
-            </nav>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={logoutMutation.isPending}
+                  aria-label="تسجيل الخروج"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 disabled:opacity-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left">تسجيل الخروج</TooltipContent>
+            </Tooltip>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
   );
 }

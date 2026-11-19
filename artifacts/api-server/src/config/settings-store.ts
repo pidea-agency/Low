@@ -41,6 +41,8 @@ export interface AppSettings {
   whatsappToken?: string;
   /** Green API Instance ID (e.g. 7107XXXXXXXXX) */
   whatsappInstanceId?: string;
+  /** Whether WhatsApp instance was verified and connected */
+  whatsappConnected?: boolean;
 }
 
 const SENSITIVE_KEYS: (keyof AppSettings)[] = [

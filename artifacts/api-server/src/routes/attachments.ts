@@ -20,6 +20,7 @@ import * as postgresService from "../services/postgres.service";
 import * as storageService from "../services/storage.service";
 import { verifyRecordAccess } from "../utils/record-access";
 import { logger } from "../lib/logger";
+import { env } from "../config/env";
 import { dispatchEventNotification } from "../services/notification-template.service";
 
 const router: IRouter = Router();
@@ -258,6 +259,7 @@ router.post("/attachments", async (req, res) => {
             uploaderName: (req.authUser as any)?.displayName || req.authUser!.username,
             recordTypeArabic: typeArabicMap[relatedRecordType] || relatedRecordType,
             recordNumber: String(relatedRecordId),
+            directLink: `${env.frontendUrl}/${relatedRecordType === "session" ? `sessions/${relatedRecordId}` : relatedRecordType === "case" ? "cases" : relatedRecordType === "poa" ? "poa" : "attachments"}`,
           },
           relatedRecordType,
           relatedRecordId,

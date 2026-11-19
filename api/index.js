@@ -20708,27 +20708,27 @@ var require_router = __commonJS({
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router23;
+    module2.exports = Router24;
     module2.exports.Route = Route;
-    function Router23(options) {
-      if (!(this instanceof Router23)) {
-        return new Router23(options);
+    function Router24(options) {
+      if (!(this instanceof Router24)) {
+        return new Router24(options);
       }
       const opts = options || {};
-      function router23(req, res, next) {
-        router23.handle(req, res, next);
+      function router24(req, res, next) {
+        router24.handle(req, res, next);
       }
-      Object.setPrototypeOf(router23, this);
-      router23.caseSensitive = opts.caseSensitive;
-      router23.mergeParams = opts.mergeParams;
-      router23.params = {};
-      router23.strict = opts.strict;
-      router23.stack = [];
-      return router23;
+      Object.setPrototypeOf(router24, this);
+      router24.caseSensitive = opts.caseSensitive;
+      router24.mergeParams = opts.mergeParams;
+      router24.params = {};
+      router24.strict = opts.strict;
+      router24.stack = [];
+      return router24;
     }
-    Router23.prototype = function() {
+    Router24.prototype = function() {
     };
-    Router23.prototype.param = function param(name, fn) {
+    Router24.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20748,7 +20748,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router23.prototype.handle = function handle(req, res, callback) {
+    Router24.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20875,7 +20875,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router23.prototype.use = function use(handler2) {
+    Router24.prototype.use = function use(handler2) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler2 !== "function") {
@@ -20908,7 +20908,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router23.prototype.route = function route(path6) {
+    Router24.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -20923,7 +20923,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router23.prototype[method] = function(path6) {
+      Router24.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice2.call(arguments, 1));
         return this;
@@ -21106,13 +21106,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve3 = require("node:path").resolve;
     var once2 = require_once();
-    var Router23 = require_router();
+    var Router24 = require_router();
     var slice2 = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init4() {
-      var router23 = null;
+      var router24 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21121,13 +21121,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router23 === null) {
-            router23 = new Router23({
+          if (router24 === null) {
+            router24 = new Router24({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router23;
+          return router24;
         }
       });
     };
@@ -21198,15 +21198,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router23 = this.router;
+      var router24 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router23.use(path6, fn2);
+          return router24.use(path6, fn2);
         }
         debug(".use app under %s", path6);
         fn2.mountpath = path6;
         fn2.parent = this;
-        router23.use(path6, function mounted_app(req, res, next) {
+        router24.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23791,7 +23791,7 @@ var require_express = __commonJS({
     var EventEmitter4 = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router23 = require_router();
+    var Router24 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23813,8 +23813,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router23.Route;
-    exports2.Router = Router23;
+    exports2.Route = Router24.Route;
+    exports2.Router = Router24;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -56925,6 +56925,12 @@ function formatWhatsappMessage(payload) {
   if (payload.plaintiff) lines.push(`\u{1F464} *\u0627\u0644\u0645\u062F\u0639\u064A:* ${payload.plaintiff}`);
   if (payload.defendant) lines.push(`\u{1F465} *\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647:* ${payload.defendant}`);
   if (payload.caseSubject) lines.push(`\u{1F4DD} *\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0642\u0636\u064A\u0629:* ${payload.caseSubject}`);
+  if (payload.sessionId) {
+    try {
+      lines.push(`\u{1F517} *\u0631\u0627\u0628\u0637 \u0627\u0644\u062C\u0644\u0633\u0629:* ${env.frontendUrl}/sessions/${payload.sessionId}`);
+    } catch {
+    }
+  }
   lines.push("", "\u0627\u0644\u0631\u062C\u0627\u0621 \u0627\u0644\u062A\u062D\u0636\u064A\u0631 \u0648\u0627\u0644\u0627\u0633\u062A\u0639\u062F\u0627\u062F \u0644\u0644\u062C\u0644\u0633\u0629 \u0641\u064A \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u0645\u062D\u062F\u062F.");
   return lines.join("\n");
 }
@@ -57031,6 +57037,7 @@ var init_whatsappChannel = __esm({
     "use strict";
     init_settings_store();
     init_logger();
+    init_env();
     WhatsappReminderChannel = class {
       name = "whatsapp";
       async sendRaw(message, recipientPhone, options) {
@@ -834518,6 +834525,9 @@ function requireEnv(key, hint) {
   }
   return value;
 }
+function isFrontendUrlConfigured() {
+  return Boolean(readEnv("FRONTEND_URL") || readEnv("APP_URL"));
+}
 function isGoogleSheetsConfigured() {
   const stored = getSettings().googleSpreadsheetId;
   const hasSpreadsheetId = Boolean(
@@ -834697,7 +834707,10 @@ var init_env = __esm({
         return readEnv("EMAIL_FROM") || "onboarding@resend.dev";
       },
       get frontendUrl() {
-        const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || "http://localhost:5173";
+        const raw = readEnv("FRONTEND_URL") || readEnv("APP_URL") || (false ? "https://example.com" : void 0);
+        if (!raw) {
+          throw new Error("FRONTEND_URL is not set \u2014 all outgoing links will be broken");
+        }
         return raw.replace(/\/+$/, "");
       }
     };
@@ -835481,7 +835494,7 @@ __export(vercelHandler_exports, {
 module.exports = __toCommonJS(vercelHandler_exports);
 
 // src/app.ts
-var import_express23 = __toESM(require_express2(), 1);
+var import_express24 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -835490,7 +835503,7 @@ var import_fs3 = __toESM(require("fs"), 1);
 var import_url4 = require("url");
 
 // src/routes/index.ts
-var import_express22 = __toESM(require_express2(), 1);
+var import_express23 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -853343,6 +853356,7 @@ async function verifyRecordAccess(officeId, relatedRecordType, relatedRecordId, 
 init_postgres_service();
 
 // src/services/assignment-notification.service.ts
+init_env();
 init_notification_template_service();
 async function notifyLawyerAssignment(params) {
   const {
@@ -853366,6 +853380,7 @@ async function notifyLawyerAssignment(params) {
     return { notified: false, inAppCreated: false, whatsappSent: false };
   }
   const eventType = recordType2 === "poa" ? "poa_assigned" : "case_assigned";
+  const absoluteLink = directLink ? directLink.startsWith("http://") || directLink.startsWith("https://") ? directLink : `${env.frontendUrl}${directLink.startsWith("/") ? "" : "/"}${directLink}` : env.frontendUrl;
   const dispatchRes = await dispatchEventNotification({
     officeId,
     eventType,
@@ -853373,7 +853388,7 @@ async function notifyLawyerAssignment(params) {
     placeholderData: {
       recordTypeArabic,
       recordDescription,
-      directLink,
+      directLink: absoluteLink,
       recordId: String(recordId),
       poaNumber: recordDescription,
       clientName: recordDescription
@@ -854257,7 +854272,8 @@ function buildSettingsResponse(s3) {
     whatsappApiUrl: s3.whatsappApiUrl ?? "",
     whatsappToken: s3.whatsappToken ? maskToken(s3.whatsappToken) : "",
     whatsappTokenIsSet: Boolean(s3.whatsappToken),
-    whatsappInstanceId: s3.whatsappInstanceId ?? ""
+    whatsappInstanceId: s3.whatsappInstanceId ?? "",
+    whatsappConnected: Boolean(s3.whatsappConnected)
   };
 }
 router6.get("/settings", async (_req, res) => {
@@ -854312,11 +854328,11 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
     return;
   }
   const s3 = await ensureSettingsLoaded();
-  const rawInstanceId = String(req.body?.instanceId ?? "").trim();
-  const rawToken = String(req.body?.token ?? "").trim();
-  const isMaskedToken = rawToken.includes("\u2022") || rawToken.includes("*");
-  const instanceId = rawInstanceId || s3.whatsappInstanceId || "";
-  const token = !rawToken || isMaskedToken ? s3.whatsappToken || "" : rawToken;
+  const rawInstanceId = req.body?.instanceId !== void 0 ? String(req.body.instanceId).trim() : void 0;
+  const rawToken = req.body?.token !== void 0 ? String(req.body.token).trim() : void 0;
+  const isMaskedToken = rawToken ? rawToken.includes("\u2022") || rawToken.includes("*") : false;
+  const instanceId = rawInstanceId !== void 0 ? rawInstanceId : s3.whatsappInstanceId || "";
+  const token = rawToken !== void 0 ? isMaskedToken ? s3.whatsappToken || "" : rawToken : s3.whatsappToken || "";
   const rawApiUrl = String(req.body?.apiUrl || s3.whatsappApiUrl || "https://api.green-api.com").trim();
   if (!instanceId || !token) {
     res.status(400).json({
@@ -854372,6 +854388,7 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
       const phoneToSave = connectedPhone || s3.whatsappNumber || "970567603295";
       await saveSettings({
         whatsappNumber: phoneToSave,
+        whatsappConnected: true,
         ...req.body?.saveOnSuccess && instanceId && token && !isMaskedToken ? {
           whatsappInstanceId: instanceId,
           whatsappToken: token,
@@ -854388,6 +854405,9 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
       });
       return;
     }
+    await saveSettings({
+      whatsappConnected: false
+    });
     let message = `\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u064A\u0644 \u0627\u0644\u062D\u0627\u0644\u064A\u0629: ${state}`;
     if (state === "notAuthorized") {
       message = "\u0627\u0644\u0645\u062B\u064A\u0644 \u063A\u064A\u0631 \u0645\u0635\u0631\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0631\u0645\u0632 \u0627\u0644\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0627\u0644\u0633\u0631\u064A\u0639\u0629 (QR Code) \u0641\u064A \u0644\u0648\u062D\u0629 \u062A\u062D\u0643\u0645 Green API \u0644\u0631\u0628\u0637 \u0627\u0644\u062D\u0633\u0627\u0628.";
@@ -854406,6 +854426,10 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
     });
   } catch (err) {
     logger.error({ err, targetUrl }, "WhatsApp test connection failed");
+    await saveSettings({
+      whatsappConnected: false
+    }).catch(() => {
+    });
     const isTimeout = err?.name === "AbortError" || err?.message?.includes("aborted");
     const msg = isTimeout ? "\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0645\u0632\u0648\u062F Green API (\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0635\u062D\u0629 \u0631\u0627\u0628\u0637 \u0627\u0644\u0640 API \u0648\u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A)." : err?.message || "\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u0645\u0632\u0648\u062F \u062E\u062F\u0645\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628.";
     res.status(400).json({
@@ -854413,6 +854437,17 @@ router6.post("/settings/test-whatsapp-connection", async (req, res) => {
       connected: false,
       error: msg
     });
+  }
+});
+router6.post("/settings/disconnect-whatsapp", async (_req, res) => {
+  try {
+    await saveSettings({
+      whatsappConnected: false
+    });
+    res.json({ success: true, message: "\u062A\u0645 \u0642\u0637\u0639 \u0631\u0628\u0637 \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628 \u0628\u0646\u062C\u0627\u062D." });
+  } catch (err) {
+    logger.error({ err }, "Failed to disconnect WhatsApp gateway");
+    res.status(500).json({ error: "\u0641\u0634\u0644 \u0642\u0637\u0639 \u0631\u0628\u0637 \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628." });
   }
 });
 router6.post("/settings/whatsapp-qr", async (req, res) => {
@@ -855016,6 +855051,7 @@ async function notify(payload, officeId) {
 }
 
 // src/services/reminder/poa-expiry.service.ts
+init_env();
 init_logger();
 init_supabase_service();
 init_postgres_service();
@@ -855094,7 +855130,8 @@ async function runPoaExpirySweep(targetOfficeId) {
               clientName,
               daysRemaining: String(daysRemaining),
               expiryDate: expiryHijri,
-              lawyerName
+              lawyerName,
+              directLink: `${env.frontendUrl}/poa`
             },
             relatedRecordType: "poa",
             relatedRecordId: poaIdStr
@@ -855112,7 +855149,8 @@ async function runPoaExpirySweep(targetOfficeId) {
                 clientName,
                 daysRemaining: String(daysRemaining),
                 expiryDate: expiryHijri,
-                lawyerName
+                lawyerName,
+                directLink: `${env.frontendUrl}/poa`
               },
               relatedRecordType: "poa",
               relatedRecordId: poaIdStr
@@ -855132,7 +855170,8 @@ async function runPoaExpirySweep(targetOfficeId) {
                 clientName,
                 daysRemaining: String(daysRemaining),
                 expiryDate: expiryHijri,
-                lawyerName: "\u063A\u064A\u0631 \u0645\u0639\u064A\u0646"
+                lawyerName: "\u063A\u064A\u0631 \u0645\u0639\u064A\u0646",
+                directLink: `${env.frontendUrl}/poa`
               },
               relatedRecordType: "poa",
               relatedRecordId: poaIdStr
@@ -855278,6 +855317,7 @@ async function runLicenseExpirySweep(targetOfficeId) {
 }
 
 // src/services/reminder/subscription-expiry.service.ts
+init_env();
 init_logger();
 init_supabase_service();
 init_postgres_service();
@@ -855348,7 +855388,9 @@ async function runSubscriptionExpirySweep(targetOfficeId) {
           planName: admin.plan_tier || "\u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629",
           daysRemaining: String(daysRemaining),
           endDate: endDateStr.split("T")[0],
-          officeName: admin.office_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629"
+          officeName: admin.office_name || "\u0645\u0643\u062A\u0628 \u0627\u0644\u0645\u062D\u0627\u0645\u0627\u0629",
+          renewLink: `${env.frontendUrl}/settings?tab=subscription`,
+          directLink: `${env.frontendUrl}/settings?tab=subscription`
         },
         relatedRecordType: "subscription",
         relatedRecordId: officeId
@@ -855521,7 +855563,8 @@ async function runReminderSweep() {
                     placeholderData: {
                       caseNumber: session.caseNumber || String(session.id),
                       sessionId: session.id,
-                      error: notifyResult.whatsappError || "\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628"
+                      error: notifyResult.whatsappError || "\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
+                      directLink: `${env.frontendUrl}/sessions/${session.id}`
                     },
                     relatedRecordType: "session",
                     relatedRecordId: session.id
@@ -855543,7 +855586,8 @@ async function runReminderSweep() {
                       sessionTime: session.sessionTime || "",
                       court: session.court || "\u0627\u0644\u0645\u062D\u0643\u0645\u0629",
                       remainingText,
-                      kind: "24h"
+                      kind: "24h",
+                      directLink: `${env.frontendUrl}/sessions/${session.id}`
                     },
                     relatedRecordType: "session",
                     relatedRecordId: session.id
@@ -855600,7 +855644,8 @@ async function runReminderSweep() {
                     placeholderData: {
                       caseNumber: session.caseNumber || String(session.id),
                       sessionId: session.id,
-                      error: notifyResult.whatsappError || "\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628"
+                      error: notifyResult.whatsappError || "\u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0630\u0643\u064A\u0631 \u0639\u0628\u0631 \u0627\u0644\u0648\u0627\u062A\u0633\u0627\u0628",
+                      directLink: `${env.frontendUrl}/sessions/${session.id}`
                     },
                     relatedRecordType: "session",
                     relatedRecordId: session.id
@@ -855622,7 +855667,8 @@ async function runReminderSweep() {
                       sessionTime: session.sessionTime || "",
                       court: session.court || "\u0627\u0644\u0645\u062D\u0643\u0645\u0629",
                       remainingText,
-                      kind: "6h"
+                      kind: "6h",
+                      directLink: `${env.frontendUrl}/sessions/${session.id}`
                     },
                     relatedRecordType: "session",
                     relatedRecordId: session.id
@@ -859953,6 +859999,7 @@ async function deleteFile(filePath) {
 
 // src/routes/attachments.ts
 init_logger();
+init_env();
 init_notification_template_service();
 var AttachmentUploadFieldsSchema = external_exports.object({
   relatedRecordType: external_exports.enum(["client", "poa", "judgment", "session", "task", "case"], {
@@ -860135,7 +860182,8 @@ router17.post("/attachments", async (req, res) => {
             documentName: originalFilename,
             uploaderName: req.authUser?.displayName || req.authUser.username,
             recordTypeArabic: typeArabicMap[relatedRecordType] || relatedRecordType,
-            recordNumber: String(relatedRecordId)
+            recordNumber: String(relatedRecordId),
+            directLink: `${env.frontendUrl}/${relatedRecordType === "session" ? `sessions/${relatedRecordId}` : relatedRecordType === "case" ? "cases" : relatedRecordType === "poa" ? "poa" : "attachments"}`
           },
           relatedRecordType,
           relatedRecordId
@@ -861158,36 +861206,148 @@ router21.post("/auth/password-reset/complete", async (req, res) => {
 });
 var password_reset_default = router21;
 
-// src/routes/index.ts
+// src/routes/landing.ts
+var import_express22 = __toESM(require_express2(), 1);
+init_supabase_service();
+init_settings_store();
+init_logger();
 var router22 = (0, import_express22.Router)();
-router22.use(health_default);
-router22.use(auth_default);
-router22.use(password_reset_default);
-router22.use(dashboard_default);
-router22.use(ai_default);
-router22.use(sessions_default);
-router22.use(settings_default);
-router22.use(reports_default);
-router22.use(cron_default);
-router22.use(poa_default);
-router22.use(judgments_default);
-router22.use(tasks_default);
-router22.use(users_default);
-router22.use(super_admin_default);
-router22.use(subscription_default);
-router22.use(clients_default);
-router22.use(notifications_default);
-router22.use(attachments_default);
-router22.use(search_default);
-router22.use(workload_default);
-router22.use(cases_default);
-var routes_default = router22;
+router22.get("/landing/data", async (_req, res) => {
+  try {
+    const settings = await ensureSettingsLoaded();
+    const client = getSupabaseClient();
+    let sessionsCount = 0;
+    let casesCount = 0;
+    let judgmentsCount = 0;
+    let clientsCount = 0;
+    let poasCount = 0;
+    let todaySessionsCount = 0;
+    let upcomingSessionsCount = 0;
+    let finishedSessionsCount = 0;
+    let featuredSessions = [];
+    if (client) {
+      const [
+        { count: sCount },
+        { count: cCount },
+        { count: jCount },
+        { count: clCount },
+        { count: pCount }
+      ] = await Promise.all([
+        client.from("sessions").select("*", { count: "exact", head: true }),
+        client.from("cases").select("*", { count: "exact", head: true }),
+        client.from("judgments").select("*", { count: "exact", head: true }),
+        client.from("clients").select("*", { count: "exact", head: true }),
+        client.from("poa").select("*", { count: "exact", head: true })
+      ]);
+      sessionsCount = sCount || 0;
+      casesCount = cCount || 0;
+      judgmentsCount = jCount || 0;
+      clientsCount = clCount || 0;
+      poasCount = pCount || 0;
+      const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+      const { data: recentSessions } = await client.from("sessions").select("id, case_number, court, court_circuit, case_subject, hearing_at, session_time, plaintiff, defendant, status, notes").order("id", { ascending: false }).limit(10);
+      if (recentSessions && recentSessions.length > 0) {
+        for (const s3 of recentSessions) {
+          const sDate = s3.hearing_at ? String(s3.hearing_at).split("T")[0] : "";
+          if (sDate === todayStr) {
+            todaySessionsCount++;
+          } else if (sDate > todayStr || s3.status === "Upcoming") {
+            upcomingSessionsCount++;
+          } else {
+            finishedSessionsCount++;
+          }
+        }
+        featuredSessions = recentSessions.slice(0, 3).map((s3) => ({
+          id: s3.id,
+          caseNumber: s3.case_number || "\u0642\u0636\u064A\u0629 \u0631\u0642\u0645 4821/2026",
+          court: s3.court || "\u0627\u0644\u0645\u062D\u0643\u0645\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u064A\u0629 \u0628\u0627\u0644\u0631\u064A\u0627\u0636",
+          circuit: s3.court_circuit || "\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u062D\u0642\u0648\u0642\u064A\u0629 \u0627\u0644\u062B\u0627\u0644\u062B\u0629",
+          subject: s3.case_subject || "\u062F\u0639\u0648\u0649 \u062A\u062C\u0627\u0631\u064A\u0629 \u0648\u0645\u0637\u0627\u0644\u0628\u0629 \u0645\u0627\u0644\u064A\u0629",
+          date: s3.hearing_at ? String(s3.hearing_at).split("T")[0] : todayStr,
+          time: s3.session_time || "10:30 \u0635",
+          status: s3.status || "Upcoming",
+          plaintiff: s3.plaintiff || "\u0627\u0644\u0645\u062F\u0639\u064A",
+          defendant: s3.defendant || "\u0627\u0644\u0645\u062F\u0639\u0649 \u0639\u0644\u064A\u0647",
+          notes: s3.notes || "\u0645\u062A\u0627\u0628\u0639\u0629 \u0648\u0625\u0639\u062F\u0627\u062F \u0645\u0630\u0643\u0631\u0629 \u0627\u0644\u062F\u0641\u0627\u0639 \u0627\u0644\u0642\u0636\u0627\u0626\u064A\u0629"
+        }));
+      }
+    }
+    const whatsappNumber = settings.whatsappNumber || "970567603295";
+    const cleanPhone = whatsappNumber.replace(/\D/g, "");
+    res.json({
+      success: true,
+      stats: {
+        totalJudgments: judgmentsCount,
+        totalCases: casesCount,
+        totalSessions: sessionsCount,
+        totalClients: clientsCount,
+        totalPoas: poasCount,
+        satisfactionRate: 4.9,
+        platformUptime: "99.9%",
+        yearsOfExcellence: 15
+      },
+      preview: {
+        todaySessionsCount,
+        activeCasesCount: casesCount,
+        urgentTasksCount: todaySessionsCount + upcomingSessionsCount,
+        featuredSessions
+      },
+      office: {
+        name: "\u0645\u0646\u0635\u0629 \u062F\u064A\u0648\u0627\u0646 \u0627\u0644\u0642\u0627\u0646\u0648\u0646\u064A\u0629",
+        brandTitle: "\u062F\u064A\u0648\u0627\u0646 \u2022 \u0645\u0646\u0638\u0648\u0645\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0642\u0627\u0646\u0648\u0646\u064A\u0629 \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0642\u0636\u0627\u0626\u064A",
+        whatsappNumber: cleanPhone,
+        whatsappFormatted: "+970 56 760 3295",
+        whatsappUrl: `https://wa.me/${cleanPhone}?text=${encodeURIComponent("\u0627\u0644\u0633\u0644\u0627\u0645 \u0639\u0644\u064A\u0643\u0645\u060C \u0623\u0648\u062F \u062D\u062C\u0632 \u0627\u0633\u062A\u0634\u0627\u0631\u0629 / \u0627\u0644\u0627\u0637\u0644\u0627\u0639 \u0639\u0644\u0649 \u062A\u062C\u0631\u0628\u0629 \u062D\u064A\u0629 \u0644\u0645\u0646\u0635\u0629 \u062F\u064A\u0648\u0627\u0646 \u0627\u0644\u0642\u0627\u0646\u0648\u0646\u064A\u0629.")}`,
+        address: "\u0627\u0644\u0645\u0645\u0644\u0643\u0629 \u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629\u060C \u0627\u0644\u0631\u064A\u0627\u0636 - \u0645\u0631\u0643\u0632 \u0627\u0644\u0645\u0644\u0643 \u0639\u0628\u062F\u0627\u0644\u0644\u0647 \u0627\u0644\u0645\u0627\u0644\u064A (KAFD)",
+        email: "contact@diwan-law.sa",
+        emergencyPhone: `+${cleanPhone}`
+      }
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to generate landing page data");
+    res.status(500).json({
+      success: false,
+      error: "\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646\u0635\u0629 \u062F\u064A\u0648\u0627\u0646."
+    });
+  }
+});
+var landing_default = router22;
+
+// src/routes/index.ts
+var router23 = (0, import_express23.Router)();
+router23.use(landing_default);
+router23.use(health_default);
+router23.use(auth_default);
+router23.use(password_reset_default);
+router23.use(dashboard_default);
+router23.use(ai_default);
+router23.use(sessions_default);
+router23.use(settings_default);
+router23.use(reports_default);
+router23.use(cron_default);
+router23.use(poa_default);
+router23.use(judgments_default);
+router23.use(tasks_default);
+router23.use(users_default);
+router23.use(super_admin_default);
+router23.use(subscription_default);
+router23.use(clients_default);
+router23.use(notifications_default);
+router23.use(attachments_default);
+router23.use(search_default);
+router23.use(workload_default);
+router23.use(cases_default);
+var routes_default = router23;
 
 // src/app.ts
 init_logger();
 init_env();
 init_settings_store();
 var import_meta = {};
+if (!isFrontendUrlConfigured() && true) {
+  logger.fatal("FATAL: FRONTEND_URL is not set \u2014 all outgoing links will be broken");
+  throw new Error("FRONTEND_URL is not set \u2014 all outgoing links will be broken");
+}
 if (!isSupabaseConfigured() && true) {
   logger.fatal("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
   throw new Error("FATAL: Database is not configured. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.");
@@ -861205,7 +861365,7 @@ void refreshSettingsFromSupabase().catch((err) => {
 });
 var currentFilename = typeof __filename !== "undefined" ? __filename : typeof import_meta !== "undefined" && __bannerImportMetaUrl ? (0, import_url4.fileURLToPath)(__bannerImportMetaUrl) : process.cwd();
 var currentDirname3 = typeof __dirname !== "undefined" ? __dirname : import_path5.default.dirname(currentFilename);
-var app = (0, import_express23.default)();
+var app = (0, import_express24.default)();
 app.set("trust proxy", 1);
 var pinoHttpMiddleware = import_pino_http.default.default || import_pino_http.default;
 app.use(
@@ -861238,8 +861398,8 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(import_express23.default.json());
-app.use(import_express23.default.urlencoded({ extended: true }));
+app.use(import_express24.default.json());
+app.use(import_express24.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)(env.sessionSecret));
 app.use("/api", routes_default);
 app.use(routes_default);
@@ -861259,7 +861419,7 @@ var distPath = possibleDistPaths.find((p) => {
 });
 if (distPath) {
   logger.info(`[Server] Serving static frontend from: ${distPath}`);
-  app.use(import_express23.default.static(distPath));
+  app.use(import_express24.default.static(distPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(import_path5.default.join(distPath, "index.html"));

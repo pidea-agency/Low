@@ -20,9 +20,11 @@ import searchRouter from "./search";
 import workloadRouter from "./workload";
 import casesRouter from "./cases";
 import passwordResetRouter from "./password-reset";
+import landingRouter from "./landing";
 
 const router: IRouter = Router();
 
+router.use(landingRouter);
 router.use(healthRouter);
 router.use(authRouter);
 router.use(passwordResetRouter);
