@@ -1,26 +1,18 @@
-import React from 'react';
+import React from "react";
 import {
-  MessageSquare,
-  FileCheck2,
-  CalendarClock,
-  Users2,
-  Bot,
-  Search,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Scale,
-  Sparkles,
-  Shield,
-  Send,
-  Eye,
   FileText,
-  UserCheck,
+  MessageCircle,
+  Database,
+  Users,
   CheckCircle2,
-  FolderOpen,
+  Clock,
   ArrowRight,
-} from 'lucide-react';
-import type { LandingData } from '../types';
+  ShieldCheck,
+  Check,
+  Sparkles,
+  Scale,
+} from "lucide-react";
+import type { LandingData } from "../types";
 
 interface FeatureShowcaseProps {
   data: LandingData | null;
@@ -28,379 +20,342 @@ interface FeatureShowcaseProps {
 }
 
 export function FeatureShowcase({ data, onOpenConsultation }: FeatureShowcaseProps) {
+  const brandName = data?.office?.name || "ديوان";
+
   return (
-    <section id="features" dir="rtl" className="py-20 sm:py-28 bg-[#FBF9F5]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-24 sm:space-y-32">
-        {/* =========================================================================
-            Section Header: AI-Assisted Session Extraction
-           ========================================================================= */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
-          <span className="text-xs font-bold text-[#C99732] uppercase tracking-wider font-sans">
-            ذكاء اصطناعي عملي وموجّه
-          </span>
-          <h2 className="font-sans text-3xl sm:text-5xl font-black text-[#0C1A30] tracking-tight">
-            استخراج فوري لبيانات الجلسات من رسائل المحاكم
+    <section
+      id="features"
+      dir="rtl"
+      className="py-20 lg:py-28 bg-white border-b border-slate-200"
+    >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 text-xs font-medium mb-3">
+            <span>المميزات الجوهرية للنظام</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight text-balance">
+            كل ما تحتاجه لإدارة مكتبك القانوني باحترافية
           </h2>
-          <p className="text-base sm:text-lg text-[#475569] font-normal leading-relaxed">
-            الذكاء الاصطناعي في المنصة مصمم لمهمة عملية محددة: قراءة نصوص رسائل وإشعارات المحاكم، واستخراج رقم القضية، أسماء الأطراف، المحكمة والدائرة، وموعد الجلسة بالهجري والميلادي آلياً، لتوفير وقت الإدخال اليدوي وتفادي أخطاء النقل.
+          <p className="text-base text-slate-600 mt-3 leading-relaxed text-balance">
+            أدوات صممت خصيصاً لتلائم طبيعة العمل القضائي وحساسية المواعيد والوكالات.
           </p>
         </div>
 
-        {/* =========================================================================
-            BLOCK 1: AI SMS-parsing (من رسالة إلى جلسة منظمة)
-            Text Right, Mockup Left
-           ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-          {/* Text Column (5 cols) */}
-          <div className="lg:col-span-5 space-y-4 text-right">
-            <span className="text-xs font-bold text-[#C99732] uppercase tracking-wider font-sans">
-              معالجة الرسائل بالذكاء الاصطناعي • AI Session Extraction
-            </span>
-            <h3 className="font-sans text-2xl sm:text-4xl font-extrabold text-[#0C1A30] leading-tight">
-              من رسالة نصية خام إلى جلسة مجدولة في ثوانٍ.
-            </h3>
-            <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-              انسخ نص رسالة تبليغ الجلسة القضائية من هاتفك أو منصة القضاء والصقها في النظام. يتعرف الذكاء الاصطناعي فوراً على رقم القضية، المحكمة، الدائرة القضائية، المدعي والمدعى عليه، ويحدد تاريخ الجلسة ووقتها بالتقويمين الهجري والميلادي معاً دون إدخال يدوي مجهد.
-            </p>
-          </div>
+        {/* Bento Grid (6 Columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* Card 1 (col-span-4): إدارة الجلسات والوكالات */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          <div className="md:col-span-4 border border-slate-200 rounded-xl bg-white p-6 sm:p-7 flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-800">
+                  القضايا والمواعيد
+                </span>
+                <span className="text-xs text-slate-400 font-mono">01</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                توكيل الوكالات ومتابعة الجلسات دون ثغرات
+              </h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed max-w-xl">
+                اربط كل وكالة بملف قضيتها، وحدد المحامي المسؤول عن كل جلسة مع
+                سجل كامل للقرارات والتأجيلات والإجراءات المتخذة.
+              </p>
+            </div>
 
-          {/* Mockup Column (7 cols) - Real SMS Parsing UI */}
-          <div className="lg:col-span-7">
-            <div className="rounded-2xl border border-[#D6E0EC] bg-slate-50/70 p-4 sm:p-6 shadow-sm">
-              <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 sm:p-5 shadow-xs space-y-4">
-                {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#0B1B3D] text-white flex items-center justify-center">
-                      <Bot className="w-4 h-4 text-[#C99732]" />
+            {/* Rich Mini UI: 3 Realistic Case/POA Rows with Status Pills */}
+            <div className="mt-6 pt-4 border-t border-slate-100 space-y-2.5">
+              {/* Row 1: Commercial Court */}
+              <div className="p-3 bg-slate-50/80 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-md bg-white border border-slate-200 flex items-center justify-center text-slate-700 shrink-0 shadow-2xs">
+                    <Scale className="w-4 h-4 text-slate-700" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-xs text-slate-900">1446/7821-ت</span>
+                      <span className="text-[11px] text-slate-700 font-medium">شركة الروابي ضد مؤسسة الإعمار</span>
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-[#0C1A30]">استخراج الجلسة من نص رسالة التبليغ</div>
-                      <div className="text-[10px] text-emerald-700 flex items-center gap-1 font-medium">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        التقاط تلقائي لبيانات القضية والموعد
-                      </div>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                      <span>المحكمة التجارية بالرياض</span>
+                      <span>•</span>
+                      <span>صك وكالة: 4612980</span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-[#0B2A4A] bg-[#EFF4FF] px-2.5 py-1 rounded-full border border-[#CFDFFC]">
-                    وفر 100% من الإدخال اليدوي
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <span className="text-[11px] text-slate-700 font-medium bg-white px-2 py-0.5 rounded border border-slate-200">
+                    أ. فيصل السعيد
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    جلسة مؤكدة
                   </span>
                 </div>
+              </div>
 
-                {/* Step 1: Raw SMS Input Preview */}
-                <div className="space-y-1.5">
-                  <div className="text-[10px] font-bold text-[#64748B]">نص الرسالة الخام الملصق:</div>
-                  <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] text-[11px] text-[#334155] leading-relaxed font-mono">
-                    «تم قيد موعد جلسة في المحكمة التجارية بالرياض - الدائرة الحقوقية الأولى للدعوى رقم 4821 المقامة من شركة الأفق ضد مؤسسة البناء بتاريخ 1448/03/15 هـ الساعة 10:30 ص»
+              {/* Row 2: Appeal Court */}
+              <div className="p-3 bg-slate-50/80 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-md bg-white border border-slate-200 flex items-center justify-center text-slate-700 shrink-0 shadow-2xs">
+                    <FileText className="w-4 h-4 text-slate-700" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-xs text-slate-900">1446/3412-ع</span>
+                      <span className="text-[11px] text-slate-700 font-medium">ورثة عبد الرحمن آل تركي</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                      <span>محكمة الاستئناف بالدمام</span>
+                      <span>•</span>
+                      <span>وكالة حصر ورثة: 4598112</span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <span className="text-[11px] text-slate-700 font-medium bg-white px-2 py-0.5 rounded border border-slate-200">
+                    أ. ريم القحطاني
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                    تقديم مذكرة
+                  </span>
+                </div>
+              </div>
 
-                {/* Step 2: Extracted Structured Result Preview */}
-                <div className="space-y-2 pt-1 border-t border-slate-100">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-[#0C1A30]">
-                    <span className="flex items-center gap-1 text-[#C99732]">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      الحقول المستخرجة آلياً:
-                    </span>
-                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      جاهز للحفظ بملف القضية
-                    </span>
+              {/* Row 3: General Court */}
+              <div className="p-3 bg-slate-50/80 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-md bg-white border border-slate-200 flex items-center justify-center text-slate-700 shrink-0 shadow-2xs">
+                    <ShieldCheck className="w-4 h-4 text-slate-700" />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
-                      <span className="block text-[9px] text-[#64748B]">رقم القضية والمحكمة</span>
-                      <span className="font-bold text-[11px] text-[#0C1A30]">4821 • المحكمة التجارية (الدائرة 1)</span>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-xs text-slate-900">1446/9024-ع</span>
+                      <span className="text-[11px] text-slate-700 font-medium">مؤسسة المناهل الرقمية</span>
                     </div>
-
-                    <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
-                      <span className="block text-[9px] text-[#64748B]">أطراف الدعوى</span>
-                      <span className="font-bold text-[11px] text-[#0C1A30]">شركة الأفق ضد مؤسسة البناء</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
-                      <span className="block text-[9px] text-[#64748B]">التاريخ الهجري</span>
-                      <span className="font-bold text-[11px] text-[#0C1A30]">15 ربيع الأول 1448 هـ</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
-                      <span className="block text-[9px] text-[#64748B]">التاريخ الميلادي والوقت</span>
-                      <span className="font-bold text-[11px] text-[#0C1A30]">27 أغسطس 2026 • 10:30 صباحاً</span>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                      <span>المحكمة العامة بجدة</span>
+                      <span>•</span>
+                      <span>وكالة عامة: 4633019</span>
                     </div>
                   </div>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <span className="text-[11px] text-slate-700 font-medium bg-white px-2 py-0.5 rounded border border-slate-200">
+                    أ. خالد العتيبي
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    تم النطق بالحكم
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* =========================================================================
-            BLOCK 2: Global Search across cases/clients/POAs/documents
-            Mockup Right, Text Left
-           ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-          {/* Mockup Column (7 cols) - Global Search UI */}
-          <div className="lg:col-span-7 order-2 lg:order-1">
-            <div className="rounded-2xl border border-[#D6E0EC] bg-slate-50/70 p-4 sm:p-6 shadow-sm">
-              <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute right-3 top-3 text-[#94A3B8]" />
-                  <input
-                    disabled
-                    readOnly
-                    type="text"
-                    value="شركة الأفق"
-                    className="w-full pr-9 pl-3 py-2.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs font-semibold text-[#0C1A30]"
-                  />
-                  <span className="absolute left-3 top-2.5 text-[10px] text-[#64748B] bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
-                    4 نتائج مطابقة
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* Card 2 (col-span-2): أتمتة الواتساب (Key Differentiator) */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          <div className="md:col-span-2 border border-slate-200 rounded-xl bg-white p-6 sm:p-7 flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  ميزة حصرية
+                </span>
+                <span className="text-xs text-slate-400">02</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                إشعارات واتساب تلقائية للموكلين
+              </h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                بمجرد تحديث حالة الجلسة، يصل إشعار فوري للموكل على واتساب باسم
+                مكتبك.
+              </p>
+            </div>
+
+            {/* Mini UI: Realistic WhatsApp Message Bubble */}
+            <div className="mt-6 pt-4 border-t border-slate-100">
+              <div className="bg-[#EFEAE2] p-3 rounded-xl border border-slate-200/80 text-right space-y-2">
+                {/* Chat Top Info */}
+                <div className="flex items-center justify-between text-[11px] text-slate-700 pb-1.5 border-b border-black/5">
+                  <span className="font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    مكتب المحاماة الرسمي
                   </span>
+                  <span className="text-[10px] text-slate-500">موثق ✓</span>
                 </div>
 
-                {/* Instant Results across 4 record types */}
-                <div className="space-y-2 text-xs">
-                  {/* Result 1: Case */}
-                  <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-[10px] border border-blue-200">
-                        قضية
-                      </div>
-                      <div>
-                        <div className="font-bold text-[#0C1A30] text-[11px]">قضية رقم 4821/2026 • مطالبة مالية</div>
-                        <div className="text-[10px] text-[#64748B]">الموكل: شركة الأفق • المحامي المكلف: أ. المنصوري</div>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-semibold text-blue-800 bg-blue-100/70 px-2 py-0.5 rounded-full border border-blue-200">
-                      جلسة قادمة
-                    </span>
+                {/* WhatsApp Chat Bubble */}
+                <div className="bg-white rounded-lg p-2.5 text-xs text-slate-800 shadow-2xs space-y-1 relative">
+                  <p className="font-semibold text-slate-900 leading-snug">
+                    السلام عليكم أ. أحمد،
+                  </p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    تم قيد جلسة جديدة لقضيتكم رقم (1446/7821) لدى المحكمة
+                    التجارية بالرياض.
+                  </p>
+                  <div className="text-[11px] font-mono text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-100 space-y-0.5">
+                    <div>🗓 الموعد: غداً الساعة 09:30 ص</div>
+                    <div>⚖️ المحامي المكلف: أ. فيصل السعيد</div>
                   </div>
-
-                  {/* Result 2: POA */}
-                  <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-[10px] border border-emerald-200">
-                        وكالة
-                      </div>
-                      <div>
-                        <div className="font-bold text-[#0C1A30] text-[11px]">وكالة شرعية رقم 451029381</div>
-                        <div className="text-[10px] text-[#64748B]">الموكل: شركة الأفق للاستثمار • سارية حتى 1448/08/10 هـ</div>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200">
-                      سارية
-                    </span>
-                  </div>
-
-                  {/* Result 3: Client */}
-                  <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-[10px] border border-amber-200">
-                        عميل
-                      </div>
-                      <div>
-                        <div className="font-bold text-[#0C1A30] text-[11px]">شركة الأفق للتطوير والاستثمار العقاري</div>
-                        <div className="text-[10px] text-[#64748B]">سجل تجاري: 1010****** • 3 قضايا نشطة</div>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-semibold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded-full border border-amber-200">
-                      ملف نشط
-                    </span>
-                  </div>
-
-                  {/* Result 4: Document */}
-                  <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-[10px] border border-purple-200">
-                        مرفق
-                      </div>
-                      <div>
-                        <div className="font-bold text-[#0C1A30] text-[11px]">مذكرة_الدفاع_الجوابية_النهائية.pdf</div>
-                        <div className="text-[10px] text-[#64748B]">مرفوعة على جلسة 15 ربيع الأول • بحجم 2.4 MB</div>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-semibold text-purple-800 bg-purple-100/70 px-2 py-0.5 rounded-full border border-purple-200">
-                      PDF
-                    </span>
+                  <div className="flex justify-end items-center gap-1 text-[10px] text-slate-400 pt-0.5">
+                    <span>10:42 ص</span>
+                    <span className="text-blue-500 font-bold">✓✓</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Text Column (5 cols) */}
-          <div className="lg:col-span-5 space-y-4 text-right order-1 lg:order-2">
-            <span className="text-xs font-bold text-[#C99732] uppercase tracking-wider font-sans">
-              البحث والأرشفة المركزية • Global Office Search
-            </span>
-            <h3 className="font-sans text-2xl sm:text-4xl font-extrabold text-[#0C1A30] leading-tight">
-              ابحث عن أي قضية، موكل، أو وكالة بلمح البصر.
-            </h3>
-            <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-              محرك بحث فوري وشامل عبر كافة ملفات وسجلات المكتب: اكتب رقم القضية، اسم الموكل، رقم السجل، رقم الوكالة، أو اسم المستند لتصل إلى كافة التفاصيل والجلسات والأحكام المرتبطة في ثانية واحدة، دون البحث اليدوي في الملفات والأوراق.
-            </p>
-          </div>
-        </div>
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* Card 3 (col-span-3): الربط المباشر مع Google Sheets */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          <div className="md:col-span-3 border border-slate-200 rounded-xl bg-white p-6 sm:p-7 flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-800">
+                  التكامل والمرونة
+                </span>
+                <span className="text-xs text-slate-400">03</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                مزامنة فورية مع Google Sheets
+              </h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                لا تتخلَ عن جداولك. صدّر وزامن بيانات القضايا والجلسات
+                والعملاء لحظياً مع قوقل شيت لتقارير مالية وإدارية مرنة.
+              </p>
+            </div>
 
-        {/* =========================================================================
-            BLOCK 3: Real Reminder System: WhatsApp + In-App Alerts
-            Text Right, Mockup Left
-           ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-          {/* Text Column (5 cols) */}
-          <div className="lg:col-span-5 space-y-4 text-right">
-            <span className="text-xs font-bold text-[#C99732] uppercase tracking-wider font-sans">
-              نظام التنبيهات المباشر • WhatsApp & In-App Alerts
-            </span>
-            <h3 className="font-sans text-2xl sm:text-4xl font-extrabold text-[#0C1A30] leading-tight">
-              تنبيهات واتساب استباقية تحمي مواعيد مكتبك من السهو.
-            </h3>
-            <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-              إرسال آلي لتذكيرات الجلسات عبر الواتساب للمحامي المكلف ومدير المكتب قبل موعد الجلسة بـ 24 ساعة وبـ 6 ساعات، مع تنبيهات دورية عند اقتراب انتهاء سريان الوكالات الشرعية، وعند تعيين أي مهمة أو قضية جديدة في النظام.
-            </p>
-          </div>
-
-          {/* Mockup Column (7 cols) - Real WhatsApp & System Alerts */}
-          <div className="lg:col-span-7">
-            <div className="rounded-2xl border border-[#D6E0EC] bg-slate-50/70 p-4 sm:p-6 shadow-sm">
-              <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <CalendarClock className="w-4 h-4 text-[#C99732]" />
-                    <span className="font-bold text-xs text-[#0C1A30]">رسائل التنبيه الآلية عبر الواتساب وداخل التطبيق</span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    مباشر وقيد التشغيل
-                  </span>
+            {/* Mini UI: Minimalist Node Diagram + Spreadsheet Preview */}
+            <div className="mt-6 pt-5 border-t border-slate-100">
+              {/* Node Diagram */}
+              <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                  <Database className="w-3.5 h-3.5 text-slate-700" />
+                  <span>{brandName}</span>
                 </div>
 
-                {/* Alert Cards */}
-                <div className="space-y-2.5 text-xs">
-                  {/* WhatsApp Message Preview */}
-                  <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1.5 font-sans">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-emerald-950 text-[11px] flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        رسالة WhatsApp واردة للمحامي المكلف (متبقي 24 ساعة)
-                      </span>
-                      <span className="text-[9px] text-emerald-700 font-mono">08:00 ص</span>
-                    </div>
-                    <div className="text-[11px] text-[#0C1A30] leading-relaxed bg-white p-2.5 rounded-lg border border-emerald-200/80 font-mono">
-                      🔔 *تذكير بموعد جلسة قضائية (متبقي 24 ساعة)*<br />
-                      📋 *رقم القضية:* 4821/2026<br />
-                      ⚖️ *المحكمة:* المحكمة التجارية بالرياض<br />
-                      🏛️ *الدائرة:* الدائرة الحقوقية الأولى<br />
-                      📅 *التاريخ الهجري:* 15 ربيع الأول 1448 هـ<br />
-                      ⏰ *الوقت:* 10:30 ص<br />
-                      🔗 *رابط الجلسة والمرفقات:* https://app.../sessions/4821
-                    </div>
-                  </div>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  مزامنة حية (Synced)
+                </div>
 
-                  {/* POA Expiry Warning */}
-                  <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                      <div>
-                        <div className="font-bold text-[#0C1A30] text-[11px]">تنبيه سريان وكالة: موكل الشيخ عبد الله</div>
-                        <div className="text-[10px] text-[#64748B]">تنتهي الوكالة رقم 448102947 خلال 7 أيام - يرجى التجديد</div>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 shrink-0">
-                      إشعار استباقي
-                    </span>
-                  </div>
-
-                  {/* Task Assignment Alert */}
-                  <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-                      <div>
-                        <div className="font-bold text-[#0C1A30] text-[11px]">تكليف بمهمة جديدة: إعداد المذكرة الجوابية</div>
-                        <div className="text-[10px] text-[#64748B]">أسندها مدير المكتب للمحامي المكلف • الموعد النهائي: الخميس</div>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-300 shrink-0">
-                      مهمة مكلفة
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                  <span className="w-3 h-3 rounded bg-emerald-600 text-white flex items-center justify-center text-[8px]">
+                    S
+                  </span>
+                  <span>Google Sheets</span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* =========================================================================
-            BLOCK 4: Multi-Lawyer Office Structure (Multi-Tenant & Roles)
-            Mockup Right, Text Left
-           ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-          {/* Mockup Column (7 cols) - Office Hierarchy UI */}
-          <div className="lg:col-span-7 order-2 lg:order-1">
-            <div className="rounded-2xl border border-[#D6E0EC] bg-slate-50/70 p-4 sm:p-6 shadow-sm">
-              <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <Users2 className="w-4 h-4 text-[#0B1B3D]" />
-                    <span className="font-bold text-xs text-[#0C1A30]">صلاحيات الأدوار وعزل البيانات بين المحامين</span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    عزل كامل لكل مكتب
-                  </span>
-                </div>
-
-                <div className="space-y-2.5 text-xs">
-                  {/* Admin View */}
-                  <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#0C1A30] text-[11px] flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#0B1B3D]" />
-                        رؤية مدير المكتب (الشريك / Admin)
-                      </span>
-                      <span className="text-[9px] text-[#64748B] bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
-                        رؤية شاملة للمكتب
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#475569]">
-                      يرى جميع القضايا (38 قضية)، وجدول جلسات جميع المحامين، وجميع الوكالات، وسجل الأحكام، مع إمكانية إسناد وإعادة توزيع القضايا والمهام.
-                    </p>
-                  </div>
-
-                  {/* Assigned Lawyer View */}
-                  <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#0C1A30] text-[11px] flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#C99732]" />
-                        مساحة عمل المحامي المكلف (Staff Lawyer)
-                      </span>
-                      <span className="text-[9px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        مساحة مخصصة
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#475569]">
-                      يرى حصراً القضايا والجلسات والمهام المسندة إليه شخصياً (مثلاً 7 قضايا وجلستان هذا الأسبوع)، دون تشتت ودون الإطلاع على قضايا الزملاء الآخرين حمايةً للسرية.
-                    </p>
-                  </div>
-
-                  {/* Multi-Tenant Security */}
-                  <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-dashed border-[#CBD5E1] text-center text-[10px] text-[#64748B]">
-                    🔒 <strong>عزل تام للبيانات:</strong> كل مكتب محاماة يملك مساحة منفصلة تماماً ومحمية برقم معرف مستقل، ولا يشارك أي بيانات مع أي مكتب آخر.
-                  </div>
-                </div>
+              {/* Sheet Grid Preview */}
+              <div className="mt-3 overflow-hidden rounded border border-slate-200 text-[11px]">
+                <table className="w-full text-right">
+                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="py-1 px-2">القضية</th>
+                      <th className="py-1 px-2">المحكمة</th>
+                      <th className="py-1 px-2">الأتعاب</th>
+                      <th className="py-1 px-2">الموعد</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white font-mono text-[10px]">
+                    <tr>
+                      <td className="py-1 px-2">7821-ت</td>
+                      <td className="py-1 px-2 text-slate-600">التجارية</td>
+                      <td className="py-1 px-2 text-emerald-700">٣٥,٠٠٠ ر.س</td>
+                      <td className="py-1 px-2 text-slate-500">1446/07/20</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2">3412-ع</td>
+                      <td className="py-1 px-2 text-slate-600">الاستئناف</td>
+                      <td className="py-1 px-2 text-emerald-700">٥٠,٠٠٠ ر.س</td>
+                      <td className="py-1 px-2 text-slate-500">1446/07/21</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
 
-          {/* Text Column (5 cols) */}
-          <div className="lg:col-span-5 space-y-4 text-right order-1 lg:order-2">
-            <span className="text-xs font-bold text-[#C99732] uppercase tracking-wider font-sans">
-              حوكمة الفريق وتوزيع الأدوار • Multi-Lawyer Offices
-            </span>
-            <h3 className="font-sans text-2xl sm:text-4xl font-extrabold text-[#0C1A30] leading-tight">
-              لوحة تحكم للإدارة، ومساحة عمل مخصصة لكل محامٍ.
-            </h3>
-            <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-              نظام مصمم لخدمة مكاتب المحاماة بكافة أحجامها: يرى مدير المكتب المشهد كاملاً (جميع القضايا، الجلسات، ونشاط الفريق)، بينما يركز كل محامٍ على ملفاته ومهامه المكلف بها مباشرة، مع حماية تامة لسرية البيانات وعزل كامل لكل ملف.
-            </p>
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* Card 4 (col-span-3): إدارة المحامين والمهام (Team & Tasks) */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          <div className="md:col-span-3 border border-slate-200 rounded-xl bg-white p-6 sm:p-7 flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-800">
+                  إدارة الفريق
+                </span>
+                <span className="text-xs text-slate-400">04</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                إدارة فريق المحامين والمهام والصلاحيات
+              </h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                أضف محامي مكتبك بصلاحيات مخصصة، وزّع المهام القانونية (صياغة
+                لوائح، مراجعة عقود) وتابع نسب الإنجاز بدقة.
+              </p>
+            </div>
+
+            {/* Mini UI: Sleek Task Checklist Component */}
+            <div className="mt-6 pt-5 border-t border-slate-100 space-y-2">
+              {/* Task 1 */}
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded bg-emerald-600 text-white flex items-center justify-center text-[10px]">
+                    ✓
+                  </span>
+                  <span className="font-medium text-slate-900 line-through text-slate-500">
+                    صياغة لائحة جوابية - شركة الروابي
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                    عاجل
+                  </span>
+                  <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
+                    ف.س
+                  </span>
+                </div>
+              </div>
+
+              {/* Task 2 */}
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center" />
+                  <span className="font-medium text-slate-900">
+                    مراجعة عقد شراكة تجارية
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">
+                    مراجعة عقد
+                  </span>
+                  <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
+                    ر.ق
+                  </span>
+                </div>
+              </div>
+
+              {/* Task 3 */}
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center" />
+                  <span className="font-medium text-slate-900">
+                    استخراج صك حصر ورثة
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-500">
+                    تسليم غداً
+                  </span>
+                  <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
+                    خ.ع
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

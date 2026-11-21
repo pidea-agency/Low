@@ -1,33 +1,25 @@
-import React, { useState } from 'react';
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import React, { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const faqs = [
     {
-      q: 'كيف تساعد المنصة في تفادي فوات مواعيد الجلسات القضائية؟',
-      a: 'تعتمد المنصة على نظام جدولة آلي متصل بمواعيد جلسات المحاكم في المملكة، يرسل إشعارات وتنبيهات مخصصة عبر تطبيق WhatsApp مباشرة للمحامي المكلف ومدير المكتب قبل 24 ساعة وقبل 6 ساعات من موعد انعقاد الجلسة، مما يضمن الجاهزية التامة وتقديم المذكرات في أوقاتها المحددة.',
+      q: "هل بيانات القضايا والوكالات آمنة وسرية؟",
+      a: "نعم، الأمان والسرية هما الركيزة الأساسية في نظام ديوان. نعتمد تشفيراً بنكياً كاملاً (AES-256) أثناء النقل والتخزين، مع عزل تام ومحكم لقواعد بيانات كل مكتب (Multi-Tenant Isolation). كما يتيح لك النظام تحديد صلاحيات صارمة لكل محامٍ، بحيث لا يطّلع أي عضو إلا على القضايا المكلف بها رسمياً.",
     },
     {
-      q: 'كيف يعمل استخراج الجلسات من نصوص الرسائل والإشعارات؟',
-      a: 'تقوم الأداة الذكية بقراءة نص رسالة التبليغ الملصقة، واستخلاص رقم القضية، اسم المحكمة، الدائرة القضائية، أطراف النزاع، وتاريخ ووقت الجلسة بالتقويمين الهجري والميلادي فوراً، مما يتيح لك حفظها مباشرة دون كتابة يدوية.',
+      q: "هل أحتاج إلى رقم واتساب خاص لربط الإشعارات؟",
+      a: "يمكنك ربط رقم واتساب مكتبك الرسمي الحالي في خطوات بسيطة لا تتعدى دقيقتين عبر واجهة الربط المعتمدة في النظام. ترسل الإشعارات والتذكيرات باسم وهوية مكتبك مباشرة للموكلين والمحامين دون الحاجة لشراء شرائح جديدة أو أجهزة إضافية.",
     },
     {
-      q: 'هل بيانات ومستندات مكتبنا وموكلينا مؤمنة ومشفرة بالكامل؟',
-      a: 'نعم، بكل تأكيد. تعتمد المنصة تشفير بيانات فائق الأمان واستضافة سحابية معتمدة مع عزل صارم لقواعد بيانات كل مكتب (Multi-Tenant Isolation)، بحيث يستحيل لأي مستخدم خارج مكتبك الوصول لأي ملف أو صك.',
+      q: "كيف أنقل بيانات مكتبي الحالية من ملفات إكسل؟",
+      a: "نوفر ميزة الربط والاستيراد الفوري عبر Google Sheets. يمكنك رفع ملفاتك الحالية ومزامنتها بنقرة زر واحدة، حيث يقوم النظام بفرز الجلسات، القضايا، والمحامين تلقائياً دون أي فقدان للبيانات أو تعطل في سير عمل المكتب.",
     },
     {
-      q: 'كيف تتم إدارة تتبع سريان الوكالات الشرعية والتراخيص؟',
-      a: 'تتيح المنصة أرشفة مركزية لجميع الوكالات، وتقوم خدمة الفحص اليومي التلقائية بمسح تواريخ انتهاء الوكالات وإرسال تنبيهات استباقية قبل 7 أيام من تاريخ الانتهاء لتمكين فريقك من تجديدها قبل موعد الترافع.',
-    },
-    {
-      q: 'هل يمكن ضبط وتوزيع صلاحيات الوصول بين المحامين في المكتب؟',
-      a: 'نعم، تدعم المنصة نظام صلاحيات دقيق (Role-Based Access Control) يفصل بين الشريك المدير، المحامي الممارس، والباحث المتدرب، حيث لا يستطيع المحامي الإطلاع إلا على القضايا والملفات المكلف بها رسمياً حمايةً لسرية الموكلين.',
-    },
-    {
-      q: 'كيف يمكن لمكتبي البدء أو تجربة المنصة؟',
-      a: 'يمكنكم الضغط على زر "اطلب عرضاً تجريبياً" أو التواصل الفوري عبر الواتساب في أسفل الصفحة. سيقوم مستشارنا بالتواصل معكم وتفعيل بيئة عمل مخصصة لمكتبكم في دقائق معدودة.',
+      q: "هل يمكنني إضافة محامين جدد أو تغيير الباقة لاحقاً؟",
+      a: "بالتأكيد. يمكنك ترقية الباقة، أو إضافة تراخيص للمحامين الجدد بمجرد انضمامهم للمكتب، أو التبديل بين الدفع الشهري والسنوي مباشرة من لوحة تحكم مدير المكتب، مع احتساب الفارق النسبي تلقائياً وبكل شفافية.",
     },
   ];
 
@@ -36,51 +28,50 @@ export function FaqSection() {
   };
 
   return (
-    <section id="faq" className="py-20 sm:py-24 bg-[#FBF9F5] border-t border-[#E2E8F0]" dir="rtl">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <section
+      id="faq"
+      dir="rtl"
+      className="py-20 lg:py-24 bg-white border-b border-slate-200"
+    >
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFF4FF] border border-[#CFDFFC] text-[#0B2A4A] text-xs font-semibold">
-            <HelpCircle className="w-3.5 h-3.5 text-[#C99732]" />
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 text-xs font-medium mb-3">
             <span>الأسئلة الشائعة</span>
           </div>
-          <h2 className="font-sans text-3xl sm:text-4xl font-black text-[#0C1A30] tracking-tight">
-            إجابات واضحة لأهم استفساراتك القانونية والتقنية
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight text-balance">
+            إجابات واضحة لأهم تساؤلات مكاتب المحاماة
           </h2>
-          <p className="text-xs sm:text-sm text-[#475569] leading-relaxed max-w-2xl mx-auto font-normal">
-            كل ما تحتاج معرفته حول معايير عمل المنظومة، سرية البيانات القضائية، وآلية تفعيل الخدمة لمكتبكم.
+          <p className="text-base text-slate-600 mt-2.5 leading-relaxed">
+            كل ما تحتاج معرفته عن الأمان، الخصوصية، وآلية نقل بيانات مكتبك.
           </p>
         </div>
 
-        {/* Accordion List */}
-        <div className="space-y-3">
+        {/* Clean Accordion */}
+        <div className="divide-y divide-slate-200 border-y border-slate-200">
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
             return (
-              <div
-                key={index}
-                className="rounded-2xl border border-[#E2E8F0] bg-white transition-all shadow-2xs overflow-hidden"
-              >
+              <div key={index} className="py-4">
                 <button
                   type="button"
                   onClick={() => toggleFaq(index)}
-                  className="w-full p-4 sm:p-5 flex items-center justify-between text-right cursor-pointer gap-4 hover:bg-slate-50 transition-colors"
-                  aria-expanded={isOpen}
+                  className="w-full flex items-center justify-between text-right gap-4 py-2 text-slate-900 hover:text-slate-700 transition-colors cursor-pointer group"
                 >
-                  <span className="font-bold text-xs sm:text-sm text-[#0C1A30]">
+                  <span className="text-base sm:text-lg font-bold leading-snug">
                     {faq.q}
                   </span>
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-transform duration-200 ${
-                      isOpen ? 'bg-[#0B1B3D] text-[#C99732] rotate-180' : 'bg-slate-100 text-[#64748B]'
+                  <span
+                    className={`w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center shrink-0 transition-transform duration-200 ${
+                      isOpen ? "rotate-180 bg-slate-200 text-slate-900" : "text-slate-500"
                     }`}
                   >
                     <ChevronDown className="w-4 h-4" />
-                  </div>
+                  </span>
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-[#475569] leading-relaxed border-t border-slate-100 bg-[#F8FAFC]/50 animate-in fade-in-50 duration-150">
+                  <div className="pt-2 pb-3 text-sm text-slate-600 leading-relaxed text-right animate-in fade-in-50 duration-150">
                     {faq.a}
                   </div>
                 )}
