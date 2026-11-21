@@ -65,8 +65,12 @@ interface GoogleBindingState {
   spreadsheet_id: string | null;
   sheet_name: string | null;
   office_name: string | null;
-  has_credentials: boolean;
+  has_credentials?: boolean;
   updated_at?: string;
+  auto_export_frequency?: 'manual' | 'hourly' | 'every_6_hours' | 'daily';
+  last_auto_export_at?: string | null;
+  last_auto_export_status?: 'success' | 'failed' | null;
+  last_auto_export_error?: string | null;
 }
 
 const WIZARD_STEPS = [
@@ -179,12 +183,15 @@ function getStatusBadge(status: string) {
 export default function OfficeSettingsPage() {
   const { toast } = useToast();
   const { data: currentUser } = useGetCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   // Navigation tab state: 'google' | 'whatsapp'
   const [activeTab, setActiveTab] = useState<'google' | 'whatsapp'>('whatsapp');
 
   // Google Sheet state
   const [binding, setBinding] = useState<GoogleBindingState | null>(null);
+  const [autoExportFrequency, setAutoExportFrequency] = useState<'manual' | 'hourly' | 'every_6_hours' | 'daily'>('manual');
+  const [isUpdatingFrequency, setIsUpdatingFrequency] = useState(false);
   const [isLoadingBinding, setIsLoadingBinding] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -203,6 +210,13 @@ export default function OfficeSettingsPage() {
   } | null>(null);
   const [isSavingBinding, setIsSavingBinding] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [manualSyncFeedback, setManualSyncFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    sessionsCount?: number;
+    tasksCount?: number;
+    timestamp: string;
+  } | null>(null);
 
   // Live Test on Success Screen (User requirement)
   const [isTestingLive, setIsTestingLive] = useState(false);
@@ -300,6 +314,9 @@ export default function OfficeSettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setBinding(data);
+        if (data.auto_export_frequency) {
+          setAutoExportFrequency(data.auto_export_frequency);
+        }
         if (data.is_connected) {
           setShowWizard(false);
           if (data.spreadsheet_id) setSheetInput(data.spreadsheet_id);
@@ -631,18 +648,112 @@ export default function OfficeSettingsPage() {
 
   const handleExportToSheets = async () => {
     setIsExporting(true);
+    setManualSyncFeedback(null);
     try {
       const res = await fetch('/api/settings/google-export', { method: 'POST' });
       const data = await res.json();
+      const timeStr = new Date().toLocaleTimeString('ar-SA', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      if (res.ok) {
+        const sessions = data.sessionsCount ?? 0;
+        const tasks = data.tasksCount ?? 0;
+        const targetSheet = data.sheetName || binding?.sheet_name || sheetName || 'Sessions';
+        const msg = `تمت المزامنة اليدوية بنجاح! تم تحديث ورقة العمل (${targetSheet}) بنجاح (${sessions} جلسة، ${tasks} مهمة).`;
+
+        setManualSyncFeedback({
+          type: 'success',
+          message: msg,
+          sessionsCount: sessions,
+          tasksCount: tasks,
+          timestamp: timeStr,
+        });
+
+        toast({
+          title: 'تمت المزامنة اليدوية بنجاح ✓',
+          description: msg,
+        });
+
+        if (data.last_auto_export_at && binding) {
+          setBinding({
+            ...binding,
+            last_auto_export_at: data.last_auto_export_at,
+            last_auto_export_status: 'success',
+            last_auto_export_error: null,
+          });
+        }
+      } else {
+        const errMsg = data.error || 'تعذر إتمام المزامنة مع Google Sheets. يرجى مراجعة إعدادات الربط.';
+        setManualSyncFeedback({
+          type: 'error',
+          message: errMsg,
+          timestamp: timeStr,
+        });
+
+        toast({
+          title: 'فشلت المزامنة اليدوية',
+          description: errMsg,
+          variant: 'destructive',
+        });
+
+        if (binding) {
+          setBinding({
+            ...binding,
+            last_auto_export_status: 'failed',
+            last_auto_export_error: errMsg,
+          });
+        }
+      }
+    } catch (err: any) {
+      const timeStr = new Date().toLocaleTimeString('ar-SA', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      const errMsg = err?.message || 'تعذر الاتصال بالخادم لإتمام المزامنة.';
+      setManualSyncFeedback({
+        type: 'error',
+        message: errMsg,
+        timestamp: timeStr,
+      });
+
+      toast({
+        title: 'فشل الاتصال',
+        description: errMsg,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleUpdateAutoExportFrequency = async (freq: 'manual' | 'hourly' | 'every_6_hours' | 'daily') => {
+    setAutoExportFrequency(freq);
+    setIsUpdatingFrequency(true);
+    try {
+      const res = await fetch('/api/settings/google-auto-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frequency: freq }),
+      });
+      const data = await res.json();
       if (res.ok) {
         toast({
-          title: 'تم تصدير نسخة حية بنجاح ✓',
-          description: `تمت مزامنة السجلات بنجاح في ورقة Google Sheets: ${binding?.sheet_name || sheetName}.`,
+          title: 'تم حفظ وتيرة المزامنة التلقائية ✓',
+          description: freq === 'manual' ? 'تم ضبط المزامنة على يدوي فقط.' : `تم تفعيل التصدير التلقائي بنجاح.`,
         });
+        if (binding) {
+          setBinding({
+            ...binding,
+            auto_export_frequency: freq,
+          });
+        }
       } else {
         toast({
-          title: 'فشل التصدير',
-          description: data.error || 'تعذر تصدير البيانات إلى Google Sheets.',
+          title: 'فشل التحديث',
+          description: data.error || 'تعذر حفظ وتيرة التصدير التلقائي.',
           variant: 'destructive',
         });
       }
@@ -653,7 +764,7 @@ export default function OfficeSettingsPage() {
         variant: 'destructive',
       });
     } finally {
-      setIsExporting(false);
+      setIsUpdatingFrequency(false);
     }
   };
 
@@ -1053,30 +1164,157 @@ export default function OfficeSettingsPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'google' && (
         <div className="space-y-6">
-          {/* Header Action Bar for Google Sheet */}
-          <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-[#10233F]">
-                  إعدادات المكتب وتصدير Google Sheet
-                </h2>
-                <span className="bg-[#eff4ff] text-[#00236f] text-[10px] font-semibold px-2 py-0.5 rounded border border-[#cfdffc]">
-                  اختياري
-                </span>
+          {/* Manual Sync Result Feedback Banner (Success or Failure) */}
+          {manualSyncFeedback && (
+            <div
+              className={`rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-3.5 border animate-in fade-in-50 duration-200 ${
+                manualSyncFeedback.type === 'success'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-950 shadow-xs'
+                  : 'bg-rose-50 border-rose-200 text-rose-950 shadow-xs'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {manualSyncFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`font-bold text-sm ${
+                        manualSyncFeedback.type === 'success' ? 'text-emerald-800' : 'text-rose-800'
+                      }`}
+                    >
+                      {manualSyncFeedback.type === 'success'
+                        ? 'نتيجة المزامنة: تمت المزامنة بنجاح ✓'
+                        : 'نتيجة المزامنة: فشلت المزامنة اليدوية ✕'}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        manualSyncFeedback.type === 'success'
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-100 text-rose-700 border-rose-200'
+                      }`}
+                    >
+                      {manualSyncFeedback.timestamp}
+                    </Badge>
+                  </div>
+                  <p
+                    className={`leading-relaxed font-medium text-xs mt-0.5 ${
+                      manualSyncFeedback.type === 'success' ? 'text-emerald-700' : 'text-rose-700 font-mono text-[11px]'
+                    }`}
+                  >
+                    {manualSyncFeedback.message}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-[#64748B] leading-relaxed max-w-2xl">
-                قاعدة بيانات المكتب مؤمنة ومعزولة على Supabase Postgres. يمكنك ربط Google Sheets كنسخة احتياطية ومزامنة حية بضغطة زر.
-              </p>
+              <button
+                onClick={() => setManualSyncFeedback(null)}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  manualSyncFeedback.type === 'success'
+                    ? 'text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100'
+                    : 'text-rose-500 hover:text-rose-700 hover:bg-rose-100'
+                }`}
+                title="إغلاق التنبيه"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Admin Failure Alert Banner */}
+          {isAdmin && binding?.last_auto_export_status === 'failed' && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-rose-900 animate-in fade-in-50">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-xs w-full">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-rose-800">
+                    آخر مزامنة تلقائية فشلت
+                  </span>
+                  <Badge variant="outline" className="bg-rose-100 text-rose-700 border-rose-200 text-[10px]">
+                    تنبيه للمدير فقط
+                  </Badge>
+                </div>
+                <p className="text-rose-700 leading-relaxed font-mono text-[11px] bg-white/70 p-2.5 rounded-lg border border-rose-200/60 mt-1">
+                  {binding.last_auto_export_error || 'خطأ غير محدد أثناء الاتصال بـ Google Sheets'}
+                </p>
+                <div className="flex flex-wrap items-center gap-4 text-[11px] text-rose-600 pt-1">
+                  {binding.last_auto_export_at && (
+                    <span>توقيت المحاولة: {new Date(binding.last_auto_export_at).toLocaleString('ar-SA')}</span>
+                  )}
+                  <span>(ملاحظة: عمليات النظام الداخلية لم تتأثر وتستمر بشكل طبيعي)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Header Action Bar for Google Sheet */}
+          <div className="bg-white border border-[#D6E0EC] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-[#10233F]">
+                    إعدادات المكتب وتصدير Google Sheet
+                  </h2>
+                  <span className="bg-[#eff4ff] text-[#00236f] text-[10px] font-semibold px-2 py-0.5 rounded border border-[#cfdffc]">
+                    اختياري
+                  </span>
+                </div>
+                <p className="text-xs text-[#64748B] leading-relaxed max-w-2xl">
+                  قاعدة بيانات المكتب مؤمنة ومعزولة على Supabase Postgres. يمكنك ضبط وتيرة المزامنة التلقائية أو إجراء مزامنة يدوية فورية بضغطة زر.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                {/* Auto-export frequency dropdown (Admin-only to change) */}
+                <div className="flex items-center gap-2 bg-[#fafcff] border border-[#d6e0ec] px-3 py-1.5 rounded-xl text-xs">
+                  <Clock className="w-3.5 h-3.5 text-[#00236f] shrink-0" />
+                  <span className="text-[#64748B] text-[11px] font-medium whitespace-nowrap">المزامنة التلقائية:</span>
+                  <select
+                    value={autoExportFrequency}
+                    onChange={(e) => handleUpdateAutoExportFrequency(e.target.value as any)}
+                    disabled={!isAdmin || isUpdatingFrequency}
+                    className="bg-transparent text-xs font-semibold text-[#10233F] focus:outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    title={!isAdmin ? "تعديل الوتيرة متاح فقط لمدير المكتب" : "تحديد وتيرة التصدير التلقائي"}
+                  >
+                    <option value="manual">يدوي فقط (عند الطلب)</option>
+                    <option value="hourly">كل ساعة (الحد الأدنى)</option>
+                    <option value="every_6_hours">كل 6 ساعات</option>
+                    <option value="daily">يومياً</option>
+                  </select>
+                </div>
+
+                <Button
+                  onClick={handleExportToSheets}
+                  disabled={isExporting}
+                  className="bg-[#00236f] hover:bg-[#15388c] text-white text-xs font-semibold h-9 px-4 gap-2 rounded-xl shadow-xs cursor-pointer shrink-0 transition-all"
+                  title="مزامنة وتصدير كافة سجلات الجلسات والمهام فورياً إلى Google Sheets"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isExporting ? 'animate-spin' : ''}`} />
+                  <span>{isExporting ? 'جارٍ المزامنة...' : 'مزامنة يدوية الآن'}</span>
+                </Button>
+              </div>
             </div>
 
-            <Button
-              onClick={handleExportToSheets}
-              disabled={isExporting}
-              className="bg-[#b87019] hover:bg-[#995c14] text-white text-xs font-semibold h-10 px-4 gap-2 rounded-xl shadow-xs cursor-pointer shrink-0"
-            >
-              <Upload className="w-4 h-4" />
-              <span>{isExporting ? 'جارٍ التصدير...' : 'تصدير نسخة احتياطية فورية (XLSX)'}</span>
-            </Button>
+            {/* Sync status info bar */}
+            <div className="pt-2 border-t border-[#f0f4f9] flex flex-wrap items-center justify-between text-[11px] text-[#64748B] gap-2">
+              <div className="flex items-center gap-2">
+                <span className={`inline-block w-2 h-2 rounded-full ${binding?.last_auto_export_status === 'failed' ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+                <span>
+                  آخر مزامنة ناجحة:{' '}
+                  <strong className="text-[#10233F]">
+                    {binding?.last_auto_export_at && binding.last_auto_export_status !== 'failed'
+                      ? new Date(binding.last_auto_export_at).toLocaleString('ar-SA')
+                      : 'لم يتم التصدير بنجاح بعد'}
+                  </strong>
+                </span>
+              </div>
+              <div className="text-[11px] text-[#00236f]">
+                الحد الأدنى لأمان معدل الطلبات (Google API): <strong>ساعة واحدة</strong> لمنع تجاوز الحصة.
+              </div>
+            </div>
           </div>
 
           {/* 
@@ -1141,12 +1379,31 @@ export default function OfficeSettingsPage() {
                 </div>
               )}
 
-              {/* Big Centered "اضغط هنا للاختبار" Button */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+              {/* Big Centered Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5 flex-wrap">
+                <Button
+                  onClick={handleExportToSheets}
+                  disabled={isExporting}
+                  className="bg-[#00236f] hover:bg-[#15388c] text-white font-bold text-sm h-12 px-7 rounded-xl shadow-md gap-2.5 cursor-pointer transition-all"
+                  title="مزامنة فورية وتحديث لكافة سجلات الجلسات والمهام في Google Sheet"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>جارٍ المزامنة اليدوية...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-5 h-5 text-sky-200" />
+                      <span>مزامنة يدوية الآن</span>
+                    </>
+                  )}
+                </Button>
+
                 <Button
                   onClick={handleLiveTestGoogle}
                   disabled={isTestingLive}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-12 px-8 rounded-xl shadow-md gap-2.5 cursor-pointer"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-12 px-7 rounded-xl shadow-md gap-2.5 cursor-pointer"
                 >
                   {isTestingLive ? (
                     <>

@@ -213,6 +213,7 @@ export default function SessionsPage() {
   const [reassignTarget, setReassignTarget] = useState<SessionItem | null>(
     null,
   );
+  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
 
   // New session form state
   const [newSessionForm, setNewSessionForm] = useState({
@@ -405,6 +406,34 @@ export default function SessionsPage() {
     toast({ title: "تم التصدير بنجاح" });
   };
 
+  const handleManualSyncSheets = async () => {
+    setIsSyncingSheets(true);
+    try {
+      const res = await fetch("/api/settings/google-export", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        toast({
+          title: "تمت المزامنة مع Google Sheets بنجاح ✓",
+          description: `تم تحديث السجلات بنجاح (${data.sessionsCount ?? 0} جلسة و ${data.tasksCount ?? 0} مهمة).`,
+        });
+      } else {
+        toast({
+          title: "فشلت المزامنة اليدوية",
+          description: data.error || "تعذر إتمام المزامنة مع Google Sheets.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "فشل الاتصال",
+        description: err?.message || "تعذر الاتصال بالخادم لإتمام المزامنة.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
   const handleCreateSession = () => {
     if (!newSessionForm.caseNumber.trim() || !newSessionForm.court.trim()) {
       toast({
@@ -458,24 +487,38 @@ export default function SessionsPage() {
         </div>
 
         {/* Action Buttons Stacked (Top & Bottom) */}
-        <div className="flex flex-col gap-2.5 w-full sm:w-56">
+        <div className="flex flex-col gap-2 w-full sm:w-60">
           {/* زر إضافة جلسة جديدة (فوق) */}
           <button
             onClick={() => setIsAddSessionOpen(true)}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl bg-[#00236f] hover:bg-[#15388c] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 h-9 rounded-xl bg-[#00236f] hover:bg-[#15388c] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 text-white" />
             <span>إضافة جلسة جديدة</span>
           </button>
 
-          {/* زر التصدير (تحت) */}
-          <button
-            onClick={handleExport}
-            className="w-full inline-flex items-center justify-center gap-2 px-3.5 h-10 rounded-xl bg-white hover:bg-slate-50 text-[#0b1c30] text-xs font-semibold border border-slate-200/70 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-[#00236f]" />
-            <span>تصدير (Excel/PDF)</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            {/* زر المزامنة اليدوية مع Google Sheets */}
+            <button
+              onClick={handleManualSyncSheets}
+              disabled={isSyncingSheets}
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 h-9 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 text-[11px] font-semibold border border-emerald-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-60"
+              title="مزامنة فورية وتحديث لكافة السجلات مع Google Sheets"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isSyncingSheets ? "animate-spin" : ""}`} />
+              <span>{isSyncingSheets ? "جارٍ المزامنة..." : "مزامنة Sheets"}</span>
+            </button>
+
+            {/* زر التصدير (Excel/PDF) */}
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 h-9 rounded-xl bg-white hover:bg-slate-50 text-[#0b1c30] text-[11px] font-semibold border border-slate-200/70 shadow-2xs transition-colors cursor-pointer"
+              title="تصدير جدول الجلسات كملف CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-[#00236f]" />
+              <span>تصدير CSV</span>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { notify } from "../services/reminder/reminder.service";
 import { runPoaExpirySweep } from "../services/reminder/poa-expiry.service";
 import { runLicenseExpirySweep } from "../services/reminder/license-expiry.service";
 import { runSubscriptionExpirySweep } from "../services/reminder/subscription-expiry.service";
+import { runGoogleSheetsAutoExportSweep } from "../services/reminder/google-sheets-auto-export.service";
 import { dispatchEventNotification } from "../services/notification-template.service";
 import { computeHearingDateTime } from "../utils/hijri";
 import { listSupabaseUsers, type AppUser } from "../services/supabase.service";
@@ -408,6 +409,13 @@ export function startReminderScheduler(): void {
     });
     runSubscriptionExpirySweep().catch((err) => {
       logger.error({ err }, "Daily subscription expiry sweep failed");
+    });
+  });
+
+  // Hourly sweep: Google Sheets auto-export for offices with configured frequency
+  cron.schedule("0 * * * *", () => {
+    runGoogleSheetsAutoExportSweep().catch((err) => {
+      logger.error({ err }, "Hourly Google Sheets auto-export sweep failed");
     });
   });
   logger.info(

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Languages, Calendar, BellRing } from 'lucide-react';
-import type { LandingData } from '../types';
+import React from "react";
+import { Languages, Calendar, BellRing } from "lucide-react";
+import type { LandingData } from "../types";
 
 interface StatsBannerProps {
   data: LandingData | null;
@@ -8,7 +8,11 @@ interface StatsBannerProps {
 
 export function StatsBanner({ data }: StatsBannerProps) {
   return (
-    <section id="stats" dir="rtl" className="py-16 sm:py-20 bg-white border-y border-[#E2E8F0]">
+    <section
+      id="stats"
+      dir="rtl"
+      className="py-16 sm:py-20 bg-white border-y border-[#E2E8F0]"
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12 text-center divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-100">
           {/* Qualitative Pillar 1: Arabic-First */}
@@ -23,7 +27,8 @@ export function StatsBanner({ data }: StatsBannerProps) {
               مبني خصيصاً لإجراءات ومحاكم المملكة
             </div>
             <div className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-              مصطلحات قضائية دقيقة: محاكم، دوائر، وكالات شرعية، أحكام، وأطراف دعوى
+              مصطلحات قضائية دقيقة: محاكم، دوائر، وكالات شرعية، أحكام، وأطراف
+              دعوى
             </div>
           </div>
 
@@ -39,7 +44,8 @@ export function StatsBanner({ data }: StatsBannerProps) {
               مزامنة وحساب دقيق للمهل القانونية
             </div>
             <div className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-              تحويل ومطابقة آلية للتواريخ في الجلسات وصلاحيات الوكالات الشرعية دون أي تعارض
+              تحويل ومطابقة آلية للتواريخ في الجلسات وصلاحيات الوكالات الشرعية
+              دون أي تعارض
             </div>
           </div>
 
@@ -55,7 +61,8 @@ export function StatsBanner({ data }: StatsBannerProps) {
               تنبيهات استباقية للجلسات والوكالات
             </div>
             <div className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-              تذكير آلي قبل 24 و 6 ساعات للمحامي المكلف والإدارة، مع تنبيهات بقرب انتهاء الوكالات
+              تذكير آلي قبل 24 و 6 ساعات للمحامي المكلف والإدارة، مع تنبيهات
+              بقرب انتهاء الوكالات
             </div>
           </div>
         </div>

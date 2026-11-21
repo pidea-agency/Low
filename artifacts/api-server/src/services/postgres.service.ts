@@ -2743,6 +2743,7 @@ export async function deleteJudgment(id: number, officeId: string): Promise<bool
 
 export async function exportOfficeDataToGoogleSheets(
   officeId: string,
+  options?: { throwOnError?: boolean },
 ): Promise<{
   sessionsCount: number;
   tasksCount: number;
@@ -2803,6 +2804,9 @@ export async function exportOfficeDataToGoogleSheets(
     };
   } catch (err: any) {
     logger.warn({ err, officeId }, "One-way Google Sheets export skipped or failed");
+    if (options?.throwOnError) {
+      throw err;
+    }
     return {
       sessionsCount: sessions.length,
       tasksCount: tasks.length,

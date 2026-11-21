@@ -11,6 +11,7 @@ import { runReminderSweep } from "../scheduler/reminderScheduler";
 import { runPoaExpirySweep } from "../services/reminder/poa-expiry.service";
 import { runLicenseExpirySweep } from "../services/reminder/license-expiry.service";
 import { runSubscriptionExpirySweep } from "../services/reminder/subscription-expiry.service";
+import { runGoogleSheetsAutoExportSweep } from "../services/reminder/google-sheets-auto-export.service";
 
 const router: IRouter = Router();
 
@@ -218,5 +219,62 @@ async function handleSubscriptionExpiryCron(req: any, res: any) {
 
 router.get("/cron/subscription-expiry", handleSubscriptionExpiryCron);
 router.post("/cron/subscription-expiry", handleSubscriptionExpiryCron);
+
+/**
+ * GET/POST /api/cron/google-sheets-export
+ *
+ * Periodic Google Sheets automated export sweep endpoint.
+ * Sweeps offices configured with periodic auto-export ('hourly', 'every_6_hours', 'daily')
+ * and syncs data to their bound Google Sheet.
+ * Protected by CRON_SECRET Bearer token.
+ */
+async function handleGoogleSheetsExportCron(req: any, res: any) {
+  const secret = env.cronSecret;
+  if (!secret || !secret.trim()) {
+    logger.error("Cron Google Sheets export endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+
+  const authHeader = req.headers["authorization"] ?? "";
+  const provided = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : null;
+
+  if (!provided || !safeCompare(provided, secret.trim())) {
+    logger.warn({ ip: req.ip }, "Cron Google Sheets export endpoint: unauthorized request rejected");
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const startedAt = Date.now();
+  try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "معايير الجدولة غير صالحة." });
+      return;
+    }
+    const targetOfficeId = (req.query.officeId as string) || (req.body?.officeId as string);
+    const result = await runGoogleSheetsAutoExportSweep(targetOfficeId);
+    const durationMs = Date.now() - startedAt;
+    logger.info(
+      {
+        durationMs,
+        officesChecked: result.officesChecked,
+        officesExported: result.officesExported,
+        officesFailed: result.officesFailed,
+      },
+      "Cron Google Sheets auto-export sweep completed",
+    );
+    res.json({ ok: true, durationMs, result });
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    logger.error({ err, durationMs }, "Cron Google Sheets auto-export sweep failed");
+    res.status(500).json({ ok: false, error: "Google Sheets auto-export sweep failed." });
+  }
+}
+
+router.get("/cron/google-sheets-export", handleGoogleSheetsExportCron);
+router.post("/cron/google-sheets-export", handleGoogleSheetsExportCron);
 
 export default router;

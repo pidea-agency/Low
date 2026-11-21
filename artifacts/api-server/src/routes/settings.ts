@@ -474,18 +474,76 @@ router.put("/settings", async (req, res) => {
 });
 
 router.post("/settings/google-export", async (req, res) => {
+  const user = req.authUser;
+  if (!user) {
+    res.status(401).json({ error: "يرجى تسجيل الدخول أولاً." });
+    return;
+  }
+  const officeAdminId = user.role === "admin" ? user.userId! : (user.adminId || user.officeId || user.userId!);
+  const { acquireExportLock, releaseExportLock } = await import(
+    "../services/reminder/google-sheets-auto-export.service"
+  );
+  if (!acquireExportLock(officeAdminId)) {
+    res.status(409).json({
+      error: "عملية المزامنة قيد التنفيذ بالفعل حالياً. يرجى الانتظار بضع ثوانٍ لحين اكتمالها.",
+    });
+    return;
+  }
   try {
-    const adminId = req.authUser!.userId!;
     const { exportOfficeDataToGoogleSheets } = await import("../services/postgres.service");
-    const result = await exportOfficeDataToGoogleSheets(adminId);
+    const result = await exportOfficeDataToGoogleSheets(officeAdminId, { throwOnError: true });
+    const nowIso = new Date().toISOString();
+    const { updateOfficeAutoExportSettings } = await import("../services/supabase.service");
+    await updateOfficeAutoExportSettings(officeAdminId, {
+      last_auto_export_at: nowIso,
+      last_auto_export_status: "success",
+      last_auto_export_error: null,
+    });
     res.json({
       success: true,
-      message: "تم تصدير البيانات إلى Google Sheets بنجاح.",
+      message: "تمت مزامنة وتصدير البيانات إلى Google Sheets بنجاح.",
       ...result,
+      last_auto_export_at: nowIso,
     });
   } catch (err: any) {
-    logger.error({ err }, "Google export failed");
-    res.status(500).json({ error: err.message || "فشل تصدير البيانات إلى Google Sheets." });
+    logger.error({ err, officeAdminId }, "Google export failed");
+    res.status(500).json({ error: err.message || "فشلت عملية المزامنة مع Google Sheets." });
+  } finally {
+    releaseExportLock(officeAdminId);
+  }
+});
+
+router.post("/settings/google-auto-export", async (req, res) => {
+  try {
+    const user = req.authUser;
+    if (!user || user.role !== "admin") {
+      res.status(403).json({ error: "صلاحية مدير المكتب مطلوبة لتعديل إعدادات التصدير التلقائي." });
+      return;
+    }
+
+    const { frequency } = req.body || {};
+    const validFrequencies = ["manual", "hourly", "every_6_hours", "daily"];
+    if (!frequency || !validFrequencies.includes(frequency)) {
+      res.status(400).json({
+        error: "وتيرة التصدير غير صالحة. الخيارات المتاحة: 'manual' أو 'hourly' أو 'every_6_hours' أو 'daily'.",
+      });
+      return;
+    }
+
+    const adminId = user.userId!;
+    const { updateOfficeAutoExportSettings } = await import("../services/supabase.service");
+    await updateOfficeAutoExportSettings(adminId, {
+      auto_export_frequency: frequency,
+    });
+
+    res.json({
+      success: true,
+      auto_export_frequency: frequency,
+      message: "تم تحديث وتيرة التصدير التلقائي بنجاح.",
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Failed to update auto export frequency");
+    res.status(500).json({ error: err.message || "فشل تحديث وتيرة التصدير التلقائي." });
   }
 });
 

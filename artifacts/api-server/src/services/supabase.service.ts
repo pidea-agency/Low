@@ -96,7 +96,15 @@ export interface AppUser {
   billingContactEmail?: string | null;
   office_address?: string | null;
   officeAddress?: string | null;
+
+  // Google Sheets Auto-Export Settings
+  auto_export_frequency?: AutoExportFrequency;
+  last_auto_export_at?: string | null;
+  last_auto_export_status?: "success" | "failed" | null;
+  last_auto_export_error?: string | null;
 }
+
+export type AutoExportFrequency = "manual" | "hourly" | "every_6_hours" | "daily";
 
 export interface UserExtendedMeta {
   legal_specialty?: string | null;
@@ -108,6 +116,10 @@ export interface UserExtendedMeta {
   billing_contact_phone?: string | null;
   billing_contact_email?: string | null;
   office_address?: string | null;
+  auto_export_frequency?: AutoExportFrequency;
+  last_auto_export_at?: string | null;
+  last_auto_export_status?: "success" | "failed" | null;
+  last_auto_export_error?: string | null;
 }
 
 const USER_META_REGEX = /<!--__USER_META__([\s\S]*?)__-->/;
@@ -155,6 +167,11 @@ export function formatUser(u: any): AppUser {
   const billing_contact_email = u.billing_contact_email !== undefined && u.billing_contact_email !== null ? u.billing_contact_email : (meta.billing_contact_email ?? null);
   const office_address = u.office_address !== undefined && u.office_address !== null ? u.office_address : (meta.office_address ?? null);
 
+  const auto_export_frequency = (u.auto_export_frequency !== undefined && u.auto_export_frequency !== null ? u.auto_export_frequency : (meta.auto_export_frequency ?? "manual")) as AutoExportFrequency;
+  const last_auto_export_at = u.last_auto_export_at !== undefined && u.last_auto_export_at !== null ? u.last_auto_export_at : (meta.last_auto_export_at ?? null);
+  const last_auto_export_status = u.last_auto_export_status !== undefined && u.last_auto_export_status !== null ? u.last_auto_export_status : (meta.last_auto_export_status ?? null);
+  const last_auto_export_error = u.last_auto_export_error !== undefined && u.last_auto_export_error !== null ? u.last_auto_export_error : (meta.last_auto_export_error ?? null);
+
   return {
     ...u,
     subscription_notes: cleanNotes || null,
@@ -176,6 +193,10 @@ export function formatUser(u: any): AppUser {
     billingContactEmail: billing_contact_email,
     office_address,
     officeAddress: office_address,
+    auto_export_frequency,
+    last_auto_export_at,
+    last_auto_export_status,
+    last_auto_export_error,
   };
 }
 
@@ -3560,6 +3581,10 @@ export async function getOfficeGoogleBinding(adminId: string): Promise<{
   spreadsheet_id: string | null;
   sheet_name: string | null;
   office_name: string | null;
+  auto_export_frequency: AutoExportFrequency;
+  last_auto_export_at: string | null;
+  last_auto_export_status: "success" | "failed" | null;
+  last_auto_export_error: string | null;
 }> {
   const admin = await findUserByIdOrUsername(adminId);
   if (!admin || admin.role !== "admin") {
@@ -3575,7 +3600,27 @@ export async function getOfficeGoogleBinding(adminId: string): Promise<{
     spreadsheet_id: creds?.spreadsheetId || null,
     sheet_name: creds?.sheetName || "Sessions",
     office_name: admin.office_name || admin.display_name || null,
+    auto_export_frequency: admin.auto_export_frequency || "manual",
+    last_auto_export_at: admin.last_auto_export_at || null,
+    last_auto_export_status: admin.last_auto_export_status || null,
+    last_auto_export_error: admin.last_auto_export_error || null,
   };
+}
+
+export async function updateOfficeAutoExportSettings(
+  adminId: string,
+  input: {
+    auto_export_frequency?: AutoExportFrequency;
+    last_auto_export_at?: string | null;
+    last_auto_export_status?: "success" | "failed" | null;
+    last_auto_export_error?: string | null;
+  },
+): Promise<AppUser> {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("حساب مدير المكتب غير صالح.");
+  }
+  return updateSupabaseUser(adminId, input);
 }
 
 export async function saveOfficeGoogleBinding(
@@ -4029,6 +4074,10 @@ export async function updateSupabaseUser(
     google_service_account_json?: string;
     google_spreadsheet_id?: string;
     google_sheet_name?: string;
+    auto_export_frequency?: AutoExportFrequency;
+    last_auto_export_at?: string | null;
+    last_auto_export_status?: "success" | "failed" | null;
+    last_auto_export_error?: string | null;
   },
 ): Promise<AppUser> {
   const client = getSupabaseClient();
@@ -4158,6 +4207,19 @@ export async function updateSupabaseUser(
   if (incomingAddress !== undefined) {
     updatedMeta.office_address = incomingAddress ? incomingAddress.trim() : null;
     updates.office_address = updatedMeta.office_address;
+  }
+
+  if (input.auto_export_frequency !== undefined) {
+    updatedMeta.auto_export_frequency = input.auto_export_frequency;
+  }
+  if (input.last_auto_export_at !== undefined) {
+    updatedMeta.last_auto_export_at = input.last_auto_export_at;
+  }
+  if (input.last_auto_export_status !== undefined) {
+    updatedMeta.last_auto_export_status = input.last_auto_export_status;
+  }
+  if (input.last_auto_export_error !== undefined) {
+    updatedMeta.last_auto_export_error = input.last_auto_export_error;
   }
 
   const baseNotes = input.subscription_notes !== undefined ? input.subscription_notes : existingCleanNotes;

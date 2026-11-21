@@ -829284,7 +829284,7 @@ async function deleteJudgment(id, officeId) {
   list.splice(idx, 1);
   return true;
 }
-async function exportOfficeDataToGoogleSheets(officeId) {
+async function exportOfficeDataToGoogleSheets(officeId, options) {
   const [sessions, tasks3, poas, judgments] = await Promise.all([
     listSessions(officeId),
     listTasks(officeId),
@@ -829333,6 +829333,9 @@ async function exportOfficeDataToGoogleSheets(officeId) {
     };
   } catch (err) {
     logger.warn({ err, officeId }, "One-way Google Sheets export skipped or failed");
+    if (options?.throwOnError) {
+      throw err;
+    }
     return {
       sessionsCount: sessions.length,
       tasksCount: tasks3.length,
@@ -831182,6 +831185,7 @@ __export(supabase_service_exports, {
   toggleOfficeMemberStatus: () => toggleOfficeMemberStatus,
   toggleUserStatus: () => toggleUserStatus,
   unpackUserNotes: () => unpackUserNotes,
+  updateOfficeAutoExportSettings: () => updateOfficeAutoExportSettings,
   updateOfficeMember: () => updateOfficeMember,
   updateOfficeMemberQuota: () => updateOfficeMemberQuota,
   updatePayment: () => updatePayment,
@@ -831230,6 +831234,10 @@ function formatUser(u) {
   const billing_contact_phone = u.billing_contact_phone !== void 0 && u.billing_contact_phone !== null ? u.billing_contact_phone : meta.billing_contact_phone ?? null;
   const billing_contact_email = u.billing_contact_email !== void 0 && u.billing_contact_email !== null ? u.billing_contact_email : meta.billing_contact_email ?? null;
   const office_address = u.office_address !== void 0 && u.office_address !== null ? u.office_address : meta.office_address ?? null;
+  const auto_export_frequency = u.auto_export_frequency !== void 0 && u.auto_export_frequency !== null ? u.auto_export_frequency : meta.auto_export_frequency ?? "manual";
+  const last_auto_export_at = u.last_auto_export_at !== void 0 && u.last_auto_export_at !== null ? u.last_auto_export_at : meta.last_auto_export_at ?? null;
+  const last_auto_export_status = u.last_auto_export_status !== void 0 && u.last_auto_export_status !== null ? u.last_auto_export_status : meta.last_auto_export_status ?? null;
+  const last_auto_export_error = u.last_auto_export_error !== void 0 && u.last_auto_export_error !== null ? u.last_auto_export_error : meta.last_auto_export_error ?? null;
   return {
     ...u,
     subscription_notes: cleanNotes || null,
@@ -831250,7 +831258,11 @@ function formatUser(u) {
     billing_contact_email,
     billingContactEmail: billing_contact_email,
     office_address,
-    officeAddress: office_address
+    officeAddress: office_address,
+    auto_export_frequency,
+    last_auto_export_at,
+    last_auto_export_status,
+    last_auto_export_error
   };
 }
 function getUserSessionVersion(userId) {
@@ -833555,8 +833567,19 @@ async function getOfficeGoogleBinding(adminId) {
     client_email: clientEmail,
     spreadsheet_id: creds?.spreadsheetId || null,
     sheet_name: creds?.sheetName || "Sessions",
-    office_name: admin.office_name || admin.display_name || null
+    office_name: admin.office_name || admin.display_name || null,
+    auto_export_frequency: admin.auto_export_frequency || "manual",
+    last_auto_export_at: admin.last_auto_export_at || null,
+    last_auto_export_status: admin.last_auto_export_status || null,
+    last_auto_export_error: admin.last_auto_export_error || null
   };
+}
+async function updateOfficeAutoExportSettings(adminId, input) {
+  const admin = await findUserByIdOrUsername(adminId);
+  if (!admin || admin.role !== "admin") {
+    throw new Error("\u062D\u0633\u0627\u0628 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.");
+  }
+  return updateSupabaseUser(adminId, input);
 }
 async function saveOfficeGoogleBinding(adminId, input) {
   const admin = await findUserByIdOrUsername(adminId);
@@ -833954,6 +833977,18 @@ async function updateSupabaseUser(id, input) {
   if (incomingAddress !== void 0) {
     updatedMeta.office_address = incomingAddress ? incomingAddress.trim() : null;
     updates.office_address = updatedMeta.office_address;
+  }
+  if (input.auto_export_frequency !== void 0) {
+    updatedMeta.auto_export_frequency = input.auto_export_frequency;
+  }
+  if (input.last_auto_export_at !== void 0) {
+    updatedMeta.last_auto_export_at = input.last_auto_export_at;
+  }
+  if (input.last_auto_export_status !== void 0) {
+    updatedMeta.last_auto_export_status = input.last_auto_export_status;
+  }
+  if (input.last_auto_export_error !== void 0) {
+    updatedMeta.last_auto_export_error = input.last_auto_export_error;
   }
   const baseNotes = input.subscription_notes !== void 0 ? input.subscription_notes : existingCleanNotes;
   updates.subscription_notes = packUserNotes(baseNotes, updatedMeta) || null;
@@ -834714,6 +834749,186 @@ var init_env = __esm({
         return raw.replace(/\/+$/, "");
       }
     };
+  }
+});
+
+// src/services/reminder/google-sheets-auto-export.service.ts
+var google_sheets_auto_export_service_exports = {};
+__export(google_sheets_auto_export_service_exports, {
+  AUTO_EXPORT_INTERVAL_MAP: () => AUTO_EXPORT_INTERVAL_MAP,
+  MIN_AUTO_EXPORT_INTERVAL_MS: () => MIN_AUTO_EXPORT_INTERVAL_MS,
+  acquireExportLock: () => acquireExportLock,
+  isExportInProgress: () => isExportInProgress,
+  releaseExportLock: () => releaseExportLock,
+  runGoogleSheetsAutoExportSweep: () => runGoogleSheetsAutoExportSweep,
+  shouldTriggerAutoExport: () => shouldTriggerAutoExport
+});
+function acquireExportLock(officeId) {
+  if (activeExportLocks.has(officeId)) {
+    return false;
+  }
+  activeExportLocks.add(officeId);
+  return true;
+}
+function releaseExportLock(officeId) {
+  activeExportLocks.delete(officeId);
+}
+function isExportInProgress(officeId) {
+  return activeExportLocks.has(officeId);
+}
+function shouldTriggerAutoExport(frequency, lastAutoExportAt, now = Date.now()) {
+  if (!frequency || frequency === "manual") {
+    return false;
+  }
+  const configuredInterval = AUTO_EXPORT_INTERVAL_MAP[frequency];
+  if (!configuredInterval || configuredInterval <= 0) {
+    return false;
+  }
+  const effectiveInterval = Math.max(MIN_AUTO_EXPORT_INTERVAL_MS, configuredInterval);
+  if (!lastAutoExportAt) {
+    return true;
+  }
+  const lastTime = new Date(lastAutoExportAt).getTime();
+  if (Number.isNaN(lastTime)) {
+    return true;
+  }
+  return now - lastTime >= effectiveInterval;
+}
+async function runGoogleSheetsAutoExportSweep(targetOfficeId) {
+  const results = [];
+  let officesExported = 0;
+  let officesFailed = 0;
+  let officesSkipped = 0;
+  let officesSkippedLocked = 0;
+  let allUsers = [];
+  try {
+    allUsers = await listSupabaseUsers();
+  } catch (err) {
+    logger.error({ err }, "runGoogleSheetsAutoExportSweep: failed to fetch users list");
+    return {
+      ok: false,
+      officesChecked: 0,
+      officesExported: 0,
+      officesFailed: 0,
+      officesSkipped: 0,
+      officesSkippedLocked: 0,
+      results: []
+    };
+  }
+  let admins = allUsers.filter((u) => u.role === "admin");
+  if (targetOfficeId) {
+    admins = admins.filter((u) => u.id === targetOfficeId);
+  }
+  const now = Date.now();
+  for (const admin of admins) {
+    const frequency = admin.auto_export_frequency || "manual";
+    if (frequency === "manual") {
+      officesSkipped++;
+      continue;
+    }
+    if (!shouldTriggerAutoExport(frequency, admin.last_auto_export_at, now)) {
+      officesSkipped++;
+      results.push({
+        officeId: admin.id,
+        status: "skipped_not_due"
+      });
+      continue;
+    }
+    try {
+      const creds = await getUserGoogleCredentials(admin.id);
+      if (!creds?.serviceAccountJson || !creds.spreadsheetId) {
+        officesSkipped++;
+        results.push({
+          officeId: admin.id,
+          status: "skipped_no_creds"
+        });
+        continue;
+      }
+    } catch {
+      officesSkipped++;
+      results.push({
+        officeId: admin.id,
+        status: "skipped_no_creds"
+      });
+      continue;
+    }
+    if (!acquireExportLock(admin.id)) {
+      logger.info({ officeId: admin.id }, "Auto-export skipped: export already in progress for office");
+      officesSkippedLocked++;
+      results.push({
+        officeId: admin.id,
+        status: "skipped_locked"
+      });
+      continue;
+    }
+    try {
+      const exportRes = await exportOfficeDataToGoogleSheets(admin.id, { throwOnError: true });
+      const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+      await updateOfficeAutoExportSettings(admin.id, {
+        last_auto_export_at: nowIso,
+        last_auto_export_status: "success",
+        last_auto_export_error: null
+      });
+      officesExported++;
+      results.push({
+        officeId: admin.id,
+        status: "success",
+        sessionsCount: exportRes.sessionsCount,
+        tasksCount: exportRes.tasksCount
+      });
+      logger.info(
+        { officeId: admin.id, frequency, sessions: exportRes.sessionsCount, tasks: exportRes.tasksCount },
+        "Google Sheets auto-export completed successfully"
+      );
+    } catch (err) {
+      const errorMessage = err?.message || "\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0625\u0644\u0649 Google Sheets";
+      logger.warn(
+        { err, officeId: admin.id, frequency },
+        "Google Sheets auto-export failed for office"
+      );
+      try {
+        await updateOfficeAutoExportSettings(admin.id, {
+          last_auto_export_status: "failed",
+          last_auto_export_error: errorMessage
+        });
+      } catch (updateErr) {
+        logger.error({ updateErr, officeId: admin.id }, "Failed to update last_auto_export_status");
+      }
+      officesFailed++;
+      results.push({
+        officeId: admin.id,
+        status: "failed",
+        error: errorMessage
+      });
+    } finally {
+      releaseExportLock(admin.id);
+    }
+  }
+  return {
+    ok: true,
+    officesChecked: admins.length,
+    officesExported,
+    officesFailed,
+    officesSkipped,
+    officesSkippedLocked,
+    results
+  };
+}
+var MIN_AUTO_EXPORT_INTERVAL_MS, AUTO_EXPORT_INTERVAL_MAP, activeExportLocks;
+var init_google_sheets_auto_export_service = __esm({
+  "src/services/reminder/google-sheets-auto-export.service.ts"() {
+    "use strict";
+    init_logger();
+    init_supabase_service();
+    init_postgres_service();
+    MIN_AUTO_EXPORT_INTERVAL_MS = 60 * 60 * 1e3;
+    AUTO_EXPORT_INTERVAL_MAP = {
+      manual: 0,
+      hourly: 60 * 60 * 1e3,
+      every_6_hours: 6 * 60 * 60 * 1e3,
+      daily: 24 * 60 * 60 * 1e3
+    };
+    activeExportLocks = /* @__PURE__ */ new Set();
   }
 });
 
@@ -854307,18 +854522,70 @@ router6.put("/settings", async (req, res) => {
   }
 });
 router6.post("/settings/google-export", async (req, res) => {
+  const user = req.authUser;
+  if (!user) {
+    res.status(401).json({ error: "\u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0623\u0648\u0644\u0627\u064B." });
+    return;
+  }
+  const officeAdminId = user.role === "admin" ? user.userId : user.adminId || user.officeId || user.userId;
+  const { acquireExportLock: acquireExportLock2, releaseExportLock: releaseExportLock2 } = await Promise.resolve().then(() => (init_google_sheets_auto_export_service(), google_sheets_auto_export_service_exports));
+  if (!acquireExportLock2(officeAdminId)) {
+    res.status(409).json({
+      error: "\u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 \u0628\u0627\u0644\u0641\u0639\u0644 \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 \u0628\u0636\u0639 \u062B\u0648\u0627\u0646\u064D \u0644\u062D\u064A\u0646 \u0627\u0643\u062A\u0645\u0627\u0644\u0647\u0627."
+    });
+    return;
+  }
   try {
-    const adminId = req.authUser.userId;
     const { exportOfficeDataToGoogleSheets: exportOfficeDataToGoogleSheets2 } = await Promise.resolve().then(() => (init_postgres_service(), postgres_service_exports));
-    const result = await exportOfficeDataToGoogleSheets2(adminId);
+    const result = await exportOfficeDataToGoogleSheets2(officeAdminId, { throwOnError: true });
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    const { updateOfficeAutoExportSettings: updateOfficeAutoExportSettings2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    await updateOfficeAutoExportSettings2(officeAdminId, {
+      last_auto_export_at: nowIso,
+      last_auto_export_status: "success",
+      last_auto_export_error: null
+    });
     res.json({
       success: true,
-      message: "\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Google Sheets \u0628\u0646\u062C\u0627\u062D.",
-      ...result
+      message: "\u062A\u0645\u062A \u0645\u0632\u0627\u0645\u0646\u0629 \u0648\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Google Sheets \u0628\u0646\u062C\u0627\u062D.",
+      ...result,
+      last_auto_export_at: nowIso
     });
   } catch (err) {
-    logger.error({ err }, "Google export failed");
-    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Google Sheets." });
+    logger.error({ err, officeAdminId }, "Google export failed");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644\u062A \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Google Sheets." });
+  } finally {
+    releaseExportLock2(officeAdminId);
+  }
+});
+router6.post("/settings/google-auto-export", async (req, res) => {
+  try {
+    const user = req.authUser;
+    if (!user || user.role !== "admin") {
+      res.status(403).json({ error: "\u0635\u0644\u0627\u062D\u064A\u0629 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0628 \u0645\u0637\u0644\u0648\u0628\u0629 \u0644\u062A\u0639\u062F\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A." });
+      return;
+    }
+    const { frequency } = req.body || {};
+    const validFrequencies = ["manual", "hourly", "every_6_hours", "daily"];
+    if (!frequency || !validFrequencies.includes(frequency)) {
+      res.status(400).json({
+        error: "\u0648\u062A\u064A\u0631\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u0627\u0644\u062E\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u062A\u0627\u062D\u0629: 'manual' \u0623\u0648 'hourly' \u0623\u0648 'every_6_hours' \u0623\u0648 'daily'."
+      });
+      return;
+    }
+    const adminId = user.userId;
+    const { updateOfficeAutoExportSettings: updateOfficeAutoExportSettings2 } = await Promise.resolve().then(() => (init_supabase_service(), supabase_service_exports));
+    await updateOfficeAutoExportSettings2(adminId, {
+      auto_export_frequency: frequency
+    });
+    res.json({
+      success: true,
+      auto_export_frequency: frequency,
+      message: "\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0648\u062A\u064A\u0631\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u0628\u0646\u062C\u0627\u062D."
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to update auto export frequency");
+    res.status(500).json({ error: err.message || "\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0648\u062A\u064A\u0631\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A." });
   }
 });
 router6.post("/settings/test-whatsapp-connection", async (req, res) => {
@@ -855419,6 +855686,7 @@ async function runSubscriptionExpirySweep(targetOfficeId) {
 }
 
 // src/scheduler/reminderScheduler.ts
+init_google_sheets_auto_export_service();
 init_notification_template_service();
 init_hijri();
 init_supabase_service();
@@ -855720,6 +855988,7 @@ async function runReminderSweep() {
 }
 
 // src/routes/cron.ts
+init_google_sheets_auto_export_service();
 var CronSweepSchema = external_exports.object({
   officeId: external_exports.string().optional()
 });
@@ -855860,6 +856129,48 @@ async function handleSubscriptionExpiryCron(req, res) {
 }
 router8.get("/cron/subscription-expiry", handleSubscriptionExpiryCron);
 router8.post("/cron/subscription-expiry", handleSubscriptionExpiryCron);
+async function handleGoogleSheetsExportCron(req, res) {
+  const secret = env.cronSecret;
+  if (!secret || !secret.trim()) {
+    logger.error("Cron Google Sheets export endpoint: CRON_SECRET is not configured on the server");
+    res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
+    return;
+  }
+  const authHeader = req.headers["authorization"] ?? "";
+  const provided = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!provided || !safeCompare(provided, secret.trim())) {
+    logger.warn({ ip: req.ip }, "Cron Google Sheets export endpoint: unauthorized request rejected");
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const startedAt = Date.now();
+  try {
+    const parseResult = CronSweepSchema.safeParse({ ...req.query, ...req.body });
+    if (!parseResult.success) {
+      res.status(400).json({ error: "\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629." });
+      return;
+    }
+    const targetOfficeId = req.query.officeId || req.body?.officeId;
+    const result = await runGoogleSheetsAutoExportSweep(targetOfficeId);
+    const durationMs = Date.now() - startedAt;
+    logger.info(
+      {
+        durationMs,
+        officesChecked: result.officesChecked,
+        officesExported: result.officesExported,
+        officesFailed: result.officesFailed
+      },
+      "Cron Google Sheets auto-export sweep completed"
+    );
+    res.json({ ok: true, durationMs, result });
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    logger.error({ err, durationMs }, "Cron Google Sheets auto-export sweep failed");
+    res.status(500).json({ ok: false, error: "Google Sheets auto-export sweep failed." });
+  }
+}
+router8.get("/cron/google-sheets-export", handleGoogleSheetsExportCron);
+router8.post("/cron/google-sheets-export", handleGoogleSheetsExportCron);
 var cron_default = router8;
 
 // src/routes/poa.ts

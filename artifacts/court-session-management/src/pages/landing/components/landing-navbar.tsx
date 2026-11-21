@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'wouter';
-import { Scale, ArrowLeft, Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import type { LandingData } from '../types';
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
+import { Scale, ArrowLeft, Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { LandingData } from "../types";
 
 interface NavbarUser {
-  role?: 'super_admin' | 'admin' | 'lawyer' | string;
+  role?: "super_admin" | "admin" | "lawyer" | string;
 }
 
 interface LandingNavbarProps {
@@ -15,12 +15,12 @@ interface LandingNavbarProps {
 }
 
 const NAV_LINKS = [
-  { label: 'الرئيسية', href: '#hero' },
-  { label: 'استخراج الجلسات', href: '#features' },
-  { label: 'عن المنظومة', href: '#stats' },
-  { label: 'الأمان وعزل البيانات', href: '#security' },
-  { label: 'الأسئلة الشائعة', href: '#faq' },
-  { label: 'تواصل معنا', href: '#contact' },
+  { label: "الرئيسية", href: "#hero" },
+  { label: "استخراج الجلسات", href: "#features" },
+  { label: "عن المنظومة", href: "#stats" },
+  { label: "الأمان وعزل البيانات", href: "#security" },
+  { label: "الأسئلة الشائعة", href: "#faq" },
+  { label: "تواصل معنا", href: "#contact" },
 ];
 
 export function LandingNavbar({
@@ -31,7 +31,7 @@ export function LandingNavbar({
   const [, setLocation] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeHash, setActiveHash] = useState('#hero');
+  const [activeHash, setActiveHash] = useState("#hero");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,34 +49,34 @@ export function LandingNavbar({
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
+      if (e.key === "Escape") setMobileMenuOpen(false);
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mobileMenuOpen]);
 
   const dashboardPath =
-    currentUser?.role === 'admin' || currentUser?.role === 'super_admin'
-      ? '/dashboard-admin'
-      : '/dashboard';
+    currentUser?.role === "admin" || currentUser?.role === "super_admin"
+      ? "/dashboard-admin"
+      : "/dashboard";
 
   const scrollToSection = (
     e: React.MouseEvent<HTMLAnchorElement>,
-    href: string
+    href: string,
   ) => {
     e.preventDefault();
     setMobileMenuOpen(false);
     setActiveHash(href);
     const element = document.querySelector(href);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -85,8 +85,8 @@ export function LandingNavbar({
       dir="rtl"
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs py-3'
-          : 'bg-[#FBF9F5]/90 backdrop-blur-xs border-b border-[#EAE3D9]/70 py-4'
+          ? "bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs py-3"
+          : "bg-[#FBF9F5]/90 backdrop-blur-xs border-b border-[#EAE3D9]/70 py-4"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -98,7 +98,7 @@ export function LandingNavbar({
             </div>
             <div className="flex flex-col text-right">
               <span className="font-sans text-lg font-black tracking-tight text-[#0C1A30] group-hover:text-[#C99732] transition-colors leading-none">
-                {data?.office?.name || 'منصة ديوان القانونية'}
+                {data?.office?.name || "منصة ديوان القانونية"}
               </span>
               <span className="text-[10px] text-[#64748B] font-medium tracking-wide mt-0.5">
                 منظومة العدالة الذكية
@@ -109,7 +109,7 @@ export function LandingNavbar({
           {/* Desktop Navigation Links */}
           <nav
             aria-label="التنقل الرئيسي"
-            className="hidden md:flex items-center gap-1 lg:gap-1.5 px-3 py-1 rounded-full bg-white/80 border border-[#D6E0EC] text-[#475569] text-xs lg:text-sm font-medium shadow-2xs"
+            className="hidden md:flex items-center gap-1 lg:gap-1.5 px-3 py-1  text-[#475569] text-xs lg:text-sm font-medium  "
           >
             {NAV_LINKS.map((link) => {
               const isActive = activeHash === link.href;
@@ -120,8 +120,8 @@ export function LandingNavbar({
                   onClick={(e) => scrollToSection(e, link.href)}
                   className={`px-3 py-1.5 rounded-full transition-all duration-150 ${
                     isActive
-                      ? 'bg-[#0B1B3D] text-white font-semibold shadow-2xs'
-                      : 'text-[#475569] hover:text-[#0B1B3D] hover:bg-slate-100/70'
+                      ? "bg-[#0B1B3D] text-white font-semibold shadow-2xs"
+                      : "text-[#475569] hover:text-[#0B1B3D] hover:bg-slate-100/70"
                   }`}
                 >
                   {link.label}
@@ -164,7 +164,7 @@ export function LandingNavbar({
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 rounded-xl text-[#475569] hover:text-[#0B1B3D] hover:bg-slate-100 transition-colors"
-            aria-label={mobileMenuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+            aria-label={mobileMenuOpen ? "إغلاق القائمة" : "فتح القائمة"}
           >
             {mobileMenuOpen ? (
               <X className="w-6 h-6" />
